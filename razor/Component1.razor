@@ -1,0 +1,180 @@
+﻿@page "/zomonoz"
+
+<h3>Hesap Makinası</h3>
+
+<div class="calculator">
+    <div class="display">
+        <input type="text" class="form-control" value="@displayValue" readonly />
+    </div>
+    
+    <div class="buttons">
+        <div class="row">
+            <button class="btn btn-secondary" @onclick="Clear">C</button>
+            <button class="btn btn-secondary" @onclick="ClearEntry">CE</button>
+            <button class="btn btn-secondary" @onclick="() => AppendOperator('/')">÷</button>
+            <button class="btn btn-warning" @onclick="Backspace">←</button>
+        </div>
+        <div class="row">
+            <button class="btn btn-primary" @onclick="() => AppendNumber('7')">7</button>
+            <button class="btn btn-primary" @onclick="() => AppendNumber('8')">8</button>
+            <button class="btn btn-primary" @onclick="() => AppendNumber('9')">9</button>
+            <button class="btn btn-secondary" @onclick="() => AppendOperator('*')">×</button>
+        </div>
+        <div class="row">
+            <button class="btn btn-primary" @onclick="() => AppendNumber('4')">4</button>
+            <button class="btn btn-primary" @onclick="() => AppendNumber('5')">5</button>
+            <button class="btn btn-primary" @onclick="() => AppendNumber('6')">6</button>
+            <button class="btn btn-secondary" @onclick="() => AppendOperator('-')">−</button>
+        </div>
+        <div class="row">
+            <button class="btn btn-primary" @onclick="() => AppendNumber('1')">1</button>
+            <button class="btn btn-primary" @onclick="() => AppendNumber('2')">2</button>
+            <button class="btn btn-primary" @onclick="() => AppendNumber('3')">3</button>
+            <button class="btn btn-secondary" @onclick="() => AppendOperator('+')">+</button>
+        </div>
+        <div class="row">
+            <button class="btn btn-primary wide" @onclick="() => AppendNumber('0')">0</button>
+            <button class="btn btn-primary" @onclick="AppendDecimal">,</button>
+            <button class="btn btn-success" @onclick="Calculate">=</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .calculator {
+        max-width: 400px;
+        margin: 20px auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background-color: #f5f5f5;
+    }
+
+    .display {
+        margin-bottom: 15px;
+    }
+
+    .display input {
+        text-align: right;
+        font-size: 24px;
+        font-weight: bold;
+        height: 50px;
+    }
+
+    .buttons .row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .buttons button {
+        flex: 1;
+        height: 60px;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .buttons button.wide {
+        flex: 2;
+    }
+</style>
+
+@code {
+    private string displayValue = "0";
+    private double currentValue = 0;
+    private double previousValue = 0;
+    private string currentOperator = "";
+    private bool newEntry = true;
+
+    private void AppendNumber(string number)
+    {
+        if (newEntry)
+        {
+            displayValue = number;
+            newEntry = false;
+        }
+        else
+        {
+            if (displayValue == "0")
+                displayValue = number;
+            else
+                displayValue += number;
+        }
+    }
+
+    private void AppendDecimal()
+    {
+        if (newEntry)
+        {
+            displayValue = "0,";
+            newEntry = false;
+        }
+        else if (!displayValue.Contains(","))
+        {
+            displayValue += ",";
+        }
+    }
+
+    private void AppendOperator(string op)
+    {
+        if (!string.IsNullOrEmpty(currentOperator))
+        {
+            Calculate();
+        }
+        else
+        {
+            previousValue = double.Parse(displayValue.Replace(",", "."), System.Globalization.CultureInfo.InvariantCulture);
+        }
+        
+        currentOperator = op;
+        newEntry = true;
+    }
+
+    private void Calculate()
+    {
+        if (string.IsNullOrEmpty(currentOperator))
+            return;
+
+        currentValue = double.Parse(displayValue.Replace(",", "."), System.Globalization.CultureInfo.InvariantCulture);
+
+        double result = currentOperator switch
+        {
+            "+" => previousValue + currentValue,
+            "-" => previousValue - currentValue,
+            "*" => previousValue * currentValue,
+            "/" => currentValue != 0 ? previousValue / currentValue : 0,
+            _ => currentValue
+        };
+
+        displayValue = result.ToString().Replace(".", ",");
+        currentOperator = "";
+        newEntry = true;
+    }
+
+    private void Clear()
+    {
+        displayValue = "0";
+        currentValue = 0;
+        previousValue = 0;
+        currentOperator = "";
+        newEntry = true;
+    }
+
+    private void ClearEntry()
+    {
+        displayValue = "0";
+        newEntry = true;
+    }
+
+    private void Backspace()
+    {
+        if (displayValue.Length > 1)
+        {
+            displayValue = displayValue[..^1];
+        }
+        else
+        {
+            displayValue = "0";
+        }
+    }
+}

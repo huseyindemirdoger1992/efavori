@@ -1,1 +1,6 @@
-<Solution />
+<Solution>
+  <Project Path="api/api.csproj" />
+  <Project Path="data/data.csproj" />
+  <Project Path="razor/razor.csproj" />
+  <Project Path="web/web.csproj" />
+</Solution>

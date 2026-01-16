@@ -15,4 +15,37 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Admin\az\" />
+    <Folder Include="Admin\de\" />
+    <Folder Include="Admin\en\" />
+    <Folder Include="Admin\es\" />
+    <Folder Include="Admin\fr\" />
+    <Folder Include="Admin\hi\" />
+    <Folder Include="Admin\pt\" />
+    <Folder Include="Admin\ru\" />
+    <Folder Include="Admin\tr\" />
+    <Folder Include="Admin\zh\" />
+    <Folder Include="Customer\az\" />
+    <Folder Include="Customer\de\" />
+    <Folder Include="Customer\en\" />
+    <Folder Include="Customer\es\" />
+    <Folder Include="Customer\fr\" />
+    <Folder Include="Customer\hi\" />
+    <Folder Include="Customer\pt\" />
+    <Folder Include="Customer\ru\" />
+    <Folder Include="Customer\tr\" />
+    <Folder Include="Customer\zh\" />
+    <Folder Include="Vendor\az\" />
+    <Folder Include="Vendor\de\" />
+    <Folder Include="Vendor\en\" />
+    <Folder Include="Vendor\es\" />
+    <Folder Include="Vendor\fr\" />
+    <Folder Include="Vendor\hi\" />
+    <Folder Include="Vendor\zh\" />
+    <Folder Include="Vendor\tr\" />
+    <Folder Include="Vendor\ru\" />
+    <Folder Include="Vendor\pt\" />
+  </ItemGroup>
+
 </Project>

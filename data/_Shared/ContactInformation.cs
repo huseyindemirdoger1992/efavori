@@ -7,10 +7,14 @@ namespace data._Shared
     {
         public bool? IsActiveEmail { get; set; }
         public string? Email { get; set; }
+        public bool PhoneEmailConfirmed { get; set; }
+
 
         public bool? IsActivePhoneNumber { get; set; }
         public string? CountryPhoneCode { get; set; }
         public string? PhoneNumber { get; set; }
+        public bool PhoneNumberConfirmed { get; set; }
+
 
         // Global Devler
         public bool? IsActiveFacebook { get; set; }

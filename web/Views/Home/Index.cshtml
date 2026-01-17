@@ -1,7 +1,16 @@
-﻿@{
+﻿@using data
+@{
     ViewData["Title"] = "Home Page";
+    List<Country> _Country;
+    using (_ApplicationConnectionDb db = new _ApplicationConnectionDb())
+    {
+        _Country = db.Country.ToList();
+    }
 }
-
+@foreach (Country item in _Country)
+{
+    <p>@item.name</p>
+}
 <div class="text-center">
     <h1 class="display-4">Welcome</h1>
     <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>

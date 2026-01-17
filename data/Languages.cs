@@ -7,8 +7,9 @@ namespace data
         [Key]
         public int Id { get; set; }
 
-        public string? Name { get; set; }    
-        public string? InterFaceName { get; set; }    
+        public string? NativeName { get; set; }    
+        public string? Iso2 { get; set; }    
+        public string? Iso3 { get; set; }    
 
     }
 }

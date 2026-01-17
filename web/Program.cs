@@ -12,7 +12,6 @@ builder.Services.AddSingleton<HtmlEncoder>(
 
 builder.Services.AddHttpContextAccessor();
 
-// 1. MVC Yapýlandýrmasý
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddControllersWithViews()
@@ -23,47 +22,43 @@ else
     builder.Services.AddControllersWithViews();
 }
 
-// 2. Blazor Server
 builder.Services.AddServerSideBlazor();
 
-// 3. VERÝTABANI BAÐLANTISI
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string '........' not found.");
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<ApplicationConnectionDb>(options =>
-    options.UseSqlServer(connectionString));
+builder.Services.AddDbContextPool<_ApplicationConnectionDb>(options =>
+{
+    options.UseSqlServer(connectionString, sql =>
+    {
+        sql.CommandTimeout(30);
+        sql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null);
+    });
 
-// 4. HTTP Client
+    if (builder.Environment.IsDevelopment())
+        options.EnableDetailedErrors();
+});
+
 builder.Services.AddHttpClient();
 
-// 5. AUTHENTICATION (Kullanýcý oturum yönetimi ve Yönlendirme)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        // Oturum açmamýþ kullanýcý [Authorize] bir sayfaya girerse buraya gider:
         options.LoginPath = "/Security/Login/";
-        // Yetkisi olmayan bir alana (Role hatasý) girmeye çalýþýrsa buraya gider:
         options.AccessDeniedPath = "/Security/Logout/";
-        // Çýkýþ yapýldýðýnda yönlendirilecek varsayýlan adres:
         options.LogoutPath = "/Security/Logout/";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
 builder.Services.AddAuthorization();
 
-// 6. DOSYA YÜKLEME LÝMÝTLERÝ (128 MB)
-builder.Services.Configure<IISServerOptions>(options =>
-{
-    options.MaxRequestBodySize = 134217728;
-});
-
-builder.Services.Configure<KestrelServerOptions>(options =>
-{
-    options.Limits.MaxRequestBodySize = 134217728;
-});
+builder.Services.Configure<IISServerOptions>(options => { options.MaxRequestBodySize = 134217728; });
+builder.Services.Configure<KestrelServerOptions>(options => { options.Limits.MaxRequestBodySize = 134217728; });
 
 var app = builder.Build();
 
-// 7. MIDDLEWARE (Sýralama kritiktir)
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -74,11 +69,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Authentication her zaman Authorization'dan önce gelmelidir
 app.UseAuthentication();
 app.UseAuthorization();
 
-// 8. ENDPOINT TANIMLAMALARI
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -8,35 +9,48 @@ namespace data
 {
     public class _ApplicationConnectionDb : DbContext
     {
-        private const string ConnectionString =
-            "Server=mssql02.trwww.com,1433;Database=efavoric_efavori;User Id=efavori;Password=Sx10Kg=X,t2cixiI;TrustServerCertificate=True;MultipleActiveResultSets=True;Encrypt=False;";
+        // Program.cs'den gelen ayarlar için
+        public _ApplicationConnectionDb(DbContextOptions<_ApplicationConnectionDb> options)
+            : base(options)
+        {
+        }
+
+        // CSHTML'deki "new _ApplicationConnectionDb()" kullanımı için boş constructor
+        public _ApplicationConnectionDb()
+        {
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            // EĞER options dışarıdan (Program.cs'den) gelmemişse, manuel yapılandır
+            if (!optionsBuilder.IsConfigured)
+            {
+                IConfigurationRoot configuration = new ConfigurationBuilder()
+                    .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../web"))
+                    .AddJsonFile("appsettings.json", optional: false)
+                    .Build();
+
+                var connectionString = configuration.GetConnectionString("DefaultConnection");
+                optionsBuilder.UseSqlServer(connectionString);
+            }
+        }
 
         public class _ApplicationConnectionDbFactory : IDesignTimeDbContextFactory<_ApplicationConnectionDb>
         {
             public _ApplicationConnectionDb CreateDbContext(string[] args)
             {
                 var optionsBuilder = new DbContextOptionsBuilder<_ApplicationConnectionDb>();
-                optionsBuilder.UseSqlServer(ConnectionString);
+
+                IConfigurationRoot configuration = new ConfigurationBuilder()
+                    .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../web"))
+                    .AddJsonFile("appsettings.json", optional: false)
+                    .Build();
+
+                var connectionString = configuration.GetConnectionString("DefaultConnection");
+                optionsBuilder.UseSqlServer(connectionString);
 
                 return new _ApplicationConnectionDb(optionsBuilder.Options);
             }
-        }
-
-        // Parametresiz constructor eklendi
-        public _ApplicationConnectionDb()
-            : base()
-        {
-        }
-
-        public _ApplicationConnectionDb(DbContextOptions<_ApplicationConnectionDb> options)
-            : base(options)
-        {
-        }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-                optionsBuilder.UseSqlServer(ConnectionString);
         }
 
         // Media
@@ -52,8 +66,10 @@ namespace data
         // public DbSet<UserShortcuts> UserShortcuts { get; set; } = default!;
         // public DbSet<UsersRoles> UsersRoles { get; set; } = default!;
 
-        // Languages & Localization
+        // Languages
         // public DbSet<Languages> Languages { get; set; } = default!;
+
+        //Localization
         public DbSet<Country> Country { get; set; } = default!;
         public DbSet<Cities> Cities { get; set; } = default!;
         public DbSet<Regions> Regions { get; set; } = default!;

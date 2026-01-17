@@ -19,4 +19,9 @@
     <ProjectReference Include="..\razor\razor.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Areas\Vendor\Controllers\" />
+    <Folder Include="Areas\Vendor\Views\" />
+  </ItemGroup>
+
 </Project>

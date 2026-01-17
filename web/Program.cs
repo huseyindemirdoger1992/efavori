@@ -121,6 +121,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 // --- 7. SEO Uyumlu Route Yapýsý ({culture} parametresi eklendi) ---
+// Areas rotasý (Eski default rotanýn ÜSTÜNE ekle)
+app.MapControllerRoute(
+    name: "areas",
+    pattern: "{culture=en}/{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+// Mevcut default rotan (Bunu koru)
 app.MapControllerRoute(
     name: "default",
     pattern: "{culture=en}/{controller=Home}/{action=Index}/{id?}");

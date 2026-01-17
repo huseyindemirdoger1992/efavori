@@ -1,55 +1,53 @@
 using data;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Localization.Routing;
+using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. Görünüm ve Kodlama Ayarlarý ---
-// Türkçe karakterlerin HTML çýktýsýnda bozulmamasý için (Örn: þ, ð, ü)
+// --- 1. Görünüm, Kodlama ve Çoklu Dil Ayarlarý ---
 builder.Services.AddSingleton<HtmlEncoder>(
     HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
 
 builder.Services.AddHttpContextAccessor();
 
-// Geliþtirme aþamasýnda Razor sayfalarýnýn yenilenmesi için
+// Dil dosyalarýnýn (Resources) aranacaðý klasörü belirtiyoruz
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+var mvcBuilder = builder.Services.AddControllersWithViews()
+    .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
+    .AddDataAnnotationsLocalization();
+
 if (builder.Environment.IsDevelopment())
 {
-    builder.Services.AddControllersWithViews()
-        .AddRazorRuntimeCompilation();
-}
-else
-{
-    builder.Services.AddControllersWithViews();
+    mvcBuilder.AddRazorRuntimeCompilation();
 }
 
 builder.Services.AddServerSideBlazor();
 
-// --- 2. Veritabaný ve Baðlantý Yapýlandýrmasý ---
-// Baðlantý cümlesini appsettings.json veya User Secrets'tan çeker
+// --- 2. Veritabaný Yapýlandýrmasý ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Baðlantý cümlesi 'DefaultConnection' bulunamadý.");
 
-// NOT: Hem AddDbContext hem AddDbContextPool kullanýlmaz. 
-// Yüksek performans için AddDbContextPool tercih edilmiþtir.
 builder.Services.AddDbContextPool<_ApplicationConnectionDb>(options =>
 {
     options.UseSqlServer(connectionString, sql =>
     {
-        sql.CommandTimeout(30); // Sorgu zaman aþýmý
-        // Baðlantý kopmalarýna karþý otomatik yeniden deneme (Resiliency)
-        sql.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorNumbersToAdd: null);
+        sql.CommandTimeout(30);
+        sql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
     });
 
     if (builder.Environment.IsDevelopment())
     {
-        options.EnableDetailedErrors(); // Hatalarý detaylandýr
-        options.EnableSensitiveDataLogging(); // Loglarda SQL parametrelerini gör (Geliþtirme için)
+        options.EnableDetailedErrors();
+        options.EnableSensitiveDataLogging();
     }
 });
 
@@ -63,19 +61,45 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Security/Logout/";
         options.LogoutPath = "/Security/Logout/";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Sadece HTTPS
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7); // Oturum süresi
-        options.SlidingExpiration = true; // Hareket varsa süreyi uzat
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
     });
 
 builder.Services.AddAuthorization();
 
-// --- 4. Dosya Yükleme Limitleri (128 MB) ---
+// --- 4. Dosya Yükleme Limitleri ---
 builder.Services.Configure<IISServerOptions>(options => { options.MaxRequestBodySize = 134217728; });
 builder.Services.Configure<KestrelServerOptions>(options => { options.Limits.MaxRequestBodySize = 134217728; });
 
-// --- 5. Uygulama Hattý (Middleware) ---
+// --- 5. Dil Seçeneklerini Yapýlandýr (TR, EN, DE) ---
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[]
+    {
+        new CultureInfo("az"),
+        new CultureInfo("de"),
+        new CultureInfo("es"),
+        new CultureInfo("fr"),
+        new CultureInfo("hi"),
+        new CultureInfo("pt"),
+        new CultureInfo("ru"),
+        new CultureInfo("tr"),
+        new CultureInfo("zh"),
+        new CultureInfo("en")
+    };
+
+    // Varsayýlan dil EN
+    options.DefaultRequestCulture = new RequestCulture(culture: "en", uiCulture: "en");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+
+    // URL'den kültür bilgisini okumak için Provider ekliyoruz
+    options.RequestCultureProviders.Insert(0, new RouteDataRequestCultureProvider());
+});
+
+// --- 6. Uygulama Hattý (Middleware) ---
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -86,15 +110,20 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
 
-// Önemli: Authentication her zaman Authorization'dan önce gelmeli
+// Dil ayarlarýný etkinleþtir
+var locOptions = app.Services.GetService<IOptions<RequestLocalizationOptions>>();
+app.UseRequestLocalization(locOptions.Value);
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+// --- 7. SEO Uyumlu Route Yapýsý ({culture} parametresi eklendi) ---
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{culture=en}/{controller=Home}/{action=Index}/{id?}");
 
 app.MapBlazorHub();
 

@@ -1,3 +1,4 @@
+using api;
 using data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
@@ -19,6 +20,8 @@ builder.Services.AddSingleton<HtmlEncoder>(
     HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddDistributedMemoryCache(); // Session için gerekli
+builder.Services.AddSession(); // Session özelliðini aktif et
 
 // Kullanýcý bilgilerini yönetmek için özel servis kaydý
 builder.Services.AddScoped<api.UserInfos>();

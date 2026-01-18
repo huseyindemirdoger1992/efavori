@@ -20,7 +20,7 @@ namespace data
         // Users
         public DbSet<Users> Users { get; set; } = default!;
         // public DbSet<LoginTry> LoginTry { get; set; } = default!;
-        // public DbSet<UserShortcuts> UserShortcuts { get; set; } = default!;
+        public DbSet<UserShortcuts> UserShortcuts { get; set; } = default!;
         // public DbSet<UsersRoles> UsersRoles { get; set; } = default!;
 
         // Languages

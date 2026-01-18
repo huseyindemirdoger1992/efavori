@@ -3,6 +3,10 @@
 @using System.Text.Encodings.Web
 @using web.wwwroot
 @using Microsoft.EntityFrameworkCore
+@using System.Web
+@using System.Text.Json;
+
+
 @inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 
 @{
@@ -71,6 +75,28 @@
                     {
                         // Log kaydı başarısız olsa bile kullanıcı deneyimini etkilemesin
                     }
+                }
+                else
+                {
+
+                    // Örnek Guid listesi
+                    List<Guid> guidList = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
+
+                    // Listeyi string'e çeviriyoruz
+                    string jsonList = JsonSerializer.Serialize(guidList);
+
+                    var cookieOptions = new CookieOptions
+                    {
+                        Expires = DateTimeOffset.UtcNow.AddDays(7), // Liste uzunsa süreyi çok uzun tutmamak iyidir
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Lax,
+                        Path = "/"
+                    };
+
+                    Context.Response.Cookies.Append("CardIds", jsonList, cookieOptions);
+                    Context.Response.Cookies.Append("UserSettings", "", cookieOptions);
+
                 }
             }
 

@@ -18,6 +18,9 @@ builder.Services.AddSingleton<HtmlEncoder>(
 
 builder.Services.AddHttpContextAccessor();
 
+// Kendi sýnýfýný sisteme kaydet
+builder.Services.AddScoped<api.UserInfos>();
+
 // Dil dosyalarýnýn (Resources) aranacaðý klasörü belirtiyoruz
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 

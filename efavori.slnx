@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Rules.txt" />
+  </Folder>
   <Project Path="api/api.csproj" />
   <Project Path="data/data.csproj" />
   <Project Path="razor/razor.csproj" />

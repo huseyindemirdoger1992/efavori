@@ -58,7 +58,7 @@ namespace data
         // public DbSet<ItemGallery> ItemGallery { get; set; } = default!;
 
         // Logs
-        // public DbSet<Logs> Logs { get; set; } = default!;
+        public DbSet<Logs> Logs { get; set; } = default!;
 
         // Users
         // public DbSet<Users> Users { get; set; } = default!;

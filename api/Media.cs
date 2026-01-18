@@ -20,9 +20,18 @@ namespace api
             _userInfos = userInfos ?? throw new ArgumentNullException(nameof(userInfos));
         }
 
-        /// <summary>
-        /// Gelen görseli AVIF formatına dönüştürür, meta verileri korur ve süreci atomik olarak loglar.
-        /// </summary>
+        // <summary>
+        // Gelen görseli AVIF formatına dönüştürür, meta verileri korur ve süreci atomik olarak loglar.
+        // </summary>
+        
+        // --------------------------------------------------------------------------------------------------
+        // TANIMLANAN/DESTEKLENEN RESİM DOSYA FORMATLARI
+        // Modern Web: AVIF, WEBP, HEIC, HEIF (iPhone), SVG
+        // Standart:   JPG, JPEG, PNG, BMP, GIF, ICO
+        // Profesyonel: PSD (Photoshop), AI (Illustrator), EPS, TIFF, TIF, PDF
+        // Fotoğrafçı: DNG (Adobe Digital Negative), CR2, NEF, ARW (Raw Kamera Formatları - Temel Destek)
+        // Teknik:     TGA, DDS (Oyun Kaplamaları), HDR, EXR (Yüksek Dinamik Aralıklı Görüntüler)
+        // --------------------------------------------------------------------------------------------------
         public async Task<(string FileName, Logs LogData)> ConvertToAvifWithLogAsync(
             IFormFile file,
             string userEmail,

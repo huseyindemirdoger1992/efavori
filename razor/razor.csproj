@@ -36,6 +36,7 @@
     <Folder Include="Customer\ru\" />
     <Folder Include="Customer\tr\" />
     <Folder Include="Customer\zh\" />
+    <Folder Include="Visitor\" />
     <Folder Include="Vendor\az\" />
     <Folder Include="Vendor\de\" />
     <Folder Include="Vendor\en\" />

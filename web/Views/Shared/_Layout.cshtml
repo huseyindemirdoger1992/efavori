@@ -1,69 +1,221 @@
-﻿@using System.Globalization
-<!DOCTYPE html>
-@* SEO: Sayfa dilini tarayıcıya ve arama motorlarına dinamik olarak bildirir *@
+﻿@using System.Security.Claims
+@using data
+@using System.Text.Encodings.Web
+@using web.wwwroot
+@using Microsoft.EntityFrameworkCore
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
+
 @{
-    // Mevcut sayfanın yolunu alıyoruz (Örn: /Index veya /Privacy)
-    var currentPage = ViewContext.RouteData.Values["page"]?.ToString();
-}
-<html lang="@CultureInfo.CurrentCulture.Name">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Web</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/web.styles.css" asp-append-version="true" />
-</head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                @* SEO Uyumlu Linkler: Mevcut kültürü otomatik ekler *@
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">web</a>
+    // --- 1. DEĞİŞKEN BAŞLATMA (VARSAYILANLAR) ---
+    string BackgroundImage = "/assets/images/bg-themes/1.png";
+    string lang = "en";
+    string TotalLang = "en_EN";
+    string currentFooterText = "All rights reserved.";
+    Users? use = null;
 
-                @* Dil Değiştirici Bölümü *@
-                <div class="ms-auto d-flex gap-2">
-                    @foreach (var culture in new[] { "en", "tr", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" })
+    var userEmail = User.FindFirstValue(ClaimTypes.Email);
+
+    // --- 2. VERİ ÇEKME VE İŞLEME ---
+    if (!string.IsNullOrEmpty(userEmail))
+    {
+        try
+        {
+            // Context kullanımı 'using' ile garanti altına alınmalı
+            using (var db = new _ApplicationConnectionDb())
+            {
+                // Task'ı await ederek thread'i bloklamıyoruz
+                use = await db.Users
+                    .AsNoTracking() // Sadece okuma yaptığımız için performans artışı sağlar
+                    .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
+
+                if (use != null)
+                {
+                    if (!string.IsNullOrEmpty(use.BackgroundImagePath))
+                        BackgroundImage = use.BackgroundImagePath;
+
+                    if (!string.IsNullOrEmpty(use.Language))
                     {
-                        <a asp-page="@currentPage"
-                           asp-route-culture="@culture"
-                           class="btn btn-sm @(CultureInfo.CurrentCulture.Name.StartsWith(culture) ? "btn-primary" : "btn-outline-primary")">
-                            @culture.ToUpper()
-                        </a>
+                        lang = use.Language.ToLower();
+                        TotalLang = $"{lang}_{lang.ToUpper()}";
                     }
-                    <a asp-area="Admin" asp-controller="Home" asp-action="Index" asp-route-culture="@CultureInfo.CurrentCulture.Name">
-                        Yönetim Paneline Git
-                    </a>
-                </div>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between ms-3">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - web - <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+                    // --- BAŞARILI İŞLEM LOGU (Seçici Yaklaşım) ---
+                    // Not: Her sayfa yüklemesinde log yerine, sadece önemli durumlarda log tutabilirsiniz
+                    // Örnek: Session kontrolü ile günde 1 kez veya belirli sayfalarda
+                    try
+                    {
+                        using (var dbLog = new _ApplicationConnectionDb())
+                        {
+                            var successLog = new Logs
+                            {
+                                Id = Guid.NewGuid(),
+                                Title = "Layout Loaded Successfully",
+                                Action = "FetchUserData_Success",
+                                UserId = use.Id,
+                                Exception = null, // Başarılı durumda exception yok
+                                StackTrace = null,
+                                Date = DateTime.UtcNow,
+                                IpAddress = Context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                                UserAgent = Context.Request.Headers["User-Agent"].ToString() ?? "Unknown",
+                                RequestPath = Context.Request.Path,
+                                RequestMethod = Context.Request.Method,
+                                Languages = Context.Request.Headers["Accept-Language"].ToString(),
+                                TraceId = Context.TraceIdentifier
+                            };
+
+                            await dbLog.Logs.AddAsync(successLog);
+                            await dbLog.SaveChangesAsync();
+                        }
+                    }
+                    catch
+                    {
+                        // Log kaydı başarısız olsa bile kullanıcı deneyimini etkilemesin
+                    }
+                }
+            }
+
+            // Sözlük tanımı (Dinamikleştirilebilir veya Cache'e alınabilir)
+            var footerTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "az", "Bütün hüquqlar qorunur." },
+                { "de", "Alle Rechte vorbehalten." },
+                { "en", "All rights reserved." },
+                { "es", "Todos los derechos reservados." },
+                { "fr", "Tous droits réservés." },
+                { "hi", "सर्वाधिकार सुरक्षित।" },
+                { "pt", "Todos os direitos reservados." },
+                { "ru", "Все права защищены." },
+                { "tr", "Tüm hakları saklıdır." },
+                { "zh", "版权所有。" }
+            };
+
+            currentFooterText = footerTexts.GetValueOrDefault(lang, footerTexts["en"]);
+        }
+        catch (Exception ex)
+        {
+            // --- 3. HATA YÖNETİMİ VE LOGLAMA (SİSTEMİ YAVAŞLATMADAN) ---
+            try
+            {
+                using (var dbLog = new _ApplicationConnectionDb())
+                {
+                    var errorLog = new Logs
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = "Layout Data Error",
+                        Action = "FetchUserData_Error",
+                        UserId = use?.Id,
+                        Exception = ex.Message,
+                        StackTrace = ex.StackTrace,
+                        Date = DateTime.UtcNow, // Global standart UTC'dir
+                        IpAddress = Context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                        UserAgent = Context.Request.Headers["User-Agent"].ToString() ?? "Unknown",
+                        RequestPath = Context.Request.Path,
+                        RequestMethod = Context.Request.Method,
+                        Languages = Context.Request.Headers["Accept-Language"].ToString(),
+                        TraceId = Context.TraceIdentifier // Hata takibi için kritik
+                    };
+
+                    await dbLog.Logs.AddAsync(errorLog);
+                    await dbLog.SaveChangesAsync();
+                }
+            }
+            catch
+            {
+                // Veritabanı bile çökmüşse, kullanıcıya beyaz ekran göstermemek için sessiz kalıyoruz.
+            }
+        }
+    }
+}
+<!doctype html>
+<html lang="@lang">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    @* --- 1. Temel SEO ve Otorite --- *@
+    <title>@ViewData["Title"] | efavori.com</title>
+    <meta name="description" content="@(ViewData["Description"] ?? "efavori.com ile favori içeriklerinizi güvenle yönetin.")">
+    <meta name="keywords" content="@(ViewData["Keywords"] ?? "efavori, dijital yönetim, içerik planlama")">
+    <meta name="author" content="efavori.com">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)" />
+    @* Çok dilli yapı desteği (lang değişkenini yukarıda tanımlamıştınız) *@
+    <link rel="alternate" hreflang="@lang" href="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)" />
+    <link rel="alternate" hreflang="x-default" href="@(Context.Request.Scheme + "://" + Context.Request.Host)/" />
+    @* --- 2. Sosyal Medya (Open Graph & Twitter) --- *@
+    <meta property="og:locale" content="@TotalLang">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="@ViewData["Title"] | efavori.com">
+    <meta property="og:description" content="@(ViewData["Description"] ?? "efavori.com ile favori içeriklerinizi güvenle yönetin.")">
+    <meta property="og:url" content="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)">
+    <meta property="og:site_name" content="efavori.com">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@ViewData["Title"]">
+    <meta name="twitter:description" content="@(ViewData["Description"] ?? "efavori.com içerik yönetimi.")">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://www.google-analytics.com">
+    <link rel="icon" href="~/assets/favicon/32x32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="~/assets/favicon/180x180.png">
+    <meta name="theme-color" content="#0000FF">
+    @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
+</head>
+<body class="bg-theme" style="background-image: url('@BackgroundImage'); min-height: 100vh;">
+    <div class="wrapper">
+        @* Bileşenlere 'use' nesnesini gönderiyoruz *@
+        @(await Html.RenderComponentAsync<razor._Shared.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+        @(await Html.RenderComponentAsync<razor._Shared.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+        <div class="page-wrapper">
+            <div class="page-content">
+                @RenderBody()
+            </div>
         </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+        @* Sidebar açılınca arkapilanı karartır *@
+        <div class="overlay toggle-icon"></div>
+        @* Yukarı çık butonu *@
+        <a href="javaScript:;" class="back-to-top" style="margin-bottom:32px;"><i class='bx bxs-up-arrow-alt'></i></a>
+        <div class="content-wrapper">
+        </div>
+        <footer class="page-footer">
+            <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText</p>
+        </footer>
+        <style>
+            .page-footer {
+                display: none; /* Mobilde gizle */
+            }
+
+            @@media (min-width: 992px) {
+                .page-footer {
+                    display: block; /* Sadece masaüstünde göster */
+                    position: fixed; /* Ekrana sabitle */
+                    bottom: 0;
+                    /* Cam Efekti Başlangıcı */
+                    backdrop-filter: blur(5px); /* Arkayı bulandırır */
+                }
+
+                body {
+                    /* Footer yüksekliği kadar boşluk bırakır, böylece en alttaki butonlar yukarı itilir */
+                    padding-bottom: 50px;
+                }
+            }
+        </style>
+    </div>
+    @* 1. Önce kütüphaneleri yükle *@
+    @(await Html.RenderComponentAsync<Js>(RenderMode.Static))
+    @* 2. Blazor Framework yükle *@
     <base href="~/" />
     <script src="~/_framework/blazor.server.js"></script>
+    @* 3. Sayfaya özel yazılan $(document).ready kodlarını çalıştır *@
     @await RenderSectionAsync("Scripts", required: false)
+    <!-- Mevcut script taglarının ALTINA ekleyin -->
+    <script>
+        // DOM tamamen yüklendikten sonra MetisMenu'yu başlat
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (typeof $ !== 'undefined' && typeof $.fn.metisMenu !== 'undefined') {
+                    $("#menu").metisMenu();
+                }
+            }, 1);
+        });
+    </script>
 </body>
 </html>

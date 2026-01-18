@@ -1,0 +1,52 @@
+﻿@using data
+
+@code {
+    [Parameter]
+    public Users? _use { get; set; }
+
+    string Role;
+
+    protected override void OnParametersSet()
+    {
+        try
+        {
+            Role = _use?.UsersType ?? "Customer";
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+}
+
+
+<div class="topbar d-flex align-items-center">
+    <nav class="navbar navbar-expand gap-3">
+        <div class="mobile-toggle-menu" onclick="$('body').addClass('toggled')">
+            <i class='bx bx-menu'></i>
+        </div>
+
+        <div class="search-bar flex-grow-1">
+            <div class="position-relative search-bar-box">
+                <input type="text" class="form-control search-control" placeholder="Type to search...">
+                <span class="position-absolute top-50 search-show translate-middle-y">
+                    <i class='bx bx-search'></i>
+                </span>
+            </div>
+        </div>
+
+        <div class="top-menu ms-auto">
+            <ul class="navbar-nav align-items-center gap-1">
+                <Language _use="@_use" />
+                <Infos _use="@_use" />
+                <ShortCuts _use="@_use" />
+                <ShopCart _use="@_use" />
+            </ul>
+        </div>
+        <ProfileMenu _use="@_use" />
+    </nav>
+</div>
+@if (Role == "Vendor" || Role == "Customer")
+{
+    <HeaderVendor use="@_use" />
+}

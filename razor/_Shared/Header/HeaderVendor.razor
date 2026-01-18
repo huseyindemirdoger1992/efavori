@@ -1,0 +1,902 @@
+﻿@using data
+@using Microsoft.EntityFrameworkCore
+@implements IAsyncDisposable
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+@code {
+    [Parameter] public Users? use { get; set; }
+
+    private _ApplicationConnectionDb? db;
+    private string MenuSelected = "Customer";
+    private bool _isUpdating = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        db = await DbFactory.CreateDbContextAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (use != null && !_isUpdating)
+        {
+            MenuSelected = use.HeaderMenuType ?? "Customer";
+        }
+    }
+
+    private async Task MenuTravel(string value)
+    {
+        if (use == null || _isUpdating) return;
+        if (MenuSelected == value) return;
+
+        try
+        {
+            _isUpdating = true;
+            MenuSelected = value;
+            use.HeaderMenuType = value;
+
+            // Önce UI'ı bir kere tetikleyelim ki donma hissi olmasın
+            StateHasChanged();
+
+            // Mevcut 'db' değişkenini kullanmak yerine yeni bir context oluşturuyoruz
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            // Mevcut 'use' nesnesini bu yeni context'e tanıtıyoruz
+            context.Entry(use).State = EntityState.Modified;
+
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            // Loglama için de yeni bir context kullanmak en güvenlisi
+            await LogError(ex);
+        }
+        finally
+        {
+            _isUpdating = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LogError(Exception ex)
+    {
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var lg = new Logs
+            {
+                Title = "Header Menu Hatası",
+                Date = DateTime.Now,
+                Exception = ex.Message
+            };
+            context.Logs.Add(lg);
+            await context.SaveChangesAsync();
+        }
+        catch { /* Log hatası uygulamayı durdurmasın */ }
+    }
+
+    public async ValueTask DisposeAsync() => await (db?.DisposeAsync() ?? ValueTask.CompletedTask);
+}
+
+<div class="windows-menu-bar" id="winMenuBar">
+    <!-- MOBİL TUTAMAK: ARTIK STICKY -->
+    <div class="win-mobile-handle d-lg-none" onclick="toggleWinMenu()">
+        <div class="handle-line"></div>
+        <div class="handle-content">
+            <i class='bx bx-chevron-up' id="winIcon"></i>
+            <span>SATICI OPERASYON MERKEZİ</span>
+        </div>
+    </div>
+
+    <ul class="windows-menu">
+        @if (use != null)
+        {
+            <ul class="windows-menu">
+                @* --- ADMIN BÖLÜMÜ --- *@
+                @if (use.UsersType == "Admin")
+                {
+                    <li class="nav-item">
+                        <a href="javascript:void(0)"
+                           class="d-flex align-items-center gap-2 nav-link
+                      @(MenuSelected == "Admin" ? "text-white opacity-100 border-bottom border-3 border-info shadow-lg" : "text-white opacity-50")"
+                           style="text-shadow: 0 0 8px rgba(13, 202, 240, 0.8);"
+                           @onclick='async () => await MenuTravel("Admin")' @onclick:preventDefault>
+                            <i class="fa fa-user-secret"></i> Admin
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="javascript:void(0)"
+                           class="d-flex align-items-center gap-2 nav-link
+                      @(MenuSelected == "Vendor" ? "text-white opacity-100 border-bottom border-3 border-info shadow-lg" : "text-white opacity-50")"
+                           style="text-shadow: 0 0 8px rgba(13, 202, 240, 0.8);"
+                           @onclick='async () => await MenuTravel("Vendor")' @onclick:preventDefault>
+                            <i class="fa fa-building-o"></i> Satış
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="javascript:void(0)"
+                           class="d-flex align-items-center gap-2 nav-link
+                      @(MenuSelected == "Customer" ? "text-white opacity-100 border-bottom border-3 border-info shadow-lg" : "text-white opacity-50")"
+                           style="text-shadow: 0 0 8px rgba(13, 202, 240, 0.8);"
+                           @onclick='async () => await MenuTravel("Customer")' @onclick:preventDefault>
+                            <i class="fa fa-shopping-basket"></i> Alışveriş
+                        </a>
+                    </li>
+                }
+
+                @* --- SATICI BÖLÜMÜ (Admin veya Satıcı ise) --- *@
+                @if (use.UsersType == "Vendor")
+                {
+                    <li class="nav-item">
+                        <a href="javascript:void(0)"
+                           class="d-flex align-items-center gap-2 nav-link
+                              @(MenuSelected == "Vendor" ? "text-white opacity-100 border-bottom border-3 border-info shadow-lg" : "text-white opacity-50")"
+                           style="text-shadow: 0 0 8px rgba(13, 202, 240, 0.8);"
+                           @onclick='async () => await MenuTravel("Vendor")' @onclick:preventDefault>
+                            <i class="fa fa-building-o"></i> Satış
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="javascript:void(0)"
+                           class="d-flex align-items-center gap-2 nav-link
+                              @(MenuSelected == "Customer" ? "text-white opacity-100 border-bottom border-3 border-info shadow-lg" : "text-white opacity-50")"
+                           style="text-shadow: 0 0 8px rgba(13, 202, 240, 0.8);"
+                           @onclick='async () => await MenuTravel("Customer")' @onclick:preventDefault>
+                            <i class="fa fa-shopping-basket"></i> Alışveriş
+                        </a>
+                    </li>
+                }
+                @* --- Müşteri BÖLÜMÜ (Admin veya Satıcı ise) --- *@
+                @if (use.UsersType == "Customer")
+                {
+                    <li class="nav-item">
+                        <a href="javascript:void(0)"
+                           class="d-flex align-items-center gap-2 nav-link
+                                      @(MenuSelected == "Customer" ? "text-white opacity-100 border-bottom border-3 border-info shadow-lg" : "text-white opacity-50")"
+                           style="text-shadow: 0 0 8px rgba(13, 202, 240, 0.8);"
+                           @onclick='async () => await MenuTravel("Customer")' @onclick:preventDefault>
+                            <i class="fa fa-shopping-basket"></i> Alışveriş
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            @* Veri yüklenirken boşluk veya loading göstererek hatayı engelleriz *@
+            <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
+        }
+
+
+        @if (MenuSelected == "Admin")
+        {
+            <li class="nav-item d-none d-md-block">
+                <a class="d-flex align-items-center gap-2">
+                    >
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="/Admin/Dashboard" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-rocket"></i> Hızlı Bakış
+                </a>
+            </li>
+
+            <!-- KULLANICI VE ROL YÖNETİMİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-users"></i> Üyeler
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Admin/Users/Sellers"><i class="fa fa-briefcase fa-fw me-2"></i> Satıcılar (Sellers)</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Users/Consumers"><i class="fa fa-user fa-fw me-2"></i> Tüketiciler (Consumers)</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Users/Admins"><i class="fa fa-user-secret fa-fw me-2"></i> Yönetici Kadrosu</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/Admin/Roles/Permissions"><i class="fa fa-key fa-fw me-2"></i> Rol ve İzin Tanımları</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Users/Verification"><i class="fa fa-check-square fa-fw me-2"></i> Kimlik Doğrulama Talepleri</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Users/Banned"><i class="fa fa-ban fa-fw me-2"></i> Yasaklı/Askıya Alınanlar</a></li>
+                </ul>
+            </li>
+
+            <!-- MAĞAZA VE PAZARYERİ ONAYLARI -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-university"></i> Mağazalar
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li>
+                        <a class="dropdown-item" href="/Admin/Stores/Pending">
+                            <i class="fa fa-hourglass-start fa-fw me-2 text-warning"></i> Mağaza Başvuruları
+                            <span class="badge bg-warning text-dark float-end">@* @db.Stores.Count(x => x.AdminPermissionPending == true) *@</span>
+                        </a>
+                    </li>
+                    <li><a class="dropdown-item" href="/Admin/Stores/Active"><i class="fa fa-check-circle fa-fw me-2 text-success"></i> Aktif Mağazalar</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Stores/Complaints"><i class="fa fa-exclamation-triangle fa-fw me-2 text-danger"></i> Mağaza Şikayetleri</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/Admin/Stores/Categories"><i class="fa fa-folder-open fa-fw me-2"></i> Sektörel Kategoriler</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Stores/Commissions"><i class="fa fa-percent fa-fw me-2"></i> Mağaza Komisyon Oranları</a></li>
+                </ul>
+            </li>
+
+            <!-- KATALOG VE ÜRÜN YÖNETİMİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-cubes"></i> Ürünler
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Admin/Products/Pending"><i class="fa fa-search fa-fw me-2"></i> Onay Bekleyen Ürünler</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Products/Reported"><i class="fa fa-flag fa-fw me-2"></i> Bildirilen Ürünler</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Products/Categories"><i class="fa fa-sitemap fa-fw me-2"></i> Kategori Ağacı Yönetimi</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Products/Attributes"><i class="fa fa-list-alt fa-fw me-2"></i> Özellik ve Varyant Havuzu</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Products/Brands"><i class="fa fa-registered fa-fw me-2"></i> Marka Yönetimi</a></li>
+                </ul>
+            </li>
+
+            <!-- FİNANSAL MERKEZ VE ÖDEMELER -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-money"></i> Finans
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Admin/Finance/Payouts"><i class="fa fa-share-square-o fa-fw me-2"></i> Satıcı Hakediş Ödemeleri</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Finance/Transactions"><i class="fa fa-exchange fa-fw me-2"></i> Tüm İşlem Geçmişi (Log)</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Finance/Invoices"><i class="fa fa-file-text-o fa-fw me-2"></i> Sistem Faturaları</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Finance/Refunds"><i class="fa fa-undo fa-fw me-2"></i> İade/Geri Ödeme Yönetimi</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/Admin/Finance/TaxSettings"><i class="fa fa-calculator fa-fw me-2"></i> Vergi ve KDV Ayarları</a></li>
+                </ul>
+            </li>
+
+            <!-- SİSTEM PAZARLAMA VE İÇERİK -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-bullhorn"></i> Pazarlama
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Admin/Cms/Banners"><i class="fa fa-picture-o fa-fw me-2"></i> Slider ve Banner Yönetimi</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Cms/Announcements"><i class="fa fa-newspaper-o fa-fw me-2"></i> Sistem Duyuruları</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Marketing/Campaigns"><i class="fa fa-gift fa-fw me-2"></i> Global Kampanyalar</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Marketing/Newsletters"><i class="fa fa-envelope-open-o fa-fw me-2"></i> E-Bülten (Mailing)</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Cms/Pages"><i class="fa fa-file-code-o fa-fw me-2"></i> Statik Sayfalar (KVKK, Sözleşmeler)</a></li>
+                </ul>
+            </li>
+
+            <!-- DESTEK VE TİCKET SİSTEMİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-life-ring"></i> Destek
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li>
+                        <a class="dropdown-item" href="/Admin/Support/Tickets">
+                            <i class="fa fa-ticket fa-fw me-2"></i> Destek Talepleri
+                            <span class="badge bg-danger float-end">12</span>
+                        </a>
+                    </li>
+                    <li><a class="dropdown-item" href="/Admin/Support/Disputes"><i class="fa fa-gavel fa-fw me-2 text-warning"></i> Alıcı-Satıcı Uyuşmazlıkları</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Support/Faas"><i class="fa fa-question-circle fa-fw me-2"></i> S.S.S Yönetimi</a></li>
+                </ul>
+            </li>
+
+            <!-- SİSTEM AYARLARI VE GÜVENLİK -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-gears"></i> Sistem
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Admin/Settings/General"><i class="fa fa-sliders fa-fw me-2"></i> Genel Site Ayarları</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Settings/MailServer"><i class="fa fa-server fa-fw me-2"></i> SMTP / Mail Sunucu</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Settings/SmsGateways"><i class="fa fa-mobile fa-fw me-2"></i> SMS Entegrasyonları</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Settings/ApiKeys"><i class="fa fa-code fa-fw me-2"></i> 3. Parti API / Webhook</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/Admin/Settings/Logs"><i class="fa fa-terminal fa-fw me-2 text-info"></i> Sistem Log Kayıtları</a></li>
+                    <li><a class="dropdown-item" href="/Admin/Settings/Backup"><i class="fa fa-database fa-fw me-2 text-success"></i> Veritabanı Yedekleme</a></li>
+                </ul>
+            </li>
+
+            <!-- RAPORLAMA VE ANALİZ -->
+            <li class="nav-item">
+                <a href="/Admin/Reports/Main" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-bar-chart"></i> Büyük Veri Analizi
+                </a>
+            </li>
+        }
+
+        
+        @if (MenuSelected == "Vendor")
+        {
+            <li class="nav-item d-none d-md-block">
+                <a class="d-flex align-items-center gap-2">
+                    >
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-dashboard"></i> Panel
+                </a>
+            </li>
+            <li class="dropdown">
+                <a href="/Panel/QuickView/" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-picture-o"></i> Medya
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Media/Images/"><i class="fa fa-file-image-o fa-fw me-2"></i> Resimler</a></li>
+                    <li><a class="dropdown-item" href="/Media/Videos/"><i class="fa fa-file-video-o fa-fw me-2"></i> Videolar</a></li>
+                    <li><a class="dropdown-item" href="/Media/Documents/"><i class="fa fa-file-text-o fa-fw me-2"></i> Dosyalar</a></li>
+                </ul>
+            </li>
+
+            <!-- MAĞAZA VE ŞUBE YÖNETİMİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-building-o"></i> Mağaza
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Vendor/ShoppingCentre/AddStore"><i class="fa fa-plus-circle fa-fw me-2"></i> Mağaza Ekle</a></li>
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li>
+                        <a class="dropdown-item" href="/ShoppingCentre/Pending">
+                            <i class="fa fa-hourglass-start fa-fw me-2"></i>
+                            Onay Bekleyenler
+@*                             @if (@db.Stores.Where(x => x.UserId == use.Id && x.AdminPermissionPending == true && x.IsActiveStateAdmin != true).Count() != 0)
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    @db.Stores.Where(x => x.UserId == use.Id && x.AdminPermissionPending == true && x.IsActiveStateAdmin != true).Count()
+                                </span>
+                            } *@
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/ShoppingCentre/Rejected">
+                            <i class="fa fa-times-circle-o fa-fw me-2"></i>
+                            Reddedilenler
+@*                             @if (@db.Stores.Where(x => x.UserId == use.Id && x.AdminPermissionPending == false && x.IsActiveStateAdmin == false).Count() != 0)
+                            {
+                                <span class="badge bg-danger">
+                                    @db.Stores.Where(x => x.UserId == use.Id && x.AdminPermissionPending == false && x.IsActiveStateAdmin == false).Count()
+                                </span>
+                            } *@
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="/ShoppingCentre/Approved">
+                            <i class="fa fa-check-circle-o fa-fw me-2"></i>
+                            Onaylananlar
+@*                             @if (@db.Stores.Where(x => x.UserId == use.Id && x.AdminPermissionPending == false && x.IsActiveStateAdmin == true).Count() != 0)
+                            {
+                                <span class="badge bg-success">
+                                    @db.Stores.Where(x => x.UserId == use.Id && x.AdminPermissionPending == false && x.IsActiveStateAdmin == true).Count()
+                                </span>
+                            } *@
+                        </a>
+                    </li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li><a class="dropdown-item" href="/ShoppingCentre/List"><i class="fa fa-list-ul fa-fw me-2"></i> Tüm Mağaza Bilgileri</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li><a class="dropdown-item" href="/ShoppingCentre/WorkingHours"><i class="fa fa-clock-o fa-fw me-2"></i> Çalışma Saatleri</a></li>
+                    <li><a class="dropdown-item" href="/ShoppingCentre/WorkingHours"><i class="fa fa-eye fa-fw me-2"></i> Görünecek Bilgiler</a></li>
+
+                    <li><a class="dropdown-item" href="/ShoppingCentre/Settings"><i class="fa fa-sliders fa-fw me-2"></i> Mağaza Genel Ayarları</a></li>
+                </ul>
+            </li>
+
+            <!-- EKİP VE YETKİLENDİRME -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-id-card-o"></i> Personel
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Employee/AddEmployee"><i class="fa fa-plus fa-fw me-2"></i> Yeni Personel</a></li>
+
+                    <li><a class="dropdown-item" href="/Employee/List"><i class="fa fa-users fa-fw me-2"></i> Personel Listesi</a></li>
+
+                    <li><a class="dropdown-item" href="/Employee/Roles"><i class="fa fa-shield fa-fw me-2"></i> Rol ve Yetki Grupları</a></li>
+
+                    <li><a class="dropdown-item" href="/Employee/Active"><i class="fa fa-user-circle fa-fw me-2"></i> Aktif Personeller</a></li>
+
+                    <li><a class="dropdown-item" href="/Employee/Passive"><i class="fa fa-user-times fa-fw me-2"></i> Pasif Personeller</a></li>
+
+                    <li><a class="dropdown-item" href="/Employee/All"><i class="fa fa-address-book fa-fw me-2"></i> Tüm Personeller</a></li>
+
+                    <li><a class="dropdown-item" href="/Employee/Activity"><i class="fa fa-history fa-fw me-2"></i> Personel Log Kayıtları</a></li>
+
+                    <li><a class="dropdown-item" href="/Employee/Messages"><i class="fa fa-comments-o fa-fw me-2"></i> Ekip İçi İletişim</a></li>
+                </ul>
+            </li>
+
+            <!-- ÜRÜN VE ENVANTER YÖNETİMİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-cubes"></i> Ürün
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Product/Create"><i class="fa fa-plus-square-o fa-fw me-2"></i> Yeni Ürün Ekle</a></li>
+
+                    <li><a class="dropdown-item" href="/Product/Pending"><i class="fa fa-hourglass-2 fa-fw me-2"></i> Onay Bekleyen Ürünler</a></li>
+
+                    <li><a class="dropdown-item" href="/Product/Approved"><i class="fa fa-check-square-o fa-fw me-2"></i> Onaylanan Ürünler</a></li>
+
+                    <li><a class="dropdown-item" href="/Product/List"><i class="fa fa-list fa-fw me-2"></i> Tüm Ürünler</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li><a class="dropdown-item" href="/Product/Variants"><i class="fa fa-tags fa-fw me-2"></i> Ürün Varyantları</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li><a class="dropdown-item" href="/Product/BatchUpdate"><i class="fa fa-refresh fa-fw me-2"></i> Toplu Stok/Fiyat Güncelleme</a></li>
+
+                    <li><a class="dropdown-item" href="/Product/Variations"><i class="fa fa-sitemap fa-fw me-2"></i> Varyant Seçenekleri</a></li>
+
+                    <li><a class="dropdown-item" href="/Product/InventoryAlerts"><i class="fa fa-exclamation-triangle fa-fw me-2"></i> Kritik Stok Uyarıları</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/Product/Reviews"><i class="fa fa-star-half-o fa-fw me-2"></i> Ürün Değerlendirmeleri</a></li>
+                </ul>
+            </li>
+
+            <!-- MÜŞTERİ VE CARİ YÖNETİMİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-address-card-o"></i> Müşteri
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Customer/Create"><i class="fa fa-user-plus fa-fw me-2"></i> Yeni Müşteri</a></li>
+                    <li><a class="dropdown-item" href="/Customer/B2C"><i class="fa fa-user fa-fw me-2"></i> Cari Müşteriler (B2C)</a></li>
+                    <li><a class="dropdown-item" href="/Customer/B2B"><i class="fa fa-briefcase fa-fw me-2"></i> Bayi Müşteriler (B2B)</a></li>
+                    <li><a class="dropdown-item" href="/Customer/List"><i class="fa fa-users fa-fw me-2"></i> Müşteri Listesi</a></li>
+                    <li><a class="dropdown-item" href="/Customer/CreateQuote"><i class="fa fa-handshake-o fa-fw me-2"></i> Toptan Fiyat Teklifi Ver</a></li>
+                    <li><a class="dropdown-item" href="/Customer/PendingQuotes"><i class="fa fa-spinner fa-spin fa-fw me-2"></i> Bekleyen Teklifler</a></li>
+                    <li><a class="dropdown-item" href="/Customer/PreparingQuotes"><i class="fa fa-cogs fa-fw me-2"></i> Hazırlanan Teklifler</a></li>
+                    <li><a class="dropdown-item" href="/Customer/ApprovedQuotes"><i class="fa fa-thumbs-o-up fa-fw me-2"></i> Onaylanan Teklifler</a></li>
+                    <li><a class="dropdown-item" href="/Customer/RejectedQuotes"><i class="fa fa-thumbs-o-down fa-fw me-2"></i> Reddedilen Teklifler</a></li>
+                    <li><a class="dropdown-item" href="/Customer/CompletedQuotes"><i class="fa fa-check fa-fw me-2"></i> Tamamlanan Teklifler</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li><a class="dropdown-item" href="/Customer/Ledger"><i class="fa fa-book fa-fw me-2"></i> Cari Hesap Ekstreleri</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Groups"><i class="fa fa-tags fa-fw me-2"></i> Müşteri Grupları & Segmentler</a></li>
+                </ul>
+            </li>
+
+            <!-- SİPARİŞ VE LOJİSTİK -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-shopping-basket"></i> Sipariş
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Order/New"><i class="fa fa-bell-o fa-fw me-2"></i> Yeni Siparişler <span class="badge bg-danger">5</span></a></li>
+                    <li><a class="dropdown-item" href="/Order/ManualOrder"><i class="fa fa-pencil-square-o fa-fw me-2"></i> Manuel Sipariş Oluştur</a></li>
+                    <li><a class="dropdown-item" href="/Order/Processing"><i class="fa fa-hourglass-half fa-fw me-2"></i> Onaylananlar/Hazırlananlar</a></li>
+                    <li><a class="dropdown-item" href="/Order/Shipped"><i class="fa fa-barcode fa-fw me-2"></i> Kargoya Verilenler</a></li>
+                    <li><a class="dropdown-item" href="/Order/Delivered"><i class="fa fa-truck fa-fw me-2"></i> Teslim Edilenler</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li><a class="dropdown-item" href="/Order/ReturnRequests"><i class="fa fa-reply fa-fw me-2"></i> İade & Değişim Talepleri</a></li>
+                    <li><a class="dropdown-item" href="/Order/ReturnsApproved"><i class="fa fa-check fa-fw me-2"></i> İade & Değişim Onaylananlar</a></li>
+                    <li><a class="dropdown-item" href="/Order/ReturnsRejected"><i class="fa fa-ban fa-fw me-2"></i> İade & Değişim Reddedilenler</a></li>
+
+                    <li><a class="dropdown-item" href="/Order/Archive"><i class="fa fa-archive fa-fw me-2"></i> Tüm Sipariş Arşivi</a></li>
+                </ul>
+            </li>
+
+            <!-- PAZARLAMA VE MÜŞTERİ SADAKATİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-magic"></i> Pazarlama
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Marketing/StoreCampaigns"><i class="fa fa-bullhorn fa-fw me-2"></i> Mağaza Kampanyaları</a></li>
+
+                    <li><a class="dropdown-item" href="/Marketing/Coupons"><i class="fa fa-ticket fa-fw me-2"></i> Özel İndirim Kuponları</a></li>
+
+                    <li><a class="dropdown-item" href="/Marketing/FlashSales"><i class="fa fa-bolt fa-fw me-2"></i> Fırsat Ürünleri (Flash)</a></li>
+
+                    <li><a class="dropdown-item" href="/Marketing/CustomerDatabase"><i class="fa fa-address-book-o fa-fw me-2"></i> Kayıtlı Müşterilerim</a></li>
+                </ul>
+            </li>
+
+            <!-- FİNANSAL YÖNETİM -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-money"></i> Finans
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Finance/Wallet"><i class="fa fa-credit-card fa-fw me-2"></i> Cüzdan Bakiyesi & Hakediş</a></li>
+
+                    <li><a class="dropdown-item" href="/Finance/Payments"><i class="fa fa-bank fa-fw me-2"></i> Banka Hesaplarım</a></li>
+
+                    <li><a class="dropdown-item" href="/Finance/TaxReports"><i class="fa fa-calculator fa-fw me-2"></i> Vergi ve Komisyon Detayları</a></li>
+
+                    <li><a class="dropdown-item" href="/Finance/Invoices"><i class="fa fa-file-pdf-o fa-fw me-2"></i> E-Fatura / Makbuzlar</a></li>
+                </ul>
+            </li>
+
+            <!-- ANALİZ VE RAPORLAMA -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-line-chart"></i> Raporlar
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Report/Sales"><i class="fa fa-pie-chart fa-fw me-2"></i> Satış Analizi</a></li>
+
+                    <li><a class="dropdown-item" href="/Report/Returns"><i class="fa fa-minus-circle fa-fw me-2"></i> Kayıp/İade Analizi</a></li>
+
+                    <li><a class="dropdown-item" href="/Report/Visitors"><i class="fa fa-eye fa-fw me-2"></i> Ziyaretçi İstatistikleri</a></li>
+                </ul>
+            </li>
+
+            <!-- DESTEK VE ENTEGRASYON -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-life-ring"></i> Yardım
+                </a>
+                <ul class="dropdown-menu shadow">
+                    <li><a class="dropdown-item" href="/Help/Suggestions"><i class="fa fa-inbox fa-fw me-2"></i> Öneri & Görüşleriniz</a></li>
+
+                    <li><a class="dropdown-item" href="/Help/Tickets"><i class="fa fa-envelope-o fa-fw me-2"></i> Destek Talepleri</a></li>
+
+                    <li><a class="dropdown-item" href="/Help/Academy"><i class="fa fa-graduation-cap fa-fw me-2"></i> Satıcı Akademisi</a></li>
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li><a class="dropdown-item" href="/Help/Integration"><i class="fa fa-plug fa-fw me-2"></i> API Anahtarları & Webhook</a></li>
+                </ul>
+            </li>
+        }
+
+ 
+        @if (MenuSelected == "Customer")
+        {
+            <li class="nav-item d-none d-md-block">
+                <a class="d-flex align-items-center gap-2">
+                    >
+                </a>
+            </li>
+
+            <!-- DASHBOARD -->
+            <li class="nav-item">
+                <a href="/Customer/Dashboard" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-th-large"></i> <span>Genel Bakış</span>
+                </a>
+            </li>
+
+            <!-- ==========================================
+                 B2C - BİREYSEL ALIŞVERİŞ DÜNYASI
+                 ========================================== -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-shopping-cart text-info"></i> Bireysel İşlemler
+                </a>
+                <ul class="dropdown-menu shadow-lg border-0">
+                    <li><h6 class="dropdown-header text-uppercase opacity-50 small text-info">Sipariş & Takip</h6></li>
+                    <li><a class="dropdown-item" href="/Customer/Orders/Retail"><i class="fa fa-shopping-basket fa-fw me-2"></i> Perakende Siparişlerim</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Orders/Tracking"><i class="fa fa-map-marker fa-fw me-2"></i> Kargo Takip</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Orders/Returns"><i class="fa fa-undo fa-fw me-2"></i> Kolay İade</a></li>
+
+                    <li><hr class="dropdown-divider opacity-25"></li>
+                    <li><h6 class="dropdown-header text-uppercase opacity-50 small text-danger">Alışveriş Deneyimi</h6></li>
+                    <li><a class="dropdown-item" href="/Customer/Wishlist"><i class="fa fa-heart-o fa-fw me-2 text-danger"></i> Favorilerim & Listelerim</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Following/Sellers"><i class="fa fa-star fa-fw me-2 text-warning"></i> Takip Ettiğim Mağazalar</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Reviews"><i class="fa fa-commenting-o fa-fw me-2"></i> Değerlendirmelerim</a></li>
+
+                    <li><hr class="dropdown-divider opacity-25"></li>
+                    <li><h6 class="dropdown-header text-uppercase opacity-50 small text-success">Sadakat & Kazanç</h6></li>
+                    <li><a class="dropdown-item" href="/Customer/Loyalty/Points"><i class="fa fa-diamond fa-fw me-2 text-info"></i> Para Puanlarım</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Loyalty/Coupons"><i class="fa fa-ticket fa-fw me-2 text-danger"></i> İndirim Kuponlarım</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Affiliate/Referral"><i class="fa fa-users fa-fw me-2 text-primary"></i> Arkadaşını Getir (Kazan)</a></li>
+                </ul>
+            </li>
+
+            <!-- ==========================================
+                 B2B - KURUMSAL TİCARET MERKEZİ
+                 ========================================== -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2 border-start border-light-3 ps-3">
+                    <i class="fa fa-briefcase text-warning"></i> Kurumsal (B2B)
+                </a>
+                <ul class="dropdown-menu shadow-lg border-0">
+                    <li><h6 class="dropdown-header text-uppercase opacity-50 small text-warning">Toptan Tedarik</h6></li>
+                    <li><a class="dropdown-item" href="/Customer/B2B/BulkOrder"><i class="fa fa-th fa-fw me-2 text-warning"></i> Matris Sipariş (Toplu Alım)</a></li>
+                    <li><a class="dropdown-item" href="/Customer/B2B/QuickOrder"><i class="fa fa-bolt fa-fw me-2 text-danger"></i> Hızlı SKU Girişi</a></li>
+                    <li><a class="dropdown-item" href="/Customer/B2B/PriceLists"><i class="fa fa-file-excel-o fa-fw me-2 text-success"></i> Şirkete Özel Fiyat Listeleri</a></li>
+                    <li><a class="dropdown-item" href="/Customer/B2B/StockAlerts"><i class="fa fa-cube fa-fw me-2"></i> Stok & Depo Uyarıları</a></li>
+
+                    <li><hr class="dropdown-divider opacity-25"></li>
+                    <li><h6 class="dropdown-header text-uppercase opacity-50 small text-primary">Teklif & RFQ Yönetimi</h6></li>
+                    <li><a class="dropdown-item" href="/Customer/Quote/Manager"><i class="fa fa-handshake-o fa-fw me-2 text-primary"></i> Proje Teklif Talepleri</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Quote/ActiveQuotes"><i class="fa fa-clock-o fa-fw me-2"></i> Açık Teklifler (Pazarlık)</a></li>
+
+                    <li><hr class="dropdown-divider opacity-25"></li>
+                    <li><h6 class="dropdown-header text-uppercase opacity-50 small text-secondary">Organizasyon</h6></li>
+                    <li><a class="dropdown-item" href="/Customer/B2B/Team"><i class="fa fa-sitemap fa-fw me-2"></i> Şirket Hiyerarşisi & Yetki</a></li>
+                    <li><a class="dropdown-item" href="/Customer/B2B/ApprovalFlow"><i class="fa fa-check-square-o fa-fw me-2 text-success"></i> Sipariş Onay Havuzu</a></li>
+                </ul>
+            </li>
+
+            <!-- ==========================================
+                 FİNANSAL YÖNETİM (B2B/B2C HYBRID)
+                 ========================================== -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-balance-scale"></i> Finans & Muhasebe
+                </a>
+                <ul class="dropdown-menu shadow-lg border-0">
+                    <li>
+                        <div class="px-3 py-2 bg-light-transparent mb-2 rounded mx-2 border border-light-3">
+                            <div class="d-flex justify-content-between small opacity-75"><span>Cari Bakiye:</span> <span class="text-info">₺124,500</span></div>
+                            <div class="d-flex justify-content-between small opacity-75"><span>Cüzdan:</span> <span class="text-success">₺12,050</span></div>
+                        </div>
+                    </li>
+                    <li><a class="dropdown-item" href="/Customer/Finance/Statements"><i class="fa fa-list-alt fa-fw me-2 text-primary"></i> Cari Hesap Ekstresi (SOA)</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Finance/Invoices"><i class="fa fa-file-pdf-o fa-fw me-2 text-danger"></i> E-Faturalar & Makbuzlar</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Finance/CreditLimit"><i class="fa fa-line-chart fa-fw me-2 text-success"></i> Risk & Limit Yönetimi</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Finance/PaymentMethods"><i class="fa fa-credit-card fa-fw me-2"></i> Kayıtlı Kartlar & DBS</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Finance/RefundTracking"><i class="fa fa-money fa-fw me-2 text-warning"></i> Geri Ödeme Takibi</a></li>
+                </ul>
+            </li>
+
+            <!-- AYARLAR & GÜVENLİK -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2">
+                    <i class="fa fa-gears"></i> Ayarlar
+                </a>
+                <ul class="dropdown-menu shadow-lg border-0">
+                    <li><a class="dropdown-item" href="/Customer/Account/Profile"><i class="fa fa-user-circle-o fa-fw me-2"></i> Profil Bilgileri</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Account/Security"><i class="fa fa-shield fa-fw me-2 text-info"></i> Güvenlik & 2FA</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Account/Privacy"><i class="fa fa-eye-slash fa-fw me-2 text-warning"></i> Gizlilik (KVKK/GDPR)</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Account/Notifications"><i class="fa fa-bell-o fa-fw me-2"></i> Bildirim Ayarları</a></li>
+                    <li><hr class="dropdown-divider opacity-25"></li>
+                    <li><a class="dropdown-item text-danger" href="/Logout"><i class="fa fa-power-off fa-fw me-2"></i> Güvenli Çıkış</a></li>
+                </ul>
+            </li>
+
+            <!-- DESTEK MERKEZİ -->
+            <li class="dropdown">
+                <a href="javascript:;" data-bs-toggle="dropdown" class="d-flex align-items-center gap-2 border border-light-3 rounded-pill px-3 ms-2">
+                    <i class="fa fa-life-ring"></i> Yardım
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0">
+                    <li><a class="dropdown-item" href="/Customer/Support/Tickets"><i class="fa fa-ticket fa-fw me-2 text-success"></i> Destek Taleplerim</a></li>
+                    <li><a class="dropdown-item" href="/Customer/Support/VendorChat"><i class="fa fa-comments-o fa-fw me-2 text-primary"></i> Satıcılarla Mesajlaşma</a></li>
+                    <li><a class="dropdown-item" href="/Help"><i class="fa fa-question-circle-o fa-fw me-2"></i> S.S.S & Rehberler</a></li>
+                    <li><a class="dropdown-item" href="/Contact"><i class="fa fa-phone fa-fw me-2"></i> Müşteri Hizmetleri</a></li>
+                </ul>
+            </li>
+        }
+    
+    </ul>
+</div>
+<div class="win-overlay" id="winOverlay" onclick="toggleWinMenu()"></div>
+
+<style>
+    @@media (max-width: 991.98px) {
+        .win-mobile-handle {
+            position: sticky;
+            top: 0;
+            z-index: 1050;
+            /* Arka planın saydamlaşmaması için rengi zorla, blur ile birleştir */
+            background-color: rgba(var(--bs-dark-rgb, 33, 37, 41), 0.95) !important;
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    }
+    /* DASHTREME TEMA VE MOBİL MENÜ ÇAKIŞMA ÇÖZÜMÜ */
+    @@media (max-width: 991.98px) {
+        /* Sayfadaki tüm içeriği menü yüksekliği kadar yukarı iter */
+        /* 60px menü boyu + 20px nefes payı = 80px */
+        #main-wrapper,
+        .content-wrapper,
+        body {
+            padding-bottom: 80px !important;
+        }
+        /* Eğer en alttaki butonun hala kapanıyorsa, doğrudan o butonun olduğu klasa da verebiliriz */
+        footer {
+            margin-bottom: 60px !important;
+        }
+    }
+</style>
+
+<style>
+    /* ===== MASAÜSTÜ TEMEL YAPI ===== */
+    .windows-menu-bar {
+        position: sticky;
+        top: 60px;
+        left: 0;
+        right: 0;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px 16px;
+        margin-left: 250px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .topbar {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
+
+    body.toggled .windows-menu-bar {
+        margin-left: 70px;
+    }
+
+    .windows-menu {
+        display: flex;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        gap: 20px;
+    }
+
+        .windows-menu li a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+
+    /* ===== MOBİL ÖZEL (Cam Efekti ve Akıcı Animasyon) ===== */
+    @@media (max-width: 991px) {
+        .windows-menu-bar {
+            position: fixed;
+            top: auto;
+            bottom: 0;
+            left: 0 !important;
+            right: 0;
+            margin-left: 0 !important;
+            background: rgba(20, 20, 20, 0.7); /* Şeffaf koyu zemin */
+            backdrop-filter: blur(25px) saturate(180%); /* Cam efekti derinliği */
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 25px 25px 0 0;
+            height: 60px; /* Kapalıyken yükseklik */
+            padding: 0;
+            overflow: hidden;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.4);
+            z-index: 2000;
+            /* Açılış animasyonu için transition */
+            transition: height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), background 0.5s ease;
+        }
+            /* Menü Aktifken */
+            .windows-menu-bar.active {
+                height: 75vh; /* Ekranın %75'ini kaplar */
+                background: rgba(30, 30, 30, 0.85);
+                overflow-y: auto;
+            }
+
+        .win-mobile-handle {
+            height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+        }
+
+        .handle-line {
+            width: 45px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: 0.3s;
+        }
+        /* Menü İçeriği Animasyonu */
+        .windows-menu {
+            flex-direction: column;
+            padding: 20px;
+            gap: 12px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease 0.1s; /* Gecikmeli içerik animasyonu */
+            pointer-events: none;
+        }
+
+        .windows-menu-bar.active .windows-menu {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .windows-menu li a {
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            font-size: 16px;
+            color: #efefef;
+            display: flex;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        /* Dropdown içleri */
+        .windows-menu .dropdown-menu {
+            position: static !important;
+            transform: none !important;
+            background: rgba(0, 0, 0, 0.2) !important;
+            border-radius: 12px;
+            border: none;
+            padding: 10px;
+            margin-top: 8px;
+        }
+
+        .dropdown-item {
+            color: rgba(255,255,255,0.8) !important;
+            padding: 10px 15px !important;
+        }
+        /* Overlay (Karartma) Animasyonu */
+        .win-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0);
+            backdrop-filter: blur(0px);
+            z-index: 1999;
+            display: none;
+            transition: all 0.5s ease;
+        }
+
+            .win-overlay.active {
+                display: block;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(6px);
+            }
+    }
+</style>
+
+<script>
+    function toggleWinMenu() {
+        const bar = document.getElementById('winMenuBar');
+        const overlay = document.getElementById('winOverlay');
+        const icon = document.getElementById('winIcon');
+
+        if (bar && window.innerWidth < 992) {
+            const isActive = bar.classList.toggle('active');
+            overlay.classList.toggle('active');
+
+            if (isActive) {
+                icon.className = 'bx bx-chevron-down';
+                document.body.style.overflow = 'hidden'; // Arka plan kaymasın
+            } else {
+                icon.className = 'bx bx-chevron-up';
+                document.body.style.overflow = '';
+            }
+        }
+    }
+</script>
+
+<style>
+    /* ORTAK ÖZELLİKLER (Her iki görünümde de marginlerin çalışması için) */
+    [class^="fa-"], [class*=" fa-"] {
+        display: inline-block;
+    }
+
+    /* --- MASAÜSTÜ GÖRÜNÜM --- */
+    @@media (min-width: 769px) {
+        [class^="fa-"], [class*=" fa-"] {
+            margin-top: -4px;
+        }
+    }
+
+    /* --- MOBİL GÖRÜNÜM (768px ve altı) --- */
+    @@media (max-width: 768px) {
+        [class^="fa-"], [class*=" fa-"] {
+            margin-right: 6px;
+            margin-top: 4px;
+        }
+    }
+</style>

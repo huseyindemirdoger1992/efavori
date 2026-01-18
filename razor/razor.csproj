@@ -49,4 +49,18 @@
     <Folder Include="Vendor\pt\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\api\api.csproj" />
+    <ProjectReference Include="..\data\data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="_Shared\FaIcons.razor">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Update="_Shared\ThisPageIsBeingPrepared.razor">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

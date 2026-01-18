@@ -1,0 +1,64 @@
+﻿@using data
+@code {
+    [Parameter]
+    public Users? _use { get; set; }
+}
+@if (_use != null)
+{
+    <div class="user-box dropdown px-3">
+        <a class="d-flex align-items-center nav-link dropdown-toggle gap-3 dropdown-toggle-nocaret" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="@_use.ProfileCoverGallery.ProfileImagePath" class="user-img" alt="user avatar"
+                 style="object-fit: cover; box-shadow: 3px 3px 5px rgba(0,0,0,0.5);">
+            <div class="user-info">
+                <p class="user-name mb-0">@_use.FirstName @_use.LastName</p>
+                <p class="designattion mb-0">@_use.ContactInformation.Email</p>
+            </div>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Profile/Index/">
+                    <i class="fa fa-user"></i>
+                    <span>Profil Bilgileri</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Profile/Visibility/">
+                    <i class="fa fa-eye"></i>
+                    <span>Görünürlük/Gizlilik</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Profile/Personalize/">
+                    <i class="fa fa-paint-brush"></i>
+                    <span>Tema Arka Planı</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Profile/HeaderShortCuts/">
+                    <i class="fa fa-link"></i>
+                    <span>Kısa Yol Yönetimi</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Security/Logout/">
+                    <i class="fa fa-sign-out"></i>
+                    <span>Çıkış Yap</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+}
+else
+{
+    <div class="user-box px-3">
+        <a class="d-flex align-items-center nav-link gap-3"
+           href="/Security/Login/">
+            <img src="/assets/images/9187604.png" class="user-img" alt="user avatar">
+            <div class="user-info">
+                <p class="user-name mb-0">Kayıt/Giriş</p>
+                <p class="designation mb-0"> Hoş Geldiniz </p>
+            </div>
+        </a>
+    </div>
+}

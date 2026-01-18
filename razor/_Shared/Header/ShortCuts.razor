@@ -1,0 +1,269 @@
+﻿@using efavori.com.Data
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IDbContextFactory<_AppDbContext> DbFactory
+
+@rendermode InteractiveServer
+
+@code {
+    private _AppDbContext db = default!;
+    private OrdersTr? OrTr = new();
+    private OrdersEn? OrEn = new();
+    [Parameter]
+    public Users? _use { get; set; }
+    private string? UserEmail;
+    private System.Threading.Timer? timer;
+    private CancellationTokenSource? _cts;
+
+    private int Gosterilecek = 12;
+    private int ResimId = 0;
+    private string ArananKelime = "";
+
+    // Bildirim Özellikleri
+    public bool Action { get; set; }
+    public string Title { get; set; } = "";
+    public string Description { get; set; } = "";
+    public string Color { get; set; } = "";
+    public string BtnLoading { get; set; } = "";
+    public string BtnState { get; set; } = "";
+
+    private List<Country> ctry = new();
+    private List<efavori.com.Data.Media> gr = new();
+    private List<LoginTry> loginTry = new();
+    private List<UserShortcuts> UserShortcuts = new();
+
+    string _Country = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            db = await DbFactory.CreateDbContextAsync();
+            _cts = new CancellationTokenSource();
+
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                UserEmail = user.FindFirst(ClaimTypes.Email)?.Value;
+
+                if (!string.IsNullOrEmpty(UserEmail))
+                {
+                    _use = await db.Users.FirstOrDefaultAsync(x => x.Email == UserEmail, _cts.Token);
+
+                    if (_use != null)
+                    {
+                        var countryData = await db.Country.AsNoTracking().FirstOrDefaultAsync(a => a.id == _use.CountryId, _cts.Token);
+                        _Country = countryData?.name ?? "Hata: Bilinmiyor";
+
+                        await RefreshData();
+                        await LoadImages();
+                    }
+                }
+            }
+
+            // UI Refresh Timer - Daha güvenli başlatma
+            timer = new System.Threading.Timer(async _ =>
+            {
+                await InvokeAsync(StateHasChanged);
+            }, null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+        }
+        catch (Exception ex)
+        {
+            await LogError("OnInitializedAsync", ex);
+        }
+    }
+
+    public async Task RefreshData()
+    {
+        try
+        {
+            // Veri tutarlılığı için AsNoTracking kullanımı doğrudur
+            ctry = await db.Country.AsNoTracking().ToListAsync(_cts?.Token ?? default);
+            loginTry = await db.LoginTry.AsNoTracking().Where(x => x.UsersId == _use.Id).ToListAsync(_cts?.Token ?? default);
+            UserShortcuts = await db.UserShortcuts.AsNoTracking().Where(x => x.UserId == _use.Id && x.IsDeleted != true).ToListAsync(_cts?.Token ?? default);
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            await LogError("Profile/HeaderShortCuts RefreshData", ex);
+        }
+    }
+
+    private async Task OnInputHandler(ChangeEventArgs e)
+    {
+        ArananKelime = e.Value?.ToString() ?? string.Empty;
+        // Debounce mantığı eklenebilir ancak mevcut yapıda doğrudan çağırmak istiyorsan:
+        await LoadImages();
+    }
+
+    private async Task LoadImages()
+    {
+        if (_use == null) return;
+
+        try
+        {
+            IQueryable<efavori.com.Data.Media> query = db.Media
+                .AsNoTracking()
+                .Where(x => x.UserId == _use.Id);
+
+            if (!string.IsNullOrWhiteSpace(ArananKelime))
+                query = query.Where(x => x.DosyaAdi.Contains(ArananKelime));
+
+            gr = await query
+                .OrderByDescending(x => x.Id)
+                .Take(Gosterilecek)
+                .ToListAsync(_cts?.Token ?? default);
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            await LogError("LoadImages", ex);
+        }
+    }
+
+    private async Task GosterilecekArttir()
+    {
+        Gosterilecek += 12;
+        await LoadImages();
+    }
+
+    public async Task ResimKayitDuzenle(Guid NesneID, Guid ResimID)
+    {
+        try
+        {
+            var userToUpdate = await db.Users.FirstOrDefaultAsync(x => x.Id == NesneID);
+            var media = await db.Media.AsNoTracking().FirstOrDefaultAsync(m => m.Id == ResimID);
+
+            if (userToUpdate == null || media == null) return;
+
+            userToUpdate.ImagePath = media.DosyaLokal;
+            await db.SaveChangesAsync();
+
+            // Sınıf seviyesindeki 'use' nesnesini güncelle
+            _use = userToUpdate;
+            ResimId = 0;
+
+            await Bildirim("Durum", "Profil resmi güncellendi.", "white", true, "Profile", "HeaderShortCuts");
+        }
+        catch (Exception ex)
+        {
+            await LogError("ResimKayitDuzenle", ex);
+        }
+    }
+
+    public async Task Bildirim(string Baslik, string Aciklama, string Renk, bool Yonlendirme, string? Controllers, string? Actions)
+    {
+        await RefreshData();
+
+        Action = true;
+        Title = Baslik;
+        Description = Aciklama;
+        Color = Renk;
+        BtnLoading = "/assets/loading.gif";
+        BtnState = "disabled";
+
+        await InvokeAsync(StateHasChanged);
+
+        await Task.Delay(3000);
+
+        Action = false;
+        Title = "";
+        Description = "";
+        Color = "";
+        BtnLoading = "";
+        BtnState = "";
+
+        await InvokeAsync(StateHasChanged);
+
+        if (Yonlendirme && !string.IsNullOrEmpty(Controllers) && !string.IsNullOrEmpty(Actions))
+        {
+            string cleanController = Controllers.Trim('/');
+            string cleanAction = Actions.Trim('/');
+            string url = $"/{cleanController}/{cleanAction}";
+
+            NavigationManager.NavigateTo(url, forceLoad: true);
+        }
+    }
+
+    private async Task LogError(string title, Exception ex)
+    {
+        try
+        {
+            db.Logs.Add(new Logs
+            {
+                Date = DateTime.Now,
+                Exception = ex.ToString(),
+                Title = title
+            });
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            // Loglama bile hata verirse yapılacak bir şey kalmadı, konsola yazdır
+            Console.WriteLine($"Critical Error: {ex}");
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        timer?.Dispose();
+        db?.Dispose();
+    }
+}
+<li class="nav-item dropdown dropdown-app">
+    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" data-bs-toggle="dropdown" href="javascript:;"><i class='bx bx-grid-alt'></i></a>
+    <div class="dropdown-menu dropdown-menu-end p-0">
+        <div class="app-container p-2 my-2" style="max-height: 400px; overflow-y: auto; overflow-x: hidden;">
+            <center>
+                <p class="mb-2">Kısa Yollarınız</p>
+            </center>
+            <hr class="mt-0" />
+            <div class="row gx-0 gy-2 row-cols-3 justify-content-center p-2">
+                @foreach (UserShortcuts item in UserShortcuts)
+                {
+                    <div class="col">
+                        <a href="@item.ShortcutUrl" target="_blank">
+                            <div class="app-box text-center">
+                                <div class="app-icon">
+                                    <i class="fa @item.ShortcutIcon"></i>
+                                </div>
+                                <div class="app-name">
+                                    <p class="mb-0 mt-1">@item.ShortcutName</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</li>
+
+<style>
+    /* Scrollbar tasarımı (Opsiyonel) */
+    .app-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .app-container::-webkit-scrollbar-thumb {
+        background-color: #e0e0e0;
+        border-radius: 10px;
+    }
+
+    .app-container::-webkit-scrollbar-track {
+        background-color: transparent;
+    }
+</style>

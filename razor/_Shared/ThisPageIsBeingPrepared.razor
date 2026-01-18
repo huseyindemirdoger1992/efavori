@@ -1,0 +1,111 @@
+﻿<div class="preparation-container d-flex align-items-center justify-content-center">
+    <div class="overlay"></div>
+
+    <div class="card bg-dark-transparent border-light-subtle shadow-lg text-center p-5">
+        <div class="card-body">
+            <div class="icon-box mb-4">
+                <i class="fa fa-code fa-5x text-info main-icon"></i>
+                <i class="fa fa-cog fa-spin fa-2x text-warning settings-icon"></i>
+            </div>
+
+            <h1 class="display-4 fw-bold text-white mb-3">Kodlar Derleniyor...</h1>
+
+            <p class="lead text-light-50 mb-4">
+                Bu sayfa şu anda modern teknolojilerle inşa ediliyor. <br />
+                <span class="text-info">Bootstrap 5.3</span> ve <span class="text-warning">Blazor</span> gücüyle çok yakında yayındayız.
+            </p>
+
+            <div class="progress mb-4" style="height: 10px; background: rgba(255,255,255,0.1);">
+                <div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+                     role="progressbar" style="width: 75%"></div>
+            </div>
+
+            <div class="d-flex justify-content-center gap-3">
+                <a href="/" class="btn btn-outline-light rounded-pill px-4">
+                    <i class="fa fa-arrow-left me-2"></i>Geri Dön
+                </a>
+                <button class="btn btn-info rounded-pill px-4 text-white" @onclick="NotifyMe">
+                    <i class="fa fa-envelope-o me-2"></i>Bittiğinde Haber Ver
+                </button>
+            </div>
+
+            <div class="mt-5 pt-4 border-top border-secondary">
+                <p class="small text-secondary mb-3">TAKİPTE KALIN</p>
+                <div class="d-flex justify-content-center gap-4 social-links">
+                    <a href="#" class="text-light"><i class="fa fa-github fa-2x"></i></a>
+                    <a href="#" class="text-light"><i class="fa fa-linkedin fa-2x"></i></a>
+                    <a href="#" class="text-light"><i class="fa fa-twitter fa-2x"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Dashtreme Transparent Stil Uyarlaması */
+    .preparation-container {
+        min-height: 100vh;
+        background: url('https://via.placeholder.com/1920x1080/1a1a1a/000000?text=Abstract+Tech+Background') no-repeat center center fixed;
+        background-size: cover;
+        position: relative;
+    }
+
+    .bg-dark-transparent {
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(15px);
+        border-radius: 20px;
+        max-width: 700px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .icon-box {
+        position: relative;
+        display: inline-block;
+    }
+
+    .settings-icon {
+        position: absolute;
+        bottom: -5px;
+        right: -10px;
+    }
+
+    .main-icon {
+        filter: drop-shadow(0 0 15px rgba(13, 202, 240, 0.5));
+    }
+
+    .social-links a {
+        transition: all 0.3s ease;
+        opacity: 0.7;
+    }
+
+        .social-links a:hover {
+            opacity: 1;
+            transform: translateY(-3px);
+            color: #0dcaf0 !important;
+        }
+
+    @@keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .text-info {
+        animation: pulse 2s infinite ease-in-out;
+    }
+</style>
+
+@code {
+    private void NotifyMe()
+    {
+        // Bildirim mantığı buraya gelecek
+    }
+}

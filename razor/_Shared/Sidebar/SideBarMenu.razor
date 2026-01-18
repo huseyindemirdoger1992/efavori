@@ -1,0 +1,78 @@
+﻿@using data
+
+@code {
+    [Parameter]
+    public Users? _use { get; set; }
+}
+<!--sidebar wrapper -->
+<div class="sidebar-wrapper" data-simplebar="true">
+    <div class="sidebar-header">
+        <a href="/">
+            <img src="/assets/favicon/64x64.png" class="logo-icon" alt="logo icon">
+        </a>
+        <a href="/">
+            <h4 class="logo-text">FAVORİ</h4>
+        </a>
+        <div class="toggle-icon ms-auto">
+            <i class='fa fa-bars'></i>
+        </div>
+        <style>
+            /* Masaüstü (Geniş ekran) görünümünde gizle */
+            .toggle-icon {
+                display: none;
+            }
+
+            /* Mobil (768px altı) görünümünde göster */
+            @@media (max-width: 767px) {
+                .toggle-icon {
+                    display: block; /* veya ikonun yerleşimine göre inline-block/flex */
+                }
+            }
+        </style>
+    </div>
+    <!--navigation-->
+    <ul class="metismenu" id="menu">
+        <li class="menu-label">Makale İçerikleri</li>
+        <li>
+            <a class="has-arrow" href="javascript:;">
+                <div class="parent-icon">
+                    <i class="bx bx-menu"></i>
+                </div>
+                <div class="menu-title">Menu Levels</div>
+            </a>
+            <ul>
+                <li>
+                    <a class="has-arrow" href="javascript:;"><i class='bx bx-radio-circle'></i>Level One</a>
+                    <ul>
+                        <li>
+                            <a class="has-arrow" href="javascript:;"><i class='bx bx-radio-circle'></i>Level Two</a>
+                            <ul>
+                                <li>
+                                    <a href="javascript:;"><i class='bx bx-radio-circle'></i>Level Three</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <a href="javascript:;">
+                <div class="parent-icon">
+                    <i class="bx bx-folder"></i>
+                </div>
+                <div class="menu-title">Documentation</div>
+            </a>
+        </li>
+        <li>
+            <a href="https://themeforest.net/user/codervent" target="_blank">
+                <div class="parent-icon">
+                    <i class="bx bx-support"></i>
+                </div>
+                <div class="menu-title">Support</div>
+            </a>
+        </li>
+    </ul>
+    <!--end navigation-->
+</div>
+<!--end sidebar wrapper -->

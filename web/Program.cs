@@ -13,150 +13,97 @@ using System.Text.Unicode;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. Görünüm, Kodlama ve Çoklu Dil Ayarlarý (View, Encoding & Localization) ---
+// --- 1. Altyapý ve Kodlama Ayarlarý ---
+ConfigureInfrastructure(builder);
 
-// Türkçe karakter sorunlarýný önlemek için tüm Unicode aralýklarýný kapsayan HtmlEncoder
-builder.Services.AddSingleton<HtmlEncoder>(
-    HtmlEncoder.Create(allowedRanges: new[] { UnicodeRanges.All }));
+// --- 2. Localization (Çoklu Dil) Yapýlandýrmasý ---
+ConfigureLocalization(builder.Services);
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddDistributedMemoryCache(); // Session için gerekli
-builder.Services.AddSession(); // Session özelliðini aktif et
+// --- 3. Veritabaný ve Veri Katmaný ---
+ConfigurePersistence(builder);
 
-// Kullanýcý bilgilerini yönetmek için özel servis kaydý
-builder.Services.AddScoped<api.UserInfos>();
+// --- 4. Güvenlik ve Kimlik Doðrulama (1 Yýllýk Çerez) ---
+ConfigureSecurity(builder.Services);
 
-// Dil dosyalarýnýn (Resources) aranacaðý klasörü belirtiyoruz
-builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
-
-var mvcBuilder = builder.Services.AddControllersWithViews()
-    .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
-    .AddDataAnnotationsLocalization();
-
-// Geliþtirme aþamasýnda Razor dosyalarýnýn anlýk güncellenmesini saðlar
-if (builder.Environment.IsDevelopment())
-{
-    mvcBuilder.AddRazorRuntimeCompilation();
-}
-
-builder.Services.AddServerSideBlazor();
-
-// --- 2. Veritabaný Yapýlandýrmasý (Database Configuration) ---
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-
-// Standart MVC kullanýmý için (Scoped)
-builder.Services.AddDbContextPool<_ApplicationConnectionDb>(options =>
-    ConfigureDbOptions(options, connectionString, builder.Environment));
-
-// Blazor ve Asenkron süreçler için Factory (Singleton/Transient uyumlu)
-// ServiceLifetime.Scoped parametresini sildik veya Singleton yaptýk
-builder.Services.AddDbContextFactory<_ApplicationConnectionDb>(options =>
-    ConfigureDbOptions(options, connectionString, builder.Environment));
-
-// --- 3. Güvenlik ve Kimlik Doðrulama (Security & Authentication) ---
-
-builder.Services.AddHttpClient();
-
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Security/Login/";
-        options.AccessDeniedPath = "/Security/Logout/";
-        options.LogoutPath = "/Security/Logout/";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.SlidingExpiration = true;
-    });
-
-builder.Services.AddAuthorization();
-
-// --- 4. Dosya Yükleme Limitleri (Upload Limits) ---
-// 128 MB limit tanýmlanýyor
-const long MaxRequestLimit = 134217728;
-builder.Services.Configure<IISServerOptions>(options => { options.MaxRequestBodySize = MaxRequestLimit; });
-builder.Services.Configure<KestrelServerOptions>(options => { options.Limits.MaxRequestBodySize = MaxRequestLimit; });
-
-// --- 5. Dil Seçeneklerini Yapýlandýr (Localization Options) ---
-
-builder.Services.Configure<RequestLocalizationOptions>(options =>
-{
-    var supportedCultures = new[]
-    {
-        new CultureInfo("tr"),
-        new CultureInfo("en"),
-        new CultureInfo("az"),
-        new CultureInfo("de"),
-        new CultureInfo("es"),
-        new CultureInfo("fr"),
-        new CultureInfo("hi"),
-        new CultureInfo("pt"),
-        new CultureInfo("ru"),
-        new CultureInfo("zh")
-    };
-
-    options.DefaultRequestCulture = new RequestCulture(culture: "en", uiCulture: "en");
-    options.SupportedCultures = supportedCultures;
-    options.SupportedUICultures = supportedCultures;
-
-    // URL tabanlý dil yönetimi için (örn: site.com/tr/Home/Index)
-    options.RequestCultureProviders.Insert(0, new RouteDataRequestCultureProvider());
-});
-
-// --- 6. Uygulama Ýþlem Hattý (Middleware Pipeline) ---
+// --- 5. Web Sunucu ve Limitler ---
+ConfigureServerLimits(builder.Services);
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
+// --- 6. Middleware Pipeline ---
+ConfigureMiddlewarePipeline(app);
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-// Dil ayarlarýný (Localization) devreye al
-var localizationOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
-app.UseRequestLocalization(localizationOptions.Value);
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-// --- 7. SEO Uyumlu Route Yapýsý (Routing) ---
-
-// Area (Bölge) desteði olan SEO uyumlu rotalama
-app.MapControllerRoute(
-    name: "areas",
-    pattern: "{culture=en}/{area:exists}/{controller=Home}/{action=Index}/{id?}");
-
-// Varsayýlan SEO uyumlu rotalama
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{culture=en}/{controller=Home}/{action=Index}/{id?}");
-
-app.MapBlazorHub();
+// --- 7. SEO Uyumlu Endpoint Tanýmlarý ---
+ConfigureEndpoints(app);
 
 app.Run();
 
-// --- 8. Yardýmcý Metotlar (Helper Methods) ---
+#region Configuration Methods
 
-// Veritabaný konfigürasyonunu merkezi bir yerden yönetmek için
+void ConfigureInfrastructure(WebApplicationBuilder b)
+{
+    b.Services.AddSingleton(HtmlEncoder.Create(UnicodeRanges.All));
+    b.Services.AddHttpContextAccessor();
+
+    // Session kaldýrýldý, yerine verileri çerezde tutacaðýz. 
+    // Ancak bazý kütüphaneler için cache altyapýsý kalabilir.
+    b.Services.AddDistributedMemoryCache();
+
+    b.Services.AddScoped<UserInfos>();
+
+    var mvcBuilder = b.Services.AddControllersWithViews()
+        .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
+        .AddDataAnnotationsLocalization();
+
+    if (b.Environment.IsDevelopment())
+    {
+        mvcBuilder.AddRazorRuntimeCompilation();
+    }
+
+    b.Services.AddServerSideBlazor();
+}
+
+void ConfigureLocalization(IServiceCollection services)
+{
+    services.AddLocalization(options => options.ResourcesPath = "Resources");
+    services.Configure<RequestLocalizationOptions>(options =>
+    {
+        var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" }
+            .Select(c => new CultureInfo(c)).ToList();
+
+        options.DefaultRequestCulture = new RequestCulture("en");
+        options.SupportedCultures = supportedCultures;
+        options.SupportedUICultures = supportedCultures;
+
+        // Provider sýrasý önemli: Route > Cookie > Header
+        options.RequestCultureProviders.Clear();
+        options.RequestCultureProviders.Add(new RouteDataRequestCultureProvider { RouteDataStringKey = "culture" });
+        options.RequestCultureProviders.Add(new CookieRequestCultureProvider
+        {
+            CookieName = ".Efavori.Culture"
+        });
+    });
+}
+
+void ConfigurePersistence(WebApplicationBuilder b)
+{
+    var connectionString = b.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+    b.Services.AddDbContextPool<_ApplicationConnectionDb>(options =>
+        ConfigureDbOptions(options, connectionString, b.Environment));
+
+    b.Services.AddDbContextFactory<_ApplicationConnectionDb>(
+        options => ConfigureDbOptions(options, connectionString, b.Environment),
+        ServiceLifetime.Singleton);
+}
+
 void ConfigureDbOptions(DbContextOptionsBuilder options, string connectionStr, IWebHostEnvironment env)
 {
     options.UseSqlServer(connectionStr, sqlOptions =>
     {
         sqlOptions.CommandTimeout(30);
-        // Baðlantý kopmalarýna karþý otomatik yeniden deneme mekanizmasý
-        sqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorNumbersToAdd: null);
+        sqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
     });
 
     if (env.IsDevelopment())
@@ -165,3 +112,110 @@ void ConfigureDbOptions(DbContextOptionsBuilder options, string connectionStr, I
         options.EnableSensitiveDataLogging();
     }
 }
+
+void ConfigureSecurity(IServiceCollection services)
+{
+    services.AddHttpClient();
+    services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddCookie(options =>
+        {
+            options.LoginPath = "/Security/Login/";
+            options.LogoutPath = "/Security/Logout/";
+            options.AccessDeniedPath = "/Security/Logout/";
+            options.Cookie.Name = ".Efavori.Auth.Identity";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+
+            // --- ÖMÜR AYARI ---
+            options.ExpireTimeSpan = TimeSpan.FromDays(365);
+            options.SlidingExpiration = true; // Kullanýcý siteye girdikçe 1 yýl süresi resetlenir
+            options.Cookie.MaxAge = options.ExpireTimeSpan; // Tarayýcý tarafýnda kalýcýlýk saðlar
+        });
+
+    services.AddAuthorization();
+}
+
+void ConfigureServerLimits(IServiceCollection services)
+{
+    const long maxRequestLimit = 134217728;
+    services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = maxRequestLimit);
+    services.Configure<KestrelServerOptions>(options => options.Limits.MaxRequestBodySize = maxRequestLimit);
+}
+
+void ConfigureMiddlewarePipeline(WebApplication app)
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseExceptionHandler("/Home/Error");
+        app.UseHsts();
+    }
+
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
+    // app.UseSession(); // Çerez yapýsýna geçildiði için kaldýrýldý
+    app.UseRouting();
+
+    var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
+    app.UseRequestLocalization(locOptions.Value);
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
+void ConfigureEndpoints(WebApplication app)
+{
+    app.MapControllerRoute(
+        name: "areaRoute",
+        pattern: "{culture}/{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+    app.MapControllerRoute(
+        name: "default",
+        pattern: "{culture}/{controller=Home}/{action=Index}/{id?}");
+
+    // Ana sayfa - Cookie'den dil tercihini oku
+    app.MapGet("/", context => {
+        var culture = GetPreferredCulture(context);
+        context.Response.Redirect($"/{culture}/Customer/Home/Index");
+        return Task.CompletedTask;
+    });
+
+    // Dil parametresi ile giriþ
+    app.MapGet("/{culture}", (string culture, HttpContext context) => {
+        var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
+        if (!supportedCultures.Contains(culture.ToLower()))
+        {
+            culture = GetPreferredCulture(context);
+        }
+        context.Response.Redirect($"/{culture}/Customer/Home/Index");
+        return Task.CompletedTask;
+    });
+
+    app.MapBlazorHub();
+}
+
+// Cookie'den kullanýcýnýn dil tercihini al
+string GetPreferredCulture(HttpContext context)
+{
+    var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
+    const string defaultCulture = "en";
+
+    // Cookie'yi oku
+    if (context.Request.Cookies.TryGetValue(".Efavori.Culture", out var cookieValue) &&
+        !string.IsNullOrEmpty(cookieValue))
+    {
+        // ASP.NET Core formatý: c=tr|uic=tr
+        var culture = CookieRequestCultureProvider.ParseCookieValue(cookieValue);
+        if (culture != null)
+        {
+            var lang = culture.Cultures.FirstOrDefault().Value?.ToLower();
+            if (!string.IsNullOrEmpty(lang) && supportedCultures.Contains(lang))
+            {
+                return lang;
+            }
+        }
+    }
+
+    return defaultCulture;
+}
+#endregion

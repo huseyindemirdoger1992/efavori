@@ -1,62 +1,107 @@
 ﻿@using data
 @using System.Globalization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
+@using Microsoft.EntityFrameworkCore
+@using System.Linq
+
 @{
-    ViewData["Title"] = "Home Page";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 
-    // YÖNTEM: Dili doğrudan URL (Route) verisinden çekiyoruz
-    // Eğer URL'de kültür yoksa Program.cs'deki varsayılanı (en) kullanır
-    var currentLang = ViewContext.RouteData.Values["culture"]?.ToString()?.ToLower() ?? "en";
+    // --- 1. Dil belirleme ---
+    string currentLang = "en";
+    var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
 
+    // Oturum kontrolü
+    var userEmail = User.FindFirstValue(ClaimTypes.Email);
+    Users? use = null;
 
-    List<Country> _Country;
-    using (_ApplicationConnectionDb db = new _ApplicationConnectionDb())
+    if (!string.IsNullOrEmpty(userEmail))
     {
-        _Country = db.Country.ToList();
+        // Oturum açık: Veritabanından dil al
+        using (var db = new _ApplicationConnectionDb())
+        {
+            use = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
+
+            if (use != null && !string.IsNullOrEmpty(use.Language) && supportedCultures.Contains(use.Language.ToLower()))
+            {
+                currentLang = use.Language.ToLower();
+            }
+        }
+    }
+    else
+    {
+        // Oturum kapalı: Önce URL, sonra cookie, en son varsayılan
+        var routeLang = ViewContext.RouteData.Values["culture"]?.ToString()?.ToLower();
+        if (!string.IsNullOrEmpty(routeLang) && supportedCultures.Contains(routeLang))
+        {
+            currentLang = routeLang;
+        }
+        else
+        {
+            // Cookie'den oku
+            var httpContext = Context;
+            if (httpContext != null && httpContext.Request.Cookies.TryGetValue(".Efavori.Culture", out var cookieValue) && !string.IsNullOrEmpty(cookieValue))
+            {
+                // ASP.NET Core formatı: c=tr|uic=tr
+                var parts = cookieValue.Split('|');
+                var cPart = parts.FirstOrDefault(p => p.StartsWith("c="));
+                if (cPart != null)
+                {
+                    var langCode = cPart.Substring(2).ToLower();
+                    if (supportedCultures.Contains(langCode))
+                        currentLang = langCode;
+                }
+            }
+        }
+    }
+
+    // --- 2. Veri çekme ---
+    List<Country> _Country;
+    using (var db = new _ApplicationConnectionDb())
+    {
+        _Country = await db.Country.ToListAsync();
     }
 }
 
 <div class="text-center">
-    @* Hata Giderildi: @ sembolünden sonra boşluk silindi *@
     <h1 class="display-4">
-        @if (currentLang == "tr")
-        {
-            @:Hoş Geldiniz
-        }
-        else if (currentLang == "az")
-        {
-            @:Xoş gəlmisiniz
-        }
-        else if (currentLang == "de")
-        {
-            @:Willkommen
-        }
-        else if (currentLang == "es")
-        {
-            @:Bienvenido
-        }
-        else if (currentLang == "fr")
-        {
-            @:Bienvenue
-        }
-        else if (currentLang == "hi")
-        {
-            @:स्वागत है
-        }
-        else if (currentLang == "pt")
-        {
-            @:Bem-vindo
-        }
-        else if (currentLang == "ru")
-        {
-            @:Добро пожаловать
-        }
-        else if (currentLang == "zh")
-        {
-            @:欢迎
-        }
-        else
-        {
-            @:Welcome
+        @{
+            switch (currentLang)
+            {
+                case "tr":
+                    @:Hoş Geldiniz;
+                    break;
+                case "az":
+                    @:Xoş gəlmisiniz;
+                    break;
+                case "de":
+                    @:Willkommen;
+                    break;
+                case "es":
+                    @:Bienvenido;
+                    break;
+                case "fr":
+                    @:Bienvenue;
+                    break;
+                case "hi":
+                    @:स्वागत है;
+                    break;
+                case "pt":
+                    @:Bem-vindo;
+                    break;
+                case "ru":
+                    @:Добро пожаловать;
+                    break;
+                case "zh":
+                    @:欢迎;
+                    break;
+                default:
+                    @:Welcome;
+                    break;
+            }
         }
     </h1>
 
@@ -65,95 +110,104 @@
     @if (!User.Identity.IsAuthenticated)
     {
         <div class="alert alert-info">
-            @if (currentLang == "tr")
-            {
-                <p>Özel içerikleri görmek için lütfen <a asp-controller="Security" asp-action="Login">giriş yapın</a>.</p>
-            }
-            else if (currentLang == "az")
-            {
-                <p>Xüsusi məzmunu görmək üçün zəhmət olmasa <a asp-controller="Security" asp-action="Login">daxil olun</a>.</p>
-            }
-            else if (currentLang == "de")
-            {
-                <p>Bitte <a asp-controller="Security" asp-action="Login">einloggen</a>, um private Inhalte zu sehen.</p>
-            }
-            else if (currentLang == "es")
-            {
-                <p>Por favor <a asp-controller="Security" asp-action="Login">inicie sesión</a> para ver contenido privado.</p>
-            }
-            else if (currentLang == "fr")
-            {
-                <p>Veuillez vous <a asp-controller="Security" asp-action="Login">connecter</a> pour voir le contenu privé.</p>
-            }
-            else if (currentLang == "hi")
-            {
-                <p>निजी सामग्री देखने के लिए कृपया <a asp-controller="Security" asp-action="Login">लॉगिन करें</a>।</p>
-            }
-            else if (currentLang == "pt")
-            {
-                <p>Por favor, faça <a asp-controller="Security" asp-action="Login">login</a> para ver o conteúdo privado.</p>
-            }
-            else if (currentLang == "ru")
-            {
-                <p>Пожалуйста, <a asp-controller="Security" asp-action="Login">войдите</a>, чтобы увидеть личный контент.</p>
-            }
-            else if (currentLang == "zh")
-            {
-                <p>请<a asp-controller="Security" asp-action="Login">登录</a>查看私人内容。</p>
-            }
-            else // Varsayılan: en
-            {
-                <p>Please <a asp-controller="Security" asp-action="Login">login</a> to see private content.</p>
+            @{
+                switch (currentLang)
+                {
+                    case "tr":
+                        <p>Özel içerikleri görmek için lütfen <a asp-controller="Security" asp-action="Login">giriş yapın</a>.</p>
+                        ;
+                        break;
+                    case "az":
+                        <p>Xüsusi məzmunu görmək üçün zəhmət olmasa <a asp-controller="Security" asp-action="Login">daxil olun</a>.</p>
+                        ;
+                        break;
+                    case "de":
+                        <p>Bitte <a asp-controller="Security" asp-action="Login">einloggen</a>, um private Inhalte zu sehen.</p>
+                        ;
+                        break;
+                    case "es":
+                        <p>Por favor <a asp-controller="Security" asp-action="Login">inicie sesión</a> para ver contenido privado.</p>
+                        ;
+                        break;
+                    case "fr":
+                        <p>Veuillez vous <a asp-controller="Security" asp-action="Login">connecter</a> pour voir le contenu privé.</p>
+                        ;
+                        break;
+                    case "hi":
+                        <p>निजी सामग्री देखने के लिए कृपया <a asp-controller="Security" asp-action="Login">लॉगिन करें</a>।</p>
+                        ;
+                        break;
+                    case "pt":
+                        <p>Por favor, faça <a asp-controller="Security" asp-action="Login">login</a> para ver o conteúdo privado.</p>
+                        ;
+                        break;
+                    case "ru":
+                        <p>Пожалуйста, <a asp-controller="Security" asp-action="Login">войдите</a>, чтобы увидеть личный контент.</p>
+                        ;
+                        break;
+                    case "zh":
+                        <p>请<a asp-controller="Security" asp-action="Login">登录</a>查看私人内容。</p>
+                        ;
+                        break;
+                    default:
+                        <p>Please <a asp-controller="Security" asp-action="Login">login</a> to see private content.</p>
+                        ;
+                        break;
+                }
             }
         </div>
     }
     else
     {
         <div class="alert alert-success">
-            @if (currentLang == "tr")
-            {
-                <span>Tekrar hoş geldin, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "az")
-            {
-                <span>Yenidən xoş gəldiniz, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "de")
-            {
-                <span>Willkommen zurück, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "es")
-            {
-                <span>Bienvenido de nuevo, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "fr")
-            {
-                <span>Bon retour, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "hi")
-            {
-                <span>वापसी पर स्वागत है, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "pt")
-            {
-                <span>Bem-vindo de volta, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "ru")
-            {
-                <span>С возвращением, @User.Identity.Name!</span>
-            }
-            else if (currentLang == "zh")
-            {
-                <span>欢迎回来, @User.Identity.Name!</span>
-            }
-            else // Varsayılan: en
-            {
-                <span>Welcome back, @User.Identity.Name!</span>
+            @{
+                switch (currentLang)
+                {
+                    case "tr":
+                        <span>Tekrar hoş geldin, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "az":
+                        <span>Yenidən xoş gəldiniz, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "de":
+                        <span>Willkommen zurück, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "es":
+                        <span>Bienvenido de nuevo, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "fr":
+                        <span>Bon retour, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "hi":
+                        <span>वापसी पर स्वागत है, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "pt":
+                        <span>Bem-vindo de volta, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "ru":
+                        <span>С возвращением, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    case "zh":
+                        <span>欢迎回来, @User.Identity.Name!</span>
+                        ;
+                        break;
+                    default:
+                        <span>Welcome back, @User.Identity.Name!</span>
+                        ;
+                        break;
+                }
             }
         </div>
     }
 
-    @* Veri Listeleme *@
     <div class="row justify-content-center mt-4">
         @foreach (var item in _Country)
         {

@@ -1,6 +1,10 @@
 ﻿@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Localization
+@using Microsoft.EntityFrameworkCore
 @using data
 @inject NavigationManager NavManager
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject IJSRuntime JS
 
 @rendermode InteractiveServer
 
@@ -8,39 +12,37 @@
     [Parameter]
     public Users? _use { get; set; }
 
-    // Mevcut dili belirle (kullanıcı veya URL'den)
+    private static readonly string[] SupportedCultures = ["tr", "az", "de", "en", "es", "fr", "hi", "pt", "ru", "zh"];
+
+    private static readonly Dictionary<string, (string Flag, string Name)> LanguageInfo = new()
+    {
+        ["tr"] = ("tr.svg", "Türkçe"),
+        ["az"] = ("az.svg", "Azərbaycan (Hazırlanıyor...)"),
+        ["de"] = ("de.svg", "Deutsch (Hazırlanıyor...)"),
+        ["en"] = ("gb.svg", "English (Hazırlanıyor...)"),
+        ["es"] = ("es.svg", "Español (Hazırlanıyor...)"),
+        ["fr"] = ("fr.svg", "Français (Hazırlanıyor...)"),
+        ["hi"] = ("in.svg", "हिन्दी (Hazırlanıyor...)"),
+        ["pt"] = ("pt.svg", "Português (Hazırlanıyor...)"),
+        ["ru"] = ("ru.svg", "Русский (Hazırlanıyor...)"),
+        ["zh"] = ("cn.svg", "中文 (Hazırlanıyor...)")
+    };
+
     private string CurrentLanguage => _use?.Language ?? GetCurrentCultureFromUrl();
 
-    // URL'den mevcut dil kodunu al
+    private string FlagPath => LanguageInfo.TryGetValue(CurrentLanguage, out var info) ? info.Flag : "tr.svg";
+
     private string GetCurrentCultureFromUrl()
     {
         var uri = new Uri(NavManager.Uri);
         var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length > 0)
-        {
-            var firstSegment = segments[0].ToLower();
-            if (new[] { "tr", "az", "de", "en", "es", "fr", "hi", "pt", "ru", "zh" }.Contains(firstSegment))
-            {
-                return firstSegment;
-            }
-        }
-        return "en"; // Varsayılan
-    }
 
-    // Dil koduna göre bayrak ikonunu seç
-    private string FlagPath => CurrentLanguage switch
-    {
-        "az" => "az.svg",
-        "de" => "de.svg",
-        "en" => "gb.svg",
-        "es" => "es.svg",
-        "fr" => "fr.svg",
-        "hi" => "in.svg",
-        "pt" => "pt.svg",
-        "ru" => "ru.svg",
-        "zh" => "cn.svg",
-        _ => "tr.svg"
-    };
+        if (segments.Length > 0 && SupportedCultures.Contains(segments[0].ToLower()))
+        {
+            return segments[0].ToLower();
+        }
+        return "en";
+    }
 
     private async Task SelectLanguage(string langCode)
     {
@@ -48,207 +50,76 @@
         {
             try
             {
-                // 1. Veritabanında güncelleme yap
-                using var db = new _ApplicationConnectionDb();
+                await using var db = await DbFactory.CreateDbContextAsync();
                 _use.Language = langCode;
                 db.Users.Update(_use);
                 await db.SaveChangesAsync();
-
-                // 2. Sayfayı tamamen yenileyerek değişiklikleri her yerde uygula
-                // NavManager.Uri mevcut adresi verir, forceLoad: true ise F5 etkisi yaratır.
-                NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
             }
             catch (Exception ex)
             {
-                Logs logs = new Logs();
-                logs.Title = "Dil değiştirmehatası";
-                logs.Exception = ex.Message;
-                logs.Date = DateTime.Now;
-                using var db = new _ApplicationConnectionDb();
-                db.Logs.Add(logs);
-                await db.SaveChangesAsync();
+                await LogErrorAsync(ex, "Dil değiştirme hatası");
             }
         }
+
+        // Yeni URL'yi hesapla
+        var newUrl = GetNewLanguageUrl(langCode);
+
+        // Cookie kaydet ve sayfayı JavaScript ile yenile (tek seferde)
+        await JS.InvokeVoidAsync("setLanguageAndRedirect", langCode, newUrl);
     }
 
-    // Oturum açmamış kullanıcılar için URL tabanlı dil değiştirme
-    private void ChangeLanguageByUrl(string langCode)
+    private string GetNewLanguageUrl(string langCode)
     {
         var uri = new Uri(NavManager.Uri);
         var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-        // İlk segment bir dil kodu mu kontrol et
-        var supportedCultures = new[] { "tr", "az", "de", "en", "es", "fr", "hi", "pt", "ru", "zh" };
-        if (segments.Count > 0 && supportedCultures.Contains(segments[0].ToLower()))
+        if (segments.Count > 0 && SupportedCultures.Contains(segments[0].ToLower()))
         {
-            segments[0] = langCode; // Mevcut dil kodunu değiştir
+            segments[0] = langCode;
         }
         else
         {
-            segments.Insert(0, langCode); // Dil kodu yoksa ekle
+            segments.Insert(0, langCode);
         }
 
-        var newPath = "/" + string.Join("/", segments) + uri.Query;
-        NavManager.NavigateTo(newPath, forceLoad: true);
+        return "/" + string.Join("/", segments) + uri.Query;
+    }
+
+    private async Task LogErrorAsync(Exception ex, string title)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Logs.Add(new Logs
+            {
+                Title = title,
+                Exception = ex.Message,
+                Date = DateTime.Now
+            });
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            // Loglama hatası sessizce geçilir
+        }
     }
 }
-@if (_use != null)
-{
-    <li class="nav-item dropdown dropdown-laungauge d-sm-flex">
-        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="/assets/flags/1x1/@FlagPath" width="22" alt="@CurrentLanguage">
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end">
+
+<li class="nav-item dropdown dropdown-laungauge d-sm-flex">
+    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" href="javascript:void(0)"
+       data-bs-toggle="dropdown" aria-expanded="false">
+        <img src="/assets/flags/1x1/@FlagPath" width="22" alt="@CurrentLanguage">
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end">
+        @foreach (var lang in LanguageInfo)
+        {
             <li>
                 <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("tr")'>
-                    <img src="/assets/flags/1x1/tr.svg" width="20" alt="Türkçe">
-                    <span class="ms-2">Türkçe</span>
+                        @onclick="() => SelectLanguage(lang.Key)">
+                    <img src="/assets/flags/1x1/@lang.Value.Flag" width="20" alt="@lang.Value.Name">
+                    <span class="ms-2">@lang.Value.Name</span>
                 </button>
             </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("az")'>
-                    <img src="/assets/flags/1x1/az.svg" width="20" alt="Azərbaycan">
-                    <span class="ms-2">Azərbaycan (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("de")'>
-                    <img src="/assets/flags/1x1/de.svg" width="20" alt="Deutsch">
-                    <span class="ms-2">Deutsch (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("en")'>
-                    <img src="/assets/flags/1x1/gb.svg" width="20" alt="English">
-                    <span class="ms-2">English (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("es")'>
-                    <img src="/assets/flags/1x1/es.svg" width="20" alt="Español">
-                    <span class="ms-2">Español (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("fr")'>
-                    <img src="/assets/flags/1x1/fr.svg" width="20" alt="Français">
-                    <span class="ms-2">Français (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("hi")'>
-                    <img src="/assets/flags/1x1/in.svg" width="20" alt="हिन्दी">
-                    <span class="ms-2">हिन्दी (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("pt")'>
-                    <img src="/assets/flags/1x1/pt.svg" width="20" alt="Português">
-                    <span class="ms-2">Português (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("ru")'>
-                    <img src="/assets/flags/1x1/ru.svg" width="20" alt="Русский">
-                    <span class="ms-2">Русский (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => SelectLanguage("zh")'>
-                    <img src="/assets/flags/1x1/cn.svg" width="20" alt="中文">
-                    <span class="ms-2">中文 (Hazırlanıyor...)</span>
-                </button>
-            </li>
-        </ul>
-    </li>
-}
-else
-{
-    <li class="nav-item dropdown dropdown-laungauge d-sm-flex">
-        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false">
-            <img src="/assets/flags/1x1/@FlagPath" width="22" alt="@CurrentLanguage">
-        </a>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("tr")'>
-                    <img src="/assets/flags/1x1/tr.svg" width="20" alt="Türkçe">
-                    <span class="ms-2">Türkçe</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("az")'>
-                    <img src="/assets/flags/1x1/az.svg" width="20" alt="Azərbaycan">
-                    <span class="ms-2">Azərbaycan (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("de")'>
-                    <img src="/assets/flags/1x1/de.svg" width="20" alt="Deutsch">
-                    <span class="ms-2">Deutsch (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("en")'>
-                    <img src="/assets/flags/1x1/gb.svg" width="20" alt="English">
-                    <span class="ms-2">English (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("es")'>
-                    <img src="/assets/flags/1x1/es.svg" width="20" alt="Español">
-                    <span class="ms-2">Español (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("fr")'>
-                    <img src="/assets/flags/1x1/fr.svg" width="20" alt="Français">
-                    <span class="ms-2">Français (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("hi")'>
-                    <img src="/assets/flags/1x1/in.svg" width="20" alt="हिन्दी">
-                    <span class="ms-2">हिन्दी (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("pt")'>
-                    <img src="/assets/flags/1x1/pt.svg" width="20" alt="Português">
-                    <span class="ms-2">Português (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("ru")'>
-                    <img src="/assets/flags/1x1/ru.svg" width="20" alt="Русский">
-                    <span class="ms-2">Русский (Hazırlanıyor...)</span>
-                </button>
-            </li>
-            <li>
-                <button type="button" class="dropdown-item d-flex align-items-center py-2"
-                        @onclick='() => ChangeLanguageByUrl("zh")'>
-                    <img src="/assets/flags/1x1/cn.svg" width="20" alt="中文">
-                    <span class="ms-2">中文 (Hazırlanıyor...)</span>
-                </button>
-            </li>
-        </ul>
-    </li>
-}
+        }
+    </ul>
+</li>

@@ -239,5 +239,19 @@
             }, 1);
         });
     </script>
+    <script>
+        function setLanguageAndRedirect(langCode, redirectUrl) {
+            // Cookie değerini ASP.NET Core formatında oluştur
+            const cookieValue = `c=${langCode}|uic=${langCode}`;
+            const expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+
+            // Cookie'yi kaydet
+            document.cookie = `.Efavori.Culture=${encodeURIComponent(cookieValue)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`;
+
+            // Sayfayı tam olarak yenile (hard refresh)
+            window.location.href = redirectUrl;
+        }
+    </script>
 </body>
 </html>

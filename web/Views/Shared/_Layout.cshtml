@@ -62,9 +62,7 @@
                                 IpAddress = Context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
                                 UserAgent = Context.Request.Headers["User-Agent"].ToString() ?? "Unknown",
                                 RequestPath = Context.Request.Path,
-                                RequestMethod = Context.Request.Method,
                                 Languages = Context.Request.Headers["Accept-Language"].ToString(),
-                                TraceId = Context.TraceIdentifier
                             };
 
                             await dbLog.Logs.AddAsync(successLog);
@@ -129,16 +127,14 @@
                         Id = Guid.NewGuid(),
                         Title = "Layout Data Error",
                         Action = "FetchUserData_Error",
-                        UserId = use?.Id,
+                        UserId = use?.Id ?? Guid.Empty,
                         Exception = ex.Message,
                         StackTrace = ex.StackTrace,
                         Date = DateTime.UtcNow, // Global standart UTC'dir
                         IpAddress = Context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
                         UserAgent = Context.Request.Headers["User-Agent"].ToString() ?? "Unknown",
                         RequestPath = Context.Request.Path,
-                        RequestMethod = Context.Request.Method,
                         Languages = Context.Request.Headers["Accept-Language"].ToString(),
-                        TraceId = Context.TraceIdentifier // Hata takibi için kritik
                     };
 
                     await dbLog.Logs.AddAsync(errorLog);

@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using data._Shared;
+using Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -11,20 +13,20 @@ namespace data
     {
 
         // Media
-        // public DbSet<Media> Media { get; set; } = default!;
-        // public DbSet<ItemGallery> ItemGallery { get; set; } = default!;
+         public DbSet<Media> Media { get; set; } = default!;
+         public DbSet<ItemGallery> ItemGallery { get; set; } = default!;
 
         // Logs
         public DbSet<Logs> Logs { get; set; } = default!;
 
         // Users
         public DbSet<Users> Users { get; set; } = default!;
-        // public DbSet<LoginTry> LoginTry { get; set; } = default!;
+        public DbSet<LoginTry> LoginTry { get; set; } = default!;
         public DbSet<UserShortcuts> UserShortcuts { get; set; } = default!;
-        // public DbSet<UsersRoles> UsersRoles { get; set; } = default!;
+        public DbSet<UsersRoles> UsersRoles { get; set; } = default!;
 
         // Languages
-        // public DbSet<Languages> Languages { get; set; } = default!;
+        public DbSet<Languages> Languages { get; set; } = default!;
 
         //Localization
         public DbSet<Country> Country { get; set; } = default!;
@@ -45,7 +47,7 @@ namespace data
         public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
 
         // Products & Stores
-        // public DbSet<Store> Stores { get; set; } = default!;
+         public DbSet<Store> Stores { get; set; } = default!;
         // public DbSet<Product> Product { get; set; } = default!;
 
         //---------------- Constructor'lar ----------------//

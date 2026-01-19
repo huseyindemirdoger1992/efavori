@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260119093325_4")]
+    partial class _4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,53 +24,6 @@ namespace data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("Data.Media", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<long?>("CompressedSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ContentType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FileExtensionType")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("FilePhysicalPathRoad")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FileStoredName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FileUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long?>("OriginalSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Media");
-                });
 
             modelBuilder.Entity("data.CategoriesAz", b =>
                 {
@@ -487,95 +443,6 @@ namespace data.Migrations
                     b.ToTable("Country");
                 });
 
-            modelBuilder.Entity("data.ItemGallery", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool?>("ExteriorImages")
-                        .HasColumnType("bit");
-
-                    b.Property<bool?>("InteriorPictures")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("ItemAddDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("ItemId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ItemRoad")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ItemType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ItemGallery");
-                });
-
-            modelBuilder.Entity("data.Languages", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Iso2")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Iso3")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NativeName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Languages");
-                });
-
-            modelBuilder.Entity("data.LoginTry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("AttemptDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Browser")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("IPAddress")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool?>("IsSuccessful")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Platform")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RequestPath")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserAgent")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("UsersId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LoginTry");
-                });
-
             modelBuilder.Entity("data.Logs", b =>
                 {
                     b.Property<Guid>("Id")
@@ -613,7 +480,7 @@ namespace data.Migrations
                     b.Property<string>("UserAgent")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -745,41 +612,6 @@ namespace data.Migrations
                     b.ToTable("States");
                 });
 
-            modelBuilder.Entity("data.Store", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool?>("AdminPermissionPending")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("IsActiveDateAdmin")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("IsActiveDateVendor")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool?>("IsActiveStateAdmin")
-                        .HasColumnType("bit");
-
-                    b.Property<bool?>("IsActiveStateVendor")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Stores");
-                });
-
             modelBuilder.Entity("data.UserShortcuts", b =>
                 {
                     b.Property<Guid>("Id")
@@ -819,39 +651,44 @@ namespace data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Currency")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("DateOfBirth")
+                    b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FirstName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("HeaderMenuType")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool?>("IsActive")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("IsActiveVendorStatu")
+                    b.Property<bool>("IsActiveVendorStatu")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("IsDeleted")
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("Language")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LastName")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Password")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("RegistrationDate")
+                    b.Property<DateTime>("RegistrationDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool?>("TermsOfUse")
+                    b.Property<bool>("TermsOfUse")
                         .HasColumnType("bit");
 
                     b.Property<string>("UsersType")
@@ -860,364 +697,6 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("data.UsersRoles", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("UsersRoles");
-                });
-
-            modelBuilder.Entity("Data.Media", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("MediaId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("MediaId");
-
-                            b1.ToTable("Media");
-
-                            b1.WithOwner()
-                                .HasForeignKey("MediaId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data.ItemGallery", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ItemGalleryId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ItemGalleryId");
-
-                            b1.ToTable("ItemGallery");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ItemGalleryId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data.Store", b =>
-                {
-                    b.OwnsOne("data._Shared.AddressInfo", "AddressInfo", b1 =>
-                        {
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("Address")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("City")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Country")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("GoogleMyBusinessAccountLink")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<double?>("Latitude")
-                                .HasColumnType("float");
-
-                            b1.Property<double?>("Longitude")
-                                .HasColumnType("float");
-
-                            b1.Property<string>("MapTitle")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("State")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("ZipCode")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("StoreId");
-
-                            b1.ToTable("Stores");
-
-                            b1.WithOwner()
-                                .HasForeignKey("StoreId");
-                        });
-
-                    b.OwnsOne("data._Shared.ContactInformation", "ContactInformation", b1 =>
-                        {
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("Behance")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("CountryPhoneCode")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Discord")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Email")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Facebook")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("GitHub")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Instagram")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<bool?>("IsActiveBehance")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveDiscord")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveEmail")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveFacebook")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveGitHub")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveInstagram")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveKakaoTalk")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveLine")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveLinkedin")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActivePhoneNumber")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActivePinterest")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveReddit")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveTelegram")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveTikTok")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveUserWebSite")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveVKontakte")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWeChat")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWeibo")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWhatsApp")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveX")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveYouTube")
-                                .HasColumnType("bit");
-
-                            b1.Property<string>("KakaoTalk")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Line")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Linkedin")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<bool>("PhoneEmailConfirmed")
-                                .HasColumnType("bit");
-
-                            b1.Property<string>("PhoneNumber")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<bool>("PhoneNumberConfirmed")
-                                .HasColumnType("bit");
-
-                            b1.Property<string>("Pinterest")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Reddit")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Telegram")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("TikTok")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("UserWebSite")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("VKontakte")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("WeChat")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Weibo")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("WhatsApp")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("X")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("YouTube")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("StoreId");
-
-                            b1.ToTable("Stores");
-
-                            b1.WithOwner()
-                                .HasForeignKey("StoreId");
-                        });
-
-                    b.OwnsOne("data._Shared.ProfileCoverGallery", "ProfileCoverGallery", b1 =>
-                        {
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CoverImagePath")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("ProfileImagePath")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("StoreId");
-
-                            b1.ToTable("Stores");
-
-                            b1.WithOwner()
-                                .HasForeignKey("StoreId");
-                        });
-
-                    b.OwnsOne("data._Shared.WorkingHours", "WorkingHours", b1 =>
-                        {
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<TimeOnly?>("FinishTimeFriday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeMonday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeSaturday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeSunday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeThursday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeTuesday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeWednesday")
-                                .HasColumnType("time");
-
-                            b1.Property<bool?>("IsActiveFriday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveMonday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveSaturday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveSunday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveThursday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveTuesday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWednesday")
-                                .HasColumnType("bit");
-
-                            b1.Property<TimeOnly?>("StartTimeFriday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeMonday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeSaturday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeSunday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeThursday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeTuesday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeWednesday")
-                                .HasColumnType("time");
-
-                            b1.HasKey("StoreId");
-
-                            b1.ToTable("Stores");
-
-                            b1.WithOwner()
-                                .HasForeignKey("StoreId");
-                        });
-
-                    b.Navigation("AddressInfo");
-
-                    b.Navigation("ContactInformation");
-
-                    b.Navigation("ProfileCoverGallery");
-
-                    b.Navigation("WorkingHours");
                 });
 
             modelBuilder.Entity("data.Users", b =>
@@ -1400,25 +879,6 @@ namespace data.Migrations
                                 .HasColumnType("nvarchar(max)");
 
                             b1.Property<string>("YouTube")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("UsersId");
-
-                            b1.ToTable("Users");
-
-                            b1.WithOwner()
-                                .HasForeignKey("UsersId");
-                        });
-
-                    b.OwnsOne("data._Shared.ProfileCoverGallery", "ProfileCoverGallery", b1 =>
-                        {
-                            b1.Property<Guid>("UsersId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CoverImagePath")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("ProfileImagePath")
                                 .HasColumnType("nvarchar(max)");
 
                             b1.HasKey("UsersId");
@@ -1517,13 +977,16 @@ namespace data.Migrations
                                 .HasForeignKey("UsersId");
                         });
 
-                    b.OwnsOne("data._Shared.UserRolesAccessPermissions", "UserRolesAccessPermissions", b1 =>
+                    b.OwnsOne("data._Shared.ProfileCoverGallery", "ProfileCoverGallery", b1 =>
                         {
                             b1.Property<Guid>("UsersId")
                                 .HasColumnType("uniqueidentifier");
 
-                            b1.Property<bool?>("IsItStaff")
-                                .HasColumnType("bit");
+                            b1.Property<string>("CoverImagePath")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("ProfileImagePath")
+                                .HasColumnType("nvarchar(max)");
 
                             b1.HasKey("UsersId");
 
@@ -1533,15 +996,17 @@ namespace data.Migrations
                                 .HasForeignKey("UsersId");
                         });
 
-                    b.Navigation("AddressInfo");
+                    b.Navigation("AddressInfo")
+                        .IsRequired();
 
-                    b.Navigation("ContactInformation");
+                    b.Navigation("ContactInformation")
+                        .IsRequired();
 
-                    b.Navigation("IsPrivateOrPublic");
+                    b.Navigation("IsPrivateOrPublic")
+                        .IsRequired();
 
-                    b.Navigation("ProfileCoverGallery");
-
-                    b.Navigation("UserRolesAccessPermissions");
+                    b.Navigation("ProfileCoverGallery")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

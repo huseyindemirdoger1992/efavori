@@ -8,8 +8,24 @@
     [Parameter]
     public Users? _use { get; set; }
 
-    // Mevcut dili belirle
-    private string CurrentLanguage => _use?.Language ?? "tr";
+    // Mevcut dili belirle (kullanıcı veya URL'den)
+    private string CurrentLanguage => _use?.Language ?? GetCurrentCultureFromUrl();
+
+    // URL'den mevcut dil kodunu al
+    private string GetCurrentCultureFromUrl()
+    {
+        var uri = new Uri(NavManager.Uri);
+        var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length > 0)
+        {
+            var firstSegment = segments[0].ToLower();
+            if (new[] { "tr", "az", "de", "en", "es", "fr", "hi", "pt", "ru", "zh" }.Contains(firstSegment))
+            {
+                return firstSegment;
+            }
+        }
+        return "en"; // Varsayılan
+    }
 
     // Dil koduna göre bayrak ikonunu seç
     private string FlagPath => CurrentLanguage switch
@@ -53,6 +69,27 @@
                 await db.SaveChangesAsync();
             }
         }
+    }
+
+    // Oturum açmamış kullanıcılar için URL tabanlı dil değiştirme
+    private void ChangeLanguageByUrl(string langCode)
+    {
+        var uri = new Uri(NavManager.Uri);
+        var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+        // İlk segment bir dil kodu mu kontrol et
+        var supportedCultures = new[] { "tr", "az", "de", "en", "es", "fr", "hi", "pt", "ru", "zh" };
+        if (segments.Count > 0 && supportedCultures.Contains(segments[0].ToLower()))
+        {
+            segments[0] = langCode; // Mevcut dil kodunu değiştir
+        }
+        else
+        {
+            segments.Insert(0, langCode); // Dil kodu yoksa ekle
+        }
+
+        var newPath = "/" + string.Join("/", segments) + uri.Query;
+        NavManager.NavigateTo(newPath, forceLoad: true);
     }
 }
 @if (_use != null)
@@ -128,6 +165,86 @@
             <li>
                 <button type="button" class="dropdown-item d-flex align-items-center py-2"
                         @onclick='() => SelectLanguage("zh")'>
+                    <img src="/assets/flags/1x1/cn.svg" width="20" alt="中文">
+                    <span class="ms-2">中文 (Hazırlanıyor...)</span>
+                </button>
+            </li>
+        </ul>
+    </li>
+}
+else
+{
+    <li class="nav-item dropdown dropdown-laungauge d-sm-flex">
+        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false">
+            <img src="/assets/flags/1x1/@FlagPath" width="22" alt="@CurrentLanguage">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("tr")'>
+                    <img src="/assets/flags/1x1/tr.svg" width="20" alt="Türkçe">
+                    <span class="ms-2">Türkçe</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("az")'>
+                    <img src="/assets/flags/1x1/az.svg" width="20" alt="Azərbaycan">
+                    <span class="ms-2">Azərbaycan (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("de")'>
+                    <img src="/assets/flags/1x1/de.svg" width="20" alt="Deutsch">
+                    <span class="ms-2">Deutsch (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("en")'>
+                    <img src="/assets/flags/1x1/gb.svg" width="20" alt="English">
+                    <span class="ms-2">English (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("es")'>
+                    <img src="/assets/flags/1x1/es.svg" width="20" alt="Español">
+                    <span class="ms-2">Español (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("fr")'>
+                    <img src="/assets/flags/1x1/fr.svg" width="20" alt="Français">
+                    <span class="ms-2">Français (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("hi")'>
+                    <img src="/assets/flags/1x1/in.svg" width="20" alt="हिन्दी">
+                    <span class="ms-2">हिन्दी (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("pt")'>
+                    <img src="/assets/flags/1x1/pt.svg" width="20" alt="Português">
+                    <span class="ms-2">Português (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("ru")'>
+                    <img src="/assets/flags/1x1/ru.svg" width="20" alt="Русский">
+                    <span class="ms-2">Русский (Hazırlanıyor...)</span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center py-2"
+                        @onclick='() => ChangeLanguageByUrl("zh")'>
                     <img src="/assets/flags/1x1/cn.svg" width="20" alt="中文">
                     <span class="ms-2">中文 (Hazırlanıyor...)</span>
                 </button>

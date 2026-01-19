@@ -1,10 +1,11 @@
-﻿using ImageMagick;
+﻿using data;
+using ImageMagick;
 using Microsoft.AspNetCore.Http;
 using System;
-using System.IO;
-using System.Threading.Tasks;
 using System.Diagnostics;
-using data;
+using System.IO;
+using System.Runtime.Intrinsics.X86;
+using System.Threading.Tasks;
 
 namespace api
 {
@@ -32,10 +33,7 @@ namespace api
         // Fotoğrafçı: DNG (Adobe Digital Negative), CR2, NEF, ARW (Raw Kamera Formatları - Temel Destek)
         // Teknik:     TGA, DDS (Oyun Kaplamaları), HDR, EXR (Yüksek Dinamik Aralıklı Görüntüler)
         // --------------------------------------------------------------------------------------------------
-        public async Task<(string FileName, Logs LogData)> ConvertToAvifWithLogAsync(
-            IFormFile file,
-            string userEmail,
-            Guid? userId)
+        public async Task<(string FileName, Logs LogData)> ConvertToAvifWithLogAsync( IFormFile file, string userEmail, Guid? userId)
         {
             // Performans ölçümü ve kullanıcı detaylarını başlangıçta yakala
             var watch = Stopwatch.StartNew();
@@ -45,16 +43,13 @@ namespace api
             var logEntry = new Logs
             {
                 Id = Guid.NewGuid(),
-                UserId = userId,
+                UserId = userId ?? Guid.Empty,
                 Title = "MediaService",
                 Action = "ConvertToAvif",
                 IpAddress = detail.IpAddress,
                 UserAgent = detail.UserAgent,
                 RequestPath = detail.RequestPath,
-                RequestMethod = detail.RequestMethod,
-                Referrer = detail.Referrer,
                 Languages = detail.Languages,
-                TraceId = detail.TraceId,
                 Date = DateTime.UtcNow
             };
 
@@ -99,7 +94,6 @@ namespace api
 
                 // Operasyon başarıyla tamamlandı
                 watch.Stop();
-                logEntry.DurationMs = watch.ElapsedMilliseconds;
                 logEntry.Exception = "Success";
 
                 return (uniqueFileName, logEntry);
@@ -108,7 +102,6 @@ namespace api
             {
                 // Kritik hata yönetimi: Hatanın tüm izlerini kaydet
                 watch.Stop();
-                logEntry.DurationMs = watch.ElapsedMilliseconds;
                 logEntry.Exception = ex.Message;
                 logEntry.StackTrace = ex.StackTrace;
 

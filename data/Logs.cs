@@ -5,37 +5,47 @@ namespace data
 {
     public class Logs
     {
+        // <summary>Log kaydının benzersiz tanımlayıcısı.</summary>
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
         // --- KİMLİK BİLGİLERİ ---
-        public Guid? UserId { get; set; }
 
+        // <summary>İşlemi gerçekleştiren kullanıcının benzersiz kimliği.</summary>
+        public Guid UserId { get; set; }
+
+        // <summary>Logun ait olduğu servis veya modül adı (örn: "MediaService").</summary>
         [Required]
         [MaxLength(100)]
-        public string Title { get; set; } // Örn: "MediaService"
+        public string? Title { get; set; }
 
+        // <summary>Gerçekleştirilen işlemin adı (örn: "ConvertAvif").</summary>
         [Required]
         [MaxLength(100)]
-        public string Action { get; set; } // Örn: "ConvertAvif"
+        public string? Action { get; set; }
 
         // --- HTTP VE BAĞLANTI DETAYLARI (UserInfos'tan Gelenler) ---
+
+        // <summary>İsteği yapan kullanıcının IP adresi.</summary>
         public string? IpAddress { get; set; }
+
+        // <summary>Kullanıcının tarayıcı ve işletim sistemi bilgisi.</summary>
         public string? UserAgent { get; set; }
-        public string? RequestPath { get; set; }  // Yeni: İşlemin yapıldığı URL
-        public string? RequestMethod { get; set; } // Yeni: GET, POST, PUT vb.
-        public string? Referrer { get; set; }      // Yeni: Kullanıcı nereden yönlendi?
-        public string? Languages { get; set; }     // Yeni: Tarayıcı dil tercihi
 
-        [MaxLength(100)]
-        public string? TraceId { get; set; }       // Yeni: İşlemin benzersiz takip numarası
+        // <summary>İşlemin yapıldığı URL yolu.</summary>
+        public string? RequestPath { get; set; }
 
-        // --- DURUM VE HATA BİLGİLERİ ---
+        // <summary>Tarayıcının kabul ettiği dil tercihleri.</summary>
+        public string? Languages { get; set; }
+
+        // <summary>İşlem sırasında oluşan hata mesajı.</summary>
         public string? Exception { get; set; }
-        public string? StackTrace { get; set; }
-        public long DurationMs { get; set; }
 
+        // <summary>Hatanın oluştuğu kod yığını (stack trace) bilgisi.</summary>
+        public string? StackTrace { get; set; }
+
+        // <summary>Log kaydının oluşturulma tarihi ve saati (UTC).</summary>
         [Required]
-        public DateTime Date { get; set; } = DateTime.UtcNow;
+        public DateTime? Date { get; set; } = DateTime.UtcNow;
     }
 }

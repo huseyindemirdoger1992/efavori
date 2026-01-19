@@ -1,111 +1,184 @@
-﻿<div class="preparation-container d-flex align-items-center justify-content-center">
-    <div class="overlay"></div>
+﻿@using Microsoft.AspNetCore.Components;
 
-    <div class="card bg-dark-transparent border-light-subtle shadow-lg text-center p-5">
-        <div class="card-body">
-            <div class="icon-box mb-4">
-                <i class="fa fa-code fa-5x text-info main-icon"></i>
-                <i class="fa fa-cog fa-spin fa-2x text-warning settings-icon"></i>
-            </div>
+@code {
+    private string _currentInput = "0";
+    private string _previousInput = string.Empty;
+    private string _operation = string.Empty;
+    private bool _isNewInput = true;
 
-            <h1 class="display-4 fw-bold text-white mb-3">Kodlar Derleniyor...</h1>
+    protected string Display => _currentInput;
 
-            <p class="lead text-light-50 mb-4">
-                Bu sayfa şu anda modern teknolojilerle inşa ediliyor. <br />
-                <span class="text-info">Bootstrap 5.3</span> ve <span class="text-warning">Blazor</span> gücüyle çok yakında yayındayız.
-            </p>
+    protected IReadOnlyList<CalculatorButton> Buttons { get; } = new List<CalculatorButton>
+    {
+        new("C", "C", "btn-danger"),
+        new("±", "±", "btn-secondary"),
+        new("%", "%", "btn-secondary"),
+        new("÷", "/", "btn-warning"),
 
-            <div class="progress mb-4" style="height: 10px; background: rgba(255,255,255,0.1);">
-                <div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
-                     role="progressbar" style="width: 75%"></div>
-            </div>
+        new("7", "7", "btn-outline-dark"),
+        new("8", "8", "btn-outline-dark"),
+        new("9", "9", "btn-outline-dark"),
+        new("×", "*", "btn-warning"),
 
-            <div class="d-flex justify-content-center gap-3">
-                <a href="/" class="btn btn-outline-light rounded-pill px-4">
-                    <i class="fa fa-arrow-left me-2"></i>Geri Dön
-                </a>
-                <button class="btn btn-info rounded-pill px-4 text-white" @onclick="NotifyMe">
-                    <i class="fa fa-envelope-o me-2"></i>Bittiğinde Haber Ver
-                </button>
-            </div>
+        new("4", "4", "btn-outline-dark"),
+        new("5", "5", "btn-outline-dark"),
+        new("6", "6", "btn-outline-dark"),
+        new("-", "-", "btn-warning"),
 
-            <div class="mt-5 pt-4 border-top border-secondary">
-                <p class="small text-secondary mb-3">TAKİPTE KALIN</p>
-                <div class="d-flex justify-content-center gap-4 social-links">
-                    <a href="#" class="text-light"><i class="fa fa-github fa-2x"></i></a>
-                    <a href="#" class="text-light"><i class="fa fa-linkedin fa-2x"></i></a>
-                    <a href="#" class="text-light"><i class="fa fa-twitter fa-2x"></i></a>
+        new("1", "1", "btn-outline-dark"),
+        new("2", "2", "btn-outline-dark"),
+        new("3", "3", "btn-outline-dark"),
+        new("+", "+", "btn-warning"),
+
+        new("0", "0", "btn-outline-dark"),
+        new(".", ".", "btn-outline-dark"),
+        new("<i class='fa fa-backspace'></i>", "⌫", "btn-secondary"),
+        new("=", "=", "btn-success")
+    };
+
+    protected void OnButtonClick(string value)
+    {
+        switch (value)
+        {
+            case "C":
+                Clear();
+                break;
+            case "±":
+                ToggleSign();
+                break;
+            case "%":
+                CalculatePercentage();
+                break;
+            case "⌫":
+                Backspace();
+                break;
+            case "=":
+                Calculate();
+                break;
+            case "+" or "-" or "*" or "/":
+                SetOperation(value);
+                break;
+            case ".":
+                AppendDecimal();
+                break;
+            default:
+                AppendDigit(value);
+                break;
+        }
+    }
+
+    private void Clear()
+    {
+        _currentInput = "0";
+        _previousInput = string.Empty;
+        _operation = string.Empty;
+        _isNewInput = true;
+    }
+
+    private void ToggleSign()
+    {
+        if (_currentInput != "0")
+        {
+            _currentInput = _currentInput.StartsWith('-')
+                ? _currentInput[1..]
+                : $"-{_currentInput}";
+        }
+    }
+
+    private void CalculatePercentage()
+    {
+        if (double.TryParse(_currentInput, out var number))
+        {
+            _currentInput = (number / 100).ToString("G");
+        }
+    }
+
+    private void Backspace()
+    {
+        _currentInput = _currentInput.Length > 1
+            ? _currentInput[..^1]
+            : "0";
+    }
+
+    private void SetOperation(string op)
+    {
+        if (!string.IsNullOrEmpty(_previousInput) && !_isNewInput)
+        {
+            Calculate();
+        }
+        _previousInput = _currentInput;
+        _operation = op;
+        _isNewInput = true;
+    }
+
+    private void AppendDecimal()
+    {
+        if (_isNewInput)
+        {
+            _currentInput = "0.";
+            _isNewInput = false;
+        }
+        else if (!_currentInput.Contains('.'))
+        {
+            _currentInput += ".";
+        }
+    }
+
+    private void AppendDigit(string digit)
+    {
+        _currentInput = _isNewInput
+            ? digit
+            : _currentInput + digit;
+        _isNewInput = false;
+    }
+
+    private void Calculate()
+    {
+        if (string.IsNullOrEmpty(_previousInput) || string.IsNullOrEmpty(_operation))
+            return;
+
+        if (!double.TryParse(_previousInput, out var prev) ||
+            !double.TryParse(_currentInput, out var curr))
+            return;
+
+        var result = _operation switch
+        {
+            "+" => prev + curr,
+            "-" => prev - curr,
+            "*" => prev * curr,
+            "/" when curr != 0 => prev / curr,
+            "/" => double.NaN,
+            _ => curr
+        };
+
+        _currentInput = double.IsNaN(result) ? "Hata" : result.ToString("G");
+        _previousInput = string.Empty;
+        _operation = string.Empty;
+        _isNewInput = true;
+    }
+
+    protected sealed record CalculatorButton(string Label, string Value, string CssClass);
+}
+
+
+<div class="card shadow-sm" style="max-width: 320px;">
+    <div class="card-header bg-primary text-white">
+        <i class="fa fa-calculator me-2"></i>Hesap Makinası
+    </div>
+    <div class="card-body">
+        <div class="form-control text-end mb-3 fs-4 bg-light" style="min-height: 50px;">
+            @Display
+        </div>
+
+        <div class="row g-2">
+            @foreach (var btn in Buttons)
+            {
+                <div class="col-3">
+                    <button class="btn @btn.CssClass w-100 py-2" @onclick="() => OnButtonClick(btn.Value)">
+                        @btn.Label
+                    </button>
                 </div>
-            </div>
+            }
         </div>
     </div>
 </div>
-
-<style>
-    /* Dashtreme Transparent Stil Uyarlaması */
-    .preparation-container {
-        min-height: 100vh;
-        background: url('https://via.placeholder.com/1920x1080/1a1a1a/000000?text=Abstract+Tech+Background') no-repeat center center fixed;
-        background-size: cover;
-        position: relative;
-    }
-
-    .bg-dark-transparent {
-        background: rgba(0, 0, 0, 0.6) !important;
-        backdrop-filter: blur(15px);
-        border-radius: 20px;
-        max-width: 700px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .icon-box {
-        position: relative;
-        display: inline-block;
-    }
-
-    .settings-icon {
-        position: absolute;
-        bottom: -5px;
-        right: -10px;
-    }
-
-    .main-icon {
-        filter: drop-shadow(0 0 15px rgba(13, 202, 240, 0.5));
-    }
-
-    .social-links a {
-        transition: all 0.3s ease;
-        opacity: 0.7;
-    }
-
-        .social-links a:hover {
-            opacity: 1;
-            transform: translateY(-3px);
-            color: #0dcaf0 !important;
-        }
-
-    @@keyframes pulse {
-        0% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.5;
-        }
-
-        100% {
-            opacity: 1;
-        }
-    }
-
-    .text-info {
-        animation: pulse 2s infinite ease-in-out;
-    }
-</style>
-
-@code {
-    private void NotifyMe()
-    {
-        // Bildirim mantığı buraya gelecek
-    }
-}

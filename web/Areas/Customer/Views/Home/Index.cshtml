@@ -58,47 +58,7 @@
         }
     }
 }
-
 <div class="text-center">
-    <h1 class="display-4">
-        @{
-            switch (currentLang)
-            {
-                case "tr":
-                    @:Hoş Geldiniz;
-                    break;
-                case "az":
-                    @:Xoş gəlmisiniz;
-                    break;
-                case "de":
-                    @:Willkommen;
-                    break;
-                case "es":
-                    @:Bienvenido;
-                    break;
-                case "fr":
-                    @:Bienvenue;
-                    break;
-                case "hi":
-                    @:स्वागत है;
-                    break;
-                case "pt":
-                    @:Bem-vindo;
-                    break;
-                case "ru":
-                    @:Добро пожаловать;
-                    break;
-                case "zh":
-                    @:欢迎;
-                    break;
-                default:
-                    @:Welcome;
-                    break;
-            }
-        }
-    </h1>
-
-    <hr />
     @if (!User.Identity.IsAuthenticated)
     {
         @* Oturum Açmamış*@
@@ -107,39 +67,39 @@
                 switch (currentLang)
                 {
                     case "tr":
-                        <p>Özel içerikleri görmek için lütfen <a asp-controller="Security" asp-action="Login">giriş yapın</a>.</p>
+                        <p class="card-text text-white">Özel içerikleri görmek için lütfen <a asp-controller="Security" asp-action="Login">giriş yapın</a>.</p>
                         ;
                         break;
                     case "az":
-                        <p>Xüsusi məzmunu görmək üçün zəhmət olmasa <a asp-controller="Security" asp-action="Login">daxil olun</a>.</p>
+                        <p class="card-text text-white">Xüsusi məzmunu görmək üçün zəhmət olmasa <a asp-controller="Security" asp-action="Login">daxil olun</a>.</p>
                         ;
                         break;
                     case "de":
-                        <p>Bitte <a asp-controller="Security" asp-action="Login">einloggen</a>, um private Inhalte zu sehen.</p>
+                        <p class="card-text text-white">Bitte <a asp-controller="Security" asp-action="Login">einloggen</a>, um private Inhalte zu sehen.</p>
                         ;
                         break;
                     case "es":
-                        <p>Por favor <a asp-controller="Security" asp-action="Login">inicie sesión</a> para ver contenido privado.</p>
+                        <p class="card-text text-white">Por favor <a asp-controller="Security" asp-action="Login">inicie sesión</a> para ver contenido privado.</p>
                         ;
                         break;
                     case "fr":
-                        <p>Veuillez vous <a asp-controller="Security" asp-action="Login">connecter</a> pour voir le contenu privé.</p>
+                        <p class="card-text text-white">Veuillez vous <a asp-controller="Security" asp-action="Login">connecter</a> pour voir le contenu privé.</p>
                         ;
                         break;
                     case "hi":
-                        <p>निजी सामग्री देखने के लिए कृपया <a asp-controller="Security" asp-action="Login">लॉगिन करें</a>।</p>
+                        <p class="card-text text-white">निजी सामग्री देखने के लिए कृपया <a asp-controller="Security" asp-action="Login">लॉगिन करें</a>।</p>
                         ;
                         break;
                     case "pt":
-                        <p>Por favor, faça <a asp-controller="Security" asp-action="Login">login</a> para ver o conteúdo privado.</p>
+                        <p class="card-text text-white">Por favor, faça <a asp-controller="Security" asp-action="Login">login</a> para ver o conteúdo privado.</p>
                         ;
                         break;
                     case "ru":
-                        <p>Пожалуйста, <a asp-controller="Security" asp-action="Login">войдите</a>, чтобы увидеть личный контент.</p>
+                        <p class="card-text text-white">Пожалуйста, <a asp-controller="Security" asp-action="Login">войдите</a>, чтобы увидеть личный контент.</p>
                         ;
                         break;
                     case "zh":
-                        <p>请<a asp-controller="Security" asp-action="Login">登录</a>查看私人内容。</p>
+                        <p class="card-text text-white">请<a asp-controller="Security" asp-action="Login">登录</a>查看私人内容。</p>
                         ;
                         break;
                     default:

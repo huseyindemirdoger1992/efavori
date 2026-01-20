@@ -1,5 +1,5 @@
-﻿<script src="/assets/js/jquery.min.js"></script>
-<script src="/assets/js/bootstrap.bundle.min.js"></script>
+﻿<script src="/assets/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/jquery.min.js"></script>
 <script src="/assets/plugins/simplebar/js/simplebar.min.js"></script>
 <script src="/assets/plugins/metismenu/js/metisMenu.min.js"></script>
 <script src="/assets/plugins/perfect-scrollbar/js/perfect-scrollbar.js"></script>
@@ -10,7 +10,23 @@
 <script src="/assets/plugins/sparkline-charts/jquery.sparkline.min.js"></script>
 <script src="/assets/plugins/jquery-knob/excanvas.js"></script>
 <script src="/assets/plugins/jquery-knob/jquery.knob.js"></script>
-<script src="/assets/plugins/select2/js/select2-custom.js"></script>
 <script src="/assets/js/index.js"></script>
 <script src="/assets/js/app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+@* Dil değiştirici yardımcısı *@
+<script>
+    window.setLanguageAndRedirect = function (langCode, newUrl) {
+        var cookieValue = 'c=' + langCode + '|uic=' + langCode;
+        var expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie = '.Efavori.Culture=' + cookieValue + ';expires=' + expires.toUTCString() + ';path=/;SameSite=Lax;Secure';
+        window.location.href = newUrl;
+    }
+</script>
+
+@*jQuery Mobil düğme etkinleştirme*@
+<script>
+    $(function() {
+        $(".knob").knob();
+    });
+</script>

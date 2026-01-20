@@ -47,6 +47,7 @@
     <Folder Include="Vendor\tr\" />
     <Folder Include="Vendor\ru\" />
     <Folder Include="Vendor\pt\" />
+    <Folder Include="_Shared\Modals\tr\" />
   </ItemGroup>
 
   <ItemGroup>

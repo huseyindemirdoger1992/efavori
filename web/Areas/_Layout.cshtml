@@ -134,30 +134,33 @@
 }
 <!doctype html>
 <html lang="@lang">
+
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    @* --- 1. Temel SEO ve Otorite --- *@
+    @* --- 1. Basic SEO and Authority --- *@
     <title>@ViewData["Title"] | efavori.com</title>
-    <meta name="description" content="@(ViewData["Description"] ?? "efavori.com ile favori içeriklerinizi güvenle yönetin.")">
-    <meta name="keywords" content="@(ViewData["Keywords"] ?? "efavori, dijital yönetim, içerik planlama")">
+    <meta name="description" content="@(ViewData["Description"] ?? "Manage your favorite content securely with efavori.com.")">
+    <meta name="keywords" content="@(ViewData["Keywords"] ?? "efavori, digital management, content planning")">
     <meta name="author" content="efavori.com">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <link rel="canonical" href="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)" />
-    @* Çok dilli yapı desteği (lang değişkenini yukarıda tanımlamıştınız) *@
+    @* Multi-language support (lang variable defined above) *@
     <link rel="alternate" hreflang="@lang" href="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)" />
     <link rel="alternate" hreflang="x-default" href="@(Context.Request.Scheme + "://" + Context.Request.Host)/" />
-    @* --- 2. Sosyal Medya (Open Graph & Twitter) --- *@
+    @* --- 2. Social Media (Open Graph & Twitter) --- *@
     <meta property="og:locale" content="@TotalLang">
     <meta property="og:type" content="website">
     <meta property="og:title" content="@ViewData["Title"] | efavori.com">
-    <meta property="og:description" content="@(ViewData["Description"] ?? "efavori.com ile favori içeriklerinizi güvenle yönetin.")">
+    <meta property="og:description" content="@(ViewData["Description"] ?? "Manage your favorite content securely with efavori.com.")">
     <meta property="og:url" content="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)">
     <meta property="og:site_name" content="efavori.com">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="@ViewData["Title"]">
-    <meta name="twitter:description" content="@(ViewData["Description"] ?? "efavori.com içerik yönetimi.")">
+    <meta name="twitter:description" content="@(ViewData["Description"] ?? "efavori.com content management.")">
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="https://www.google-analytics.com">
     <link rel="icon" href="~/assets/favicon/32x32.png" type="image/png" sizes="32x32" />
@@ -165,75 +168,25 @@
     <meta name="theme-color" content="#0000FF">
     @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
 </head>
-<body class="bg-theme" style="background-image: url('@BackgroundImage'); min-height: 100vh;">
+
+<body class="bg-theme bg-theme1">
     <div class="wrapper">
-        @* Bileşenlere 'use' nesnesini gönderiyoruz *@
-        @(await Html.RenderComponentAsync<razor._Shared.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
         @(await Html.RenderComponentAsync<razor._Shared.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+        @(await Html.RenderComponentAsync<razor._Shared.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
         <div class="page-wrapper">
             <div class="page-content">
                 @RenderBody()
             </div>
         </div>
-        @* Sidebar açılınca arkapilanı karartır *@
         <div class="overlay toggle-icon"></div>
-        @* Yukarı çık butonu *@
-        <a href="javaScript:;" class="back-to-top" style="margin-bottom:32px;"><i class='bx bxs-up-arrow-alt'></i></a>
-        <div class="content-wrapper">
-        </div>
+        <a href="javaScript:;" class="back-to-top"><i class='bx bxs-up-arrow-alt'></i></a>
         <footer class="page-footer">
             <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText</p>
         </footer>
-        <style>
-            .page-footer {
-                display: none; /* Mobilde gizle */
-            }
-            @@media (min-width: 992px) {
-                .page-footer {
-                    display: block; /* Sadece masaüstünde göster */
-                    position: fixed; /* Ekrana sabitle */
-                    bottom: 0;
-                    /* Cam Efekti Başlangıcı */
-                    backdrop-filter: blur(5px); /* Arkayı bulandırır */
-                }
-                body {
-                    /* Footer yüksekliği kadar boşluk bırakır, böylece en alttaki butonlar yukarı itilir */
-                    padding-bottom: 50px;
-                }
-            }
-        </style>
     </div>
-    @* 1. Önce kütüphaneleri yükle *@
+    @(await Html.RenderComponentAsync<razor._Shared.Modals.en.LoginModals>(RenderMode.Static))
     @(await Html.RenderComponentAsync<Js>(RenderMode.Static))
-    @* 2. Blazor Framework yükle *@
     <base href="~/" />
     <script src="~/_framework/blazor.server.js"></script>
-    @* 3. Sayfaya özel yazılan $(document).ready kodlarını çalıştır *@
-    @await RenderSectionAsync("Scripts", required: false)
-    <!-- Mevcut script taglarının ALTINA ekleyin -->
-    <script>
-        // DOM tamamen yüklendikten sonra MetisMenu'yu başlat
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(function() {
-                if (typeof $ !== 'undefined' && typeof $.fn.metisMenu !== 'undefined') {
-                    $("#menu").metisMenu();
-                }
-            }, 1);
-        });
-    </script>
-    <script>
-        function setLanguageAndRedirect(langCode, redirectUrl) {
-            // Cookie değerini ASP.NET Core formatında oluştur
-            const cookieValue = `c=${langCode}|uic=${langCode}`;
-            const expires = new Date();
-            expires.setFullYear(expires.getFullYear() + 1);
-            // Cookie'yi kaydet
-            document.cookie = `.Efavori.Culture=${encodeURIComponent(cookieValue)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`;
-            // Sayfayı tam olarak yenile (hard refresh)
-            window.location.href = redirectUrl;
-        }
-    </script>
-    @* 3. Sayfaya özel yazılan $(document).ready kodlarını çalıştır *@
-    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -57,13 +57,6 @@
             }
         }
     }
-
-    // --- 2. Veri çekme ---
-    List<Country> _Country;
-    using (var db = new _ApplicationConnectionDb())
-    {
-        _Country = await db.Country.ToListAsync();
-    }
 }
 
 <div class="text-center">
@@ -106,9 +99,9 @@
     </h1>
 
     <hr />
-
     @if (!User.Identity.IsAuthenticated)
     {
+        @* Oturum Açmamış*@
         <div class="alert alert-info">
             @{
                 switch (currentLang)
@@ -150,7 +143,9 @@
                         ;
                         break;
                     default:
-                        <p>Please <a asp-controller="Security" asp-action="Login">login</a> to see private content.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                 }
@@ -159,6 +154,7 @@
     }
     else
     {
+        @* Oturum Açmış*@
         <div class="alert alert-success">
             @{
                 switch (currentLang)
@@ -200,26 +196,14 @@
                         ;
                         break;
                     default:
-                        <span>Welcome back, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
+
                         ;
                         break;
                 }
             }
         </div>
     }
-
-    <div class="row justify-content-center mt-4">
-        @foreach (var item in _Country)
-        {
-            <div class="col-md-4 mb-2">
-                <div class="card p-2 shadow-sm">
-                    <strong>@item.name</strong>
-                </div>
-            </div>
-        }
-    </div>
-
-    <p class="mt-4">
-        Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.
-    </p>
 </div>

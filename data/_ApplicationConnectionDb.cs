@@ -33,6 +33,7 @@ namespace data
         public DbSet<Cities> Cities { get; set; } = default!;
         public DbSet<Regions> Regions { get; set; } = default!;
         public DbSet<States> States { get; set; } = default!;
+        public DbSet<Addresses> Addresses { get; set; } = default!;
 
         // Categories
         public DbSet<CategoriesAz> CategoriesAz { get; set; } = default!;

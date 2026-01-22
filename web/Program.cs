@@ -136,6 +136,9 @@ void ConfigureSecurity(IServiceCollection services)
     services.AddAuthorization();
 }
 
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents(); 
+
 void ConfigureServerLimits(IServiceCollection services)
 {
     const long maxRequestLimit = 134217728;

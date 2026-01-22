@@ -13,32 +13,36 @@
     string lang = "en";
     string TotalLang = "en_EN";
     string currentFooterText = "All rights reserved.";
+    var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
+
     Users? use = null;
     var userEmail = User.FindFirstValue(ClaimTypes.Email);
-    // --- 2. VERİ ÇEKME VE İŞLEME ---
-    if (!string.IsNullOrEmpty(userEmail))
+
+    // --- 2. DİL VE VERİ ÇEKME MANTIĞI ---
+    try
     {
-        try
+        if (!string.IsNullOrEmpty(userEmail))
         {
-            // Context kullanımı 'using' ile garanti altına alınmalı
+            // --- DURUM A: OTURUM AÇIK ---
             using (var db = new _ApplicationConnectionDb())
             {
-                // Task'ı await ederek thread'i bloklamıyoruz
                 use = await db.Users
-                    .AsNoTracking() // Sadece okuma yaptığımız için performans artışı sağlar
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
+
                 if (use != null)
                 {
+                    // Arka plan resmi
                     if (!string.IsNullOrEmpty(use.BackgroundImagePath))
                         BackgroundImage = use.BackgroundImagePath;
-                    if (!string.IsNullOrEmpty(use.Language))
+
+                    // Kullanıcı dili
+                    if (!string.IsNullOrEmpty(use.Language) && supportedCultures.Contains(use.Language.ToLower()))
                     {
                         lang = use.Language.ToLower();
-                        TotalLang = $"{lang}_{lang.ToUpper()}";
                     }
-                    // --- BAŞARILI İŞLEM LOGU (Seçici Yaklaşım) ---
-                    // Not: Her sayfa yüklemesinde log yerine, sadece önemli durumlarda log tutabilirsiniz
-                    // Örnek: Session kontrolü ile günde 1 kez veya belirli sayfalarda
+
+                    // Başarı Logu
                     try
                     {
                         using (var dbLog = new _ApplicationConnectionDb())
@@ -49,8 +53,6 @@
                                 Title = "Layout Loaded Successfully",
                                 Action = "FetchUserData_Success",
                                 UserId = use.Id,
-                                Exception = null, // Başarılı durumda exception yok
-                                StackTrace = null,
                                 Date = DateTime.UtcNow,
                                 IpAddress = Context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
                                 UserAgent = Context.Request.Headers["User-Agent"].ToString() ?? "Unknown",
@@ -61,75 +63,77 @@
                             await dbLog.SaveChangesAsync();
                         }
                     }
-                    catch
-                    {
-                        // Log kaydı başarısız olsa bile kullanıcı deneyimini etkilemesin
-                    }
-                }
-                else
-                {
-                    // Örnek Guid listesi
-                    List<Guid> guidList = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
-                    // Listeyi string'e çeviriyoruz
-                    string jsonList = JsonSerializer.Serialize(guidList);
-                    var cookieOptions = new CookieOptions
-                    {
-                        Expires = DateTimeOffset.UtcNow.AddDays(7), // Liste uzunsa süreyi çok uzun tutmamak iyidir
-                        HttpOnly = true,
-                        Secure = true,
-                        SameSite = SameSiteMode.Lax,
-                        Path = "/"
-                    };
-                    Context.Response.Cookies.Append("CardIds", jsonList, cookieOptions);
-                    Context.Response.Cookies.Append("UserSettings", "", cookieOptions);
+                    catch { /* Log hatası akışı bozmasın */ }
                 }
             }
-            // Sözlük tanımı (Dinamikleştirilebilir veya Cache'e alınabilir)
-            var footerTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "az", "Bütün hüquqlar qorunur." },
-                { "de", "Alle Rechte vorbehalten." },
-                { "en", "All rights reserved." },
-                { "es", "Todos los derechos reservados." },
-                { "fr", "Tous droits réservés." },
-                { "hi", "सर्वाधिकार सुरक्षित।" },
-                { "pt", "Todos os direitos reservados." },
-                { "ru", "Все права защищены." },
-                { "tr", "Tüm hakları saklıdır." },
-                { "zh", "版权所有。" }
-            };
-            currentFooterText = footerTexts.GetValueOrDefault(lang, footerTexts["en"]);
         }
-        catch (Exception ex)
+        else
         {
-            // --- 3. HATA YÖNETİMİ VE LOGLAMA (SİSTEMİ YAVAŞLATMADAN) ---
-            try
+            // --- DURUM B: OTURUM KAPALI (DİL HATIRLAMA) ---
+            var routeLang = ViewContext.RouteData.Values["culture"]?.ToString()?.ToLower();
+            if (!string.IsNullOrEmpty(routeLang) && supportedCultures.Contains(routeLang))
             {
-                using (var dbLog = new _ApplicationConnectionDb())
+                lang = routeLang;
+            }
+            else if (Context.Request.Cookies.TryGetValue(".Efavori.Culture", out var cookieValue) && !string.IsNullOrEmpty(cookieValue))
+            {
+                // ASP.NET Core formatı: c=tr|uic=tr
+                var parts = cookieValue.Split('|');
+                var cPart = parts.FirstOrDefault(p => p.StartsWith("c="));
+                if (cPart != null)
                 {
-                    var errorLog = new Logs
-                    {
-                        Id = Guid.NewGuid(),
-                        Title = "Layout Data Error",
-                        Action = "FetchUserData_Error",
-                        UserId = use?.Id ?? Guid.Empty,
-                        Exception = ex.Message,
-                        StackTrace = ex.StackTrace,
-                        Date = DateTime.UtcNow, // Global standart UTC'dir
-                        IpAddress = Context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-                        UserAgent = Context.Request.Headers["User-Agent"].ToString() ?? "Unknown",
-                        RequestPath = Context.Request.Path,
-                        Languages = Context.Request.Headers["Accept-Language"].ToString(),
-                    };
-                    await dbLog.Logs.AddAsync(errorLog);
-                    await dbLog.SaveChangesAsync();
+                    var langCode = cPart.Substring(2).ToLower();
+                    if (supportedCultures.Contains(langCode))
+                        lang = langCode;
                 }
             }
-            catch
+        }
+
+        // Değişkenleri güncelle
+        TotalLang = $"{lang}_{lang.ToUpper()}";
+
+        // Footer Metinleri
+        var footerTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "az", "Bütün hüquqlar qorunur." },
+            { "de", "Alle Rechte vorbehalten." },
+            { "en", "All rights reserved." },
+            { "es", "Todos los derechos reservados." },
+            { "fr", "Tous droits réservés." },
+            { "hi", "सर्वाधिकार सुरक्षित।" },
+            { "pt", "Todos os direitos reservados." },
+            { "ru", "Все права защищены." },
+            { "tr", "Tüm hakları saklıdır." },
+            { "zh", "版权所有。" }
+        };
+        currentFooterText = footerTexts.GetValueOrDefault(lang, footerTexts["en"]);
+    }
+    catch (Exception ex)
+    {
+        // --- 3. HATA YÖNETİMİ ---
+        try
+        {
+            using (var dbLog = new _ApplicationConnectionDb())
             {
-                // Veritabanı bile çökmüşse, kullanıcıya beyaz ekran göstermemek için sessiz kalıyoruz.
+                var errorLog = new Logs
+                {
+                    Id = Guid.NewGuid(),
+                    Title = "Layout Data Error",
+                    Action = "FetchUserData_Error",
+                    UserId = use?.Id ?? Guid.Empty,
+                    Exception = ex.Message,
+                    StackTrace = ex.StackTrace,
+                    Date = DateTime.UtcNow,
+                    IpAddress = Context.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                    UserAgent = Context.Request.Headers["User-Agent"].ToString() ?? "Unknown",
+                    RequestPath = Context.Request.Path,
+                    Languages = Context.Request.Headers["Accept-Language"].ToString(),
+                };
+                await dbLog.Logs.AddAsync(errorLog);
+                await dbLog.SaveChangesAsync();
             }
         }
+        catch { }
     }
 }
 <!doctype html>
@@ -168,11 +172,61 @@
     <meta name="theme-color" content="#0000FF">
     @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
 </head>
-
 <body class="bg-theme bg-theme1">
     <div class="wrapper">
-        @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-        @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+        @switch (lang)
+        {
+            case "tr":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "az":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "de":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "es":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "fr":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "hi":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "pt":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "ru":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            case "zh":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+            default:
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+                ;
+                break;
+        }
         <div class="page-wrapper">
             <div class="page-content">
                 @RenderBody()
@@ -181,10 +235,73 @@
         <div class="overlay toggle-icon"></div>
         <a href="javaScript:;" class="back-to-top"><i class='bx bxs-up-arrow-alt'></i></a>
         <footer class="page-footer">
-            <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText</p>
+            <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText (@lang)</p>
         </footer>
     </div>
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.LoginModals>(RenderMode.Static))
+
+    @switch (lang)
+    {
+        case "tr":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "az":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "de":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "es":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "fr":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "hi":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "pt":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "ru":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        case "zh":
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+        default:
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.Login>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.NewUserRegister>(RenderMode.Static))
+            @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.Account.ResetPassword>(RenderMode.Static))
+            ;
+            break;
+    }
     @(await Html.RenderComponentAsync<Js>(RenderMode.Static))
     <base href="~/" />
     <script src="~/_framework/blazor.server.js"></script>

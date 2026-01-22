@@ -13,19 +13,45 @@
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label class="form-label text-white"><i class="fa fa-user"></i> Adınız</label>
-                        <input type="text" class="form-control bg-transparent text-white border-light-3" placeholder="Adınız">
+                        <input type="text" class="form-control bg-transparent text-white border-light-3" @bind="_user.FirstName">
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label text-white"><i class="fa fa-user"></i> Soyadınız</label>
-                        <input type="text" class="form-control bg-transparent text-white border-light-3" placeholder="Soyadınız">
+                        <input type="text" class="form-control bg-transparent text-white border-light-3" @bind="_user.LastName">
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label text-white"><i class="fa fa-calendar-check-o"></i> Doğum Tarihiniz</label>
-                        <input type="date" class="form-control bg-transparent text-white border-light-3">
+                        <input type="date" class="form-control bg-transparent text-white border-light-3" @bind="_user.DateOfBirth">
                     </div>
 
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-white"><i class="fa fa-envelope"></i> E-posta</label>
+                        <input type="email" class="form-control bg-transparent text-white border-light-3" placeholder="E-posta" @bind="_UserEmail">
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-white"><i class="fa fa-phone"></i> Telefon</label>
+                        <div class="input-group">
+                            <div style="max-width: 100px;">
+                                <select class="form-select bg-transparent text-white border-light-3" @onchange="@(e => _SelectedPhoneCode = e.Value.ToString())">
+                                    <option value="90">90</option>
+                                    @foreach (var c in _Countries.Where(x => !string.IsNullOrEmpty(x.phonecode) && !string.IsNullOrEmpty(x.iso2)))
+                                    {
+                                        <option value="@c.phonecode">@c.phonecode</option>
+                                    }
+                                </select>
+                            </div>
+                            <span class="input-group-text bg-transparent border-light-3">
+                                <img src="/assets/flags/1x1/@(_Countries.FirstOrDefault(x => x.phonecode == _SelectedPhoneCode)?.iso2?.ToLower() ?? "tr").svg" width="20" />
+                            </span>
+                            <input type="tel" class="form-control bg-transparent text-white border-light-3" placeholder="5XX XXX XX XX" @bind="_UserPhoneNumber">
+                        </div>
+                    </div>
+
+
+                    @*                 
                     <div class="col-md-4 mb-3">
                         <label class="form-label text-white"><i class="fa fa-globe"></i> Ülkeniz</label>
                         <select class="form-select bg-transparent text-white border-light-3" @onchange="OnCountrySelected">
@@ -36,7 +62,6 @@
                             }
                         </select>
                     </div>
-
                     <div class="col-md-4 mb-3">
                         <label class="form-label text-white"><i class="fa fa-map"></i> Eyalet/İl</label>
                         <select class="form-select bg-transparent text-white border-light-3" @onchange="OnStateSelected" disabled="@(!_States.Any())">
@@ -47,7 +72,6 @@
                             }
                         </select>
                     </div>
-
                     <div class="col-md-4 mb-3">
                         <label class="form-label text-white"><i class="fa fa-building-o"></i> Şehir</label>
                         <select class="form-select bg-transparent text-white border-light-3" disabled="@(!_Cities.Any())">
@@ -58,7 +82,7 @@
                             }
                         </select>
                     </div>
-
+                    *@
 
 
                     <div class="col-md-4 mb-3">
@@ -98,26 +122,55 @@
                         </select>
                     </div>
 
+
                     @if (_user.UsersType == "Vendor")
                     {
                         <div class="col-md-12 mb-3">
-                            <label class="form-label text-white"><i class="fa fa-handshake-o"></i> Sponsorunuzun Email Adresi</label>
-                            <input type="text" class="form-control bg-transparent text-white border-light-3"
-                                   placeholder="Boş Geçerseniz 'Sponsor Yok' olarak kabul edilir."
-                                   @bind="_Sponsored"
-                                   @bind:event="oninput">
-                            <span class="text-warning">
-                                <i class="fa fa-info-circle"></i>
-                                Kesintiler(Sponsor Var İse): %5 Sponsorunuzun + %5 Servis Sağlayıcınızın Olacaktır.
-                            </span>
-                            <br />
-                            <span class="text-warning">
-                                <i class="fa fa-info-circle"></i>
-                                Kesintiler(Sponsor Yok İse): %10 Servis Sağlayıcınızın Olacaktır.
-                            </span>
+                            <label class="form-label text-white">
+                                <i class="fa fa-handshake-o"></i> Sponsorunuzun Email Adresi
+                            </label>
+
+                            <div class="input-group">
+                                <input type="text"
+                                       class="form-control bg-transparent text-white border-light-3"
+                                       placeholder="Boş/Geçerseniz 'Sponsor Yok' kabul edilir."
+                                       @bind="_Sponsored"
+                                       @oninput="@(async e => { _Sponsored = e.Value?.ToString(); await CheckSponsorAsync(); })">
+
+                                @*          <button class="btn btn-outline-light" type="button" id="button-addon2" @onclick="CheckSponsorAsync">
+                                    Kontrol Et
+                                </button> *@
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(_SponsorFullName))
+                            {
+                                <div class="mt-2">
+                                    <span class="text-info d-inline">
+                                        <i class="fa fa-check-circle-o" aria-hidden="true"></i>
+                                        Kesintiler(Sponsor Var İse): %5 Sponsorunuzun + %5 Servis Sağlayıcınızın Olacaktır.
+                                    </span>
+                                    <span class="d-block">
+                                        <i class="fa fa-question-circle-o" aria-hidden="true"></i>
+                                        Kesintiler(Sponsor Yok İse): %10 Servis Sağlayıcınızın Olacaktır.
+                                    </span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mt-2">
+                                    <span class="d-block">
+                                        <i class="fa fa-question-circle-o" aria-hidden="true"></i>
+                                        Kesintiler(Sponsor Var İse): %5 Sponsorunuzun + %5 Servis Sağlayıcınızın Olacaktır.
+                                    </span>
+                                    <span class="text-info d-inline">
+                                        <i class="fa fa-check-circle-o" aria-hidden="true"></i>
+                                        Kesintiler(Sponsor Yok İse): %10 Servis Sağlayıcınızın Olacaktır.
+                                    </span>
+                                </div>
+                            }
+
+
                         </div>
                     }
-
                     @if (!string.IsNullOrWhiteSpace(_SponsorFullName))
                     {
                         <div class="col-md-12 mb-3">
@@ -126,111 +179,16 @@
                                    value="@_SponsorFullName" readonly>
                         </div>
                     }
-
-
-
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-white"><i class="fa fa-envelope"></i> E-posta</label>
-                        <input type="email" class="form-control bg-transparent text-white border-light-3" placeholder="E-posta">
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-white"><i class="fa fa-phone"></i> Telefon</label>
-                        <div class="input-group">
-                            <div style="max-width: 100px;">
-                                <select class="form-select bg-transparent text-white border-light-3" @onchange="@(e => _SelectedPhoneCode = e.Value.ToString())">
-                                    <option value="90">90</option>
-                                    @foreach (var c in _Countries.Where(x => !string.IsNullOrEmpty(x.phonecode) && !string.IsNullOrEmpty(x.iso2)))
-                                    {
-                                        <option value="@c.phonecode">@c.phonecode</option>
-                                    }
-                                </select>
-                            </div>
-                            <span class="input-group-text bg-transparent border-light-3">
-                                <img src="/assets/flags/1x1/@(_Countries.FirstOrDefault(x => x.phonecode == _SelectedPhoneCode)?.iso2?.ToLower() ?? "tr").svg" width="20" />
-                            </span>
-                            <input type="tel" class="form-control bg-transparent text-white border-light-3" placeholder="5XX XXX XX XX">
-                        </div>
-                    </div>
-
+                    <p>@_Sponsored</p>
                     <div class="col-md-12 mb-3">
                         <label class="form-label text-white"><i class="fa fa-key"></i> Şifreniz </label>
                         <input type="email" class="form-control bg-transparent text-white border-light-3" @bind="_user.Password">
                     </div>
-
-
-
                 </div>
             </div>
             <div class="modal-footer border-top border-secondary">
-                <button type="button" class="btn btn-light shadow w-100"><i class="fa fa-user-plus"></i> Kayıt Ol</button>
+                <button type="button" class="btn btn-light shadow w-100" @onclick="UserSave"><i class="fa fa-user-plus"></i> Kayıt Ol</button>
             </div>
         </div>
     </div>
 </div>
-
-<!-- Oturum Açma Modalı -->
-<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(2px);">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title text-white">
-                    <i class="fa fa-sign-in"></i> Oturum Aç
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label"><i class="fa fa-envelope"></i> E-posta</label>
-                    <input type="email" class="form-control" placeholder="E-posta adresiniz" />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label"><i class="fa fa-lock"></i> Şifre</label>
-                    <input type="password" class="form-control" placeholder="Şifreniz" />
-                </div>
-                <div class="d-flex justify-content-between">
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#resetModal">
-                        <i class="fa fa-key"></i> Şifremi Unuttum
-                    </button>
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal">
-                        <i class="fa fa-user-plus"></i> Kayıt Ol
-                    </button>
-                </div>
-            </div>
-            <div class="modal-footer border-top border-secondary">
-                <button type="button" class="btn btn-light shadow" style="width:100%;">
-                    <i class="fa fa-sign-in"></i> Giriş Yap
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Şifre Yenileme Modalı -->
-<div class="modal fade" id="resetModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(2px);">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title text-white">
-                    <i class="fa fa-key"></i> Şifre Yenile
-                </h5>
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginModal">
-                    <i class="fa fa-sign-in"></i> Giriş Yap
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label"><i class="fa fa-envelope"></i> E-posta</label>
-                    <input type="email" class="form-control" placeholder="E-posta adresiniz" />
-                </div>
-            </div>
-            <div class="modal-footer border-top border-secondary">
-                <button type="button" class="btn btn-light shadow" style="width:100%;">
-                    <i class="fa fa-key"></i> Şifre Yenile
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-

@@ -163,16 +163,16 @@
     <meta name="twitter:description" content="@(ViewData["Description"] ?? "efavori.com content management.")">
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="https://www.google-analytics.com">
-    <link rel="icon" href="~/assets/favicon/32x32.png" type="image/png" sizes="32x32" />
-    <link rel="apple-touch-icon" href="~/assets/favicon/180x180.png">
+    <link rel="icon" href="~/assets/images/favicon/32x32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="~/assets/images/favicon/180x180.png">
     <meta name="theme-color" content="#0000FF">
     @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
 </head>
 
 <body class="bg-theme bg-theme1">
     <div class="wrapper">
-        @(await Html.RenderComponentAsync<razor._Shared.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-        @(await Html.RenderComponentAsync<razor._Shared.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+        @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
+        @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
         <div class="page-wrapper">
             <div class="page-content">
                 @RenderBody()
@@ -184,7 +184,7 @@
             <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText</p>
         </footer>
     </div>
-    @(await Html.RenderComponentAsync<razor._Shared.Modals.en.LoginModals>(RenderMode.Static))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Modals.LoginModals>(RenderMode.Static))
     @(await Html.RenderComponentAsync<Js>(RenderMode.Static))
     <base href="~/" />
     <script src="~/_framework/blazor.server.js"></script>

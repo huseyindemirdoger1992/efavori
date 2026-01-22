@@ -13,6 +13,7 @@ namespace data._Shared
         public bool? IsActivePhoneNumber { get; set; }
         public string? CountryPhoneCode { get; set; }
         public string? PhoneNumber { get; set; }
+        public string? FullPhoneNumber { get; set; }
         public bool PhoneNumberConfirmed { get; set; }
 
 

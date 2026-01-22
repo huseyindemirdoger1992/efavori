@@ -2,6 +2,7 @@
 @code {
     [Parameter]
     public Users? _use { get; set; }
+    _ApplicationConnectionDb db = new _ApplicationConnectionDb();
 }
 <div class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
@@ -12,12 +13,15 @@
             <h4 class="logo-text">favori.com</h4>
         </div>
         <div class="toggle-icon ms-auto">
-            <i class='bx bx-arrow-back'></i>
+            <i class='bx bx-menu'></i>
         </div>
     </div>
     <!--navigation-->
     <ul class="metismenu" id="menu">
 
+        <li>
+            <input class="form-control mb-3" type="text" placeholder="XXX" aria-label="default input example">
+        </li>
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
@@ -37,7 +41,6 @@
                 </li>
             </ul>
         </li>
-
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">

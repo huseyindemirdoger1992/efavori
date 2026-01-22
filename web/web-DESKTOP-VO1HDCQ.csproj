@@ -22,6 +22,7 @@
   <ItemGroup>
     <Folder Include="Areas\Vendor\Controllers\" />
     <Folder Include="Areas\Vendor\Views\" />
+    <Folder Include="wwwroot\assets\favicon\" />
   </ItemGroup>
 
 </Project>

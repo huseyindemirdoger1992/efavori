@@ -47,7 +47,15 @@
     <Folder Include="Vendor\tr\" />
     <Folder Include="Vendor\ru\" />
     <Folder Include="Vendor\pt\" />
-    <Folder Include="_Shared\Modals\tr\" />
+    <Folder Include="_Shared\az\" />
+    <Folder Include="_Shared\de\" />
+    <Folder Include="_Shared\en\" />
+    <Folder Include="_Shared\es\" />
+    <Folder Include="_Shared\fr\" />
+    <Folder Include="_Shared\hi\" />
+    <Folder Include="_Shared\pt\" />
+    <Folder Include="_Shared\ru\" />
+    <Folder Include="_Shared\zh\" />
   </ItemGroup>
 
   <ItemGroup>

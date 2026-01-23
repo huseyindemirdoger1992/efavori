@@ -1,6 +1,8 @@
-using api;
+ï»¿using api;
 using data;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Localization.Routing;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -13,28 +15,31 @@ using System.Text.Unicode;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. Altyapý ve Kodlama Ayarlarý ---
+// --- 1. AltyapÄ± ve Kodlama AyarlarÄ± ---
 ConfigureInfrastructure(builder);
 
-// --- 2. Localization (Çoklu Dil) Yapýlandýrmasý ---
+// --- 2. Localization (Ã‡oklu Dil) YapÄ±landÄ±rmasÄ± ---
 ConfigureLocalization(builder.Services);
 
-// --- 3. Veritabaný ve Veri Katmaný ---
+// --- 3. VeritabanÄ± ve Veri KatmanÄ± ---
 ConfigurePersistence(builder);
 
-// --- 4. Güvenlik ve Kimlik Doðrulama (1 Yýllýk Çerez) ---
+// --- 4. GÃ¼venlik ve Kimlik DoÄŸrulama ---
 ConfigureSecurity(builder.Services);
 
 // --- 5. Web Sunucu ve Limitler ---
 ConfigureServerLimits(builder.Services);
 
+builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+
 var app = builder.Build();
 
-// --- 6. Middleware Pipeline ---
+// --- 6. Middleware Pipeline (SÄ±ralama DÃ¼zenlendi) ---
 ConfigureMiddlewarePipeline(app);
 
-// --- 7. SEO Uyumlu Endpoint Tanýmlarý ---
+// --- 7. SEO Uyumlu Endpoint TanÄ±mlarÄ± ---
 ConfigureEndpoints(app);
+app.MapControllers();
 
 app.Run();
 
@@ -44,11 +49,7 @@ void ConfigureInfrastructure(WebApplicationBuilder b)
 {
     b.Services.AddSingleton(HtmlEncoder.Create(UnicodeRanges.All));
     b.Services.AddHttpContextAccessor();
-
-    // Session kaldýrýldý, yerine verileri çerezde tutacaðýz. 
-    // Ancak bazý kütüphaneler için cache altyapýsý kalabilir.
     b.Services.AddDistributedMemoryCache();
-
     b.Services.AddScoped<UserInfos>();
 
     var mvcBuilder = b.Services.AddControllersWithViews()
@@ -61,6 +62,7 @@ void ConfigureInfrastructure(WebApplicationBuilder b)
     }
 
     b.Services.AddServerSideBlazor();
+    b.Services.AddRazorComponents().AddInteractiveServerComponents();
 }
 
 void ConfigureLocalization(IServiceCollection services)
@@ -75,7 +77,6 @@ void ConfigureLocalization(IServiceCollection services)
         options.SupportedCultures = supportedCultures;
         options.SupportedUICultures = supportedCultures;
 
-        // Provider sýrasý önemli: Route > Cookie > Header
         options.RequestCultureProviders.Clear();
         options.RequestCultureProviders.Add(new RouteDataRequestCultureProvider { RouteDataStringKey = "culture" });
         options.RequestCultureProviders.Add(new CookieRequestCultureProvider
@@ -119,25 +120,24 @@ void ConfigureSecurity(IServiceCollection services)
     services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
         .AddCookie(options =>
         {
-            options.LoginPath = "/Security/Login/";
-            options.LogoutPath = "/Security/Logout/";
-            options.AccessDeniedPath = "/Security/Logout/";
             options.Cookie.Name = ".Efavori.Auth.Identity";
+            options.Cookie.Path = "/";
+            options.LoginPath = "/";
+            options.LogoutPath = "/tr/Account/Logout";
+            options.AccessDeniedPath = "/tr/Account/Logout";
             options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+            // GeliÅŸtirme ortamÄ±nda Ã§erezlerin yazÄ±labilmesi iÃ§in 'SameAsRequest' yapÄ±ldÄ±.
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             options.Cookie.SameSite = SameSiteMode.Lax;
 
-            // --- ÖMÜR AYARI ---
             options.ExpireTimeSpan = TimeSpan.FromDays(365);
-            options.SlidingExpiration = true; // Kullanýcý siteye girdikçe 1 yýl süresi resetlenir
-            options.Cookie.MaxAge = options.ExpireTimeSpan; // Tarayýcý tarafýnda kalýcýlýk saðlar
+            options.SlidingExpiration = true;
+            options.Cookie.MaxAge = options.ExpireTimeSpan;
         });
 
     services.AddAuthorization();
 }
-
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(); 
 
 void ConfigureServerLimits(IServiceCollection services)
 {
@@ -156,12 +156,12 @@ void ConfigureMiddlewarePipeline(WebApplication app)
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();
-    // app.UseSession(); // Çerez yapýsýna geçildiði için kaldýrýldý
+
     app.UseRouting();
 
+    // --- KRÄ°TÄ°K SIRALAMA: Localization, Auth'dan Ã¶nce gelmeli ---
     var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
     app.UseRequestLocalization(locOptions.Value);
-
     app.UseAuthentication();
     app.UseAuthorization();
 }
@@ -176,14 +176,17 @@ void ConfigureEndpoints(WebApplication app)
         name: "default",
         pattern: "{culture}/{controller=Home}/{action=Index}/{id?}");
 
-    // Ana sayfa - Cookie'den dil tercihini oku
+    app.MapControllerRoute(
+        name: "account",
+        pattern: "{culture}/Account/{action=Login}",
+        defaults: new { controller = "Account" });
+
     app.MapGet("/", context => {
         var culture = GetPreferredCulture(context);
         context.Response.Redirect($"/{culture}/Customer/Home/Index");
         return Task.CompletedTask;
     });
 
-    // Dil parametresi ile giriþ
     app.MapGet("/{culture}", (string culture, HttpContext context) => {
         var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
         if (!supportedCultures.Contains(culture.ToLower()))
@@ -197,17 +200,14 @@ void ConfigureEndpoints(WebApplication app)
     app.MapBlazorHub();
 }
 
-// Cookie'den kullanýcýnýn dil tercihini al
 string GetPreferredCulture(HttpContext context)
 {
     var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
     const string defaultCulture = "en";
 
-    // Cookie'yi oku
     if (context.Request.Cookies.TryGetValue(".Efavori.Culture", out var cookieValue) &&
         !string.IsNullOrEmpty(cookieValue))
     {
-        // ASP.NET Core formatý: c=tr|uic=tr
         var culture = CookieRequestCultureProvider.ParseCookieValue(cookieValue);
         if (culture != null)
         {

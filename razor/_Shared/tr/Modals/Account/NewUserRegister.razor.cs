@@ -14,12 +14,22 @@ namespace razor._Shared.tr.Modals.Account
     {
         [Inject] public IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; set; }
         [Inject] public IJSRuntime JSRuntime { get; set; }
+        [Inject] public UserInfos UserInfos { get; set; }
 
-        private Users _user = new Users{};
+
+        private Users _user = new Users { };
 
         protected List<Country> _Countries = new();
         protected List<States> _States = new();
         protected List<Cities> _Cities = new();
+
+        private Notification? notificationRef;
+        private async Task ShowNotification(string type, string title, string text, string? image)
+        {
+            var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+            if (notificationRef != null)
+                await notificationRef.Launch(type, title, text, imageUrl);
+        }
 
         private async Task CheckSponsorAsync()
         {
@@ -89,18 +99,181 @@ namespace razor._Shared.tr.Modals.Account
         private string? _UserEmail = string.Empty;
         private string? _UserPhoneNumber = string.Empty;
         public async Task UserSave()
-        {        
+        {
+            // --- 1. BOŞ ALAN KONTROLLERİ ---
+
+            // E-posta Kontrolü
+            if (string.IsNullOrWhiteSpace(_UserEmail))
+            {
+                await ShowNotification("warning", "E-posta Gerekli", "Lütfen devam etmek için e-posta adresinizi yazın.", null);
+                return;
+            }
+
+            if (!_UserEmail.Contains("@") || !_UserEmail.Contains("."))
+            {
+                await ShowNotification("error", "Geçersiz Format", "Girdiğiniz e-posta adresi hatalı görünüyor. Lütfen kontrol edin.", null);
+                return;
+            }
+
+            // Telefon Kontrolü
+            if (string.IsNullOrWhiteSpace(_UserPhoneNumber))
+            {
+                await ShowNotification("warning", "Telefon Gerekli", "Telefon numaranızı girmelisiniz.", null);
+                return;
+            }
+
+            // Kişisel Bilgiler
+            if (string.IsNullOrWhiteSpace(_user.FirstName))
+            {
+                await ShowNotification("warning", "Ad Alanı Boş", "Lütfen adınızı belirtiniz.", null);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_user.LastName))
+            {
+                await ShowNotification("warning", "Soyad Alanı Boş", "Lütfen soyadınızı belirtiniz.", null);
+                return;
+            }
+
+            if (_user.DateOfBirth == null)
+            {
+                await ShowNotification("warning", "Tarih Seçilmedi", "Doğum tarihinizi takvimden seçmeniz gerekiyor.", null);
+                return;
+            }
+
+            // Tercihler
+            if (string.IsNullOrWhiteSpace(_user.Language))
+            {
+                await ShowNotification("info", "Dil Seçimi", "Lütfen tercih ettiğiniz iletişim dilini seçin.", null);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_user.Currency))
+            {
+                await ShowNotification("info", "Para Birimi", "İşlemleriniz için bir para birimi belirlemelisiniz.", null);
+                return;
+            }
+
+            // Hesap Detayları
+            if (string.IsNullOrWhiteSpace(_user.UsersType))
+            {
+                await ShowNotification("info", "Kullanıcı Tipi", "Lütfen hesap türünüzü (Müşteri/Satıcı vb.) seçin.", null);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_user.Password))
+            {
+                await ShowNotification("error", "Şifre Belirlenmedi", "Güvenliğiniz için bir kullanıcı şifresi oluşturmalısınız.", null);
+                return;
+            }
+
+            // --- 2. VERİ HAZIRLAMA VE ÖN KONTROLLER ---
+
             TextualFunctions tf = new TextualFunctions();
-            _user.ContactInformation = new ContactInformation();
-            _user.ContactInformation.CountryPhoneCode = !string.IsNullOrWhiteSpace(_SelectedPhoneCode) ? _SelectedPhoneCode : "90";
-            _user.ContactInformation.PhoneNumber = tf.NormalizePhoneNumberEditor(_UserPhoneNumber);
-            _user.ContactInformation.Email = _UserEmail;
-            _user.UserSponsorEmail = _Sponsored;
-            _user.HeaderMenuType = _user.UsersType;
-            _user.RegistrationDate = DateTime.UtcNow;
-            using var db = await DbFactory.CreateDbContextAsync();
-            db.Users.Add(_user);
-            await db.SaveChangesAsync();
+            var normalizedPhone = tf.NormalizePhoneNumberEditor(_UserPhoneNumber);
+
+            // Sponsor ve kullanıcı e-postası aynı mı?
+            if (!string.IsNullOrWhiteSpace(_Sponsored) && _UserEmail.Trim().ToLower() == _Sponsored.Trim().ToLower())
+            {
+                await ShowNotification("error", "Kayıt Hatası", "Kullanıcı e-posta adresi ile sponsor e-posta adresi aynı olamaz.", null);
+                return;
+            }
+
+            try
+            {
+                using var db = await DbFactory.CreateDbContextAsync();
+
+                // --- 3. VERİTABANI ÇAKIŞMA KONTROLÜ ---
+
+                // Hem e-posta hem de telefon için benzersizlik kontrolü
+                var existingUser = await db.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u =>
+                        u.ContactInformation != null &&
+                        (u.ContactInformation.Email.ToLower() == _UserEmail.ToLower() ||
+                         u.ContactInformation.PhoneNumber == normalizedPhone));
+
+                if (existingUser != null)
+                {
+                    // Hangi verinin çakıştığını kullanıcıya daha net belirtmek isterseniz:
+                    string duplicateType = existingUser.ContactInformation.Email.ToLower() == _UserEmail.ToLower()
+                        ? "E-posta adresi"
+                        : "Telefon numarası";
+
+                    await ShowNotification("error", "Mükerrer Kayıt", $"Bu {duplicateType} zaten sistemde kayıtlı.", null);
+                    return;
+                }
+
+                // --- 4. KAYIT İŞLEMİ ---
+
+                _user.ContactInformation = new ContactInformation
+                {
+                    CountryPhoneCode = _SelectedPhoneCode,
+                    PhoneNumber = normalizedPhone,
+                    Email = _UserEmail.Trim().ToLower()
+                };
+
+                _user.UserSponsorEmail = _Sponsored?.Trim().ToLower();
+                _user.HeaderMenuType = _user.UsersType;
+                _user.IsActive = true;
+                _user.RegistrationDate = DateTime.UtcNow;
+
+                db.Users.Add(_user);
+                await db.SaveChangesAsync();
+
+                // Başarılı işlem bildirimi
+                await ShowNotification("success", "İşlem Tamamlandı", "Kullanıcı kaydı başarıyla oluşturuldu.", null);
+
+
+
+                var userDetail = UserInfos.GetCurrentUserDetails();
+                var log = new Logs
+                {
+                    UserId = _user?.Id ?? null,
+                    Title = "UserRegister",
+                    Action = "NewUserCreated",
+                    IpAddress = userDetail.IpAddress,
+                    UserAgent = userDetail.UserAgent,
+                    RequestPath = userDetail.RequestPath,
+                    Languages = userDetail.Languages,
+                    Exception = null,
+                    StackTrace = null,
+                    Date = DateTime.UtcNow
+                };
+                db.Logs.Add(log);
+                await db.SaveChangesAsync();
+
+            }
+            catch (Exception ex)
+            {
+                // Kullanıcı ve istek detaylarını al
+                var userDetail = UserInfos.GetCurrentUserDetails();
+
+                // Hata detaylarını logla
+                var log = new Logs
+                {
+                    UserId = _user?.Id ?? null,
+                    Title = "UserRegister",
+                    Action = "NewUserCreated",
+                    IpAddress = userDetail.IpAddress,
+                    UserAgent = userDetail.UserAgent,
+                    RequestPath = userDetail.RequestPath,
+                    Languages = userDetail.Languages,
+                    Exception = ex.Message,
+                    StackTrace = ex.StackTrace,
+                    Date = DateTime.UtcNow
+                };
+
+                // Yeni bir context ile log kaydını ekle (db context dispose edilmiş olabilir)
+                using (var dbLog = await DbFactory.CreateDbContextAsync())
+                {
+                    dbLog.Logs.Add(log);
+                    await dbLog.SaveChangesAsync();
+                }
+
+                // Kullanıcıya hata bildirimi göster
+                await ShowNotification("error", "Sistem Hatası", "Kayıt sırasında teknik bir hata oluştu. Lütfen tekrar deneyiniz.", null);
+            }
         }
     }
 }

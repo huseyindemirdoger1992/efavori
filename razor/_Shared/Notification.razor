@@ -1,0 +1,238 @@
+﻿@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+@code {
+    [Parameter] public object? use { get; set; }
+
+    [Parameter] public string? Type { get; set; } = "info";
+    [Parameter] public string? Title { get; set; } = "SİSTEM";
+    [Parameter] public string? Text { get; set; } = "İşlem başarıyla tamamlandı.";
+    [Parameter] public string? ImageUrl { get; set; } = "https://picsum.photos/120";
+
+    public async Task Launch(string? type = null, string? title = null, string? text = null, string? image = null)
+    {
+        await JSRuntime.InvokeVoidAsync("dxtrV2_Notify",
+            title ?? Title,
+            text ?? Text,
+            image ?? ImageUrl,
+            type ?? Type);
+    }
+}
+
+<div id="dxtr-v2-toaster-host"></div>
+
+<style>
+    #dxtr-v2-toaster-host {
+        position: fixed;
+        top: 2rem;
+        right: 2rem;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+        width: 360px;
+        pointer-events: none;
+        perspective: 1200px;
+    }
+
+    /* --- GLASSMORPHISM DÜZENLEME --- */
+    .dxtr-v2-toast-node {
+        pointer-events: auto;
+        position: relative;
+        /* Tam cam görünümü: Çok düşük opaklık */
+        background: rgba(255, 255, 255, 0.03) !important;
+        /* %20 Seviyesinde Blur */
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        padding: 20px;
+        color: #fff;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        opacity: 0;
+        transform: rotateX(-45deg) scale(0.8) translateY(-40px);
+        transform-origin: top;
+        transition: transform 0.8s cubic-bezier(0.22, 1.61, 0.36, 1), opacity 0.4s ease;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+        .dxtr-v2-toast-node.v2-active {
+            opacity: 1;
+            transform: rotateX(0deg) scale(1) translateY(0);
+        }
+
+        .dxtr-v2-toast-node.v2-exit {
+            opacity: 0 !important;
+            transform: scale(0.9) translateY(-20px) rotateZ(-2deg);
+            filter: blur(5px);
+            transition: all 0.5s ease-in;
+        }
+
+    .dxtr-v2-media {
+        width: 52px;
+        height: 52px;
+        flex-shrink: 0;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+        .dxtr-v2-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    /* --- METİN SOLA YASLAMA --- */
+    .dxtr-v2-content {
+        flex: 1;
+        padding-right: 15px;
+        text-align: left; /* Sola yasla */
+    }
+
+    .dxtr-v2-title {
+        display: block;
+        font-weight: 900;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+        text-align: left; /* Sola yasla */
+    }
+
+    .dxtr-v2-desc {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+        line-height: 1.4;
+        margin: 0;
+        text-align: left; /* Sola yasla */
+    }
+
+    .dxtr-v2-close {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: #fff;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1rem;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        transition: all 0.3s;
+    }
+
+        .dxtr-v2-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+    .dxtr-v2-timer-wrapper {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 0 0 16px 16px;
+        overflow: hidden;
+    }
+
+    .dxtr-v2-timer-bar {
+        height: 100%;
+        width: 0%;
+        transition: width 4000ms linear;
+    }
+
+    .dxtr-v2-toast-node.info .dxtr-v2-title {
+        color: #00e5ff;
+    }
+
+    .dxtr-v2-toast-node.info .dxtr-v2-timer-bar {
+        background: #00e5ff;
+    }
+
+    .dxtr-v2-toast-node.success .dxtr-v2-title {
+        color: #00ffa3;
+    }
+
+    .dxtr-v2-toast-node.success .dxtr-v2-timer-bar {
+        background: #00ffa3;
+    }
+
+    .dxtr-v2-toast-node.warning .dxtr-v2-title {
+        color: #ffeb3b;
+    }
+
+    .dxtr-v2-toast-node.warning .dxtr-v2-timer-bar {
+        background: #ffeb3b;
+    }
+
+    .dxtr-v2-toast-node.danger .dxtr-v2-title {
+        color: #ff2d55;
+    }
+
+    .dxtr-v2-toast-node.danger .dxtr-v2-timer-bar {
+        background: #ff2d55;
+    }
+
+    .dxtr-v2-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+</style>
+
+<script>
+    function dxtrV2_Notify(title, msg, img, status) {
+        let host = document.getElementById('dxtr-v2-toaster-host');
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'dxtr-v2-toaster-host';
+            document.body.appendChild(host);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `dxtr-v2-toast-node ${status}`;
+        toast.innerHTML = `
+            <div class="dxtr-v2-media"><img src="${img}"></div>
+            <div class="dxtr-v2-content">
+                <span class="dxtr-v2-title">${title}</span>
+                <p class="dxtr-v2-desc">${msg}</p>
+            </div>
+            <button class="dxtr-v2-close">&times;</button>
+            <div class="dxtr-v2-timer-wrapper"><div class="dxtr-v2-timer-bar"></div></div>`;
+
+        host.appendChild(toast);
+        toast.querySelector('.dxtr-v2-close').onclick = () => removeToast(toast);
+
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                toast.classList.add('v2-active');
+                const bar = toast.querySelector('.dxtr-v2-timer-bar');
+                if(bar) bar.style.width = '100%';
+            }, 10);
+        });
+
+        let autoClose = setTimeout(() => removeToast(toast), 4000);
+
+        function removeToast(el) {
+            if (!el.parentElement) return;
+            clearTimeout(autoClose);
+            el.classList.add('v2-exit');
+            setTimeout(() => { if(el.parentElement) el.remove(); }, 550);
+        }
+    }
+</script>

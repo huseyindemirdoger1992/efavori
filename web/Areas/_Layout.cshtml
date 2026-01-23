@@ -8,7 +8,7 @@
 @using Microsoft.AspNetCore.Http
 @inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 @{
-    // --- 1. DEĞİŞKEN BAŞLATMA (VARSAYILANLAR) ---
+    // --- 1. DEĞİŞKEN BAŞLATMA ---
     string BackgroundImage = "/assets/images/bg-themes/1.png";
     string lang = "en";
     string TotalLang = "en_EN";
@@ -16,27 +16,27 @@
     var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
 
     Users? use = null;
-    var userEmail = User.FindFirstValue(ClaimTypes.Email);
 
     // --- 2. DİL VE VERİ ÇEKME MANTIĞI ---
     try
     {
-        if (!string.IsNullOrEmpty(userEmail))
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        Guid userId;
+        bool isGuid = Guid.TryParse(userIdStr, out userId);
+        if (isGuid)
         {
-            // --- DURUM A: OTURUM AÇIK ---
+            // --- DURUM A: OTURUM AÇIK (GUID İLE SORGULAMA) ---
             using (var db = new _ApplicationConnectionDb())
             {
                 use = await db.Users
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
+                    .FirstOrDefaultAsync(u => u.Id == userId);
 
                 if (use != null)
                 {
-                    // Arka plan resmi
                     if (!string.IsNullOrEmpty(use.BackgroundImagePath))
                         BackgroundImage = use.BackgroundImagePath;
 
-                    // Kullanıcı dili
                     if (!string.IsNullOrEmpty(use.Language) && supportedCultures.Contains(use.Language.ToLower()))
                     {
                         lang = use.Language.ToLower();
@@ -63,7 +63,7 @@
                             await dbLog.SaveChangesAsync();
                         }
                     }
-                    catch { /* Log hatası akışı bozmasın */ }
+                    catch { }
                 }
             }
         }
@@ -77,7 +77,6 @@
             }
             else if (Context.Request.Cookies.TryGetValue(".Efavori.Culture", out var cookieValue) && !string.IsNullOrEmpty(cookieValue))
             {
-                // ASP.NET Core formatı: c=tr|uic=tr
                 var parts = cookieValue.Split('|');
                 var cPart = parts.FirstOrDefault(p => p.StartsWith("c="));
                 if (cPart != null)
@@ -89,10 +88,8 @@
             }
         }
 
-        // Değişkenleri güncelle
         TotalLang = $"{lang}_{lang.ToUpper()}";
 
-        // Footer Metinleri
         var footerTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             { "az", "Bütün hüquqlar qorunur." },
@@ -110,7 +107,6 @@
     }
     catch (Exception ex)
     {
-        // --- 3. HATA YÖNETİMİ ---
         try
         {
             using (var dbLog = new _ApplicationConnectionDb())
@@ -120,7 +116,7 @@
                     Id = Guid.NewGuid(),
                     Title = "Layout Data Error",
                     Action = "FetchUserData_Error",
-                    UserId = use?.Id ?? Guid.Empty,
+                    // UserId = isGuid ? userId : Guid.Empty,
                     Exception = ex.Message,
                     StackTrace = ex.StackTrace,
                     Date = DateTime.UtcNow,
@@ -229,6 +225,10 @@
         }
         <div class="page-wrapper">
             <div class="page-content">
+                @if (use != null)
+                {
+                    <h2>@use.FirstName</h2>
+                }
                 @RenderBody()
             </div>
         </div>

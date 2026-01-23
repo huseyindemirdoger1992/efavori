@@ -67,39 +67,57 @@
                 switch (currentLang)
                 {
                     case "tr":
-                        <p class="card-text text-white">Özel içerikleri görmek için lütfen <a asp-controller="Security" asp-action="Login">giriş yapın</a>.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "az":
-                        <p class="card-text text-white">Xüsusi məzmunu görmək üçün zəhmət olmasa <a asp-controller="Security" asp-action="Login">daxil olun</a>.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "de":
-                        <p class="card-text text-white">Bitte <a asp-controller="Security" asp-action="Login">einloggen</a>, um private Inhalte zu sehen.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "es":
-                        <p class="card-text text-white">Por favor <a asp-controller="Security" asp-action="Login">inicie sesión</a> para ver contenido privado.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "fr":
-                        <p class="card-text text-white">Veuillez vous <a asp-controller="Security" asp-action="Login">connecter</a> pour voir le contenu privé.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "hi":
-                        <p class="card-text text-white">निजी सामग्री देखने के लिए कृपया <a asp-controller="Security" asp-action="Login">लॉगिन करें</a>।</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "pt":
-                        <p class="card-text text-white">Por favor, faça <a asp-controller="Security" asp-action="Login">login</a> para ver o conteúdo privado.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "ru":
-                        <p class="card-text text-white">Пожалуйста, <a asp-controller="Security" asp-action="Login">войдите</a>, чтобы увидеть личный контент.</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "zh":
-                        <p class="card-text text-white">请<a asp-controller="Security" asp-action="Login">登录</a>查看私人内容。</p>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     default:
@@ -120,46 +138,63 @@
                 switch (currentLang)
                 {
                     case "tr":
-                        <span>Tekrar hoş geldin, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "az":
-                        <span>Yenidən xoş gəldiniz, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "de":
-                        <span>Willkommen zurück, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "es":
-                        <span>Bienvenido de nuevo, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "fr":
-                        <span>Bon retour, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "hi":
-                        <span>वापसी पर स्वागत है, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "pt":
-                        <span>Bem-vindo de volta, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "ru":
-                        <span>С возвращением, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     case "zh":
-                        <span>欢迎回来, @User.Identity.Name!</span>
+                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                RenderMode.Server,
+                                new { use = (use != null ? use : null) }))
                         ;
                         break;
                     default:
                         @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
                                 RenderMode.Server,
                                 new { use = (use != null ? use : null) }))
-
                         ;
                         break;
                 }

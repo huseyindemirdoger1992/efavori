@@ -12,7 +12,7 @@ namespace data
         // --- KİMLİK BİLGİLERİ ---
 
         // <summary>İşlemi gerçekleştiren kullanıcının benzersiz kimliği.</summary>
-        public Guid UserId { get; set; }
+        public Guid? UserId { get; set; }
 
         // <summary>Logun ait olduğu servis veya modül adı (örn: "MediaService").</summary>
         [Required]

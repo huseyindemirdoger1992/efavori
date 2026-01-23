@@ -8,20 +8,20 @@ namespace data
         // === Temel Kimlik Bilgileri ===
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid(); // Birincil anahtar, otomatik artan benzersiz
-        public string? UserSponsorEmail { get; set; } // Kullanıcının Sponsor Email Adresi----+
-        public string? FirstName { get; set; } // Kullanıcının adı (Zorunlu, max 50 karakter)----+
-        public string? LastName { get; set; } // Kullanıcının soyadı (Zorunlu, max 50 karakter)----+
-        public string? Password { get; set; } // Şifrenin hashlenmiş (şifrelenmiş) hali----+
+        public string? UserSponsorEmail { get; set; } // Kullanıcının Sponsor Email Adresi + 
+        public string? FirstName { get; set; } // Kullanıcının adı (Zorunlu, max 50 karakter) + 
+        public string? LastName { get; set; } // Kullanıcının soyadı (Zorunlu, max 50 karakter) + 
+        public string? Password { get; set; } // Şifrenin hashlenmiş (şifrelenmiş) hali + 
 
         // === Tarih Bilgileri ===
-        public DateTime? RegistrationDate { get; set; } // Sisteme ilk kayıt olduğu tarih ve saat
-        public DateTime? DateOfBirth { get; set; } // Doğum Tarihi----+
+        public DateTime? RegistrationDate { get; set; } // Sisteme ilk kayıt olduğu tarih ve saat + 
+        public DateTime? DateOfBirth { get; set; } // Doğum Tarihi + 
 
         // === Kullanıcı Tercihleri ===
-        public string? Language { get; set; } = "en"; // Arayüz dili tercihi (Varsayılan: İngilizce)----+
-        public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi----+
-        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi----+
-        public string? HeaderMenuType { get; set; } = "Customer"; // Kullanıcı Tipi Header Menüsü
+        public string? Language { get; set; } = "en"; // Arayüz dili tercihi (Varsayılan: İngilizce) + 
+        public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi + 
+        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi + 
+        public string? HeaderMenuType { get; set; } = "Customer"; // Kullanıcı Tipi Header Menüsü + 
 
         // === Durum ve Yetki Bilgileri ===
         public bool? IsActive { get; set; } = true; // Kullanıcı hesabı aktif mi dondurulmuş mu?

@@ -19,9 +19,10 @@ namespace web.Account.Controllers
         }
 
         [HttpPost]
-        [IgnoreAntiforgeryToken] // JSON (Fetch/Axios) ile çağrılacağı için
-                                 // ... önceki kodlar değişmedi ...
-        public async Task<IActionResult> Login([FromBody] LoginRequest model, string culture = "en")
+        [IgnoreAntiforgeryToken]
+        // JSON (Fetch/Axios) ile çağrılacağı için
+        // ... önceki kodlar değişmedi ...
+        public async Task<IActionResult> Login([FromForm] LoginRequest model, string culture = "en")
         {
             // 1. Temel Kontroller
             if (model == null || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
@@ -68,18 +69,14 @@ namespace web.Account.Controllers
                 authProperties);
 
             // 7. Başarılı Yanıt ve Yönlendirme URL'i dönüyoruz
-            return Ok(new
-            {
-                success = true,
-                message = "Giriş başarılı.",
-                //redirectUrl = $"/{culture}/Customer/Home/Index"
-            });
+            return Redirect($"/{culture}/Customer/Home/Index");
         }
-        [HttpPost]
-        public async Task<IActionResult> Logout()
+
+        [HttpGet, HttpPost] // Her iki yöntemi de desteklesin
+        public async Task<IActionResult> Logout(string culture = "en")
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Ok(new { success = true });
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme); // Oturumu kapat
+            return Redirect($"/{culture}/Customer/Home/Index"); // Ana sayfaya dön
         }
     }
 

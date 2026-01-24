@@ -1,5 +1,6 @@
 ﻿using data;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ namespace razor._Shared.tr.Modals.Account
     {
         [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
+        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
         private Notification? notificationRef;
         private async Task ShowNotification(string type, string title, string text, string? image)
@@ -25,49 +27,23 @@ namespace razor._Shared.tr.Modals.Account
 
         private async Task LoginUserAsync()
         {
-            loginMessage = null;
-
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
-                loginMessage = "E-posta ve şifre gereklidir.";
-                await ShowNotification("error", "Hata", loginMessage, null);
+                await ShowNotification("error", "Hata", "E-posta ve şifre gereklidir.", null);
                 return;
             }
 
-            var client = HttpClientFactory.CreateClient();
-            client.BaseAddress = new Uri(Navigation.BaseUri);
-
-            // Kültürü URI'dan alıyoruz
+            // Backend'in kültürü anlaması için
             var uri = new Uri(Navigation.Uri);
             var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             var culture = segments.Length > 0 ? segments[0] : "en";
 
-            // Doğru endpoint: /tr/Account/login
-            var endpoint = $"/{culture}/Account/login";
+            var endpoint = $"/{culture}/Account/Login";
 
-
-            // bu alan sürekli 404 dönüyor. nedeni ne olabilir?
-            var response = await client.PostAsJsonAsync(endpoint, new { Email = email, Password = password });
-
-            
-
-            if (response.IsSuccessStatusCode)
-            {
-                var result = await response.Content.ReadFromJsonAsync<LoginResult>();
-                loginMessage = result?.message ?? "Giriş başarılı!";
-                await ShowNotification("success", "Başarılı", loginMessage, null);
-
-                // Oturum açıldıktan sonra sayfayı yenile
-                Navigation.NavigateTo($"/{culture}/Customer/Home/Index", forceLoad: true);
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                loginMessage = !string.IsNullOrWhiteSpace(error) ? error : "E-posta veya şifre hatalı ya da hesap aktif değil.";
-                await ShowNotification("error", "Hata", loginMessage, null);
-            }
+            // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
+            // Bu sayede tarayıcı Set-Cookie yanıtını doğrudan işler.
+            await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
         }
-
         private class LoginResult
         {
             public string message { get; set; }

@@ -9,6 +9,7 @@
 @code {
     [Parameter]
     public Users? _use { get; set; }
+    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 }
 @if (_use != null)
 {
@@ -40,7 +41,7 @@
                 <div class="dropdown-divider mb-0"></div>
             </li>
             <li>
-                <button class="dropdown-item d-flex align-items-center"><i class="bx bx-log-out-circle"></i><span>Logout</span></button>
+                <a class="dropdown-item d-flex align-items-center" href="/@culture/Account/Logout/"><i class="bx bx-log-out-circle"></i><span>Logout</span></a>
             </li>
         </ul>
     </div>

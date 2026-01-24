@@ -54,3 +54,27 @@
         });
     });
 </script>
+
+@* Oturum açma işlemini güvenli hale getirir *@
+<script>
+        window.submitLoginForm = (path, email, password) => {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = path;
+
+        const emailField = document.createElement('input');
+        emailField.type = 'hidden';
+        emailField.name = 'Email';
+        emailField.value = email;
+        form.appendChild(emailField);
+
+        const passwordField = document.createElement('input');
+        passwordField.type = 'hidden';
+        passwordField.name = 'Password';
+        passwordField.value = password;
+        form.appendChild(passwordField);
+
+        document.body.appendChild(form);
+        form.submit();
+    };
+</script>

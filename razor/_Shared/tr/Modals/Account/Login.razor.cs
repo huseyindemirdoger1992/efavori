@@ -1,5 +1,6 @@
 ﻿using data;
 using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -21,23 +22,39 @@ namespace razor._Shared.tr.Modals.Account
                 await notificationRef.Launch(type, title, text, imageUrl);
         }
 
+        _ApplicationConnectionDb _db = new _ApplicationConnectionDb();
+
         private string? email = "huseyindemirdoger1992@gmail.com";
         private string? password = "9090";
         private async Task LoginUserAsync()
         {
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
-                await ShowNotification("error", "Hata", "E-posta ve şifre gereklidir.", null);
+                await ShowNotification("danger", "Hata", "E-posta ve şifre gereklidir.", null);
                 return;
             }
-            // Backend'in kültürü anlaması için
-            var uri = new Uri(Navigation.Uri);
-            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var culture = segments.Length > 0 ? segments[0] : "en";
+            else
+            {
+                var user = await _db.Users.AsNoTracking().Include(u => u.ContactInformation).FirstOrDefaultAsync(u => u.ContactInformation.Email == email && u.Password == password);
 
-            var endpoint = $"/{culture}/Account/Login";
-            // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
-            await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
+                // 3. Doğrulama (Not: Şifreleme/Hashing kullanmanı şiddetle öneririm)
+                if (user == null)
+                {
+                    await ShowNotification("danger", "Hata", "Girdiğiniz bilgilere ait kullanıcı bulunamadı.",null);
+                    return;
+                }
+                else
+                {
+                    // Backend'in kültürü anlaması için
+                    var uri = new Uri(Navigation.Uri);
+                    var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                    var culture = segments.Length > 0 ? segments[0] : "en";
+
+                    var endpoint = $"/{culture}/Account/Login";
+                    // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
+                    await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
+                }
+            }
         }
         private class LoginResult
         {

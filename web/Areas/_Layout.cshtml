@@ -225,17 +225,13 @@
         }
         <div class="page-wrapper">
             <div class="page-content">
-                @if (use != null)
-                {
-                    <h2>@use.FirstName</h2>
-                }
                 @RenderBody()
             </div>
         </div>
         <div class="overlay toggle-icon"></div>
         <a href="javaScript:;" class="back-to-top"><i class='bx bxs-up-arrow-alt'></i></a>
         <footer class="page-footer">
-            <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText (@lang)</p>
+            <p class="mb-0">(@lang): efavori.com © @DateTime.Now.Year. @currentFooterText</p>
         </footer>
     </div>
 

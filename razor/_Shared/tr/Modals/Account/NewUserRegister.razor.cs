@@ -16,6 +16,8 @@ namespace razor._Shared.tr.Modals.Account
         [Inject] public IJSRuntime JSRuntime { get; set; }
         [Inject] public UserInfos UserInfos { get; set; }
 
+        private readonly TakeLogs _logger;
+
 
         private Users _user = new Users { };
 
@@ -33,22 +35,43 @@ namespace razor._Shared.tr.Modals.Account
 
         private async Task CheckSponsorAsync()
         {
-            _SponsorFullName = null;
-            if (!string.IsNullOrWhiteSpace(_Sponsored))
-            {
-                using var db = await DbFactory.CreateDbContextAsync();
-                var sponsor = await db.Users
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.ContactInformation != null && u.ContactInformation.Email == _Sponsored);
+            var userDetail = UserInfos.GetCurrentUserDetails();
 
-                if (sponsor != null)
+            try
+            {
+                _SponsorFullName = null;
+                if (!string.IsNullOrWhiteSpace(_Sponsored))
                 {
-                    TextualFunctions tf = new TextualFunctions();
-                    _SponsorFullName = $"{tf.FirstLastLetter(sponsor.FirstName)} {tf.FirstLastLetter(sponsor.LastName)}";
-                    StateHasChanged();
+                    using var db = await DbFactory.CreateDbContextAsync();
+                    var sponsor = await db.Users
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.ContactInformation != null && u.ContactInformation.Email == _Sponsored);
+
+                    if (sponsor != null)
+                    {
+                        TextualFunctions tf = new TextualFunctions();
+                        _SponsorFullName = $"{tf.FirstLastLetter(sponsor.FirstName)} {tf.FirstLastLetter(sponsor.LastName)}";
+                        StateHasChanged();
+                    }
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    await _logger.TakeIt(
+                        userId: null,
+                        title: "CheckSponsorAsync",
+                        action: $"Take Sponsor",
+                        exception: ex.Message,
+                        stackTrace: ex.StackTrace
+                    );
+                }
+                catch
+                {
                 }
             }
-            await InvokeAsync(StateHasChanged);
         }
 
         protected override async Task OnParametersSetAsync()

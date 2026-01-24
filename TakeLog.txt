@@ -1,0 +1,33 @@
+using api;
+
+namespace XXXXXXXXXXXXXXXXXX
+{
+    public partial class ClassName
+    {
+        private readonly TakeLogs _logger; // ***
+
+        private async Task CheckSponsorAsync()
+        {
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    await _logger.TakeIt(
+                        userId: null,
+                        title: "CheckSponsorAsync",
+                        action: $"Take Sponsor",
+                        exception: ex.Message,
+                        stackTrace: ex.StackTrace
+                    );
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
+}

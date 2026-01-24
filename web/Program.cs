@@ -32,6 +32,9 @@ ConfigureServerLimits(builder.Services);
 
 builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
+builder.Services.AddScoped<UserInfos>(); // UserInfos'un yaşam döngüsü
+builder.Services.AddScoped<TakeLogs>();  // TakeLogs'un yaşam döngüsü
+
 var app = builder.Build();
 
 // --- 6. Middleware Pipeline (Sıralama Düzenlendi) ---

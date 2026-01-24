@@ -50,7 +50,7 @@ namespace razor._Shared.tr.Modals.Account
                     var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
                     var culture = segments.Length > 0 ? segments[0] : "en";
 
-                    var endpoint = $"/{culture}/Account/Login";
+                    var endpoint = $"/{user.Language}/Account/Login";
                     // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
                     await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
                 }

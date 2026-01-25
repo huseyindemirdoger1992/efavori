@@ -10,11 +10,20 @@ namespace razor._Shared.tr.Modals.Account
 {
     public partial class Login : ComponentBase
     {
+
+
+
+        private bool isProcessing = false;
+
+
+
         [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
         private Notification? notificationRef;
+
+
         private async Task ShowNotification(string type, string title, string text, string? image)
         {
             var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
@@ -28,9 +37,23 @@ namespace razor._Shared.tr.Modals.Account
         private string? password = "9090";
         private async Task LoginUserAsync()
         {
+
+
+
+            if (isProcessing) return;
+
+            isProcessing = true;
+
+
+
+
+
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
                 await ShowNotification("danger", "Hata", "E-posta ve şifre gereklidir.", null);
+                // 5 saniye bekletme kuralını uyguluyoruz
+                await Task.Delay(4000);
+                isProcessing = false;
                 return;
             }
             else
@@ -41,6 +64,9 @@ namespace razor._Shared.tr.Modals.Account
                 if (user == null)
                 {
                     await ShowNotification("danger", "Hata", "Girdiğiniz bilgilere ait kullanıcı bulunamadı.",null);
+                    // 5 saniye bekletme kuralını uyguluyoruz
+                    await Task.Delay(4000);
+                    isProcessing = false;
                     return;
                 }
                 else
@@ -52,6 +78,10 @@ namespace razor._Shared.tr.Modals.Account
 
                     var endpoint = $"/{user.Language}/Account/Login";
                     // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
+                    // 5 saniye bekletme kuralını uyguluyoruz
+                    await ShowNotification("success", "Başarılı", "Girişiniz yapılıyor.", null);
+                    await Task.Delay(4000);
+                    isProcessing = false;
                     await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
                 }
             }

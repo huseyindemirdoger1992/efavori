@@ -29,9 +29,25 @@
                 </div>
             </div>
             <div class="modal-footer border-top border-secondary">
-                <button type="button" class="btn btn-light shadow" style="width:100%;" @onclick="LoginUserAsync">
-                    <i class="fa fa-sign-in"></i> Giriş Yap
-                </button>
+
+
+<button type="button" 
+        class="btn btn-light shadow btn-action" 
+        style="width:100%;" 
+        @onclick="LoginUserAsync" 
+        disabled="@isProcessing">
+    
+    @if (isProcessing)
+    {
+        <i class="fa fa-spinner fa-spin"></i> <span>Yükleniyor...</span>
+    }
+    else
+    {
+        <i class="fa fa-sign-in"></i> <span>Giriş Yap</span>
+    }
+</button>
+
+
             </div>
         </div>
     </div>

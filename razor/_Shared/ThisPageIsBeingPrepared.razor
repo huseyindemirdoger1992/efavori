@@ -1,22 +1,13 @@
-﻿<Notification @ref="notificationRef" />
-@using Microsoft.JSInterop
-@inject IJSRuntime JSRuntime
+﻿@rendermode InteractiveServer
+<razor._Shared.Notification @ref="notificationRef" />
 
-<div style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px;">
-    <button class="dxtr-v2-btn" @onclick="@(() => ShowNotification("info", "INFO", "This is an info notification.", "https://picsum.photos/120?1"))">Show Info</button>
-    <button class="dxtr-v2-btn" @onclick="@(() => ShowNotification("success", "SUCCESS", "Operation completed successfully.", "https://picsum.photos/120?2"))">Show Success</button>
-    <button class="dxtr-v2-btn" @onclick="@(() => ShowNotification("warning", "WARNING", "This is a warning notification.", "https://picsum.photos/120?3"))">Show Warning</button>
-    <button class="dxtr-v2-btn" @onclick="@(() => ShowNotification("danger", "DANGER", "An error has occurred.", ""))">Show Danger (No Image)</button>
-</div>
+<button type="button"
+        class="btn btn-light shadow btn-action"
+        style="width:100%;"
+        @onclick="Action"
+        disabled="@Btn_isProcessing_01">
 
-@code {
-    [Parameter] public object? use { get; set; }
+    <i class="fa @(Btn_isProcessing_01 ? "fa-spinner fa-spin" : "fa-sign-in")"></i>
+    <span>@(Btn_isProcessing_01 ? "Yükleniyor..." : "Giriş Yap")</span>
 
-    private Notification? notificationRef;
-    private async Task ShowNotification(string type, string title, string text, string? image)
-    {
-        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
-        if (notificationRef != null)
-            await notificationRef.Launch(type, title, text, imageUrl);
-    }
-}
+</button>

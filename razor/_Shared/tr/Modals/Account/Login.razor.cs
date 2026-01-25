@@ -37,17 +37,7 @@ namespace razor._Shared.tr.Modals.Account
         private string? password = "9090";
         private async Task LoginUserAsync()
         {
-
-
-
             if (isProcessing) return;
-
-            isProcessing = true;
-
-
-
-
-
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
                 await ShowNotification("danger", "Hata", "E-posta ve şifre gereklidir.", null);

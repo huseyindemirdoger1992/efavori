@@ -253,7 +253,7 @@ namespace razor._Shared.tr.Modals.Account
                 var log = new Logs
                 {
                     UserId = _user?.Id ?? null,
-                    Title = "UserRegister",
+                    PageNameSpaceTitle = "UserRegister",
                     Action = "NewUserCreated",
                     IpAddress = userDetail.IpAddress,
                     UserAgent = userDetail.UserAgent,
@@ -276,7 +276,7 @@ namespace razor._Shared.tr.Modals.Account
                 var log = new Logs
                 {
                     UserId = _user?.Id ?? null,
-                    Title = "UserRegister",
+                    PageNameSpaceTitle = "UserRegister",
                     Action = "NewUserCreated",
                     IpAddress = userDetail.IpAddress,
                     UserAgent = userDetail.UserAgent,

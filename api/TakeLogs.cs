@@ -24,7 +24,7 @@ namespace api
             var log = new Logs
             {
                 UserId = userId,
-                Title = title,
+                PageNameSpaceTitle = title,
                 Action = action,
                 IpAddress = details.IpAddress,
                 UserAgent = details.UserAgent,
@@ -45,7 +45,7 @@ namespace api
                 // Log nesnesini oluşan yeni hata bilgileriyle güncelleyip tekrar deniyoruz.
                 try
                 {
-                    log.Title = $"[LOGGING ERROR] {title}";
+                    log.PageNameSpaceTitle = $"[LOGGING ERROR] {title}";
                     log.Exception = $"Original Exception: {exception} | Logging System Error: {ex.Message}";
                     log.StackTrace = ex.StackTrace;
 

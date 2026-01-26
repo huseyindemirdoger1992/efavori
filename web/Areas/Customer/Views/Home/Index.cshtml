@@ -58,147 +58,142 @@
         }
     }
 }
-<div class="text-center">
-    @if (!User.Identity.IsAuthenticated)
+
+@if (!User.Identity.IsAuthenticated)
+{
+    @* Oturum Açmamış*@
     {
-        @* Oturum Açmamış*@
-        <div class="alert alert-info">
-            @{
-                switch (currentLang)
-                {
-                    case "tr":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "az":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "de":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "es":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "fr":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "hi":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "pt":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "ru":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "zh":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    default:
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                }
-            }
-        </div>
+        switch (currentLang)
+        {
+            case "tr":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "az":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "de":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "es":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "fr":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "hi":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "pt":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "ru":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "zh":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            default:
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+        }
     }
-    else
+}
+else
+{
+    @* Oturum Açmış*@
     {
-        @* Oturum Açmış*@
-        <div class="alert alert-success">
-            @{
-                switch (currentLang)
-                {
-                    case "tr":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "az":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "de":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "es":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "fr":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "hi":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "pt":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "ru":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    case "zh":
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                    default:
-                        @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
-                                RenderMode.Server,
-                                new { use = (use != null ? use : null) }))
-                        ;
-                        break;
-                }
-            }
-        </div>
+        switch (currentLang)
+        {
+            case "tr":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "az":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "de":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "es":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "fr":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "hi":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "pt":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "ru":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "zh":
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            default:
+                @(await Html.RenderComponentAsync<razor._Shared.ThisPageIsBeingPrepared>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+        }
     }
-</div>
+}

@@ -50,7 +50,7 @@
                             var successLog = new Logs
                             {
                                 Id = Guid.NewGuid(),
-                                Title = "Layout Loaded Successfully",
+                                PageNameSpaceTitle = "Layout Loaded Successfully",
                                 Action = "FetchUserData_Success",
                                 UserId = use.Id,
                                 Date = DateTime.UtcNow,
@@ -114,7 +114,7 @@
                 var errorLog = new Logs
                 {
                     Id = Guid.NewGuid(),
-                    Title = "Layout Data Error",
+                    PageNameSpaceTitle = "Layout Data Error",
                     Action = "FetchUserData_Error",
                     // UserId = isGuid ? userId : Guid.Empty,
                     Exception = ex.Message,

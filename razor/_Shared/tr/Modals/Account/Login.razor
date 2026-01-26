@@ -19,6 +19,10 @@
                     <label class="form-label"><i class="fa fa-lock"></i> Şifre</label>
                     <input type="password" class="form-control" placeholder="Şifreniz" @bind="password" />
                 </div>
+                @if (!string.IsNullOrEmpty(loginMessage))
+                {
+                    <div class="alert alert-danger">@loginMessage</div>
+                }
                 <div class="d-flex justify-content-between">
                     <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#resetModal">
                         <i class="fa fa-key"></i> Şifremi Unuttum
@@ -29,21 +33,33 @@
                 </div>
             </div>
             <div class="modal-footer border-top border-secondary">
-
-
-                <button type="button"
-                        class="btn btn-light shadow btn-action"
-                        style="width:100%;"
-                        @onclick="LoginUserAsync"
-                        disabled="@isProcessing">
-
-                    <i class="fa @(isProcessing ? "fa-spinner fa-spin" : "fa-sign-in")"></i>
-                    <span>@(isProcessing ? "Yükleniyor..." : "Giriş Yap")</span>
-
+                <button type="button" class="btn btn-light shadow" style="width:100%;" @onclick="LoginUserAsync">
+                    <i class="fa fa-sign-in"></i> Giriş Yap
                 </button>
-
-
             </div>
         </div>
     </div>
 </div>
+
+<script>
+        window.submitLoginForm = (path, email, password) => {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = path;
+
+        const emailField = document.createElement('input');
+        emailField.type = 'hidden';
+        emailField.name = 'Email';
+        emailField.value = email;
+        form.appendChild(emailField);
+
+        const passwordField = document.createElement('input');
+        passwordField.type = 'hidden';
+        passwordField.name = 'Password';
+        passwordField.value = password;
+        form.appendChild(passwordField);
+
+        document.body.appendChild(form);
+        form.submit();
+    };
+</script>

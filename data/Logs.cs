@@ -15,13 +15,9 @@ namespace data
         public Guid? UserId { get; set; }
 
         // <summary>Logun ait olduğu servis veya modül adı (örn: "MediaService").</summary>
-        [Required]
-        [MaxLength(100)]
-        public string? Title { get; set; }
+        public string? PageNameSpaceTitle { get; set; }
 
         // <summary>Gerçekleştirilen işlemin adı (örn: "ConvertAvif").</summary>
-        [Required]
-        [MaxLength(100)]
         public string? Action { get; set; }
 
         // --- HTTP VE BAĞLANTI DETAYLARI (UserInfos'tan Gelenler) ---

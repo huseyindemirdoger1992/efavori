@@ -3,126 +3,145 @@ using data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace razor._Shared
 {
+    /// <summary>
+    /// Veri odaklı sayfalar için standartlaştırılmış soyut temel sınıf.
+    /// Profesyonel bir yapı; hata toleransı, kaynak yönetimi ve thread-safety üzerine kurulur.
+    /// </summary>
     public partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable
     {
-        // Profesyonel Enjeksiyonlar
-        [Inject] private IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; set; } = default!;
-        [Inject] private NavigationManager Navigation { get; set; } = default!;
-        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
-        [Inject] private TakeLogs Logger { get; set; } = default!; // Logger artık DI üzerinden geliyor
 
-        private List<Country> Country_ = new();
-        private bool Btn_isProcessing_01 = false;
+        [Parameter] public Users? use { get; set; }
+
+        #region Services
+        [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
+        [Inject] protected NavigationManager Navigation { get; init; } = default!;
+        [Inject] protected IJSRuntime JS { get; init; } = default!;
+        [Inject] protected TakeLogs Logger { get; init; } = default!;
+        #endregion
+
+        #region State Management
+        protected readonly CancellationTokenSource _cts = new();
+        private readonly TakeLogs _logger; // Logging servisi
+
+
         private Notification? notificationRef;
+        #endregion
 
-        // 10 saniyelik döngü için kontrolcü
-        private CancellationTokenSource _periodicCts = new();
-
+        #region Lifecycle
         protected override async Task OnInitializedAsync()
         {
+            // İlk yükleme: Kullanıcı ekranı görmeden verinin hazır olması istenir.
             await LoadData();
 
-            // 10 saniyede bir çalışacak metodu başlatıyoruz (Fire and forget)
-            _ = StartPeriodicTaskAsync();
+            // Arka plan işleyicisi: UI akışını engellemeden (fire-and-forget) başlatılır.
+            _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
         }
 
-        private async Task LoadData()
+        #region Orchestration
+        private async Task StartAutoRefreshLoop(TimeSpan interval)
+        {
+            using var timer = new PeriodicTimer(interval);
+            try
+            {
+                while (await timer.WaitForNextTickAsync(_cts.Token))
+                {
+                    await LoadData();
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        private async Task ShowNotification(string type, string title, string text, string? image)
+        {
+            if (notificationRef is null) return;
+
+            var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+            await notificationRef.Launch(type, title, text, imageUrl);
+        }
+        #endregion
+        public virtual void Dispose()
+        {
+            // 60 yılın kuralı: Açtığın kapıyı kapat, başlattığın sinyali durdur.
+            _cts.Cancel();
+            _cts.Dispose();
+        }
+        #endregion
+
+        //----------------------------------------------
+
+        #region Data Operations
+
+        // Aksiyon buton grubu için thread-safe kontrol
+        private bool Btn_isProcessing_01 = false;
+
+
+        protected IReadOnlyList<Country> Countries { get; private set; } = Array.Empty<Country>();
+        protected Users _newUser = new();
+
+        protected virtual async Task LoadData()
         {
             try
             {
-                using var db = await DbFactory.CreateDbContextAsync();
-                // Performans için AsNoTracking
-                Country_ = await db.Country.AsNoTracking().ToListAsync(); 
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+                // Read-only operasyonlarda AsNoTracking performansın altın kuralıdır.
+                Countries = await db.Country.AsNoTracking().ToListAsync(_cts.Token);
             }
+            catch (OperationCanceledException) { /* Sessizce sonlandır */ }
             catch (Exception ex)
             {
-                await LogError("LoadData", "Country fetch", ex);
+                await _logger.TakeIt(
+                    userId: null,
+                    title: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable | LoadData",
+                    action: $"Take Sponsor",
+                    exception: ex.Message,
+                    stackTrace: ex.StackTrace
+                );
             }
-        }
-
-        // --- İSTEDİĞİN 10 SANİYELİK METOD ---
-        private async Task StartPeriodicTaskAsync()
-        {
-            while (!_periodicCts.Token.IsCancellationRequested)
+            finally
             {
-                try
-                {
-                    // Buraya her 10 saniyede bir yapılmasını istediğin işi yaz
-                    await MyPeriodicAction();
-
-                    // 10 saniye bekle (sayfa kapanırsa bekleme iptal edilir)
-                    await Task.Delay(10000, _periodicCts.Token);
-                }
-                // Sayfa kapandı, döngüden çık
-                catch (TaskCanceledException) { break; }
-                catch (Exception ex)
-                {
-                    await LogError("PeriodicTask", "Routine work", ex);
-                }
+                StateHasChanged();
             }
         }
 
-        private async Task MyPeriodicAction()
+        protected async Task Action()
         {
-            // Örnek: Verileri tazele veya bir durumu kontrol et
-            Console.WriteLine($"Sistem saati: {DateTime.Now} - Arka plan işi çalıştı.");
-            await Task.CompletedTask;
-        }
-
-        private async Task Action()
-        {
-            // Çift tıklamayı engelle
             if (Btn_isProcessing_01) return;
 
             try
             {
                 Btn_isProcessing_01 = true;
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-                // Aksiyon kodların buraya...
+                db.Users.Add(_newUser);
+                await db.SaveChangesAsync(_cts.Token);
 
-                await ShowNotification("success", "Başarılı", "İşlem tamamlandı.", null);
-                await Task.Delay(2000);
+                _newUser = new();
+                await ShowNotification("success", "Başarılı", "Kullanıcı kaydedildi.", null);
+
+                await LoadData();
             }
             catch (Exception ex)
             {
-                await LogError("Action", "Main Action", ex);
+                await _logger.TakeIt(
+                    userId: null,
+                    title: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
+                    action: $"HandleSaveUser",
+                    exception: ex.Message,
+                    stackTrace: ex.StackTrace
+                );
             }
             finally
             {
-                // Hata olsa da olmasa da butonu serbest bırak
+                await Task.Delay(3500);
                 Btn_isProcessing_01 = false;
+                await LoadData();
             }
         }
+        #endregion
 
-        // Merkezi Loglama Yardımı
-        private async Task LogError(string title, string action, Exception ex)
-        {
-            try
-            {
-                await Logger.TakeIt(null, title, action, ex.Message, ex.StackTrace);
-            }
-            catch { /* Loglama bile çökerse sistemi kilitleme */ }
-        }
-
-        private async Task ShowNotification(string type, string title, string text, string? image)
-        {
-            var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
-            if (notificationRef != null)
-                await notificationRef.Launch(type, title, text, imageUrl);
-        }
-
-        // Sayfadan çıkıldığında zamanlayıcıyı durdur (Bellek yönetimi)
-        public void Dispose()
-        {
-            _periodicCts.Cancel();
-            _periodicCts.Dispose();
-        }
     }
 }

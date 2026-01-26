@@ -2,12 +2,11 @@
 <razor._Shared.Notification @ref="notificationRef" />
 
 <button type="button"
-        class="btn btn-light shadow btn-action"
+        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
         style="width:100%;"
         @onclick="Action"
         disabled="@Btn_isProcessing_01">
 
     <i class="fa @(Btn_isProcessing_01 ? "fa-spinner fa-spin" : "fa-sign-in")"></i>
     <span>@(Btn_isProcessing_01 ? "Yükleniyor..." : "Giriş Yap")</span>
-
 </button>

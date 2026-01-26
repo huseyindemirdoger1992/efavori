@@ -44,7 +44,7 @@ namespace api
             {
                 Id = Guid.NewGuid(),
                 UserId = userId ?? Guid.Empty,
-                Title = "MediaService",
+                PageNameSpaceTitle = "MediaService",
                 Action = "ConvertToAvif",
                 IpAddress = detail.IpAddress,
                 UserAgent = detail.UserAgent,

@@ -1,4 +1,5 @@
 ﻿using data;
+using api;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Net.Http;
@@ -38,10 +39,19 @@ namespace razor._Shared.tr.Modals.Account
             var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             var culture = segments.Length > 0 ? segments[0] : "en";
 
-            var endpoint = $"/{culture}/Account/Login";
+            await ShowNotification("success", "Başarılı", "Giriş yapılıyor...", null);
+
+            var emailSender = new EmailSender();
+            await emailSender.SendEmailAsync(
+                email,
+                "Test Maili",
+                "<b>Merhaba</b><br/>Bu mail SMTP üzerinden gönderildi."
+            );
+
 
             // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
             // Bu sayede tarayıcı Set-Cookie yanıtını doğrudan işler.
+            var endpoint = $"/{culture}/Account/Login";
             await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
         }
         private class LoginResult

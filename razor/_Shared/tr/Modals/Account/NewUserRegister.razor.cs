@@ -62,7 +62,7 @@ namespace razor._Shared.tr.Modals.Account
                 {
                     await _logger.TakeIt(
                         userId: null,
-                        title: "CheckSponsorAsync",
+                        PageNameSpaceTitle: "CheckSponsorAsync",
                         action: $"Take Sponsor",
                         exception: ex.Message,
                         stackTrace: ex.StackTrace

@@ -3,7 +3,7 @@
 <!-- Oturum Açma Modalı -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(2px);">
+        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
             <div class="modal-header border-bottom border-secondary">
                 <h5 class="modal-title text-white">
                     <i class="fa fa-sign-in"></i> Oturum Aç
@@ -33,33 +33,11 @@
                 </div>
             </div>
             <div class="modal-footer border-top border-secondary">
-                <button type="button" class="btn btn-light shadow" style="width:100%;" @onclick="LoginUserAsync">
+                <button type="button" class="btn btn-light" @onclick="LoginUserAsync"
+                        style="width: 100%;">
                     <i class="fa fa-sign-in"></i> Giriş Yap
                 </button>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-        window.submitLoginForm = (path, email, password) => {
-        const form = document.createElement('form');
-        form.method = 'post';
-        form.action = path;
-
-        const emailField = document.createElement('input');
-        emailField.type = 'hidden';
-        emailField.name = 'Email';
-        emailField.value = email;
-        form.appendChild(emailField);
-
-        const passwordField = document.createElement('input');
-        passwordField.type = 'hidden';
-        passwordField.name = 'Password';
-        passwordField.value = password;
-        form.appendChild(passwordField);
-
-        document.body.appendChild(form);
-        form.submit();
-    };
-</script>

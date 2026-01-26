@@ -6,7 +6,6 @@
         style="width:100%;"
         @onclick="Action"
         disabled="@Btn_isProcessing_01">
-
-    <i class="fa @(Btn_isProcessing_01 ? "fa-spinner fa-spin" : "fa-sign-in")"></i>
+    <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
     <span>@(Btn_isProcessing_01 ? "Yükleniyor..." : "Giriş Yap")</span>
 </button>

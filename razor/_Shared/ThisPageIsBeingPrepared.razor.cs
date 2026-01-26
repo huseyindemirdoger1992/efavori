@@ -12,9 +12,6 @@ namespace razor._Shared
     /// </summary>
     public partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable
     {
-
-        [Parameter] public Users? use { get; set; }
-
         #region Services
         [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
         [Inject] protected NavigationManager Navigation { get; init; } = default!;
@@ -37,7 +34,7 @@ namespace razor._Shared
             await LoadData();
 
             // Arka plan işleyicisi: UI akışını engellemeden (fire-and-forget) başlatılır.
-            _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
+            // _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
         }
 
         #region Orchestration
@@ -77,6 +74,10 @@ namespace razor._Shared
         // Aksiyon buton grubu için thread-safe kontrol
         private bool Btn_isProcessing_01 = false;
 
+        // Gelen kullanıcı parametresi
+        [Parameter] public Users? use { get; set; }
+
+
 
         protected IReadOnlyList<Country> Countries { get; private set; } = Array.Empty<Country>();
         protected Users _newUser = new();
@@ -95,8 +96,8 @@ namespace razor._Shared
             {
                 await _logger.TakeIt(
                     userId: null,
-                    title: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable | LoadData",
-                    action: $"Take Sponsor",
+                    PageNameSpaceTitle: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
+                    action: $"LoadData",
                     exception: ex.Message,
                     stackTrace: ex.StackTrace
                 );
@@ -128,8 +129,8 @@ namespace razor._Shared
             {
                 await _logger.TakeIt(
                     userId: null,
-                    title: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
-                    action: $"HandleSaveUser",
+                    PageNameSpaceTitle: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
+                    action: $"Action",
                     exception: ex.Message,
                     stackTrace: ex.StackTrace
                 );

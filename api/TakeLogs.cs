@@ -16,7 +16,7 @@ namespace api
             _userInfos = userInfos;
         }
 
-        public async Task TakeIt(Guid? userId, string? title, string? action, string? exception = null, string? stackTrace = null)
+        public async Task TakeIt(Guid? userId, string? PageNameSpaceTitle, string? action, string? exception = null, string? stackTrace = null)
         {
             var details = _userInfos.GetCurrentUserDetails();
 
@@ -24,7 +24,7 @@ namespace api
             var log = new Logs
             {
                 UserId = userId,
-                PageNameSpaceTitle = title,
+                PageNameSpaceTitle = PageNameSpaceTitle,
                 Action = action,
                 IpAddress = details.IpAddress,
                 UserAgent = details.UserAgent,
@@ -45,7 +45,7 @@ namespace api
                 // Log nesnesini oluşan yeni hata bilgileriyle güncelleyip tekrar deniyoruz.
                 try
                 {
-                    log.PageNameSpaceTitle = $"[LOGGING ERROR] {title}";
+                    log.PageNameSpaceTitle = $"[LOGGING ERROR] {PageNameSpaceTitle}";
                     log.Exception = $"Original Exception: {exception} | Logging System Error: {ex.Message}";
                     log.StackTrace = ex.StackTrace;
 

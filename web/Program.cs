@@ -34,6 +34,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStat
 
 builder.Services.AddScoped<UserInfos>(); // UserInfos'un yaşam döngüsü
 builder.Services.AddScoped<TakeLogs>();  // TakeLogs'un yaşam döngüsü
+builder.Services.AddScoped<EmailSender>();
 
 var app = builder.Build();
 

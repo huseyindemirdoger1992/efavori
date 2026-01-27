@@ -18,6 +18,7 @@ namespace data
 
         // Logs
         public DbSet<Logs> Logs { get; set; } = default!;
+        public DbSet<EmailHistory> EmailHistory { get; set; } = default!;
 
         // Users
         public DbSet<Users> Users { get; set; } = default!;

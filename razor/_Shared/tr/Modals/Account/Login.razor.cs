@@ -1,10 +1,12 @@
-﻿using data;
-using api;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Net.Http.Json;
+using System.Net.Mail;
 using System.Threading.Tasks;
+using api;
+using data;
+using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.JSInterop;
 
 namespace razor._Shared.tr.Modals.Account
 {
@@ -13,8 +15,14 @@ namespace razor._Shared.tr.Modals.Account
         [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
-
         private Notification? notificationRef;
+
+        private readonly _ApplicationConnectionDb _db;
+
+        public Login(_ApplicationConnectionDb db)
+        {
+            _db = db;
+        }
         private async Task ShowNotification(string type, string title, string text, string? image)
         {
             var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
@@ -41,16 +49,15 @@ namespace razor._Shared.tr.Modals.Account
 
             await ShowNotification("success", "Başarılı", "Giriş yapılıyor...", null);
 
-            var emailSender = new EmailSender();
-            await emailSender.SendEmailAsync(
-                email,
-                "Test Maili",
-                "<b>Merhaba</b><br/>Bu mail SMTP üzerinden gönderildi."
-            );
-
-
             // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
             // Bu sayede tarayıcı Set-Cookie yanıtını doğrudan işler.
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.ContactInformation.Email == email && u.Password == password);
+
+            if (user != null)
+            {
+                culture = user.Language ?? culture;
+            }
             var endpoint = $"/{culture}/Account/Login";
             await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
         }

@@ -32,8 +32,8 @@ ConfigureServerLimits(builder.Services);
 
 builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
-builder.Services.AddScoped<UserInfos>(); // UserInfos'un yaşam döngüsü
-builder.Services.AddScoped<TakeLogs>();  // TakeLogs'un yaşam döngüsü
+builder.Services.AddScoped<UserInfos>(); 
+builder.Services.AddScoped<TakeLogs>();  
 builder.Services.AddScoped<EmailSender>();
 
 var app = builder.Build();

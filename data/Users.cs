@@ -15,6 +15,9 @@ namespace data
 
         // === Tarih Bilgileri ===
         public DateTime? RegistrationDate { get; set; } // Sisteme ilk kayıt olduğu tarih ve saat + 
+        public bool AccountActivationMailStatu { get; set; } // Hesap aktivasyon durumu +
+        public int AccountActivationMailCode { get; set; } // Hesap aktivasyon kodu +
+        public DateTime? AccountActivationMailDeadline { get; set; } // Hesap aktivasyon geçerlilik süresi +
         public DateTime? DateOfBirth { get; set; } // Doğum Tarihi + 
 
         // === Kullanıcı Tercihleri ===

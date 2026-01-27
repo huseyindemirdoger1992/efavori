@@ -12,22 +12,3 @@
 </button>
 
 
-<h1 id="sayac">Yükleniyor...</h1>
-
-<script>
-    const hedefTarih = new Date(2026, 0, 28, 16, 0, 30).getTime();
-    const geriSayim = setInterval(() => {
-        const simdi = new Date().getTime();
-        const fark = hedefTarih - simdi;
-        const gun = Math.floor(fark / (1000 * 60 * 60 * 24));
-        const saat = Math.floor((fark % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const dakika = Math.floor((fark % (1000 * 60 * 60)) / (1000 * 60));
-        const saniye = Math.floor((fark % (1000 * 60)) / 1000);
-        const eleman = document.getElementById("sayac");
-        eleman.innerText = `${gun}'Gün ${saat}'Saat ${dakika}'Dakika ${saniye}'Saniye`;
-        if (fark < 0) {
-            clearInterval(geriSayim);
-            eleman.innerText = "Süre doldu!";
-        }
-    }, 1000);
-</script>

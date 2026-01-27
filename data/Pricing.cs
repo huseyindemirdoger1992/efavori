@@ -6,7 +6,7 @@ using System.Text;
 
 namespace data
 {
-    internal class Pricing
+    public class Pricing
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();

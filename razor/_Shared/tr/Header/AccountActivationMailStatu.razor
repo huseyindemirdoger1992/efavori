@@ -1,0 +1,114 @@
+﻿
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<div class="container-fluid mt-3">
+    <div class="card bg-transparent border border-light-3 shadow-info" role="alert">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-12 col-md-8 d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-light-3 text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
+                        <i class="fa fa-shield fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1 fw-bold text-white d-flex align-items-center">
+                            E-posta Doğrulama
+                            <span class="ms-2 badge rounded-pill bg-danger border border-danger small fw-normal">KRİTİK</span>
+                        </h6>
+                        <p class="mb-0 text-white-50 small">
+                            Doğrulanmayan hesaplar sistemden uzaklaştırılır. Kalan süre:
+                            <span id="sayac" class="text-warning fw-bold font-monospace ms-1">Yükleniyor...</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4 text-md-end text-center mt-3 mt-md-0">
+                    <button class="btn btn-light btn-sm rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#EmailVerificationAction">
+                        <i class="fa fa-check-circle me-1"></i> Hemen Doğrula
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const hedefTarih = new Date(2026, 0, 28, 16, 0, 30).getTime();
+
+        const geriSayim = setInterval(() => {
+            const simdi = new Date().getTime();
+            const fark = hedefTarih - simdi;
+
+            if (fark < 0) {
+                clearInterval(geriSayim);
+                document.getElementById("sayac").innerText = "Süre doldu!";
+                return;
+            }
+
+            const gun = Math.floor(fark / (1000 * 60 * 60 * 24));
+            const saat = Math.floor((fark % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const dakika = Math.floor((fark % (1000 * 60 * 60)) / (1000 * 60));
+            const saniye = Math.floor((fark % (1000 * 60)) / 1000);
+
+            document.getElementById("sayac").innerText = `${gun}'Gün ${saat}'Saat ${dakika}'Dakika ${saniye}'Saniye`;
+        }, 1000);
+    })();
+</script>
+
+@rendermode InteractiveServer
+<razor._Shared.Notification @ref="notificationRef" />
+<!-- Oturum Açma Modalı -->
+<div class="modal fade" id="EmailVerificationAction" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa fa-sign-in"></i> Hesabınızı Doğrulayabilirsiniz
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="mb-3">
+                    <label for="emailInput" class="form-label text-white">E-posta Adresiniz</label>
+                    <input type="email" class="form-control" id="emailInput" @bind="@use.ContactInformation.Email" readonly>
+                </div>
+
+                @if (EmailSentStatus == true)
+                {
+                    <div class="mb-3">
+                        <label for="emailInput" class="form-label text-white">Doğrulama Kodunuzu Giriniz</label>
+                        <input type="email" class="form-control" id="emailInput" @bind="@EmailActivationCode">
+                    </div>
+                    <button type="button"
+                            class="@(Btn_isProcessing_02 ? "btn btn-dark" : "btn btn-success")"
+                            style="width:100%;"
+                            @onclick="EmailControl"
+                            disabled="@Btn_isProcessing_02">
+                        <i class="fa @(Btn_isProcessing_02 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
+                        <span>@(Btn_isProcessing_02 ? "Denetleniyor..." : "Hesabımı Doğrula")</span>
+                    </button>
+                }
+            </div>
+            <div class="modal-footer border-top border-secondary">
+
+                <button type="button"
+                        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
+                        style="width:100%;"
+                        @onclick="Action"
+                        disabled="@Btn_isProcessing_01">
+
+                    <i class="fa @(Btn_isProcessing_01 ? "fa-hourglass-half" : "fa-sign-in")"></i>
+
+                    <span>
+                        @(Btn_isProcessing_01
+                                                ? $"Tekrar göndermek için {RemainingSeconds} saniyen bekleyin"
+                                                : "Emailinize Kod Talep Edin")
+                    </span>
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>

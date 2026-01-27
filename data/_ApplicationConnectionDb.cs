@@ -51,6 +51,7 @@ namespace data
         // Products & Stores
          public DbSet<Store> Stores { get; set; } = default!;
          public DbSet<Pricing> Pricing { get; set; } = default!;
+
         // public DbSet<Product> Product { get; set; } = default!;
 
         //---------------- Constructor'lar ----------------//

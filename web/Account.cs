@@ -15,11 +15,14 @@ namespace web.Account.Controllers
     {
         private readonly _ApplicationConnectionDb _db;
         private readonly UserInfos _userInfos; // 1. Servisi ekle
+        private readonly EmailSender emailSender; // 1. EmailSender alanını ekleyin
 
-        public AccountController(_ApplicationConnectionDb db, UserInfos userInfos)
+        // 2. Constructor'a EmailSender parametresini ekleyin
+        public AccountController(_ApplicationConnectionDb db, UserInfos userInfos, EmailSender _emailSender)
         {
             _db = db;
             _userInfos = userInfos;
+            emailSender = _emailSender;
         }
 
         [HttpPost]
@@ -74,7 +77,6 @@ namespace web.Account.Controllers
 
             culture = (user.Language != null) ? user.Language : "en";
 
-            var emailSender = new EmailSender();
             var attachments = new List<Attachment>();
             //attachments.Add(new Attachment("C:\\dosyalar\\rapor.pdf"));
             //attachments.Add(new Attachment("C:\\dosyalar\\resim.jpg"));
@@ -90,7 +92,7 @@ namespace web.Account.Controllers
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
         
         <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-            <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -146,7 +148,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 25px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -197,7 +199,6 @@ namespace web.Account.Controllers
         </p>
     </div>
 </div>";
-
                 await emailSender.SendEmailAsync(model.Email, "Security Alert: New Sign-in Detected", emailBody, attachments);
             }
             if (culture == "az")
@@ -206,7 +207,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -265,7 +266,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -325,7 +326,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -385,7 +386,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -445,7 +446,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -505,7 +506,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -565,7 +566,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -625,7 +626,7 @@ namespace web.Account.Controllers
 <div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://cdn-icons-png.flaticon.com/512/9187/9187604.png' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>

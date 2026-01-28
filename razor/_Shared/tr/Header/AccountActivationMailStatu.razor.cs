@@ -175,6 +175,10 @@ namespace razor._Shared.tr.Header
                 if (use != null && EmailActivationCode.HasValue)
                 {
                     use.AccountActivationMailCode = EmailActivationCode.Value;
+                    use.AccountActivationMailStatu = true;
+                    await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                    db.Users.Update(use);
+                    await db.SaveChangesAsync(_cts.Token);
                 }
                 await ShowNotification("success", "Tebrikler", $"Email adresiniz doğrulandı.", null);
             }

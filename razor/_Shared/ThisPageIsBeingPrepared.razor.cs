@@ -22,6 +22,16 @@ namespace razor._Shared
         #region State Management
         protected readonly CancellationTokenSource _cts = new();
         private readonly TakeLogs _logger; // Logging servisi
+        private readonly _ApplicationConnectionDb _db;
+        private readonly UserInfos _userInfos; // 1. Servisi ekle
+        private readonly EmailSender emailSender; // 1. EmailSender alanını ekleyin
+        public ThisPageIsBeingPrepared(_ApplicationConnectionDb db,TakeLogs logger,  UserInfos userInfos, EmailSender _emailSender)
+        {
+            _db = db;
+            _logger = logger;
+            _userInfos = userInfos;
+            emailSender = _emailSender;
+        }
 
 
         private Notification? notificationRef;
@@ -117,8 +127,11 @@ namespace razor._Shared
                 Btn_isProcessing_01 = true;
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-                db.Users.Add(_newUser);
-                await db.SaveChangesAsync(_cts.Token);
+                // db.Users.Add(use);
+                // await db.SaveChangesAsync(_cts.Token);
+
+                // db.Users.Update(use);
+                // await db.SaveChangesAsync(_cts.Token);
 
                 _newUser = new();
                 await ShowNotification("success", "Başarılı", "Kullanıcı kaydedildi.", null);

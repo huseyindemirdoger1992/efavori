@@ -1,32 +1,49 @@
-﻿
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+﻿<style>
+    /* Dashtreme Transparan Stil Destekçileri */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.125);
+    }
 
-<div class="container-fluid mt-3">
-    <div class="card bg-transparent border border-light-3 shadow-info" role="alert">
-        <div class="card-body">
+    .glow-border {
+        box-shadow: 0 0 15px rgba(13, 202, 240, 0.2);
+    }
+
+    .timer-box {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <div class="card glass-card shadow-lg" role="alert">
+        <div class="card-body p-4">
             <div class="row align-items-center">
                 <div class="col-12 col-md-8 d-flex align-items-center">
-                    <div class="flex-shrink-0 bg-light-3 text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 48px; height: 48px;">
-                        <i class="fa fa-shield fs-4"></i>
+                    <div class="flex-shrink-0 bg-danger text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm me-3" style="width: 54px; height: 54px; opacity: 0.9;">
+                        <i class="fa fa-shield fs-3"></i>
                     </div>
                     <div>
-                        <h6 class="mb-1 fw-bold text-white d-flex align-items-center">
+                        <h5 class="mb-1 fw-bold text-white d-flex align-items-center">
                             E-posta Doğrulama
-                            <span class="ms-2 badge rounded-pill bg-danger border border-danger small fw-normal">KRİTİK</span>
-                        </h6>
-                        <p class="mb-0 text-white-50 small">
-                            Doğrulanmayan hesaplar sistemden uzaklaştırılır. Kalan süre:
-                            <span id="sayac" class="text-warning fw-bold font-monospace ms-1">Yükleniyor...</span>
+                            <span class="ms-2 badge rounded-pill bg-danger border border-danger small fw-normal" style="font-size: 0.65rem; letter-spacing: 1px;">KRİTİK</span>
+                        </h5>
+                        <p class="mb-0 text-white-50">
+                            Doğrulanmayan hesaplar sistemden uzaklaştırılır.
+                            <span class="ms-2 text-light small opacity-75">Kalan süre:</span>
+                            <span id="sayac" class="timer-box text-warning fw-bold ms-1">Yükleniyor...</span>
                         </p>
                     </div>
                 </div>
 
                 <div class="col-12 col-md-4 text-md-end text-center mt-3 mt-md-0">
-                    <button class="btn btn-light btn-sm rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#EmailVerificationAction">
-                        <i class="fa fa-check-circle me-1"></i> Hemen Doğrula
+                    <button class="btn btn-light btn-lg rounded-pill px-4 fw-bold shadow-sm transition-all" data-bs-toggle="modal" data-bs-target="#EmailVerificationAction">
+                        <i class="fa fa-check-circle me-2"></i>Hemen Doğrula
                     </button>
                 </div>
-
             </div>
         </div>
     </div>
@@ -34,8 +51,6 @@
 
 <script>
     (function() {
-        // Razor değişkenini JS içine güvenli bir şekilde aktarıyoruz
-        // .ToString("yyyy-MM-ddTHH:mm:ss") formatı JS Date objesi için en sağlıklısıdır
         const deadlineStr = "@Deadline.ToString("yyyy-MM-ddTHH:mm:ss")";
         const hedefTarih = new Date(deadlineStr).getTime();
 
@@ -43,74 +58,78 @@
             const simdi = new Date().getTime();
             const fark = hedefTarih - simdi;
 
+            const sayacElement = document.getElementById("sayac");
+
             if (fark <= 0) {
                 clearInterval(geriSayim);
-                document.getElementById("sayac").innerText = "Süre doldu!";
+                sayacElement.innerText = "Süre doldu!";
+                sayacElement.classList.replace("text-warning", "text-danger");
                 return;
             }
-            
+
             const gun = Math.floor(fark / (1000 * 60 * 60 * 24));
             const saat = Math.floor((fark % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const dakika = Math.floor((fark % (1000 * 60 * 60)) / (1000 * 60));
             const saniye = Math.floor((fark % (1000 * 60)) / 1000);
 
-            document.getElementById("sayac").innerText = `${gun} Gün ${saat} Saat ${dakika} Dakika ${saniye} Saniye`;
+            sayacElement.innerText = `${gun}g ${saat}s ${dakika}dk ${saniye}sn`;
         }, 1000);
     })();
 </script>
 
 @rendermode InteractiveServer
 <razor._Shared.Notification @ref="notificationRef" />
-<!-- Oturum Açma Modalı -->
+
 <div class="modal fade" id="EmailVerificationAction" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title text-white">
-                    <i class="fa fa-sign-in"></i> Hesabınızı Doğrulayabilirsiniz
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card glow-border border-light shadow-lg">
+            <div class="modal-header border-bottom border-light-3">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="fa fa-envelope-o me-2"></i>Güvenlik Doğrulaması
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
 
-                <div class="mb-3">
-                    <label for="emailInput" class="form-label text-white">E-posta Adresiniz</label>
-                    <input type="email" class="form-control" id="emailInput" @bind="@use.ContactInformation.Email" readonly>
+                <div class="mb-4">
+                    <label class="form-label text-white-50 small uppercase fw-bold">E-posta Adresiniz</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-light-3 text-white-50"><i class="fa fa-at"></i></span>
+                        <input type="email" class="form-control bg-transparent text-white border-light-3" @bind="@use.ContactInformation.Email" readonly>
+                    </div>
                 </div>
 
                 @if (EmailSentStatus == true)
                 {
-                    <div class="mb-3">
-                        <label for="emailInput" class="form-label text-white">Doğrulama Kodunuzu Giriniz</label>
-                        <input type="email" class="form-control" id="emailInput" @bind="@EmailActivationCode">
+                    <div class="mb-4 animate__animated animate__fadeIn">
+                        <label class="form-label text-info small uppercase fw-bold">Doğrulama Kodunu Girin</label>
+                        <input type="text" class="form-control form-control-lg bg-dark text-white border-info text-center fw-bold"
+                               placeholder="000000" @bind="@EmailActivationCode" style="letter-spacing: 5px;" maxlength="6">
                     </div>
+
                     <button type="button"
-                            class="@(Btn_isProcessing_02 ? "btn btn-dark" : "btn btn-success")"
-                            style="width:100%;"
+                            class="btn @(Btn_isProcessing_02 ? "btn-secondary" : "btn-info") btn-lg w-100 fw-bold mb-3 shadow-sm"
                             @onclick="EmailControl"
                             disabled="@Btn_isProcessing_02">
-                        <i class="fa @(Btn_isProcessing_02 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
-                        <span>@(Btn_isProcessing_02 ? "Denetleniyor..." : "Hesabımı Doğrula")</span>
+                        <i class="fa @(Btn_isProcessing_02 ? "fa-circle-o-notch fa-spin" : "fa-shield") me-2"></i>
+                        @(Btn_isProcessing_02 ? "Denetleniyor..." : "Hesabımı Doğrula")
                     </button>
                 }
             </div>
-            <div class="modal-footer border-top border-secondary">
 
+            <div class="modal-footer border-top border-light-3 bg-light-transparent">
                 <button type="button"
-                        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
-                        style="width:100%;"
+                        class="btn @(Btn_isProcessing_01 ? "btn-dark" : "btn-outline-light") w-100 py-2 shadow-none"
                         @onclick="Action"
                         disabled="@Btn_isProcessing_01">
 
-                    <i class="fa @(Btn_isProcessing_01 ? "fa-hourglass-half" : "fa-sign-in")"></i>
-
+                    <i class="fa @(Btn_isProcessing_01 ? "fa-hourglass-end fa-spin" : "fa-paper-plane") me-2"></i>
                     <span>
                         @(Btn_isProcessing_01
-                                                ? $"Tekrar göndermek için {RemainingSeconds} saniyen bekleyin"
-                                                : "Emailinize Kod Talep Edin")
+                                                ? $"{RemainingSeconds} Saniye Sonra Tekrar Deneyin"
+                                                : "E-postama Kod Gönder")
                     </span>
                 </button>
-
             </div>
         </div>
     </div>

@@ -17,6 +17,9 @@ namespace razor._Shared.tr.Header
         [Inject] protected NavigationManager Navigation { get; init; } = default!;
         [Inject] protected IJSRuntime JS { get; init; } = default!;
         [Inject] protected TakeLogs Logger { get; init; } = default!;
+
+        private DateTime Deadline;
+
         #endregion
 
         #region State Management
@@ -33,6 +36,10 @@ namespace razor._Shared.tr.Header
             // İlk yükleme: Kullanıcı ekranı görmeden verinin hazır olması istenir.
             await LoadData();
 
+            if (use != null)
+            {
+                Deadline = Convert.ToDateTime(use.AccountActivationMailDeadline);
+            }
             // Arka plan işleyicisi: UI akışını engellemeden (fire-and-forget) başlatılır.
             // _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
         }

@@ -34,24 +34,27 @@
 
 <script>
     (function() {
-        const hedefTarih = new Date(2026, 0, 28, 16, 0, 30).getTime();
+        // Razor değişkenini JS içine güvenli bir şekilde aktarıyoruz
+        // .ToString("yyyy-MM-ddTHH:mm:ss") formatı JS Date objesi için en sağlıklısıdır
+        const deadlineStr = "@Deadline.ToString("yyyy-MM-ddTHH:mm:ss")";
+        const hedefTarih = new Date(deadlineStr).getTime();
 
         const geriSayim = setInterval(() => {
             const simdi = new Date().getTime();
             const fark = hedefTarih - simdi;
 
-            if (fark < 0) {
+            if (fark <= 0) {
                 clearInterval(geriSayim);
                 document.getElementById("sayac").innerText = "Süre doldu!";
                 return;
             }
-
+            
             const gun = Math.floor(fark / (1000 * 60 * 60 * 24));
             const saat = Math.floor((fark % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const dakika = Math.floor((fark % (1000 * 60 * 60)) / (1000 * 60));
             const saniye = Math.floor((fark % (1000 * 60)) / 1000);
 
-            document.getElementById("sayac").innerText = `${gun}'Gün ${saat}'Saat ${dakika}'Dakika ${saniye}'Saniye`;
+            document.getElementById("sayac").innerText = `${gun} Gün ${saat} Saat ${dakika} Dakika ${saniye} Saniye`;
         }, 1000);
     })();
 </script>

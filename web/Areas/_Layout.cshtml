@@ -226,10 +226,13 @@
         <div class="page-wrapper">
             <div class="page-content">
                 @RenderBody()
-                @if (use.AccountActivationMailStatu != true)
+                @if (use != null)
                 {
-                    @(await Html.RenderComponentAsync<razor._Shared.tr.Header.AccountActivationMailStatu>(RenderMode.Static, new { use = use != null ? use : null }))
-                }
+                    if (use?.AccountActivationMailStatu != true)
+                    {
+                        @(await Html.RenderComponentAsync<razor._Shared.tr.Header.AccountActivationMailStatu>(RenderMode.Static, new { use = use != null ? use : null }))
+                    }
+                }                
             </div>
         </div>
         <div class="overlay toggle-icon"></div>

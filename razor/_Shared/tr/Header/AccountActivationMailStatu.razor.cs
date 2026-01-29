@@ -12,7 +12,7 @@ namespace razor._Shared.tr.Header
     /// Veri odaklı sayfalar için standartlaştırılmış soyut temel sınıf.
     /// Profesyonel bir yapı; hata toleransı, kaynak yönetimi ve thread-safety üzerine kurulur.
     /// </summary>
-    public partial class AccountActivationMailStatu : ComponentBase, IDisposable
+    public partial class AccountActivationMailStatu : ComponentBase, IAsyncDisposable
     {
         #region Services
         [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
@@ -20,7 +20,7 @@ namespace razor._Shared.tr.Header
         [Inject] protected IJSRuntime JS { get; init; } = default!;
         [Inject] protected TakeLogs Logger { get; init; } = default!;
 
-        private readonly EmailSender emailSender; // 1. EmailSender alanını ekleyin
+        private readonly EmailSender emailSender;
 
         public AccountActivationMailStatu(EmailSender _emailSender)
         {
@@ -33,8 +33,7 @@ namespace razor._Shared.tr.Header
 
         #region State Management
         protected readonly CancellationTokenSource _cts = new();
-        private readonly TakeLogs _logger; // Logging servisi
-
+        private PeriodicTimer? _refreshTimer; // Timer referansı
 
         private Notification? notificationRef;
         #endregion
@@ -42,21 +41,43 @@ namespace razor._Shared.tr.Header
         #region Lifecycle
         protected override async Task OnInitializedAsync()
         {
-            // İlk yükleme: Kullanıcı ekranı görmeden verinin hazır olması istenir.
-            await LoadData();
-
-            if (use != null)
+            try
             {
-                Deadline = Convert.ToDateTime(use.AccountActivationMailDeadline);
+                // İlk yükleme: Kullanıcı ekranı görmeden verinin hazır olması istenir.
+                await LoadData();
+
+                // HATA FİKS #1: Null check yapıldıktan sonra Deadline set et
+                if (use != null && !string.IsNullOrWhiteSpace(use.AccountActivationMailDeadline?.ToString()))
+                {
+                    Deadline = Convert.ToDateTime(use.AccountActivationMailDeadline);
+                }
+                else
+                {
+                    Deadline = DateTime.Now.AddMinutes(30); // Varsayılan deadline
+                }
+
+                // Arka plan işleyicisi: UI akışını engellemeden (fire-and-forget) başlatılır.
+                // _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
             }
-            // Arka plan işleyicisi: UI akışını engellemeden (fire-and-forget) başlatılır.
-            // _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
+            catch (Exception ex)
+            {
+                await Logger.TakeIt(
+                    userId: use?.Id,
+                    PageNameSpaceTitle: "namespace razor._Shared.tr.Header",
+                    action: "OnInitializedAsync",
+                    exception: ex.Message,
+                    stackTrace: ex.StackTrace
+                );
+                await ShowNotification("danger", "Başlangıç Hatası", "Sayfa yüklenirken bir hata oluştu.", null);
+            }
         }
 
         #region Orchestration
         private async Task StartAutoRefreshLoop(TimeSpan interval)
         {
             using var timer = new PeriodicTimer(interval);
+            _refreshTimer = timer; // Timer referansını kaydet
+
             try
             {
                 while (await timer.WaitForNextTickAsync(_cts.Token))
@@ -64,23 +85,53 @@ namespace razor._Shared.tr.Header
                     await LoadData();
                 }
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+                // Expected - component disposed
+            }
+            catch (Exception ex)
+            {
+                await Logger.TakeIt(
+                    userId: use?.Id,
+                    PageNameSpaceTitle: "namespace razor._Shared.tr.Header",
+                    action: "StartAutoRefreshLoop",
+                    exception: ex.Message,
+                    stackTrace: ex.StackTrace
+                );
+            }
         }
 
         private async Task ShowNotification(string type, string title, string text, string? image)
         {
             if (notificationRef is null) return;
 
-            var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
-            await notificationRef.Launch(type, title, text, imageUrl);
+            try
+            {
+                var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+                await notificationRef.Launch(type, title, text, imageUrl);
+            }
+            catch (Exception ex)
+            {
+                await Logger.TakeIt(
+                    userId: use?.Id,
+                    PageNameSpaceTitle: "namespace razor._Shared.tr.Header",
+                    action: "ShowNotification",
+                    exception: ex.Message,
+                    stackTrace: ex.StackTrace
+                );
+            }
         }
         #endregion
-        public virtual void Dispose()
+
+        // HATA FİKS #2: IDisposable yerine IAsyncDisposable kullan
+        async ValueTask IAsyncDisposable.DisposeAsync()
         {
-            // 60 yılın kuralı: Açtığın kapıyı kapat, başlattığın sinyali durdur.
             _cts.Cancel();
             _cts.Dispose();
+
+            GC.SuppressFinalize(this);
         }
+
         #endregion
 
         //----------------------------------------------
@@ -93,7 +144,9 @@ namespace razor._Shared.tr.Header
 
         // E-posta gönderim durumu
         private bool EmailSentStatus = false;
-        private int? EmailActivationCode = null;
+
+        // HATA FİKS #3: Nullable int yerine string kullan (input field genellikle string gelir)
+        private string EmailActivationCode = string.Empty;
 
         private int RemainingSeconds { get; set; } = 180;
 
@@ -104,18 +157,32 @@ namespace razor._Shared.tr.Header
         {
             try
             {
-            }
-            finally
-            {
+                // TODO: Veri yükleme işlemleri burada yapılacak
                 StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                await Logger.TakeIt(
+                    userId: use?.Id,
+                    PageNameSpaceTitle: "namespace razor._Shared.tr.Header",
+                    action: "LoadData",
+                    exception: ex.Message,
+                    stackTrace: ex.StackTrace
+                );
             }
         }
 
         protected async Task Action()
         {
-            if (Btn_isProcessing_01 || EmailSentStatus || use == null)
+            // HATA FİKS #4: Reentrance kontrolü ve null check sırasının düzeltilmesi
+            if (Btn_isProcessing_01)
             {
-                if (use == null) await ShowNotification("danger", "Hata", "Kullanıcı bulunamadı.", null);
+                return; // Zaten işlem yapılıyor
+            }
+
+            if (use == null)
+            {
+                await ShowNotification("danger", "Hata", "Kullanıcı bulunamadı.", null);
                 return;
             }
 
@@ -125,37 +192,51 @@ namespace razor._Shared.tr.Header
                 EmailSentStatus = true;
                 RemainingSeconds = 180;
 
+                // E-posta gönder
                 await emailSender.SendAccountActivationCodeInfoEmailAsync(use.Language, use.ContactInformation.Email);
 
                 await ShowNotification("success", "Mail Gönderildi", $"{use.ContactInformation.Email}", null);
 
-                // 5. Timer Döngüsü (CancellationToken desteği ile)
-                // Kullanıcı sayfadan çıkarsa Task.Delay hata fırlatır ve döngü durur (Bellek yönetimi)
+                // HATA FİKS #5: Timer döngüsü içinde State tracking
                 while (RemainingSeconds > 0)
                 {
-                    await Task.Delay(1000, _cts.Token);
-                    RemainingSeconds--;
-                    StateHasChanged();
+                    try
+                    {
+                        await Task.Delay(1000, _cts.Token);
+                        RemainingSeconds--;
+                        StateHasChanged();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break; // Component disposed
+                    }
                 }
-                await ShowNotification("success", "Bilgi", "Doğrulama kodu süresi doldu. Yeniden gönderebilirsiniz.", null);
+
+                // Süre dolduğunda notification göster
+                if (RemainingSeconds <= 0)
+                {
+                    await ShowNotification("success", "Bilgi", "Doğrulama kodu süresi doldu. Yeniden gönderebilirsiniz.", null);
+                }
             }
             catch (OperationCanceledException)
             {
+                // Component disposed - bu exception'u handle et
+                await ShowNotification("info", "İşlem İptal Edildi", "Sayfa kapatıldı.", null);
             }
             catch (Exception ex)
             {
-                await _logger.TakeIt(
+                await Logger.TakeIt(
                     userId: use?.Id,
-                    PageNameSpaceTitle: "AccountActivationMailStatu",
+                    PageNameSpaceTitle: "namespace razor._Shared.tr.Header",
                     action: "Action",
                     exception: ex.Message,
                     stackTrace: ex.StackTrace
                 );
-                await ShowNotification("danger", "Hata", "Bir sorun oluştu.", null);
+                await ShowNotification("danger", "Hata", "E-posta gönderirken bir hata oluştu.", null);
             }
             finally
             {
-                // 6. Resetleme: Sadece döngü bittiğinde veya hata aldığında çalışır
+                // HATA FİKS #6: Reset işlemini merkezi yönet
                 Btn_isProcessing_01 = false;
                 EmailSentStatus = false;
                 RemainingSeconds = 180;
@@ -166,56 +247,75 @@ namespace razor._Shared.tr.Header
         protected async Task EmailControl()
         {
             if (Btn_isProcessing_02) return;
+            if (use == null)
+            {
+                await ShowNotification("danger", "Hata", "Kullanıcı bilgileri yüklenemedi.", null);
+                return;
+            }
 
             try
             {
                 Btn_isProcessing_02 = true;
 
-                // 1. Validasyon Kontrolleri
-                if (use == null)
+                if (!int.TryParse(EmailActivationCode, out var enteredCode))
                 {
-                    await ShowNotification("danger", "Hata", "Kullanıcı bilgileri yüklenemedi.", null);
+                    await ShowNotification("danger", "Hata", "Lütfen geçerli bir kod girin.", null);
                     return;
                 }
 
-                if (use.AccountActivationMailCode != 0 && use.AccountActivationMailCode == EmailActivationCode)
-                {
-                    // Başarılı Durum
-                    use.AccountActivationMailStatu = true;
+                // ⭐ Her işlem öncesi database'den güncel veriyi çek
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                var currentUser = await db.Users.FirstOrDefaultAsync(u => u.Id == use.Id, _cts.Token);
 
-                    await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-                    db.Users.Update(use);
+                if (currentUser == null)
+                {
+                    await ShowNotification("danger", "Hata", "Kullanıcı bulunamadı.", null);
+                    return;
+                }
+
+                // ⭐ Güncel veride kontrol et
+                if (currentUser.AccountActivationMailCode != 0 && currentUser.AccountActivationMailCode == enteredCode)
+                {
+                    currentUser.AccountActivationMailStatu = true;
+                    db.Users.Update(currentUser);
                     await db.SaveChangesAsync(_cts.Token);
 
-                    await ShowNotification("success", "Tebrikler", "Email adresiniz başarıyla doğrulandı.", null);
+                    // ⭐ Local state'i de güncelle
+                    use = currentUser;
 
-                    // Başarılıysa yönlendir (Sayfayı yenilemek yerine ana sayfaya veya panele git)
-                    await Task.Delay(4000);
+                    await ShowNotification("success", "Tebrikler", "Email adresiniz başarıyla doğrulandı.", null);
+                    await Task.Delay(2000, _cts.Token);
                     Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
                 }
                 else
                 {
-                    // Hatalı Kod Durumu
-                    await ShowNotification("danger", "Hata", "Girdiğiniz kod boş veya yanlış.", null);
+                    await ShowNotification("danger", "Hata",
+                        currentUser.AccountActivationMailCode == 0
+                            ? "Sistemde kod kaydı bulunamadı."
+                            : "Girdiğiniz kod boş veya yanlış.",
+                        null);
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                await ShowNotification("info", "İşlem İptal Edildi", "Sayfa kapatıldı.", null);
+            }
+            catch (DbUpdateException ex)
+            {
+                await Logger.TakeIt(userId: use?.Id, PageNameSpaceTitle: "namespace razor._Shared.tr.Header", action: "EmailControl - DbUpdate", exception: ex.Message, stackTrace: ex.StackTrace);
+                await ShowNotification("danger", "Veritabanı Hatası", "Doğrulama kaydedilemedi. Lütfen tekrar deneyin.", null);
             }
             catch (Exception ex)
             {
-                await _logger.TakeIt(
-                    userId: use?.Id, // ID'yi loglamak hata çözmeyi kolaylaştırır
-                    PageNameSpaceTitle: "AccountActivation",
-                    action: "EmailControl",
-                    exception: ex.Message,
-                    stackTrace: ex.StackTrace
-                );
+                await Logger.TakeIt(userId: use?.Id, PageNameSpaceTitle: "namespace razor._Shared.tr.Header", action: "EmailControl", exception: ex.Message, stackTrace: ex.StackTrace);
                 await ShowNotification("danger", "Sistem Hatası", "İşlem sırasında bir hata oluştu.", null);
             }
             finally
             {
                 Btn_isProcessing_02 = false;
+                StateHasChanged();
             }
-        }
+        }       
         #endregion
-
     }
 }

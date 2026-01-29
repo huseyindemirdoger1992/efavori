@@ -14,6 +14,7 @@ namespace data
         public string Subject { get; set; }
         public string Body { get; set; }
         public string Attachments { get; set; }
+        public string TraceId { get; set; }
         public DateTime SentDate { get; set; } = DateTime.UtcNow;
     }
 }

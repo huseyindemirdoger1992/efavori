@@ -37,6 +37,7 @@ namespace api
 
         public async Task SendEmailAsync(string SenderEmailAddress, string recipient, string subject, string body, List<Attachment>? attachments = null)
         {
+            using var message = new MailMessage();
             switch (SenderEmailAddress.ToLower())
             {
                 case "security@efavori.com":
@@ -44,6 +45,7 @@ namespace api
                     SmtpPort = 587;
                     EmailAddress = "security@efavori.com";
                     EmailPassword = "SXAk4obokyOePCJ48VsR";
+                    message.From = new MailAddress(EmailAddress, EmailAddress);
                     break;
 
                 case "guvenlik@efavori.com":
@@ -51,6 +53,7 @@ namespace api
                     SmtpPort = 587;
                     EmailAddress = "guvenlik@efavori.com";
                     EmailPassword = "DestekSifresi123";
+                    message.From = new MailAddress(EmailAddress, EmailAddress);
                     break;
 
                 default:
@@ -58,6 +61,7 @@ namespace api
                     SmtpPort = 587;
                     EmailAddress = "security@efavori.com";
                     EmailPassword = "SXAk4obokyOePCJ48VsR";
+                    message.From = new MailAddress(EmailAddress, EmailAddress);
                     break;
             }
             // Kayıt için kullanılacak ek dosya isimleri
@@ -67,8 +71,6 @@ namespace api
 
             try
             {
-                using var message = new MailMessage();
-                message.From = new MailAddress(EmailAddress, "Efavori Security");
                 message.To.Add(recipient);
                 message.Subject = subject;
                 message.Body = body;
@@ -91,15 +93,18 @@ namespace api
                 };
 
                 await smtp.SendMailAsync(message);
+                var details = _userInfos.GetCurrentUserDetails();
 
                 // --- KAYIT İŞLEMİ BAŞLIYOR ---
                 var history = new EmailHistory
                 {
+
                     FromWhom = EmailAddress,
                     ToWho = recipient,
                     Subject = subject,
                     Body = body,
                     Attachments = attachmentNames,
+                    TraceId = details.TraceId.ToString(),
                     SentDate = DateTime.UtcNow
                 };
 
@@ -123,7 +128,7 @@ namespace api
             }
         }
 
-        // security@efavori.com-------------------------------------------------------------------------------------------------------------
+        // security@efavori.com--------------------------------------------------------------------------+
         public async Task SendNewRegisterInfoEmailAsync(string Culture, string Email)
         {
             var attachments = new List<Attachment>();
@@ -182,7 +187,7 @@ namespace api
                 Bu bir sistem mesajıdır, lütfen yanıtlamayınız.
             </p>
             <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
+                İşlem Kayıt No: {details.TraceId} | © 2026 efavori
             </p>
         </div>
     </div>";
@@ -677,7 +682,7 @@ namespace api
             }
         }
 
-        // security@efavori.com-------------------------------------------------------------------------------------------------------------
+        //security@efavori.com---------------------------------------------------------------------------+
         public async Task SendLoginInfoEmailAsync(string Culture, string Email)
         {
             var attachments = new List<Attachment>();
@@ -1292,10 +1297,10 @@ namespace api
 
         }
 
-        // security@efavori.com-------------------------------------------------------------------------------------------------------------
+        //security@efavori.com---------------------------------------------------------------------------+
         public async Task SendAccountActivationCodeInfoEmailAsync(string Culture, string Email)
         {
-            Users use = await _context.Users.FirstOrDefaultAsync(x=>x.ContactInformation.Email == Email,_cts.Token);
+            Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
             use.AccountActivationMailCode = Random.Shared.Next(100000, 999999);
             _context.Users.Update(use);
             await _context.SaveChangesAsync(_cts.Token);
@@ -1831,12 +1836,586 @@ namespace api
             }
         }
 
-        // security@efavori.com-------------------------------------------------------------------------------------------------------------
+        //security@efavori.com---------------------------------------------------------------------------+
         public async Task SendLogOutInfoEmailAsync(string Culture, string Email)
         {
+            var attachments = new List<Attachment>();
+
+            var details = _userInfos.GetCurrentUserDetails();
+            string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
+            string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
+            string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
+
+            if (Culture == "tr")
+            {
+                string emailBody = $@"
+    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+        
+        <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        </div>
+
+        <div style='padding: 0 40px 30px 40px;'>
+            <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; text-align: center;'>Oturum Kapatma Bildirimi</h2>
+            
+            <p style='font-size: 15px;'>Sayın Kullanıcımız,</p>
+            <p style='font-size: 14px; color: #555;'>Hesabınızdan başarıyla çıkış yapılmıştır. İşlemin ayrıntıları aşağıdadır:</p>
+            
+            <table style='width: 100%; border-collapse: collapse; margin: 25px 0; background-color: #f8f9fa; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffffff;'>Tarih / Saat</td>
+                    <td style='padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #ffffff;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffffff;'>IP Adresi</td>
+                    <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; border-bottom: 1px solid #ffffff;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px;'>Cihaz Bilgisi</td>
+                    <td style='padding: 12px 15px; font-size: 12px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+
+            <p style='font-size: 13px; color: #777; text-align: center;'>
+                Hesabınız güvenli bir şekilde kapatılmıştır.
+            </p>
+
+            <div style='background-color: #f0f4ff; border-left: 4px solid #1a237e; border-right: 4px solid #1a237e; padding: 20px; margin-top: 25px; text-align: center;'>
+                <p style='margin: 0 0 15px 0; font-size: 13px; color: #1a237e; line-height: 1.5;'>
+                    <strong>Güvenlik İpucu:</strong> Genel bilgisayarlardan çıkış yaptıktan sonra tarayıcıyı tamamen kapatmayı unutmayın.
+                </p>
+            </div>
+        </div>
+
+        <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+            <p style='font-size: 11px; color: #999; margin: 0;'>
+                Bu e-posta, hesabınızın güvenliğini sağlamak amacıyla sistem tarafından otomatik olarak gönderilmiştir.
+            </p>
+            <p style='font-size: 10px; color: #bbb; margin-top: 8px; letter-spacing: 0.5px;'>
+                İşlem Kayıt No (Trace ID): {details.TraceId}
+            </p>
+        </div>
+    </div>";
+                await SendEmailAsync("security@efavori.com", Email, "Oturum Kapatma Bildirimi", emailBody, attachments);
+            }
+            if (Culture == "en")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 25px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Sign-out Confirmation</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>You have successfully signed out of your account.</p>
+        
+        <p style='font-size: 15px; font-weight: 600;'>Hello,</p>
+        <p style='font-size: 14px; color: #555;'>Here are the details of your sign-out activity:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>Date / Time</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>IP Address</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: ""Courier New"", Courier, monospace; color: #333; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>Device</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #888; text-align: center; font-style: italic;'>
+            Your account is now secured and signed out from all active sessions.
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 8px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 14px; color: #1a237e; font-weight: 600;'>
+                Security Tip
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #444; line-height: 1.5;'>
+                When using shared computers, always remember to sign out and close your browser completely.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f9fafb; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            This is an automated security notification. Please do not reply to this email.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 10px; letter-spacing: 0.5px; text-transform: uppercase;'>
+            Trace ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("security@efavori.com", Email, "Sign-out Confirmation", emailBody, attachments);
+            }
+            if (Culture == "az")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #f5f5f5; padding-bottom: 15px; text-align: center;'>Çıkış Bildirişi</h2>
+        
+        <p style='font-size: 15px; font-weight: 600;'>Hörmətli İstifadəçi,</p>
+        <p style='font-size: 14px; color: #555;'>Hesabınızdan uğurla çıxış etmisiniz. Çıxış məlumatları aşağıda verilmişdir:</p>
+        
+        <table style='width: 100%; border-collapse: collapse; margin: 25px 0; background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>Tarix və Saat</td>
+                <td style='padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>IP Ünvanı</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px;'>Cihaz Məlumatı</td>
+                <td style='padding: 12px 15px; font-size: 12px; color: #444;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #888; text-align: center;'>
+            Hesabınız təhlükəsiz şəkildə kapatılmışdır.
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 8px; padding: 20px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 14px; color: #1a237e; font-weight: bold;'>
+                Təhlükəsizlik İpucu
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #444;'>
+                Ortaq kompüterlərdən istifadə edərkən həmişə çıxış etməyi və brauzeri tamamilə bağlamağı unutmayın.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f8f9fa; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            Bu e-poçt təhlükəsizlik məqsədilə sistem tərəfindən avtomatik göndərilib.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
+            Əməliyyat ID (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Çıxış Bildirişi", emailBody, attachments);
+
+            }
+            if (Culture == "de")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #0d47a1; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Abmeldung bestätigt</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Sie haben sich erfolgreich von Ihrem Konto abgemeldet.</p>
+        
+        <p style='font-size: 15px;'>Guten Tag,</p>
+        <p style='font-size: 14px; color: #555;'>Hier sind die Details Ihrer Abmeldung:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fafafa; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Datum / Uhrzeit</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>IP-Adresse</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #eeeeee;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>Gerät</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 12px; color: #999; text-align: center;'>
+            Ihr Konto ist nun sicher abgemeldet.
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 8px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 14px; color: #0d47a1; font-weight: bold;'>
+                Sicherheitstipp
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #4a5568;'>
+                Denken Sie daran, bei der Verwendung öffentlicher Computer den Browser vollständig zu schließen.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f7f9fc; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #a0aec0; margin: 0;'>
+            Dies ist eine automatisch generierte Sicherheitsbenachrichtigung. Bitte antworten Sie nicht auf diese E-Mail.
+        </p>
+        <p style='font-size: 10px; color: #cbd5e0; margin-top: 10px; letter-spacing: 0.5px;'>
+            Trace-ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Abmeldung bestätigt", emailBody, attachments);
+
+            }
+            if (Culture == "es")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Confirmación de Cierre de Sesión</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Ha cerrado sesión exitosamente en su cuenta.</p>
+        
+        <p style='font-size: 15px;'>Estimado usuario/a,</p>
+        <p style='font-size: 14px; color: #555;'>Aquí están los detalles de su cierre de sesión:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Fecha / Hora</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Dirección IP</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #eeeeee;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>Dispositivo</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 12px; color: #999; text-align: center;'>
+            Su cuenta está ahora segura y ha cerrado sesión.
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 8px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 14px; color: #1a237e; font-weight: bold;'>
+                Consejo de Seguridad
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #555;'>
+                Al usar computadoras compartidas, recuerde siempre cerrar sesión y cerrar el navegador completamente.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Esta es una notificación automática de seguridad. Por favor, no responda a este correo.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de Seguimiento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Confirmación de cierre de sesión", emailBody, attachments);
+
+            }
+            if (Culture == "fr")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Confirmation de déconnexion</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Vous avez été déconnecté de votre compte avec succès.</p>
+        
+        <p style='font-size: 15px;'>Bonjour,</p>
+        <p style='font-size: 14px; color: #555;'>Voici les détails de votre déconnexion :</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>Date et heure</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>Adresse IP</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>Appareil</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 12px; color: #999; text-align: center;'>
+            Votre compte est maintenant sécurisé et déconnecté.
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 10px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 14px; color: #1a237e; font-weight: bold;'>
+                Conseil de sécurité
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #555;'>
+                Lorsque vous utilisez des ordinateurs partagés, n'oubliez pas de vous déconnecter et de fermer complètement votre navigateur.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f8f9fa; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Ceci est une notification automatique. Merci de ne pas répondre à cet e-mail.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de suivi : {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("security@efavori.com", Email, "Confirmation de déconnexion", emailBody, attachments);
+
+            }
+            if (Culture == "hi")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>लॉगआउट की पुष्टि</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>आप अपने खाते से सफलतापूर्वक लॉगआउट हो गए हैं।</p>
+        
+        <p style='font-size: 15px;'>नमस्ते,</p>
+        <p style='font-size: 14px; color: #555;'>आपके लॉगआउट के विवरण यहां दिए गए हैं:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>दिनांक / समय</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>आईपी पता (IP Address)</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #eeeeee;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>डिवाइस (Device)</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 12px; color: #999; text-align: center;'>
+            आपका खाता अब सुरक्षित है और लॉगआउट हो गया है।
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 10px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 16px; color: #1a237e; font-weight: bold;'>
+                सुरक्षा सुझाव
+            </p>
+            <p style='margin: 0; font-size: 14px; color: #555;'>
+                साझा कंप्यूटर का उपयोग करते समय, हमेशा लॉगआउट करना और ब्राउज़र को पूरी तरह बंद करना याद रखें।
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            यह एक स्वचालित सुरक्षा सूचना है। कृपया इस ईमेल का उत्तर न दें।
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ट्रेस आईडी (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("security@efavori.com", Email, "लॉगआउट की पुष्टि", emailBody, attachments);
+
+            }
+            if (Culture == "pt")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Confirmação de Logout</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Você saiu de sua conta com sucesso.</p>
+        
+        <p style='font-size: 15px;'>Olá,</p>
+        <p style='font-size: 14px; color: #555;'>Aqui estão os detalhes do seu logout:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Data / Hora</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Endereço IP</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #eeeeee;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>Dispositivo</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 12px; color: #999; text-align: center;'>
+            Sua conta está agora segura e desconectada.
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 10px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #1a237e; font-weight: bold;'>
+                Dica de Segurança
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #555;'>
+                Ao usar computadores compartilhados, lembre-se sempre de fazer logout e fechar o navegador completamente.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Esta é uma notificação automática de segurança. Por favor, não responda a este e-mail.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de Rastreamento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Confirmação de logout", emailBody, attachments);
+
+            }
+            if (Culture == "ru")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Подтверждение выхода</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Вы успешно вышли из своего аккаунта.</p>
+        
+        <p style='font-size: 15px;'>Здравствуйте,</p>
+        <p style='font-size: 14px; color: #555;'>Вот детали вашего выхода:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Дата / Время</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>IP-адрес</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #eeeeee;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>Устройство</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 12px; color: #999; text-align: center;'>
+            Ваш аккаунт теперь безопасен и вы вышли из него.
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 10px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #1a237e; font-weight: bold;'>
+                Совет по безопасности
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #555;'>
+                При использовании общих компьютеров не забывайте выходить и полностью закрывать браузер.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Это автоматическое уведомление системы безопасности. Пожалуйста, не отвечайте на это письмо.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID транзакции (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Подтверждение выхода", emailBody, attachments);
+
+            }
+            if (Culture == "zh")
+            {
+                string emailBody = $@"
+<div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>登出确认</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>您已成功退出账户。</p>
+        
+        <p style='font-size: 15px;'>尊敬的用户，您好：</p>
+        <p style='font-size: 14px; color: #555;'>以下是您的登出信息：</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>日期 / 时间</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>IP 地址</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #eeeeee;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>设备信息</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 12px; color: #999; text-align: center;'>
+            您的账户现已安全登出。
+        </p>
+
+        <div style='background-color: #f0f4ff; border: 1px solid #c5d9f9; border-radius: 10px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #1a237e; font-weight: bold;'>
+                安全提示
+            </p>
+            <p style='margin: 0; font-size: 13px; color: #555;'>
+                在使用公共电脑时，请记得登出账户并完全关闭浏览器。
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            这是系统生成的自动安全通知，请勿直接回复。
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            追踪 ID (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "登出确认", emailBody, attachments);
+
+            }
+
         }
-
-
-
     }
 }

@@ -87,7 +87,18 @@ namespace web.Account.Controllers
         [HttpGet, HttpPost] // Her iki yöntemi de desteklesin
         public async Task<IActionResult> Logout(string culture = "en")
         {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme); // Oturumu kapat
+            // Oturum kapatmadan önce kullanıcı bilgisini al
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            // Oturumu kapat
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            // Logout email'i gönder
+            if (!string.IsNullOrWhiteSpace(userEmail))
+            {
+                await emailSender.SendLogOutInfoEmailAsync(culture, userEmail);
+            }
+
             return Redirect($"/{culture}/Customer/Home/Index"); // Ana sayfaya dön
         }
     }

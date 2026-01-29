@@ -16,13 +16,19 @@ namespace razor._Shared.tr.Modals.Account
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
         private Notification? notificationRef;
+        private readonly TakeLogs _logger;
+
 
         private readonly _ApplicationConnectionDb _db;
 
-        public Login(_ApplicationConnectionDb db)
+        public Login(_ApplicationConnectionDb db, TakeLogs logger)
         {
             _db = db;
+            _logger = logger;
         }
+
+        private bool Btn_isProcessing_01 = false;
+
         private async Task ShowNotification(string type, string title, string text, string? image)
         {
             var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
@@ -32,52 +38,60 @@ namespace razor._Shared.tr.Modals.Account
 
         private string? email = "huseyindemirdoger1992@gmail.com";
         private string? password = "9090";
-        private string? loginMessage;
 
         private async Task LoginUserAsync()
         {
-            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+            if (Btn_isProcessing_01) return;
+
+            try
             {
-                await ShowNotification("error", "Hata", "E-posta ve şifre gereklidir.", null);
-                return;
+                Btn_isProcessing_01 = true;
+
+                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                {
+                    await ShowNotification("danger", "Hata", "E-posta ve şifre gereklidir.", null);
+                    return;
+                }
+
+                // Backend'in kültürü anlaması için
+                var uri = new Uri(Navigation.Uri);
+                var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                var culture = segments.Length > 0 ? segments[0] : "en";
+
+                // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
+                // Bu sayede tarayıcı Set-Cookie yanıtını doğrudan işler.
+                var user = await _db.Users
+                    .FirstOrDefaultAsync(u => u.ContactInformation.Email == email && u.Password == password);
+
+                if (user != null)
+                {
+                    await ShowNotification("success", "Başarılı", "Giriş yapılıyor...", null);
+                    culture = user.Language ?? culture;
+                    var endpoint = $"/{culture}/Account/Login";
+                    await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
+                }
+                else
+                {
+                    await ShowNotification("danger", "Hata", "Girilen bilgilere ait kullanıcı bulunamadı.", null);
+                }
+
+
             }
-
-            // Backend'in kültürü anlaması için
-            var uri = new Uri(Navigation.Uri);
-            var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var culture = segments.Length > 0 ? segments[0] : "en";
-
-
-            // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
-            // Bu sayede tarayıcı Set-Cookie yanıtını doğrudan işler.
-            var user = await _db.Users
-                .FirstOrDefaultAsync(u => u.ContactInformation.Email == email && u.Password == password);
-
-            if (user != null)
+            catch (Exception ex)
             {
-                await ShowNotification("success", "Başarılı", "Giriş yapılıyor...", null);
-                culture = user.Language ?? culture;
-                var endpoint = $"/{culture}/Account/Login";
-                await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
+                await _logger.TakeIt(
+                    userId: null,
+                    PageNameSpaceTitle: "namespace razor._Shared.tr.Modals.Account",
+                    action: $"LoginUserAsync",
+                    exception: ex.Message,
+                    stackTrace: ex.StackTrace
+                );
             }
-            else
+            finally
             {
-                await ShowNotification("danger", "Hata", "Girilen bilgilere ait kullanıcı bulunamadı.", null);
+                await Task.Delay(3500);
+                Btn_isProcessing_01 = false;
             }
-
-        }
-        private class LoginResult
-        {
-            public string message { get; set; }
-            public UserInfo user { get; set; }
-        }
-
-        private class UserInfo
-        {
-            public Guid Id { get; set; }
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
-            public string Email { get; set; }
         }
     }
 }

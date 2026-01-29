@@ -25,7 +25,10 @@
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label text-white"><i class="fa fa-calendar-check-o"></i> Doğum Tarihiniz</label>
-                        <input type="date" class="form-control bg-transparent text-white border-light-3" @bind="_user.DateOfBirth">
+                        <input type="date"
+                               class="form-control bg-transparent text-white border-light-3"
+                               @bind="_user.DateOfBirth"
+                               max="@_maxDate">
                     </div>
 
                     <div class="col-md-6 mb-3">

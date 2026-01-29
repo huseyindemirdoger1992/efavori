@@ -20,6 +20,8 @@ namespace razor._Shared.tr.Modals.Account
         [Inject] protected NavigationManager Navigation { get; init; } = default!;
         [Inject] protected IJSRuntime JS { get; init; } = default!;
 
+        private string _maxDate = DateTime.Now.AddYears(-18).ToString("yyyy-MM-dd");
+
         private readonly EmailSender emailSender;
 
         private readonly TakeLogs _logger;
@@ -144,7 +146,7 @@ namespace razor._Shared.tr.Modals.Account
 
             if (!_UserEmail.Contains("@") || !_UserEmail.Contains("."))
             {
-                await ShowNotification("error", "Geçersiz Format", "Girdiğiniz e-posta adresi hatalı görünüyor. Lütfen kontrol edin.", null);
+                await ShowNotification("danger", "Geçersiz Format", "Girdiğiniz e-posta adresi hatalı görünüyor. Lütfen kontrol edin.", null);
                 return;
             }
 
@@ -196,7 +198,12 @@ namespace razor._Shared.tr.Modals.Account
 
             if (string.IsNullOrWhiteSpace(_user.Password))
             {
-                await ShowNotification("error", "Şifre Belirlenmedi", "Güvenliğiniz için bir kullanıcı şifresi oluşturmalısınız.", null);
+                await ShowNotification("danger", "Şifre Belirlenmedi", "Güvenliğiniz için bir kullanıcı şifresi oluşturmalısınız.", null);
+                return;
+            }
+            if (_user.DateOfBirth > DateTime.Now.AddYears(-18))
+            {
+                await ShowNotification("danger", "Yaş kısıtlaması", "Yaşınız 18'den küçük olduğu için kayıt yapamazsınız.", null);
                 return;
             }
 
@@ -208,7 +215,7 @@ namespace razor._Shared.tr.Modals.Account
             // Sponsor ve kullanıcı e-postası aynı mı?
             if (!string.IsNullOrWhiteSpace(_Sponsored) && _UserEmail.Trim().ToLower() == _Sponsored.Trim().ToLower())
             {
-                await ShowNotification("error", "Kayıt Hatası", "Kullanıcı e-posta adresi ile sponsor e-posta adresi aynı olamaz.", null);
+                await ShowNotification("danger", "Kayıt Hatası", "Kullanıcı e-posta adresi ile sponsor e-posta adresi aynı olamaz.", null);
                 return;
             }
 
@@ -233,7 +240,7 @@ namespace razor._Shared.tr.Modals.Account
                         ? "E-posta adresi"
                         : "Telefon numarası";
 
-                    await ShowNotification("error", "Mükerrer Kayıt", $"Bu {duplicateType} zaten sistemde kayıtlı.", null);
+                    await ShowNotification("danger", "Mükerrer Kayıt", $"Bu {duplicateType} zaten sistemde kayıtlı.", null);
                     return;
                 }
 
@@ -261,546 +268,7 @@ namespace razor._Shared.tr.Modals.Account
                 string displayDate = DateTime.UtcNow.ToString("dd MMMM yyyy HH:mm");
 
                 #region Kayıt Emaili Gönderir
-                if (_user.Language == "tr")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Aramıza Hoş Geldiniz!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>Hesabınız başarıyla oluşturuldu. efavori dünyasına ilk adımınızı attığınız için heyecanlıyız.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    Hemen Başlayın
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Kayıt İşlem Detayları</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>IP Adresi</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Tarih / Saat</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Cihaz Bilgisi</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Bu kayıt işlemi size ait değilse, lütfen güvenlik ekibimizle iletişime geçiniz.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                Bu bir sistem mesajıdır, lütfen yanıtlamayınız.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "efavori'ye Hoş Geldiniz!", emailBody, attachments);
-                }
-                if (_user.Language == "en")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Welcome to Our Community!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>Your account has been successfully created. We are excited to have you take your first step into the world of efavori.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    Get Started Now
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Registration Details</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>IP Address</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Date / Time</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Device Info</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                If this registration does not belong to you, please contact our security team.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                This is a system message, please do not reply.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "Welcome to efavori!", emailBody, attachments);
-                }
-                if (_user.Language == "az")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Aramıza Xoş Gəldiniz!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>Hesabınız uğurla yaradıldı. efavori dünyasına ilk addımınızı atdığınız üçün həyəcanlıyıq.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    İndi Başlayın
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Qeydiyyat Məlumatları</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>IP Ünvanı</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Tarix / Saat</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Cihaz Məlumatı</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Bu qeydiyyat prosesi sizə aid deyilsə, xahiş edirik təhlükəsizlik komandamızla əlaqə saxlayın.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                Bu bir sistem mesajıdır, xahiş edirik cavablandırmayın.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "efavori-yə Xoş Gəldiniz!", emailBody, attachments);
-                }
-                if (_user.Language == "de")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Willkommen bei uns!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>Ihr Konto wurde erfolgreich erstellt. Wir freuen uns, dass Sie den ersten Schritt in die Welt von efavori gemacht haben.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    Jetzt starten
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Details zur Registrierung</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>IP-Adresse</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Datum / Uhrzeit</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Geräteinformationen</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Wenn diese Registrierung nicht von Ihnen stammt, kontaktieren Sie bitte unser Sicherheitsteam.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                Dies ist eine systemgenerierte Nachricht, bitte antworten Sie nicht darauf.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "Willkommen bei efavori!", emailBody, attachments);
-                }
-                if (_user.Language == "es")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>¡Bienvenido a nuestra comunidad!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>Tu cuenta ha sido creada con éxito. Estamos emocionados de que des tu primer paso en el mundo de efavori.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    Comenzar ahora
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Detalles del registro</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Dirección IP</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Fecha / Hora</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Información del dispositivo</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Si este registro no le pertenece, por favor póngase en contacto con nuestro equipo de seguridad.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                Este es un mensaje del sistema, por favor no responda.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "¡Bienvenido a efavori!", emailBody, attachments);
-                }
-                if (_user.Language == "fr")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Bienvenue parmi nous !</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>Votre compte a été créé avec succès. Nous sommes ravis que vous fassiez vos premiers pas dans l'univers d'efavori.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    Commencer dès maintenant
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Détails de l'inscription</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Adresse IP</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Date / Heure</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Infos sur l'appareil</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Si cette inscription ne provient pas de vous, veuillez contacter notre équipe de sécurité.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                Ceci est un message système, merci de ne pas y répondre.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "Bienvenue chez efavori !", emailBody, attachments);
-                }
-                if (_user.Language == "hi")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>हमारे साथ आपका स्वागत है!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>आपका खाता सफलतापूर्वक बना लिया गया है। हमें खुशी है कि आपने efavori की दुनिया में अपना पहला कदम रखा है।</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    अभी शुरू करें
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>पंजीकरण विवरण</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>IP पता</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>दिनांक / समय</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>डिवाइस की जानकारी</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                यदि यह पंजीकरण आपने नहीं किया है, तो कृपया हमारी सुरक्षा टीम से संपर्क करें।
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                यह एक सिस्टम जनित संदेश है, कृपया इसका उत्तर न दें।
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "efavori में आपका स्वागत है!", emailBody, attachments);
-                }
-                if (_user.Language == "pt")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Bem-vindo à nossa comunidade!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>A sua conta foi criada com sucesso. Estamos entusiasmados por vê-lo dar o seu primeiro passo no mundo da efavori.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    Comece Agora
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Detalhes do Registro</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Endereço IP</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Data / Hora</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Informações do Dispositivo</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Se este registro não foi feito por você, entre em contato com nossa equipe de segurança.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                Esta é uma mensagem do sistema, por favor não responda.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "Bem-vindo à efavori!", emailBody, attachments);
-                }
-                if (_user.Language == "ru")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Добро пожаловать к нам!</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>Ваш аккаунт был успешно создан. Мы рады, что вы сделали свой первый шаг в мир efavori.</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    Начать сейчас
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>Детали регистрации</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>IP-адрес</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>Дата / Время</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>Информация об устройстве</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Если вы не совершали эту регистрацию, пожалуйста, свяжитесь с нашей службой безопасности.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                Это системное сообщение, пожалуйста, не отвечайте на него.
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "Добро пожаловать в efavori!", emailBody, attachments);
-                }
-                if (_user.Language == "zh")
-                {
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
-        
-        <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
-        </div>
-
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 24px; font-weight: 700; margin-bottom: 10px; text-align: center;'>欢迎加入我们！</h2>
-            <p style='font-size: 15px; color: #555; text-align: center;'>您的账户已成功创建。我们很高兴您迈出了进入 efavori 世界的第一步。</p>
-            
-            <div style='text-align: center; margin: 30px 0;'>
-                <a href='https://efavori.com/en/Customer/Home/Index' style='background-color: #1a237e; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;'>
-                    立即开始
-                </a>
-            </div>
-
-            <div style='background-color: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 20px; margin-top: 20px;'>
-                <p style='margin-top: 0; margin-bottom: 15px; font-size: 13px; font-weight: 700; color: #1a237e; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;'>注册详情</p>
-                <table style='width: 100%; border-collapse: collapse;'>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>IP 地址</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right; font-family: monospace;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777;'>日期 / 时间</td>
-                        <td style='padding: 6px 0; font-size: 12px; color: #333; text-align: right;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 6px 0; font-size: 12px; color: #777; vertical-align: top;'>设备信息</td>
-                        <td style='padding: 6px 0; font-size: 11px; color: #333; text-align: right; line-height: 1.4;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                如果此注册操作非您本人所为，请联系我们的安全团队。
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 11px; color: #999; margin: 0;'>
-                这是一条系统消息，请勿回复。
-            </p>
-            <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
-                Trace ID: {details.TraceId} | © 2026 efavori
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync(_UserEmail, "欢迎来到 efavori！", emailBody, attachments);
-                }
+                await emailSender.SendNewRegisterInfoEmailAsync(_user.Language,_user.ContactInformation.Email);
                 #endregion
 
                 db.Users.Add(_user);
@@ -860,7 +328,7 @@ namespace razor._Shared.tr.Modals.Account
                 }
 
                 // Kullanıcıya hata bildirimi göster
-                await ShowNotification("error", "Sistem Hatası", "Kayıt sırasında teknik bir hata oluştu. Lütfen tekrar deneyiniz.", null);
+                await ShowNotification("danger", "Sistem Hatası", "Kayıt sırasında teknik bir hata oluştu. Lütfen tekrar deneyiniz.", null);
             }
         }
     }

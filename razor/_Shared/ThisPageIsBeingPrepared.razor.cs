@@ -12,29 +12,31 @@ namespace razor._Shared
     /// </summary>
     public partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable
     {
-        #region Services
+        // Gelen kullanıcı parametresi
+        [Parameter] public Users? use { get; set; }
+
+        #region Services 
         [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
         [Inject] protected NavigationManager Navigation { get; init; } = default!;
         [Inject] protected IJSRuntime JS { get; init; } = default!;
-        [Inject] protected TakeLogs Logger { get; init; } = default!;
+        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
         #endregion
 
         #region State Management
+        // Bildirim bileşeni referansı
+        private Notification? notificationRef;
+        // Servisler ve kaynak yönetimi için CancellationTokenSource
         protected readonly CancellationTokenSource _cts = new();
-        private readonly TakeLogs _logger; // Logging servisi
-        private readonly _ApplicationConnectionDb _db;
-        private readonly UserInfos _userInfos; // 1. Servisi ekle
-        private readonly EmailSender emailSender; // 1. EmailSender alanını ekleyin
-        public ThisPageIsBeingPrepared(_ApplicationConnectionDb db,TakeLogs logger,  UserInfos userInfos, EmailSender _emailSender)
+        private readonly TakeLogs _logger; 
+        private readonly UserInfos _userInfos; 
+        private readonly EmailSender _emailSender;
+        // Yapıcı metod ile bağımlılık enjeksiyonu
+        public ThisPageIsBeingPrepared(TakeLogs logger, UserInfos userInfos, EmailSender emailSender)
         {
-            _db = db;
             _logger = logger;
             _userInfos = userInfos;
-            emailSender = _emailSender;
+            _emailSender = emailSender;
         }
-
-
-        private Notification? notificationRef;
         #endregion
 
         #region Lifecycle
@@ -84,13 +86,11 @@ namespace razor._Shared
         // Aksiyon buton grubu için thread-safe kontrol
         private bool Btn_isProcessing_01 = false;
 
-        // Gelen kullanıcı parametresi
-        [Parameter] public Users? use { get; set; }
 
-
-
-        protected IReadOnlyList<Country> Countries { get; private set; } = Array.Empty<Country>();
-        protected Users _newUser = new();
+        // Veri koleksiyonları
+        protected List<Country>? Country_;
+        protected List<Users>? Users_;
+        protected Users? _Users = new();
 
         protected virtual async Task LoadData()
         {
@@ -98,19 +98,40 @@ namespace razor._Shared
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-                // Read-only operasyonlarda AsNoTracking performansın altın kuralıdır.
-                Countries = await db.Country.AsNoTracking().ToListAsync(_cts.Token);
+                Country_ = await db.Country.ToListAsync(_cts.Token);
+
+                Users_ = await db.Users
+                    .Where(
+                    x => 
+                    x.FirstName == "Deneme"
+                    &&
+                    x.LastName == "Test"
+                    )
+                    .ToListAsync(_cts.Token);
+
+                _Users = await db.Users
+                    .FirstOrDefaultAsync(
+                    x => 
+                    x.FirstName == "Deneme" &&
+                    x.LastName == "Test"
+                    ,_cts.Token);
+
             }
             catch (OperationCanceledException) { /* Sessizce sonlandır */ }
             catch (Exception ex)
             {
-                await _logger.TakeIt(
-                    userId: null,
-                    PageNameSpaceTitle: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
-                    action: $"LoadData",
-                    exception: ex.Message,
-                    stackTrace: ex.StackTrace
-                );
+                try
+                {
+                    await _logger.TakeIt(
+                        userId: null,
+                        PageNameSpaceTitle: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
+                        action: $"LoadData",
+                        exception: ex.Message,
+                        stackTrace: ex.StackTrace
+                    );
+                }
+                catch{ }
+
             }
             finally
             {
@@ -133,24 +154,27 @@ namespace razor._Shared
                 // db.Users.Update(use);
                 // await db.SaveChangesAsync(_cts.Token);
 
-                _newUser = new();
                 await ShowNotification("success", "Başarılı", "Kullanıcı kaydedildi.", null);
 
                 await LoadData();
             }
             catch (Exception ex)
             {
-                await _logger.TakeIt(
-                    userId: null,
-                    PageNameSpaceTitle: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
-                    action: $"Action",
-                    exception: ex.Message,
-                    stackTrace: ex.StackTrace
-                );
+                try
+                {
+                    await _logger.TakeIt(
+                        userId: null,
+                        PageNameSpaceTitle: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
+                        action: $"Action",
+                        exception: ex.Message,
+                        stackTrace: ex.StackTrace
+                    );
+                }
+                catch{ }
             }
             finally
             {
-                await Task.Delay(3500);
+                await Task.Delay(4000);
                 Btn_isProcessing_01 = false;
                 await LoadData();
             }

@@ -1,5 +1,17 @@
 ﻿@rendermode InteractiveServer
 <razor._Shared.Notification @ref="notificationRef" />
+
+
+
+
+
+
+
+
+
+
+
+
 <!-- Oturum Açma Modalı -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -19,10 +31,6 @@
                     <label class="form-label"><i class="fa fa-lock"></i> Şifre</label>
                     <input type="password" class="form-control" placeholder="Şifreniz" @bind="password" />
                 </div>
-                @if (!string.IsNullOrEmpty(loginMessage))
-                {
-                    <div class="alert alert-danger">@loginMessage</div>
-                }
                 <div class="d-flex justify-content-between">
                     <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#resetModal">
                         <i class="fa fa-key"></i> Şifremi Unuttum
@@ -37,7 +45,18 @@
                         style="width: 100%;">
                     <i class="fa fa-sign-in"></i> Giriş Yap
                 </button>
+
+                <button type="button"
+                        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
+                        style="width:100%;"
+                        @onclick="LoginUserAsync"
+                        disabled="@Btn_isProcessing_01">
+                    <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
+                    <span>@(Btn_isProcessing_01 ? "Yükleniyor..." : "Giriş Yap")</span>
+                </button>
+
             </div>
         </div>
     </div>
 </div>
+

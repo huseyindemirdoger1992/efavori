@@ -217,7 +217,7 @@ namespace razor._Shared.tr.Header
         </div>
     </div>";
 
-                    await emailSender.SendEmailAsync(use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Hesap Doğrulama Kodunuz", emailBody, attachments);
+                    await emailSender.SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Hesap Doğrulama Kodunuz", emailBody, attachments);
                 }
                 await ShowNotification("success", "Mail Gönderildi", $"{use.ContactInformation.Email}", null);
 

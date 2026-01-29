@@ -21,11 +21,9 @@ namespace razor._Shared.tr.Header
         [Inject] protected TakeLogs Logger { get; init; } = default!;
 
         private readonly EmailSender emailSender; // 1. EmailSender alanını ekleyin
-        private readonly UserInfos _userInfos; // 1. Servisi ekle
 
-        public AccountActivationMailStatu(UserInfos userInfos, EmailSender _emailSender)
+        public AccountActivationMailStatu(EmailSender _emailSender)
         {
-            _userInfos = userInfos;
             emailSender = _emailSender;
         }
 
@@ -102,9 +100,6 @@ namespace razor._Shared.tr.Header
         // Gelen kullanıcı parametresi
         [Parameter] public Users? use { get; set; }
 
-
-
-
         protected virtual async Task LoadData()
         {
             try
@@ -118,7 +113,6 @@ namespace razor._Shared.tr.Header
 
         protected async Task Action()
         {
-            // 1. Guard Clauses: Hızlı kontrol ve erken çıkış
             if (Btn_isProcessing_01 || EmailSentStatus || use == null)
             {
                 if (use == null) await ShowNotification("danger", "Hata", "Kullanıcı bulunamadı.", null);
@@ -127,28 +121,9 @@ namespace razor._Shared.tr.Header
 
             try
             {
-                // 2. State Başlangıcı
                 Btn_isProcessing_01 = true;
                 EmailSentStatus = true;
                 RemainingSeconds = 180;
-
-                // 3. Aktivasyon Kodu Üretimi (Modern Random)
-                use.AccountActivationMailCode = Random.Shared.Next(100000, 999999);
-                // 4. Veritabanı İşlemi
-                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-                db.Users.Update(use);
-                await db.SaveChangesAsync(_cts.Token);
-
-                // TODO: Mail gönderme servisini burada await edin
-
-                var attachments = new List<Attachment>();
-                //attachments.Add(new Attachment("C:\\dosyalar\\rapor.pdf"));
-                //attachments.Add(new Attachment("C:\\dosyalar\\resim.jpg"));
-
-                var details = _userInfos.GetCurrentUserDetails();
-                string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
-                string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
-                string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
 
                 await emailSender.SendAccountActivationCodeInfoEmailAsync(use.Language, use.ContactInformation.Email);
 
@@ -166,7 +141,6 @@ namespace razor._Shared.tr.Header
             }
             catch (OperationCanceledException)
             {
-                // Sayfa kapandı veya işlem iptal edildi, sessizce çık
             }
             catch (Exception ex)
             {
@@ -188,8 +162,6 @@ namespace razor._Shared.tr.Header
                 StateHasChanged();
             }
         }
-        // Kullanıcının input alanına girdiği değer için bir değişken olduğunu varsayıyorum: 
-        // [Parameter] public int UserEnteredCode { get; set; }
 
         protected async Task EmailControl()
         {
@@ -205,7 +177,6 @@ namespace razor._Shared.tr.Header
                     await ShowNotification("danger", "Hata", "Kullanıcı bilgileri yüklenemedi.", null);
                     return;
                 }
-
 
                 if (use.AccountActivationMailCode != 0 && use.AccountActivationMailCode == EmailActivationCode)
                 {

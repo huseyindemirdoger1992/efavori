@@ -15,16 +15,17 @@ namespace razor._Shared.tr.Modals.Account
         [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
         private Notification? notificationRef;
         private readonly TakeLogs _logger;
-
-
         private readonly _ApplicationConnectionDb _db;
+        private readonly UserInfos _userInfos; // 1. UserInfos servisi eklendi
 
-        public Login(_ApplicationConnectionDb db, TakeLogs logger)
+        public Login(_ApplicationConnectionDb db, TakeLogs logger, UserInfos userInfos)
         {
             _db = db;
             _logger = logger;
+            _userInfos = userInfos;
         }
 
         private bool Btn_isProcessing_01 = false;
@@ -47,8 +48,13 @@ namespace razor._Shared.tr.Modals.Account
             {
                 Btn_isProcessing_01 = true;
 
+                // Kullanıcı bilgilerini al
+                var userDetails = _userInfos.GetCurrentUserDetails();
+
+                // 1. Temel Kontroller
                 if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 {
+                    await LogFailedLoginAttempt(null, userDetails, "Boş email veya şifre");
                     await ShowNotification("danger", "Hata", "E-posta ve şifre gereklidir.", null);
                     return;
                 }
@@ -58,34 +64,52 @@ namespace razor._Shared.tr.Modals.Account
                 var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
                 var culture = segments.Length > 0 ? segments[0] : "en";
 
-                // HttpClient ile değil, JS aracılığıyla formu POST ediyoruz. 
-                // Bu sayede tarayıcı Set-Cookie yanıtını doğrudan işler.
+                // 2. Kullanıcı Sorgulama
                 var user = await _db.Users
-                    .FirstOrDefaultAsync(u => u.ContactInformation.Email == email && u.Password == password);
+                    .AsNoTracking()
+                    .Include(u => u.ContactInformation)
+                    .FirstOrDefaultAsync(u => u.ContactInformation.Email == email);
 
-                if (user != null)
+                // 3. Doğrulama
+                if (user == null)
                 {
-                    await ShowNotification("success", "Başarılı", "Giriş yapılıyor...", null);
-                    culture = user.Language ?? culture;
-                    var endpoint = $"/{culture}/Account/Login";
-                    await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
-                }
-                else
-                {
+                    await LogFailedLoginAttempt(null, userDetails, "E-posta bulunamadı");
                     await ShowNotification("danger", "Hata", "Girilen bilgilere ait kullanıcı bulunamadı.", null);
+                    return;
                 }
 
+                if (user.Password != password)
+                {
+                    await LogFailedLoginAttempt(user.Id, userDetails, "Şifre hatalı");
+                    await ShowNotification("danger", "Hata", "Girilen bilgilere ait kullanıcı bulunamadı.", null);
+                    return;
+                }
 
+                if (user.IsActive != true)
+                {
+                    await LogFailedLoginAttempt(user.Id, userDetails, "Hesap aktif değil");
+                    await ShowNotification("danger", "Hata", "Hesabınız aktif değil.", null);
+                    return;
+                }
+
+                // 4. Başarılı giriş denemesini kaydet
+                await LogSuccessfulLoginAttempt(user.Id, userDetails);
+
+                // 5. Başarılı giriş bildirimi göster
+                await ShowNotification("success", "Başarılı", "Giriş yapılıyor...", null);
+
+                // 6. Dil tercihi güncelle
+                culture = user.Language ?? culture;
+
+                // 7. Giriş formunu submit et
+                var endpoint = $"/{culture}/Account/Login";
+                await JSRuntime.InvokeVoidAsync("submitLoginForm", endpoint, email, password);
             }
             catch (Exception ex)
             {
-                await _logger.TakeIt(
-                    userId: null,
-                    PageNameSpaceTitle: "namespace razor._Shared.tr.Modals.Account",
-                    action: $"LoginUserAsync",
-                    exception: ex.Message,
-                    stackTrace: ex.StackTrace
-                );
+                // Hata loglaması
+                await LogException(ex, "LoginUserAsync");
+                await ShowNotification("danger", "Hata", "Giriş sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.", null);
             }
             finally
             {
@@ -93,5 +117,149 @@ namespace razor._Shared.tr.Modals.Account
                 Btn_isProcessing_01 = false;
             }
         }
+
+        #region Giriş/Çıkış Kayıtları (LoginTry)
+
+        private async Task LogSuccessfulLoginAttempt(Guid userId, UserDetail userDetails)
+        {
+            try
+            {
+                var loginTry = new LoginTry
+                {
+                    Id = Guid.NewGuid(),
+                    UsersId = userId,
+                    AttemptDate = DateTime.UtcNow,
+                    IsSuccessful = true,
+                    IPAddress = userDetails.IpAddress,
+                    UserAgent = userDetails.UserAgent,
+                    RequestPath = userDetails.RequestPath,
+                    Platform = ExtractPlatform(userDetails.UserAgent),
+                    Browser = ExtractBrowser(userDetails.UserAgent)
+                };
+
+                _db.LoginTry.Add(loginTry);
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoginTry kayıt hatası: {ex.Message}");
+            }
+        }
+
+        private async Task LogFailedLoginAttempt(Guid? userId, UserDetail userDetails, string reason)
+        {
+            try
+            {
+                var loginTry = new LoginTry
+                {
+                    Id = Guid.NewGuid(),
+                    UsersId = userId,
+                    AttemptDate = DateTime.UtcNow,
+                    IsSuccessful = false,
+                    IPAddress = userDetails.IpAddress,
+                    UserAgent = userDetails.UserAgent,
+                    RequestPath = userDetails.RequestPath,
+                    Platform = ExtractPlatform(userDetails.UserAgent),
+                    Browser = ExtractBrowser(userDetails.UserAgent)
+                };
+
+                _db.LoginTry.Add(loginTry);
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"LoginTry kayıt hatası: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Hata Logları (Logs)
+
+        private async Task LogException(Exception ex, string action)
+        {
+            try
+            {
+                var userDetails = _userInfos.GetCurrentUserDetails();
+
+                var log = new Logs
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = null, // Henüz giriş yapılmadığı için userId null
+                    PageNameSpaceTitle = "razor._Shared.tr.Modals.Account",
+                    Action = action,
+                    IpAddress = userDetails.IpAddress,
+                    UserAgent = userDetails.UserAgent,
+                    RequestPath = userDetails.RequestPath,
+                    Languages = userDetails.Languages,
+                    Exception = ex.Message,
+                    StackTrace = ex.StackTrace,
+                    Date = DateTime.UtcNow
+                };
+
+                _db.Logs.Add(log);
+                await _db.SaveChangesAsync();
+            }
+            catch (Exception logEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"Hata loglama başarısız: {logEx.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Yardımcı Metodlar
+
+        /// <summary>
+        /// User-Agent'ından platform bilgisini çıkarır (iOS, Android, Windows, macOS, Linux, Web)
+        /// </summary>
+        private string ExtractPlatform(string userAgent)
+        {
+            if (string.IsNullOrWhiteSpace(userAgent))
+                return "Unknown";
+
+            userAgent = userAgent.ToLower();
+
+            if (userAgent.Contains("iphone") || userAgent.Contains("ipad") || userAgent.Contains("ipod"))
+                return "iOS";
+            if (userAgent.Contains("android"))
+                return "Android";
+            if (userAgent.Contains("windows"))
+                return "Windows";
+            if (userAgent.Contains("macintosh") || userAgent.Contains("mac os"))
+                return "macOS";
+            if (userAgent.Contains("linux"))
+                return "Linux";
+
+            return "Web";
+        }
+
+        /// <summary>
+        /// User-Agent'ından tarayıcı bilgisini çıkarır (Chrome, Firefox, Safari, Edge, vb.)
+        /// </summary>
+        private string ExtractBrowser(string userAgent)
+        {
+            if (string.IsNullOrWhiteSpace(userAgent))
+                return "Unknown";
+
+            userAgent = userAgent.ToLower();
+
+            if (userAgent.Contains("edg/") || userAgent.Contains("edge/"))
+                return "Edge";
+            if (userAgent.Contains("chrome/"))
+                return "Chrome";
+            if (userAgent.Contains("firefox/"))
+                return "Firefox";
+            if (userAgent.Contains("safari/") && !userAgent.Contains("chrome/"))
+                return "Safari";
+            if (userAgent.Contains("opera/") || userAgent.Contains("opr/"))
+                return "Opera";
+            if (userAgent.Contains("trident/"))
+                return "Internet Explorer";
+
+            return "Unknown";
+        }
+
+        #endregion
     }
 }

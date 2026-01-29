@@ -1,10 +1,13 @@
 ﻿using data; // EmailHistory sınıfının bulunduğu namespace
+using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq; // Dosya isimlerini birleştirmek için
 using System.Net;
 using System.Net.Mail;
+using System.Runtime.Intrinsics.X86;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -12,6 +15,10 @@ namespace api
 {
     public class EmailSender
     {
+
+        [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
+        protected readonly CancellationTokenSource _cts = new();
+
         private string? SmtpServer = null;
         private int SmtpPort = 0;
         private string? EmailAddress = null;
@@ -20,14 +27,12 @@ namespace api
         private readonly TakeLogs _logger;
         private readonly _ApplicationConnectionDb _context;
         private readonly UserInfos _userInfos;
-        private readonly EmailSender _emailSender;
 
-        public EmailSender(TakeLogs logger, _ApplicationConnectionDb context, UserInfos userInfos, EmailSender emailSender)
+        public EmailSender(TakeLogs logger, _ApplicationConnectionDb context, UserInfos userInfos)
         {
             _logger = logger;
             _context = context;
             _userInfos = userInfos;
-            this._emailSender = emailSender;
         }
 
         public async Task SendEmailAsync(string SenderEmailAddress, string recipient, string subject, string body, List<Attachment>? attachments = null)
@@ -181,7 +186,7 @@ namespace api
             </p>
         </div>
     </div>";
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "efavori'ye Hoş Geldiniz!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "efavori'ye Hoş Geldiniz!", emailBody, attachments);
             }
             if (Culture == "en")
             {
@@ -235,7 +240,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Welcome to efavori!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Welcome to efavori!", emailBody, attachments);
 
             }
             if (Culture == "az")
@@ -290,7 +295,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "efavori-yə Xoş Gəldiniz!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "efavori-yə Xoş Gəldiniz!", emailBody, attachments);
             }
             if (Culture == "de")
             {
@@ -344,7 +349,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Willkommen bei efavori!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Willkommen bei efavori!", emailBody, attachments);
             }
             if (Culture == "es")
             {
@@ -398,7 +403,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "¡Bienvenido a efavori!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "¡Bienvenido a efavori!", emailBody, attachments);
             }
             if (Culture == "fr")
             {
@@ -452,7 +457,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Bienvenue chez efavori !", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Bienvenue chez efavori !", emailBody, attachments);
             }
             if (Culture == "hi")
             {
@@ -506,7 +511,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "efavori में आपका स्वागत है!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "efavori में आपका स्वागत है!", emailBody, attachments);
             }
             if (Culture == "pt")
             {
@@ -560,7 +565,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Bem-vindo à efavori!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Bem-vindo à efavori!", emailBody, attachments);
             }
             if (Culture == "ru")
             {
@@ -614,7 +619,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Добро пожаловать в efavori!", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Добро пожаловать в efavori!", emailBody, attachments);
             }
             if (Culture == "zh")
             {
@@ -668,7 +673,7 @@ namespace api
         </div>
     </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "欢迎来到 efavori！", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "欢迎来到 efavori！", emailBody, attachments);
             }
         }
 
@@ -738,7 +743,7 @@ namespace api
             </p>
         </div>
     </div>";
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Güvenlik Uyarısı: Yeni Giriş Yapıldı", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Güvenlik Uyarısı: Yeni Giriş Yapıldı", emailBody, attachments);
             }
             if (Culture == "en")
             {
@@ -797,7 +802,7 @@ namespace api
         </p>
     </div>
 </div>";
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Security Alert: New Sign-in Detected", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Security Alert: New Sign-in Detected", emailBody, attachments);
             }
             if (Culture == "az")
             {
@@ -856,7 +861,7 @@ namespace api
     </div>
 </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Təhlükəsizlik Xəbərdarlığı: Yeni Giriş", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Təhlükəsizlik Xəbərdarlığı: Yeni Giriş", emailBody, attachments);
 
             }
             if (Culture == "de")
@@ -917,7 +922,7 @@ namespace api
     </div>
 </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Sicherheitswarnung: Neue Anmeldung erkannt", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Sicherheitswarnung: Neue Anmeldung erkannt", emailBody, attachments);
 
             }
             if (Culture == "es")
@@ -978,7 +983,7 @@ namespace api
     </div>
 </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Alerta de seguridad: Nuevo inicio de sesión detectado", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Alerta de seguridad: Nuevo inicio de sesión detectado", emailBody, attachments);
 
             }
             if (Culture == "fr")
@@ -1038,7 +1043,7 @@ namespace api
         </p>
     </div>
 </div>";
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Alerte de sécurité : Nouvelle connexion détectée", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Alerte de sécurité : Nouvelle connexion détectée", emailBody, attachments);
 
             }
             if (Culture == "hi")
@@ -1098,7 +1103,7 @@ namespace api
         </p>
     </div>
 </div>";
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "सुरक्षा अलर्ट: नया लॉगिन मिला", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "सुरक्षा अलर्ट: नया लॉगिन मिला", emailBody, attachments);
 
             }
             if (Culture == "pt")
@@ -1159,7 +1164,7 @@ namespace api
     </div>
 </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Alerta de segurança: Novo acesso detectado", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Alerta de segurança: Novo acesso detectado", emailBody, attachments);
 
             }
             if (Culture == "ru")
@@ -1220,7 +1225,7 @@ namespace api
     </div>
 </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "Оповещение о безопасности: Обнаружен новый вход", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "Оповещение о безопасности: Обнаружен новый вход", emailBody, attachments);
 
             }
             if (Culture == "zh")
@@ -1281,18 +1286,554 @@ namespace api
     </div>
 </div>";
 
-                await _emailSender.SendEmailAsync("security@efavori.com", Email, "安全警报：检测到新登录", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", Email, "安全警报：检测到新登录", emailBody, attachments);
 
             }
 
         }
 
         // security@efavori.com-------------------------------------------------------------------------------------------------------------
-        public async Task SendAccountActivationInfoEmailAsync(string Culture, string Email) 
-        { 
+        public async Task SendAccountActivationCodeInfoEmailAsync(string Culture, string Email)
+        {
+            Users use = await _context.Users.FirstOrDefaultAsync(x=>x.ContactInformation.Email == Email,_cts.Token);
+            use.AccountActivationMailCode = Random.Shared.Next(100000, 999999);
+            _context.Users.Update(use);
+            await _context.SaveChangesAsync(_cts.Token);
+
+            var attachments = new List<Attachment>();
+            //attachments.Add(new Attachment("C:\\dosyalar\\rapor.pdf"));
+            //attachments.Add(new Attachment("C:\\dosyalar\\resim.jpg"));
+
+            var details = _userInfos.GetCurrentUserDetails();
+            string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
+            string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
+            string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
+
+            if (Culture == "tr")
+            {
+                // E-posta aktivasyon kodu ve güvenlik bilgilerini içeren mail içeriği
+                string emailBody = $@"
+    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+        
+        <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        </div>
+
+        <div style='padding: 0 40px 30px 40px;'>
+            <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>E-posta Doğrulama</h2>
+            <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Hesap doğrulama işleminizi tamamlamak için aşağıdaki kodu kullanın.</p>
+            
+            <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+                <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Doğrulama Kodunuz</span>
+                <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            </div>
+
+            <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+                <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>İşlem Bilgileri</p>
+                <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                    <tr>
+                        <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Tarih</td>
+                        <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Adresi</td>
+                        <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                    </tr>
+                    <tr>
+                        <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Cihaz</td>
+                        <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+                Bu kodun süresi 3 dakika geçerlidir. Eğer bu işlemi siz yapmadıysanız lütfen hesabınızı güvenceye alın.
+            </p>
+        </div>
+
+        <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+            <p style='font-size: 10px; color: #bbb; margin: 0;'>
+                Bu mail otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+                <br>İşlem Kayıt No: {details.TraceId}
+            </p>
+        </div>
+    </div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Hesap Doğrulama Kodunuz", emailBody, attachments);
+            }
+            if (Culture == "en")
+            {
+                // Email body containing email activation code and security information
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Email Verification</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Please use the code below to complete your account verification process.</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Your Verification Code</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Transaction Details</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Date</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Address</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Device</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            This code is valid for 3 minutes. If you did not perform this action, please secure your account.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            This is an automated email. Please do not reply.
+            <br>Trace ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Your Account Verification Code", emailBody, attachments);
+            }
+            if (Culture == "az")
+            {
+                // E-poçt aktivasiya kodu və təhlükəsizlik məlumatlarını ehtiva edən mail məzmunu
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>E-poçt Təsdiqləmə</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Hesab təsdiqləmə prosesini tamamlamaq üçün aşağıdakı kodu istifadə edin.</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Təsdiqləmə Kodunuz</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Əməliyyat Məlumatları</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Tarix</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Ünvanı</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Cihaz</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Bu kodun etibarlılıq müddəti 3 dəqiqədir. Əgər bu əməliyyatı siz etməmisinizsə, lütfən hesabınızın təhlükəsizliyini təmin edin.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Bu e-poçt avtomatik olaraq göndərilib. Lütfən cavab yazmayın.
+            <br>Əməliyyat nömrəsi: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Hesab Təsdiqləmə Kodunuz", emailBody, attachments);
+            }
+            if (Culture == "de")
+            {
+                // E-Mail-Inhalt mit Aktivierungscode und Sicherheitsinformationen
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>E-Mail Bestätigung</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Bitte verwenden Sie den folgenden Code, um Ihre Kontoverifizierung abzuschließen.</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ihr Bestätigungscode</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Transaktionsdetails</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Datum</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP-Adresse</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Gerät</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Dieser Code ist 3 Minuten lang gültig. Wenn Sie diese Anfrage nicht gestellt haben, sichern Sie bitte Ihr Konto.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Dies ist eine automatisch generierte E-Mail. Bitte antworten Sie nicht darauf.
+            <br>Trace-ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Ihr Bestätigungscode", emailBody, attachments);
+            }
+            if (Culture == "es")
+            {
+                // Contenido del correo que incluye el código de activación y la información de seguridad
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Verificación de Correo</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Utilice el siguiente código para completar el proceso de verificación de su cuenta.</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Su Código de Verificación</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Información de la Operación</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Fecha</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Dirección IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Dispositivo</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Este código es válido por 3 minutos. Si no ha realizado esta acción, por favor asegure su cuenta.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Este correo ha sido enviado automáticamente. Por favor, no responda.
+            <br>ID de Seguimiento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Su código de verificación de cuenta", emailBody, attachments);
+            }
+            if (Culture == "fr")
+            {
+                // Contenu de l'e-mail contenant le code d'activation et les informations de sécurité
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Vérification de l'e-mail</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Veuillez utiliser le code ci-dessous pour terminer la vérification de votre compte.</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Votre Code de Vérification</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Informations sur la Transaction</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Date</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Adresse IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Appareil</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Ce code est valable pendant 3 minutes. Si vous n'êtes pas à l'origine de cette demande, veuillez sécuriser votre compte.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Ceci est un message automatique. Veuillez ne pas y répondre.
+            <br>ID de suivi : {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Votre code de vérification de compte", emailBody, attachments);
+            }
+            if (Culture == "hi")
+            {
+                // सक्रियण कोड और सुरक्षा जानकारी वाला ईमेल विषय वस्तु
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>ईमेल सत्यापन</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>अपनी खाता सत्यापन प्रक्रिया को पूरा करने के लिए नीचे दिए गए कोड का उपयोग करें।</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>आपका सत्यापन कोड</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>लेनदेन की जानकारी</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>दिनांक</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>आईपी पता</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>डिवाइस</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            यह कोड 3 मिनट के लिए वैध है। यदि आपने यह क्रिया नहीं की है, तो कृपया अपना खाता सुरक्षित करें।
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            यह ईमेल स्वचालित रूप से भेजा गया है। कृपया इसका उत्तर न दें।
+            <br>ट्रेस आईडी: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - आपका खाता सत्यापन कोड", emailBody, attachments);
+            }
+            if (Culture == "pt")
+            {
+                // Conteúdo do e-mail contendo o código de ativação e informações de segurança
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Verificação de E-mail</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Utilize o código abaixo para concluir o processo de verificação da sua conta.</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Seu Código de Verificação</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Informações da Operação</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Data</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Endereço IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Dispositivo</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Este código é válido por 3 minutos. Se você não solicitou esta operação, por favor, proteja sua conta.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Este e-mail foi enviado automaticamente. Por favor, não responda.
+            <br>ID da Transação: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Seu Código de Verificação de Conta", emailBody, attachments);
+            }
+            if (Culture == "ru")
+            {
+                // Содержимое письма с кодом активации и информацией о безопасности
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Подтверждение e-mail</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Используйте приведенный ниже код для завершения верификации вашего аккаунта.</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ваш код подтверждения</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Информация о транзакции</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Дата</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP-адрес</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Устройство</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Этот код действителен в течение 3 минут. Если вы не совершали этого действия, пожалуйста, обезопасьте свой аккаунт.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Это письмо отправлено автоматически. Пожалуйста, не отвечайте на него.
+            <br>ID транзакции: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Ваш код подтверждения аккаунта", emailBody, attachments);
+            }
+            if (Culture == "zh")
+            {
+                // 包含电子邮件激活码和安全信息的邮件内容
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>电子邮件验证</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>请使用以下代码完成您的账户验证流程。</p>
+        
+        <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>您的验证码</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>交易信息</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>日期</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP 地址</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>设备</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            此代码在 3 分钟内有效。如果这不是您的操作，请尽快采取措施保护您的账户。
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            这是一封自动发送的电子邮件，请勿回复。
+            <br>追踪 ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - 您的账户验证码", emailBody, attachments);
+            }
         }
-        public async Task SendLogOutInfoEmailAsync(string Culture, string Email) 
-        { 
+
+        // security@efavori.com-------------------------------------------------------------------------------------------------------------
+        public async Task SendLogOutInfoEmailAsync(string Culture, string Email)
+        {
         }
 
 

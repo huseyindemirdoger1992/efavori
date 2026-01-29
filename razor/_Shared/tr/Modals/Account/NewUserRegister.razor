@@ -191,7 +191,14 @@
                 </div>
             </div>
             <div class="modal-footer border-top border-secondary">
-                <button type="button" class="btn btn-light shadow w-100" @onclick="UserSave"><i class="fa fa-user-plus"></i> Kayıt Ol</button>
+                <button type="button"
+                        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
+                        style="width:100%;"
+                        @onclick="UserSave"
+                        disabled="@Btn_isProcessing_01">
+                    <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa fa-user-plus")"></i>
+                    <span>@(Btn_isProcessing_01 ? "Yükleniyor..." : "Kayıt Ol")</span>
+                </button>
             </div>
         </div>
     </div>

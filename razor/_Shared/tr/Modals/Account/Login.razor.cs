@@ -89,7 +89,7 @@ namespace razor._Shared.tr.Modals.Account
             }
             finally
             {
-                await Task.Delay(3500);
+                await Task.Delay(4000);
                 Btn_isProcessing_01 = false;
             }
         }

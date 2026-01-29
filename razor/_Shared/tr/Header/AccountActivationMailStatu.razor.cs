@@ -104,28 +104,11 @@ namespace razor._Shared.tr.Header
 
 
 
-        protected IReadOnlyList<Country> Countries { get; private set; } = Array.Empty<Country>();
-        protected Users _newUser = new();
 
         protected virtual async Task LoadData()
         {
             try
             {
-                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-                // Read-only operasyonlarda AsNoTracking performansın altın kuralıdır.
-                Countries = await db.Country.AsNoTracking().ToListAsync(_cts.Token);
-            }
-            catch (OperationCanceledException) { /* Sessizce sonlandır */ }
-            catch (Exception ex)
-            {
-                await _logger.TakeIt(
-                    userId: null,
-                    PageNameSpaceTitle: "public abstract partial class ThisPageIsBeingPrepared : ComponentBase, IDisposable",
-                    action: $"LoadData",
-                    exception: ex.Message,
-                    stackTrace: ex.StackTrace
-                );
             }
             finally
             {
@@ -167,58 +150,8 @@ namespace razor._Shared.tr.Header
                 string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
                 string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
 
-                if (use.Language == "tr")
-                {
-                    // E-posta aktivasyon kodu ve güvenlik bilgilerini içeren mail içeriği
-                    string emailBody = $@"
-    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
-        
-        <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
-        </div>
+                await emailSender.SendAccountActivationCodeInfoEmailAsync(use.Language, use.ContactInformation.Email);
 
-        <div style='padding: 0 40px 30px 40px;'>
-            <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>E-posta Doğrulama</h2>
-            <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Hesap doğrulama işleminizi tamamlamak için aşağıdaki kodu kullanın.</p>
-            
-            <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
-                <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Doğrulama Kodunuz</span>
-                <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
-            </div>
-
-            <div style='border-top: 1px solid #eee; padding-top: 20px;'>
-                <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>İşlem Bilgileri</p>
-                <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
-                    <tr>
-                        <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Tarih</td>
-                        <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Adresi</td>
-                        <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
-                    </tr>
-                    <tr>
-                        <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Cihaz</td>
-                        <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
-                    </tr>
-                </table>
-            </div>
-
-            <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
-                Bu kodun süresi 3 dakika geçerlidir. Eğer bu işlemi siz yapmadıysanız lütfen hesabınızı güvenceye alın.
-            </p>
-        </div>
-
-        <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
-            <p style='font-size: 10px; color: #bbb; margin: 0;'>
-                Bu mail otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
-                <br>İşlem Kayıt No: {details.TraceId}
-            </p>
-        </div>
-    </div>";
-
-                    await emailSender.SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Hesap Doğrulama Kodunuz", emailBody, attachments);
-                }
                 await ShowNotification("success", "Mail Gönderildi", $"{use.ContactInformation.Email}", null);
 
                 // 5. Timer Döngüsü (CancellationToken desteği ile)

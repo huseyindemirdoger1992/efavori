@@ -133,20 +133,29 @@ namespace razor._Shared.tr.Modals.Account
         private string? _SelectedPhoneCode = string.Empty;
         private string? _UserEmail = string.Empty;
         private string? _UserPhoneNumber = string.Empty;
+
+        private bool Btn_isProcessing_01 = false;
+
         public async Task UserSave()
         {
-            // --- 1. BOŞ ALAN KONTROLLERİ ---
+            if (Btn_isProcessing_01) return;
+            Btn_isProcessing_01 = true;
+
 
             // E-posta Kontrolü
             if (string.IsNullOrWhiteSpace(_UserEmail))
             {
                 await ShowNotification("warning", "E-posta Gerekli", "Lütfen devam etmek için e-posta adresinizi yazın.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
             if (!_UserEmail.Contains("@") || !_UserEmail.Contains("."))
             {
                 await ShowNotification("danger", "Geçersiz Format", "Girdiğiniz e-posta adresi hatalı görünüyor. Lütfen kontrol edin.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
@@ -154,6 +163,8 @@ namespace razor._Shared.tr.Modals.Account
             if (string.IsNullOrWhiteSpace(_UserPhoneNumber))
             {
                 await ShowNotification("warning", "Telefon Gerekli", "Telefon numaranızı girmelisiniz.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
@@ -161,18 +172,24 @@ namespace razor._Shared.tr.Modals.Account
             if (string.IsNullOrWhiteSpace(_user.FirstName))
             {
                 await ShowNotification("warning", "Ad Alanı Boş", "Lütfen adınızı belirtiniz.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(_user.LastName))
             {
                 await ShowNotification("warning", "Soyad Alanı Boş", "Lütfen soyadınızı belirtiniz.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
             if (_user.DateOfBirth == null)
             {
                 await ShowNotification("warning", "Tarih Seçilmedi", "Doğum tarihinizi takvimden seçmeniz gerekiyor.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
@@ -180,12 +197,16 @@ namespace razor._Shared.tr.Modals.Account
             if (string.IsNullOrWhiteSpace(_user.Language))
             {
                 await ShowNotification("info", "Dil Seçimi", "Lütfen tercih ettiğiniz iletişim dilini seçin.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(_user.Currency))
             {
                 await ShowNotification("info", "Para Birimi", "İşlemleriniz için bir para birimi belirlemelisiniz.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
@@ -193,17 +214,23 @@ namespace razor._Shared.tr.Modals.Account
             if (string.IsNullOrWhiteSpace(_user.UsersType))
             {
                 await ShowNotification("info", "Kullanıcı Tipi", "Lütfen hesap türünüzü (Müşteri/Satıcı vb.) seçin.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(_user.Password))
             {
                 await ShowNotification("danger", "Şifre Belirlenmedi", "Güvenliğiniz için bir kullanıcı şifresi oluşturmalısınız.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
             if (_user.DateOfBirth > DateTime.Now.AddYears(-18))
             {
                 await ShowNotification("danger", "Yaş kısıtlaması", "Yaşınız 18'den küçük olduğu için kayıt yapamazsınız.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
@@ -216,11 +243,14 @@ namespace razor._Shared.tr.Modals.Account
             if (!string.IsNullOrWhiteSpace(_Sponsored) && _UserEmail.Trim().ToLower() == _Sponsored.Trim().ToLower())
             {
                 await ShowNotification("danger", "Kayıt Hatası", "Kullanıcı e-posta adresi ile sponsor e-posta adresi aynı olamaz.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
                 return;
             }
 
             try
             {
+
                 using var db = await DbFactory.CreateDbContextAsync();
 
                 // --- 3. VERİTABANI ÇAKIŞMA KONTROLÜ ---
@@ -241,6 +271,8 @@ namespace razor._Shared.tr.Modals.Account
                         : "Telefon numarası";
 
                     await ShowNotification("danger", "Mükerrer Kayıt", $"Bu {duplicateType} zaten sistemde kayıtlı.", null);
+                    await Task.Delay(4000);
+                    Btn_isProcessing_01 = false;
                     return;
                 }
 
@@ -268,7 +300,7 @@ namespace razor._Shared.tr.Modals.Account
                 string displayDate = DateTime.UtcNow.ToString("dd MMMM yyyy HH:mm");
 
                 #region Kayıt Emaili Gönderir
-                await emailSender.SendNewRegisterInfoEmailAsync(_user.Language,_user.ContactInformation.Email);
+                await emailSender.SendNewRegisterInfoEmailAsync(_user.Language, _user.ContactInformation.Email);
                 #endregion
 
                 db.Users.Add(_user);
@@ -329,6 +361,11 @@ namespace razor._Shared.tr.Modals.Account
 
                 // Kullanıcıya hata bildirimi göster
                 await ShowNotification("danger", "Sistem Hatası", "Kayıt sırasında teknik bir hata oluştu. Lütfen tekrar deneyiniz.", null);
+            }
+            finally
+            {
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
             }
         }
     }

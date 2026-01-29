@@ -37,7 +37,6 @@ namespace web.Account.Controllers
                 // 1. Temel Kontroller
                 if (model == null || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
                 {
-                    await LogFailedLoginAttempt(null, userDetails, "Boş email veya şifre");
                     return BadRequest(new { message = "E-posta ve şifre zorunludur." });
                 }
 
@@ -50,26 +49,20 @@ namespace web.Account.Controllers
                 // 3. Doğrulama (Not: Şifreleme/Hashing kullanmanı şiddetle öneririm)
                 if (user == null)
                 {
-                    await LogFailedLoginAttempt(null, userDetails, "E-posta bulunamadı");
                     return Unauthorized(new { message = "E-posta veya şifre hatalı." });
                 }
 
                 if (user.Password != model.Password)
                 {
-                    await LogFailedLoginAttempt(user.Id, userDetails, "Şifre hatalı");
                     return Unauthorized(new { message = "E-posta veya şifre hatalı." });
                 }
 
                 if (user.IsActive != true)
                 {
-                    await LogFailedLoginAttempt(user.Id, userDetails, "Hesap aktif değil");
                     return Unauthorized(new { message = "Hesabınız aktif değil." });
                 }
 
-                // 4. Başarılı giriş denemesini kaydet
-                await LogSuccessfulLoginAttempt(user.Id, userDetails);
-
-                // 5. Claim Oluşturma
+                // 4. Claim Oluşturma
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -81,7 +74,7 @@ namespace web.Account.Controllers
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
-                // 6. Auth Özellikleri
+                // 5. Auth Özellikleri
                 var authProperties = new AuthenticationProperties
                 {
                     IsPersistent = true, // "Beni Hatırla" aktif
@@ -90,7 +83,7 @@ namespace web.Account.Controllers
                     IssuedUtc = DateTimeOffset.UtcNow
                 };
 
-                // 7. Giriş İşlemi
+                // 6. Giriş İşlemi
                 await HttpContext.SignInAsync(
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(claimsIdentity),
@@ -98,10 +91,10 @@ namespace web.Account.Controllers
 
                 culture = (user.Language != null) ? user.Language : "en";
 
-                // 8. Giriş bilgileri e-postası gönder
+                // 7. Giriş bilgileri e-postası gönder
                 await emailSender.SendLoginInfoEmailAsync(culture, model.Email);
 
-                // 9. Başarılı Yanıt ve Yönlendirme URL'i dönüyoruz
+                // 8. Başarılı Yanıt ve Yönlendirme URL'i dönüyoruz
                 return Redirect($"/{culture}/Customer/Home/Index");
             }
             catch (Exception ex)
@@ -121,13 +114,6 @@ namespace web.Account.Controllers
             {
                 // Oturum kapatmadan önce kullanıcı bilgisini al
                 var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                // Çıkış denemesini kaydet
-                if (!string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var userGuid))
-                {
-                    await LogLogoutAttempt(userGuid, userDetails);
-                }
 
                 // Oturumu kapat
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -148,89 +134,6 @@ namespace web.Account.Controllers
             }
         }
 
-        #region Giriş/Çıkış Kayıtları (LoginTry)
-
-        private async Task LogSuccessfulLoginAttempt(Guid userId, UserDetail userDetails)
-        {
-            try
-            {
-                var loginTry = new LoginTry
-                {
-                    Id = Guid.NewGuid(),
-                    UsersId = userId,
-                    AttemptDate = DateTime.UtcNow,
-                    IsSuccessful = true,
-                    IPAddress = userDetails.IpAddress,
-                    UserAgent = userDetails.UserAgent,
-                    RequestPath = userDetails.RequestPath,
-                    Platform = ExtractPlatform(userDetails.UserAgent),
-                    Browser = ExtractBrowser(userDetails.UserAgent)
-                };
-
-                _db.LoginTry.Add(loginTry);
-                await _db.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                // Log kaydı başarısız olsa bile uygulamayı kırmayın
-                System.Diagnostics.Debug.WriteLine($"LoginTry kayıt hatası: {ex.Message}");
-            }
-        }
-
-        private async Task LogFailedLoginAttempt(Guid? userId, UserDetail userDetails, string reason)
-        {
-            try
-            {
-                var loginTry = new LoginTry
-                {
-                    Id = Guid.NewGuid(),
-                    UsersId = userId,
-                    AttemptDate = DateTime.UtcNow,
-                    IsSuccessful = false,
-                    IPAddress = userDetails.IpAddress,
-                    UserAgent = userDetails.UserAgent,
-                    RequestPath = userDetails.RequestPath,
-                    Platform = ExtractPlatform(userDetails.UserAgent),
-                    Browser = ExtractBrowser(userDetails.UserAgent)
-                };
-
-                _db.LoginTry.Add(loginTry);
-                await _db.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"LoginTry kayıt hatası: {ex.Message}");
-            }
-        }
-
-        private async Task LogLogoutAttempt(Guid userId, UserDetail userDetails)
-        {
-            try
-            {
-                var loginTry = new LoginTry
-                {
-                    Id = Guid.NewGuid(),
-                    UsersId = userId,
-                    AttemptDate = DateTime.UtcNow,
-                    IsSuccessful = true, // Çıkış başarılı
-                    IPAddress = userDetails.IpAddress,
-                    UserAgent = userDetails.UserAgent,
-                    RequestPath = userDetails.RequestPath,
-                    Platform = ExtractPlatform(userDetails.UserAgent),
-                    Browser = ExtractBrowser(userDetails.UserAgent)
-                };
-
-                _db.LoginTry.Add(loginTry);
-                await _db.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Logout kayıt hatası: {ex.Message}");
-            }
-        }
-
-        #endregion
-
         #region Hata Logları (Logs)
 
         private async Task LogException(Exception ex, UserDetail userDetails, string action)
@@ -241,7 +144,7 @@ namespace web.Account.Controllers
                 {
                     Id = Guid.NewGuid(),
                     UserId = GetCurrentUserId(),
-                    PageNameSpaceTitle = "Account.Controller",
+                    PageNameSpaceTitle = "namespace web.Account.Controllers",
                     Action = action,
                     IpAddress = userDetails.IpAddress,
                     UserAgent = userDetails.UserAgent,
@@ -264,56 +167,6 @@ namespace web.Account.Controllers
         #endregion
 
         #region Yardımcı Metodlar
-
-        /// <summary>
-        /// User-Agent'ından platform bilgisini çıkarır (Web, Mobile, vb.)
-        /// </summary>
-        private string ExtractPlatform(string userAgent)
-        {
-            if (string.IsNullOrWhiteSpace(userAgent))
-                return "Unknown";
-
-            userAgent = userAgent.ToLower();
-
-            if (userAgent.Contains("iphone") || userAgent.Contains("ipad") || userAgent.Contains("ipod"))
-                return "iOS";
-            if (userAgent.Contains("android"))
-                return "Android";
-            if (userAgent.Contains("windows"))
-                return "Windows";
-            if (userAgent.Contains("macintosh") || userAgent.Contains("mac os"))
-                return "macOS";
-            if (userAgent.Contains("linux"))
-                return "Linux";
-
-            return "Web";
-        }
-
-        /// <summary>
-        /// User-Agent'ından tarayıcı bilgisini çıkarır
-        /// </summary>
-        private string ExtractBrowser(string userAgent)
-        {
-            if (string.IsNullOrWhiteSpace(userAgent))
-                return "Unknown";
-
-            userAgent = userAgent.ToLower();
-
-            if (userAgent.Contains("edg/") || userAgent.Contains("edge/"))
-                return "Edge";
-            if (userAgent.Contains("chrome/"))
-                return "Chrome";
-            if (userAgent.Contains("firefox/"))
-                return "Firefox";
-            if (userAgent.Contains("safari/") && !userAgent.Contains("chrome/"))
-                return "Safari";
-            if (userAgent.Contains("opera/") || userAgent.Contains("opr/"))
-                return "Opera";
-            if (userAgent.Contains("trident/"))
-                return "Internet Explorer";
-
-            return "Unknown";
-        }
 
         /// <summary>
         /// Mevcut kullanıcının ID'sini veya null'ı döndürür

@@ -20,12 +20,15 @@ namespace razor._Shared.tr.Modals.Account
         private readonly TakeLogs _logger;
         private readonly _ApplicationConnectionDb _db;
         private readonly UserInfos _userInfos; // 1. UserInfos servisi eklendi
+        private readonly EmailSender emailSender; // 2. EmailSender servisi
 
-        public Login(_ApplicationConnectionDb db, TakeLogs logger, UserInfos userInfos)
+
+        public Login(_ApplicationConnectionDb db, TakeLogs logger, UserInfos userInfos, EmailSender emailSender)
         {
             _db = db;
             _logger = logger;
             _userInfos = userInfos;
+            this.emailSender = emailSender;
         }
 
         private bool Btn_isProcessing_01 = false;
@@ -82,6 +85,7 @@ namespace razor._Shared.tr.Modals.Account
                 {
                     await LogFailedLoginAttempt(user.Id, userDetails, "Şifre hatalı");
                     await ShowNotification("danger", "Hata", "Girilen bilgilere ait kullanıcı bulunamadı.", null);
+                    emailSender.SendLoginErrorInfoEmailAsync(user.Language, email);
                     return;
                 }
 

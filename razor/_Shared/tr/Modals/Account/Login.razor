@@ -1,17 +1,5 @@
 ﻿@rendermode InteractiveServer
 <razor._Shared.Notification @ref="notificationRef" />
-
-
-
-
-
-
-
-
-
-
-
-
 <!-- Oturum Açma Modalı -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -47,7 +35,7 @@
                         @onclick="LoginUserAsync"
                         disabled="@Btn_isProcessing_01">
                     <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
-                    <span>@(Btn_isProcessing_01 ? "Yükleniyor..." : "Giriş Yap")</span>
+                    <span>@(Btn_isProcessing_01 ? "Giriş Yapılıyor..." : "Giriş Yap")</span>
                 </button>
 
             </div>

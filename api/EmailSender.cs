@@ -1298,6 +1298,679 @@ namespace api
         }
 
         //security@efavori.com---------------------------------------------------------------------------+
+        public async Task SendLoginErrorInfoEmailAsync(string Culture, string Email)
+        {
+            var attachments = new List<Attachment>();
+
+            var details = _userInfos.GetCurrentUserDetails();
+            string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
+            string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
+            string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
+
+            if (Culture == "tr")
+            {
+                string emailBody = $@"
+    <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+        
+        <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        </div>
+
+        <div style='padding: 0 40px 30px 40px;'>
+            <h2 style='color: #d32f2f; font-size: 20px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; text-align: center;'>Dikkat: Başarısız Giriş Denemesi</h2>
+            
+            <p style='font-size: 15px;'>Sayın Kullanıcımız,</p>
+            <p style='font-size: 14px; color: #555;'>Hesabınıza yönelik başarısız bir oturum açma denemesi tespit edilmiştir. Bu, hesabınızın güvenliğini korumak için önemlidir. Denemenin ayrıntıları aşağıdadır:</p>
+            
+            <table style='width: 100%; border-collapse: collapse; margin: 25px 0; background-color: #fff5f5; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffffff;'>Tarih / Saat</td>
+                    <td style='padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #ffffff;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffffff;'>IP Adresi</td>
+                    <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; border-bottom: 1px solid #ffffff;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px;'>Cihaz Bilgisi</td>
+                    <td style='padding: 12px 15px; font-size: 12px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+
+            <p style='font-size: 13px; color: #777;'>
+                <strong>Hata Sebebi:</strong> Girilen şifre hatalıdır. Lütfen doğru şifrenizi kullanarak tekrar deneyin.
+            </p>
+
+            <div style='background-color: #fff4f4; border-left: 4px solid #d32f2f; border-right: 4px solid #d32f2f; padding: 20px; margin-top: 25px;'>
+                <p style='margin: 0 0 15px 0; font-size: 13px; color: #b71c1c; line-height: 1.5;'>
+                    <strong>Şifrenizi mi unuttuğunuz?</strong> Hesabınıza erişim sağlamak için lütfen şifre sıfırlama seçeneğini kullanınız.
+                </p>
+                <hr style='border: 0; border-top: 1px solid rgba(211, 47, 47, 0.2); margin: 15px 0;' />
+                <p style='margin: 0; font-size: 13px; color: #777;'>
+                    Bu deneme sizin tarafınızdan yapılmadıysa, hesabınızı korumak adına lütfen şifrenizi güncelleyiniz.
+                </p>
+            </div>
+
+            <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+                <p style='margin: 0; font-size: 12px; color: #666;'>
+                    🔒 Güvenli tutun: Güçlü ve karmaşık şifreler kullanın, şifrenizi kimseyle paylaşmayın.
+                </p>
+            </div>
+        </div>
+
+        <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+            <p style='font-size: 11px; color: #999; margin: 0;'>
+                Bu e-posta, hesabınızın güvenliğini sağlamak amacıyla sistem tarafından otomatik olarak gönderilmiştir.
+            </p>
+            <p style='font-size: 10px; color: #bbb; margin-top: 8px; letter-spacing: 0.5px;'>
+                İşlem Kayıt No (Trace ID): {details.TraceId}
+            </p>
+        </div>
+    </div>";
+                await SendEmailAsync("security@efavori.com", Email, "Başarısız Giriş Denemesi", emailBody, attachments);
+            }
+            if (Culture == "en")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 25px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Failed Login Attempt</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>We detected an unsuccessful login attempt on your account.</p>
+        
+        <p style='font-size: 15px; font-weight: 600;'>Hello,</p>
+        <p style='font-size: 14px; color: #555;'>For your protection, here are the details of the failed login attempt:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Date / Time</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>IP Address</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: ""Courier New"", Courier, monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>Device</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 500;'>
+            <strong>Reason:</strong> The password you entered is incorrect.
+        </p>
+
+        <div style='background-color: #fff9f9; border: 1px solid #ffdbdb; border-radius: 8px; padding: 20px; margin-top: 25px;'>
+            <p style='margin: 0 0 15px 0; font-size: 14px; color: #c62828; font-weight: 500;'>
+                <strong>Forgot your password?</strong>
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555; line-height: 1.5;'>
+                Use the password reset option to regain access to your account. If you continue to experience issues, please contact our support team.
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ If this was not you, please secure your account by updating your password immediately.
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 Stay safe: Use strong passwords and never share them with anyone.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            This is an automated security notification. Please do not reply to this email.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 10px; letter-spacing: 0.5px; text-transform: uppercase;'>
+            Trace ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("security@efavori.com", Email, "Failed Login Attempt Detected", emailBody, attachments);
+            }
+            if (Culture == "az")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #f5f5f5; padding-bottom: 15px; text-align: center;'>Diqqət: Uğursuz Giriş Cəsdi</h2>
+        
+        <p style='font-size: 15px; font-weight: 600;'>Hörmətli İstifadəçi,</p>
+        <p style='font-size: 14px; color: #555;'>Hesabınıza uğursuz bir giriş cəsdi qeydə alınmışdır. Həmin cəsdin məlumatlarını aşağıda görmək olar:</p>
+        
+        <table style='width: 100%; border-collapse: collapse; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Tarix və Saat</td>
+                <td style='padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>IP Ünvanı</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px;'>Cihaz Məlumatı</td>
+                <td style='padding: 12px 15px; font-size: 12px; color: #444;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>Səbəb:</strong> Daxil etilən şifrə yanlışdır.
+        </p>
+
+        <div style='background-color: #fff9f9; border: 1px solid #ffdbdb; border-radius: 8px; padding: 20px; margin-top: 25px;'>
+            <p style='margin: 0 0 12px 0; font-size: 14px; color: #c62828; font-weight: bold;'>
+                Şifrənizi unutmuşsunuz?
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555;'>
+                Hesabınıza daxil olmaq üçün şifrenizi sıfırlama seçəniyi istifadə edin.
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ Bu siz deyilsinizsə, lütfen hesabınızı qorumaq üçün şifrenizi yeniləyin.
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 Təhlükəsiz qalın: Güclü şifrələr istifadə edin.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            Bu e-poçt təhlükəsizlik məqsədilə sistem tərəfindən avtomatik göndərilib.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
+            Əməliyyat ID (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Uğursuz Giriş Cəsdi", emailBody, attachments);
+
+            }
+            if (Culture == "de")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Fehlgeschlagener Anmeldeversuch</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Ein fehlgeschlagener Anmeldeversuch wurde erkannt.</p>
+        
+        <p style='font-size: 15px;'>Guten Tag,</p>
+        <p style='font-size: 14px; color: #555;'>Zu Ihrer Sicherheit informieren wir Sie über einen fehlgeschlagenen Anmeldeversuch. Hier sind die Details:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Datum / Uhrzeit</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>IP-Adresse</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>Gerät</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>Grund:</strong> Das eingegebene Passwort ist falsch.
+        </p>
+
+        <div style='background-color: #fff9f9; border: 1px solid #ffdbdb; border-radius: 8px; padding: 20px; margin-top: 25px;'>
+            <p style='margin: 0 0 12px 0; font-size: 14px; color: #c53030; font-weight: bold;'>
+                Passwort vergessen?
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555;'>
+                Verwenden Sie die Passwort-Zurücksetzen-Option, um auf Ihr Konto zuzugreifen.
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ Falls dies nicht Sie waren, aktualisieren Sie sofort Ihr Passwort.
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 Bleiben Sie sicher: Verwenden Sie starke Passwörter.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            Dies ist eine automatisch generierte Sicherheitsbenachrichtigung. Bitte antworten Sie nicht auf diese E-Mail.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 10px; letter-spacing: 0.5px;'>
+            Trace-ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Fehlgeschlagener Anmeldeversuch erkannt", emailBody, attachments);
+
+            }
+            if (Culture == "es")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Intento de Inicio de Sesión Fallido</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Se ha detectado un intento fallido de inicio de sesión.</p>
+        
+        <p style='font-size: 15px;'>Estimado usuario/a,</p>
+        <p style='font-size: 14px; color: #555;'>Para su protección, le informamos sobre un intento fallido de acceso a su cuenta:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Fecha / Hora</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Dirección IP</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>Dispositivo</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>Motivo:</strong> La contraseña ingresada es incorrecta.
+        </p>
+
+        <div style='background-color: #fff8f8; border: 1px solid #ffebeb; border-radius: 8px; padding: 25px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #d32f2f; font-weight: bold;'>
+                ¿Olvidó su contraseña?
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555;'>
+                Utilice la opción de restablecimiento de contraseña para recuperar el acceso.
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ Si no fue usted, actualice su contraseña de inmediato.
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 Manténgase seguro: Use contraseñas fuertes.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Esta es una notificación automática de seguridad. Por favor, no responda a este correo.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de Seguimiento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Intento de inicio de sesión fallido detectado", emailBody, attachments);
+
+            }
+            if (Culture == "fr")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Tentative de Connexion Échouée</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Une tentative échouée de connexion a été détectée.</p>
+        
+        <p style='font-size: 15px;'>Bonjour,</p>
+        <p style='font-size: 14px; color: #555;'>Pour votre sécurité, nous vous informons d'une tentative échouée de connexion :</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Date et heure</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Adresse IP</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>Appareil</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>Motif :</strong> Le mot de passe saisi est incorrect.
+        </p>
+
+        <div style='background-color: #fff9f9; border: 1px solid #ffebeb; border-radius: 10px; padding: 25px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #c62828; font-weight: bold;'>
+                Mot de passe oublié ?
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555;'>
+                Utilisez l'option de réinitialisation du mot de passe pour accéder à votre compte.
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ Si ce n'était pas vous, mettez à jour votre mot de passe immédiatement.
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 Restez en sécurité : Utilisez des mots de passe forts.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f8f9fa; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Ceci est une notification automatique. Merci de ne pas répondre à cet e-mail.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de suivi : {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("security@efavori.com", Email, "Tentative de connexion échouée détectée", emailBody, attachments);
+
+            }
+            if (Culture == "hi")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>विफल लॉगिन प्रयास</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>आपके खाते में एक विफल लॉगिन प्रयास देखा गया है।</p>
+        
+        <p style='font-size: 15px;'>नमस्ते,</p>
+        <p style='font-size: 14px; color: #555;'>आपकी सुरक्षा के लिए, यहाँ विफल लॉगिन प्रयास के विवरण दिए गए हैं:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>दिनांक / समय</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>आईपी पता (IP Address)</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>डिवाइस (Device)</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>कारण:</strong> दर्ज किया गया पासवर्ड गलत है।
+        </p>
+
+        <div style='background-color: #fff8f8; border: 1px solid #ffebeb; border-radius: 10px; padding: 25px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 16px; color: #d32f2f; font-weight: bold;'>
+                क्या पासवर्ड भूल गए हैं?
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 14px; color: #555;'>
+                अपना खाता पुनः प्राप्त करने के लिए पासवर्ड रीसेट विकल्प का उपयोग करें।
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ यदि यह आप नहीं थे, तो तुरंत अपना पासवर्ड बदलें।
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 सुरक्षित रहें: मजबूत पासवर्ड का उपयोग करें।
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            यह एक स्वचालित सुरक्षा सूचना है। कृपया इस ईमेल का उत्तर न दें।
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ट्रेस आईडी (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("security@efavori.com", Email, "विफल लॉगिन प्रयास मिला", emailBody, attachments);
+
+            }
+            if (Culture == "pt")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Tentativa de Acesso Falhada</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Detectamos uma tentativa falhada de acesso na sua conta.</p>
+        
+        <p style='font-size: 15px;'>Olá,</p>
+        <p style='font-size: 14px; color: #555;'>Para sua proteção, aqui estão os detalhes da tentativa falhada:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Data / Hora</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Endereço IP</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>Dispositivo</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>Motivo:</strong> A senha inserida é incorreta.
+        </p>
+
+        <div style='background-color: #fff8f8; border: 1px solid #ffebeb; border-radius: 10px; padding: 25px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #d32f2f; font-weight: bold;'>
+                Esqueceu sua senha?
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555;'>
+                Use a opção de redefinição de senha para recuperar o acesso.
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ Se não foi você, atualize sua senha imediatamente.
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 Mantenha-se seguro: Use senhas fortes.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Esta é uma notificação automática de segurança. Por favor, não responda a este e-mail.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de Rastreamento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Tentativa de acesso falhada detectada", emailBody, attachments);
+
+            }
+            if (Culture == "ru")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Неудачная попытка входа</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Обнаружена неудачная попытка входа в ваш аккаунт.</p>
+        
+        <p style='font-size: 15px;'>Здравствуйте,</p>
+        <p style='font-size: 14px; color: #555;'>В целях безопасности мы уведомляем вас о неудачной попытке входа:</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>Дата / Время</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>IP-адрес</td>
+                <td style='padding: 12px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px;'>Устройство</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>Причина:</strong> Введённый пароль неверен.
+        </p>
+
+        <div style='background-color: #fff8f8; border: 1px solid #ffebeb; border-radius: 10px; padding: 25px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #d32f2f; font-weight: bold;'>
+                Забыли пароль?
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555;'>
+                Используйте функцию восстановления пароля для доступа к вашему аккаунту.
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ Если это были не вы, немедленно измените пароль.
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 Оставайтесь в безопасности: Используйте надёжные пароли.
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Это автоматическое уведомление системы безопасности. Пожалуйста, не отвечайте на это письмо.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID транзакции (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "Обнаружена неудачная попытка входа", emailBody, attachments);
+
+            }
+            if (Culture == "zh")
+            {
+                string emailBody = $@"
+<div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #d32f2f; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>登录失败警报</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>检测到您账户的一次失败登录尝试。</p>
+        
+        <p style='font-size: 15px;'>尊敬的用户，您好：</p>
+        <p style='font-size: 14px; color: #555;'>为了保护您的账户安全，以下是失败登录尝试的具体信息：</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>日期 / 时间</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #ffe0e0;'>{displayDate}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #ffe0e0;'>IP 地址</td>
+                <td style='padding: 14px 15px; font-size: 13px; font-family: monospace; color: #333; border-bottom: 1px solid #ffe0e0;'>{safeIp}</td>
+            </tr>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px;'>设备信息</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333;'>{safeDevice}</td>
+            </tr>
+        </table>
+
+        <p style='font-size: 13px; color: #d32f2f; text-align: center; font-weight: 600;'>
+            <strong>原因：</strong>输入的密码不正确。
+        </p>
+
+        <div style='background-color: #fff8f8; border: 1px solid #ffebeb; border-radius: 10px; padding: 25px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #d32f2f; font-weight: bold;'>
+                忘记了密码？
+            </p>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #555;'>
+                请使用密码重置功能来恢复您的账户访问权限。
+            </p>
+            <p style='margin: 0; font-size: 12px; color: #777;'>
+                ⚠️ 如果不是您操作的，请立即修改您的密码。
+            </p>
+        </div>
+
+        <div style='background-color: #f9f9f9; padding: 15px; margin-top: 20px; border-radius: 6px; text-align: center;'>
+            <p style='margin: 0; font-size: 12px; color: #666;'>
+                🔒 保持安全：使用强密码。
+            </p>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            这是系统生成的自动安全通知，请勿直接回复。
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            追踪 ID (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", Email, "登录失败警报", emailBody, attachments);
+
+            }
+
+        }
+
+        //security@efavori.com---------------------------------------------------------------------------+
         public async Task SendAccountActivationCodeInfoEmailAsync(string Culture, string Email)
         {
             Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);

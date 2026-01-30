@@ -3644,5 +3644,103 @@ namespace api
             }
 
         }
+
+        // security@efavori.com | Şifre sıfırlama kodu  
+        public async Task SendAccountPasswordResetCodeInformationEmailAsync(string Culture, string Email)
+        {
+            Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
+
+            // Generate a new password reset code
+            use.AccountPasswordResetMailCode = Random.Shared.Next(100000, 999999);
+            _context.Users.Update(use);
+            await _context.SaveChangesAsync(_cts.Token);
+
+            var attachments = new List<Attachment>();
+            var details = _userInfos.GetCurrentUserDetails();
+            string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
+            string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
+            string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
+
+            // Helper to generate the standardized HTML wrapper with localized content
+            string GetHtmlBody(string title, string description, string codeLabel, string infoTitle, string dateLabel, string ipLabel, string deviceLabel, string warning, string footer, string traceLabel)
+            {
+                return $@"
+        <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+            <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+                <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+            </div>
+            <div style='padding: 0 40px 30px 40px;'>
+                <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>{title}</h2>
+                <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>{description}</p>
+                <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+                    <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>{codeLabel}</span>
+                    <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+                </div>
+                <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+                    <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>{infoTitle}</p>
+                    <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                        <tr>
+                            <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>{dateLabel}</td>
+                            <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>{ipLabel}</td>
+                            <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                        </tr>
+                        <tr>
+                            <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>{deviceLabel}</td>
+                            <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                        </tr>
+                    </table>
+                </div>
+                <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>{warning}</p>
+            </div>
+            <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+                <p style='font-size: 10px; color: #bbb; margin: 0;'>{footer}<br>{traceLabel}: {details.TraceId}</p>
+            </div>
+        </div>";
+            }
+
+            string body = "";
+            string subject = "";
+
+            switch (Culture.ToLower())
+            {
+                case "tr":
+                    subject = $"{use.AccountPasswordResetMailCode} - Şifre Sıfırlama Kodunuz";
+                    body = GetHtmlBody("Şifre Sıfırlama", "Şifrenizi sıfırlamak için aşağıdaki kodu kullanın.", "Sıfırlama Kodunuz", "İşlem Bilgileri", "Tarih", "IP Adresi", "Cihaz", "Bu kod 3 dakika geçerlidir. İşlemi siz yapmadıysanız hesabınızı güvenceye alın.", "Bu mail otomatik gönderilmiştir. Lütfen yanıtlamayınız.", "İşlem Kayıt No");
+                    break;
+                case "en":
+                    subject = $"{use.AccountPasswordResetMailCode} - Your Password Reset Code";
+                    body = GetHtmlBody("Password Reset", "Please use the code below to reset your password.", "Your Reset Code", "Transaction Details", "Date", "IP Address", "Device", "This code is valid for 3 minutes. If you didn't request this, please secure your account.", "This is an automated email. Please do not reply.", "Trace ID");
+                    break;
+                case "az":
+                    subject = $"{use.AccountPasswordResetMailCode} - Şifrə Sıfırlama Kodunuz";
+                    body = GetHtmlBody("Şifrə Sıfırlama", "Şifrənizi sıfırlamaq üçün aşağıdakı kodu istifadə edin.", "Sıfırlama Kodunuz", "Əməliyyat Məlumatları", "Tarix", "IP Ünvanı", "Cihaz", "Bu kod 3 dəqiqə etibarlıdır. Əgər siz etməmisinizsə, hesabınızı qoruyun.", "Bu e-poçt avtomatik göndərilib. Lütfən cavab yazmayın.", "Əməliyyat nömrəsi");
+                    break;
+                case "de":
+                    subject = $"{use.AccountPasswordResetMailCode} - Ihr Passwort-Rücksetzcode";
+                    body = GetHtmlBody("Passwort zurücksetzen", "Verwenden Sie den Code, um Ihr Passwort zurückzusetzen.", "Ihr Rücksetzcode", "Transaktionsdetails", "Datum", "IP-Adresse", "Gerät", "Code 3 Min. gültig. Falls nicht angefordert, Konto sichern.", "Automatisch generierte E-Mail. Bitte nicht antworten.", "Trace-ID");
+                    break;
+                case "es":
+                    subject = $"{use.AccountPasswordResetMailCode} - Su código de restablecimiento";
+                    body = GetHtmlBody("Restablecer Contraseña", "Use el código para restablecer su contraseña.", "Su Código", "Información de la Operación", "Fecha", "Dirección IP", "Dispositivo", "Válido por 3 minutos. Si no fue usted, asegure su cuenta.", "Correo automático. No responda.", "ID de Seguimiento");
+                    break;
+                case "fr":
+                    subject = $"{use.AccountPasswordResetMailCode} - Votre code de réinitialisation";
+                    body = GetHtmlBody("Réinitialisation de mot de passe", "Utilisez ce code pour réinitialiser votre mot de passe.", "Votre Code", "Infos Transaction", "Date", "Adresse IP", "Appareil", "Valable 3 minutes. Si ce n'est pas vous, sécurisez votre compte.", "Message automatique. Ne pas répondre.", "ID de suivi");
+                    break;
+                case "ru":
+                    subject = $"{use.AccountPasswordResetMailCode} - Код сброса пароля";
+                    body = GetHtmlBody("Сброс пароля", "Используйте код ниже для сброса пароля.", "Ваш код", "Детали транзакции", "Дата", "IP-адрес", "Устройство", "Код действителен 3 минуты. Если это не вы, защитите аккаунт.", "Автоматическое письмо. Не отвечайте.", "Trace ID");
+                    break;
+                default: // Fallback to English
+                    subject = $"{use.AccountPasswordResetMailCode} - Your Password Reset Code";
+                    body = GetHtmlBody("Password Reset", "Please use the code below to reset your password.", "Your Reset Code", "Transaction Details", "Date", "IP Address", "Device", "This code is valid for 3 minutes. If you didn't request this, please secure your account.", "This is an automated email. Please do not reply.", "Trace ID");
+                    break;
+            }
+
+            await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, subject, body, attachments);
+        }
     }
 }

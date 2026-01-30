@@ -1,5 +1,6 @@
 ﻿using api;
 using data;
+using Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
@@ -16,7 +17,12 @@ namespace razor
         [Inject] protected NavigationManager Navigation { get; init; } = default!;
         [Inject] protected IJSRuntime JS { get; init; } = default!;
         [Inject] protected TakeLogs Logger { get; init; } = default!;
-        [Inject] protected EmailSender EmailSender { get; init; } = default!;
+        // Api Entegrasyonu
+        [Inject] protected EmailSender ApiEmailSender { get; init; } = default!;
+        // [Inject] protected api.Media ApiMedia { get; init; } = default!;
+        [Inject] protected TakeLogs ApiTakeLogs { get; init; } = default!;
+        // [Inject] protected TextualFunctions ApiTextualFunctions { get; init; } = default!;
+        [Inject] protected UserInfos ApiUserInfos { get; init; } = default!;
         #endregion
 
         #region State Management
@@ -171,6 +177,7 @@ namespace razor
             {
                 await LogError(nameof(LoadData), ex);
             }
+
         }
 
         protected async Task Action()

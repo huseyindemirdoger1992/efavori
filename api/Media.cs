@@ -12,9 +12,9 @@ namespace api
     /// <summary>
     /// Medya işleme operasyonlarını yüksek performans ve detaylı izlenebilirlik ile yönetir.
     /// </summary>
-    internal class Media
+    public class Media
     {
-        private readonly UserInfos _userInfos;
+        public readonly UserInfos _userInfos;
 
         public Media(UserInfos userInfos)
         {

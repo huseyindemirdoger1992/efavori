@@ -17,6 +17,7 @@ namespace data
         public DateTime? RegistrationDate { get; set; } // Sisteme ilk kayıt olduğu tarih ve saat + 
         public bool AccountActivationMailStatu { get; set; } // Hesap aktivasyon durumu +
         public int AccountActivationMailCode { get; set; } // Hesap aktivasyon kodu +
+        public int AccountPasswordResetMailCode { get; set; } // Hesap şifre sıfırlama kodu +
         public DateTime? AccountActivationMailDeadline { get; set; } // Hesap aktivasyon geçerlilik süresi +
         public DateTime? DateOfBirth { get; set; } // Doğum Tarihi + 
 
@@ -29,8 +30,8 @@ namespace data
         // === Durum ve Yetki Bilgileri ===
         public bool? IsActive { get; set; } = true; // Kullanıcı hesabı aktif mi dondurulmuş mu?
         public bool? IsActiveVendorStatu { get; set; } = false; // Mağaza açma yetkisi var mı?
-        public bool? IsDeleted { get; set; } = false; // Veritabanından silmek yerine "silindi" işaretlemek için (Soft Delete)
         public bool? TermsOfUse { get; set; } // Kullanım koşullarını ve gizlilik sözleşmesini kabul etti mi?
+        public bool? IsDeleted { get; set; } = false; // Veritabanından silmek yerine "silindi" işaretlemek için (Soft Delete)
 
         // === Profil Bilgileri ===
         public string? BackgroundImagePath { get; set; } // Profil arka plan resmi

@@ -34,7 +34,7 @@ namespace api
             _context = context;
             _userInfos = userInfos;
         }
-
+        // Email gönderme aksiyonu
         public async Task SendEmailAsync(string SenderEmailAddress, string recipient, string subject, string body, List<Attachment>? attachments = null)
         {
             using var message = new MailMessage();

@@ -282,8 +282,9 @@ namespace razor._Shared.tr.Header
 
                     // ⭐ Local state'i de güncelle
                     use = currentUser;
-
+                    await emailSender.SendAccountEmailAddressVerifiedNotificationAsync(use.Language, use.ContactInformation.Email);
                     await ShowNotification("success", "Tebrikler", "Email adresiniz başarıyla doğrulandı.", null);
+
                     await Task.Delay(2000, _cts.Token);
                     Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
                 }

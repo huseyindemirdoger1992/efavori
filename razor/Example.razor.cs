@@ -9,6 +9,7 @@ namespace razor
 {
     public partial class Example : ComponentBase, IAsyncDisposable
     {
+        #region 
         [Parameter] public Users? use { get; set; }
 
         #region Services 
@@ -34,6 +35,7 @@ namespace razor
             _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
         }
 
+        // Repetitive Tasks
         private async Task StartAutoRefreshLoop(TimeSpan interval)
         {
             using var timer = new PeriodicTimer(interval);
@@ -84,17 +86,16 @@ namespace razor
                 _processingStates[buttonKey] = true;
                 StateHasChanged();
 
-                // 3 saniye bekle
-                await Task.Delay(4000, _cts.Token);
-
                 // Asıl işlemi gerçekleştir
                 await action();
+
+                // İşlem bittikten sonra 4 saniye bekle
+                await Task.Delay(3000, _cts.Token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
                 await LogError(buttonKey, ex);
-                await ShowNotification("error", "Hata", "İşlem başarısız oldu.", null);
             }
             finally
             {
@@ -106,7 +107,7 @@ namespace razor
         #endregion
 
 
-        #region Helpers
+        #region  Helpers
         private async Task LogError(string action, Exception ex)
         {
             try
@@ -155,15 +156,14 @@ namespace razor
         }
         #endregion
 
-        #region Data Collections
+        // ------------------------------------------------------- Crud Actions -------------------------------------------------------
+
+        #region Data Operations
+
         protected List<Country>? Country_;
         protected List<Users>? Users_;
         protected Users? _Users;
-        #endregion
 
-
-
-        #region Data Operations
         protected virtual async Task LoadData()
         {
             try
@@ -207,6 +207,8 @@ namespace razor
                 await LoadData();
             });
         }
+
         #endregion
+   
     }
 }

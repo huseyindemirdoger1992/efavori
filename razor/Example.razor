@@ -2,42 +2,38 @@
 
 <razor._Shared.Notification @ref="notificationRef" />
 
-<!-- Örnek Buton 1: Giriþ Yap -->
 <button type="button"
-        class="@(IsButtonProcessing("LoginButton") ? "btn btn-dark" : "btn btn-light")"
+        class="@(IsButtonProcessing("LoginButton") ? "btn btn-light colored" : "btn btn-light")"
         style="width:100%;"
-        @onclick="async () => await HandleButtonClick(nameof(Action), Action)"
+        @onclick='async () => await HandleButtonClick("LoginButton", Action)'
         disabled="@IsButtonProcessing("LoginButton")">
-    <i class="fa @(IsButtonProcessing("LoginButton") ? "fa-cog fa-spin" : "fa-sign-in")"></i>
+    <i class="fa @(IsButtonProcessing("LoginButton") ? "fa-refresh fa-spin" : "fa-sign-in")"></i>
     <span>@(IsButtonProcessing("LoginButton") ? "Yükleniyor..." : "Giriþ Yap")</span>
 </button>
 
-<!-- Örnek Buton 2: Kaydet -->
 <button type="button"
-        class="@(IsButtonProcessing("SaveButton") ? "btn btn-dark" : "btn btn-success")"
+        class="@(IsButtonProcessing("SaveButton") ? "btn btn-success colored" : "btn btn-success")"
         style="width:100%; margin-top:10px;"
-        @onclick="async () => await HandleButtonClick(nameof(Action), Action)"
+        @onclick='async () => await HandleButtonClick("SaveButton", Action)'
         disabled="@IsButtonProcessing("SaveButton")">
-    <i class="fa @(IsButtonProcessing("SaveButton") ? "fa-cog fa-spin" : "fa-save")"></i>
+    <i class="fa @(IsButtonProcessing("SaveButton") ? "fa-refresh fa-spin" : "fa-save")"></i>
     <span>@(IsButtonProcessing("SaveButton") ? "Kaydediliyor..." : "Kaydet")</span>
 </button>
 
-<!-- Örnek Buton 3: Sil -->
 <button type="button"
-        class="@(IsButtonProcessing("DeleteButton") ? "btn btn-dark" : "btn btn-danger")"
+        class="@(IsButtonProcessing("DeleteButton") ? "btn btn-danger colored" : "btn btn-danger")"
         style="width:100%; margin-top:10px;"
-        @onclick="async () => await HandleButtonClick(nameof(Action), Action)"
+        @onclick='async () => await HandleButtonClick("DeleteButton", Action)'
         disabled="@IsButtonProcessing("DeleteButton")">
-    <i class="fa @(IsButtonProcessing("DeleteButton") ? "fa-cog fa-spin" : "fa-trash")"></i>
+    <i class="fa @(IsButtonProcessing("DeleteButton") ? "fa-refresh fa-spin" : "fa-trash")"></i>
     <span>@(IsButtonProcessing("DeleteButton") ? "Siliniyor..." : "Sil")</span>
 </button>
 
-<!-- Örnek Buton 4: Güncelle -->
 <button type="button"
-        class="@(IsButtonProcessing("UpdateButton") ? "btn btn-dark" : "btn btn-primary")"
+        class="@(IsButtonProcessing("UpdateButton") ? "btn btn-primary colored" : "btn btn-primary")"
         style="width:100%; margin-top:10px;"
-        @onclick="async () => await HandleButtonClick(nameof(Action), Action)"
+        @onclick='async () => await HandleButtonClick("UpdateButton", Action)'
         disabled="@IsButtonProcessing("UpdateButton")">
-    <i class="fa @(IsButtonProcessing("UpdateButton") ? "fa-cog fa-spin" : "fa-refresh")"></i>
+    <i class="fa @(IsButtonProcessing("UpdateButton") ? "fa-refresh fa-spin" : "fa-refresh")"></i>
     <span>@(IsButtonProcessing("UpdateButton") ? "Güncelleniyor..." : "Güncelle")</span>
 </button>

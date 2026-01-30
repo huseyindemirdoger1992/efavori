@@ -26,7 +26,7 @@
         if (isGuid)
         {
             // --- DURUM A: OTURUM AÇIK (GUID İLE SORGULAMA) ---
-            using (var db = new _ApplicationConnectionDb())
+            using (var db = new _ApplicationConnectionDb()) 
             {
                 use = await db.Users
                     .AsNoTracking()

@@ -130,6 +130,9 @@
 }
 else
 {
+    @(await Html.RenderComponentAsync<razor.Example>(
+                                                    RenderMode.Server,
+                                                    new { use = (use != null ? use : null) }))
     @* Oturum Açmış*@
     {
         switch (currentLang)

@@ -29,7 +29,6 @@ namespace razor
         private Notification? notificationRef;
         private readonly CancellationTokenSource _cts = new();
         private readonly SemaphoreSlim _dbLock = new(1, 1);
-        private readonly Dictionary<string, bool> _processingStates = new();
         private bool _disposed;
         #endregion
 
@@ -67,32 +66,52 @@ namespace razor
         #endregion
 
         #region Button Management
-        protected bool IsButtonProcessing(string buttonKey)
-        {
-            return _processingStates.GetValueOrDefault(buttonKey, false);
-        }
+        private readonly Dictionary<string, bool> _processingStates = new();
+        protected bool IsButtonProcessing(string key) => _processingStates.GetValueOrDefault(key, false);
 
-        protected async Task HandleButtonClick(string buttonKey, Func<Task> action)
+        // 1. Merkezi Yönetim: Tüm ortak mantık burada toplanır.
+        private async Task<bool> RunWithStateAsync(string key, Func<Task> action, bool useDbLock = false)
         {
-            if (IsButtonProcessing(buttonKey))
-                return;
+            if (IsButtonProcessing(key)) return false;
+
+            if (useDbLock) await _dbLock.WaitAsync(_cts.Token);
+
             try
             {
-                _processingStates[buttonKey] = true;
+                _processingStates[key] = true;
                 StateHasChanged();
+
                 await action();
-                await Task.Delay(3000, _cts.Token);
+                return true;
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException) { return false; }
             catch (Exception ex)
             {
-                await LogError(buttonKey, ex);
+                await LogError(key, ex);
+                if (useDbLock) await ShowNotification("error", "Hata", "İşlem başarısız oldu.", null);
+
+                return false;
             }
             finally
             {
-                _processingStates[buttonKey] = false;
+                _processingStates[key] = false;
+                if (useDbLock) _dbLock.Release();
                 StateHasChanged();
             }
+        }
+
+        // 2. Kullanım: Daha kısa ve temiz metotlar.
+        protected async Task HandleButtonClick(string buttonKey, Func<Task> action)
+        {
+            await RunWithStateAsync(buttonKey, async () => {
+                await action();
+                await Task.Delay(3000, _cts.Token);
+            });
+        }
+
+        private async Task<bool> ExecuteWithLock(string key, Func<Task> action)
+        {
+            return await RunWithStateAsync(key, action, useDbLock: true);
         }
         #endregion
 
@@ -116,32 +135,6 @@ namespace razor
             if (notificationRef is null) return;
             var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
             await notificationRef.Launch(type, title, text, imageUrl);
-        }
-        private async Task<bool> ExecuteWithLock(string key, Func<Task> action)
-        {
-            if (_processingStates.GetValueOrDefault(key)) return false;
-
-            await _dbLock.WaitAsync(_cts.Token);
-            try
-            {
-                _processingStates[key] = true;
-                StateHasChanged();
-                await action();
-                return true;
-            }
-            catch (OperationCanceledException) { return false; }
-            catch (Exception ex)
-            {
-                await LogError(key, ex);
-                await ShowNotification("error", "Hata", "İşlem başarısız oldu.", null);
-                return false;
-            }
-            finally
-            {
-                _processingStates[key] = false;
-                _dbLock.Release();
-                StateHasChanged();
-            }
         }
         #endregion
 

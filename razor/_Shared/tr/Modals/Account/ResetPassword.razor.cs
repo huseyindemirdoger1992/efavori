@@ -66,41 +66,20 @@ namespace razor._Shared.tr.Modals.Account
 
         #region Button Management
         private readonly Dictionary<string, bool> _processingStates = new();
-        protected bool IsButtonProcessing(string buttonKey)
-        {
-            return _processingStates.GetValueOrDefault(buttonKey, false);
-        }
-        protected async Task HandleButtonClick(string buttonKey, Func<Task> action)
-        {
-            if (IsButtonProcessing(buttonKey))
-                return;
-            try
-            {
-                _processingStates[buttonKey] = true;
-                StateHasChanged();
-                await action();
-                await Task.Delay(3000, _cts.Token);
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                await LogError(buttonKey, ex);
-            }
-            finally
-            {
-                _processingStates[buttonKey] = false;
-                StateHasChanged();
-            }
-        }
-        private async Task<bool> ExecuteWithLock(string key, Func<Task> action)
-        {
-            if (_processingStates.GetValueOrDefault(key)) return false;
+        protected bool IsButtonProcessing(string key) => _processingStates.GetValueOrDefault(key, false);
 
-            await _dbLock.WaitAsync(_cts.Token);
+        // 1. Merkezi Yönetim: Tüm ortak mantık burada toplanır.
+        private async Task<bool> RunWithStateAsync(string key, Func<Task> action, bool useDbLock = false)
+        {
+            if (IsButtonProcessing(key)) return false;
+
+            if (useDbLock) await _dbLock.WaitAsync(_cts.Token);
+
             try
             {
                 _processingStates[key] = true;
                 StateHasChanged();
+
                 await action();
                 return true;
             }
@@ -108,17 +87,51 @@ namespace razor._Shared.tr.Modals.Account
             catch (Exception ex)
             {
                 await LogError(key, ex);
-                await ShowNotification("error", "Hata", "İşlem başarısız oldu.", null);
+                if (useDbLock) await ShowNotification("error", "Hata", "İşlem başarısız oldu.", null);
+
                 return false;
             }
             finally
             {
                 _processingStates[key] = false;
-                _dbLock.Release();
+                if (useDbLock) _dbLock.Release();
                 StateHasChanged();
             }
         }
+        public string? BtnIsSecand = "180";
+        protected async Task HandleButtonClick(string buttonKey, Func<Task> action)
+        {
+            await RunWithStateAsync(buttonKey, async () =>
+            {
+                await action();
 
+                if (buttonKey == "LoginButton" && IsSendRessPassCode == true)
+                {
+                    int totalSeconds = 180;
+
+                    while (totalSeconds > 0)
+                    {
+                        BtnIsSecand = totalSeconds.ToString();
+                        StateHasChanged(); // Arayüzdeki rakamı güncelle
+
+                        await Task.Delay(1000, _cts.Token); // 1 saniye bekle
+                        totalSeconds--;
+                    }
+
+                    BtnIsSecand = "180"; // Süre bitince tekrar başa sar (isteğe bağlı)
+                }
+                else
+                {
+                    // Diğer butonlar için standart 3 saniye bekleme
+                    await Task.Delay(3000, _cts.Token);
+                }
+            });
+        }
+
+        private async Task<bool> ExecuteWithLock(string key, Func<Task> action)
+        {
+            return await RunWithStateAsync(key, action, useDbLock: true);
+        }
         #endregion
 
         #region  Helpers
@@ -151,7 +164,6 @@ namespace razor._Shared.tr.Modals.Account
         protected List<Country>? Country_;
         protected List<Users>? Users_;
         protected Users? _Users;
-        protected string? EmailResPas = null;
 
         protected virtual async Task LoadData()
         {
@@ -179,22 +191,51 @@ namespace razor._Shared.tr.Modals.Account
             }
         }
 
+        protected string? EmailResPas = null;
+        protected bool? IsSendRessPassCode = false;
+        protected string? RessPassCode = null;
         protected async Task Action()
         {
             await ExecuteWithLock(nameof(Action), async () =>
+            {
+                if (string.IsNullOrEmpty(EmailResPas))
+                {
+                    await ShowNotification("danger", "Hata", $"E-posta alanını boş geçemezsiniz.", null);
+                }
+                else
+                {
+                    await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                    _Users = await db.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == EmailResPas, _cts.Token);
+                    if (_Users != null && !string.IsNullOrWhiteSpace(EmailResPas))
+                    {
+                        // Use injected EmailSender (constructed by DI) instead of creating a new instance
+                        await ApiEmailSender.SendAccountPasswordResetCodeInformationEmailAsync(_Users.Language ?? "en", EmailResPas);
+                        IsSendRessPassCode = true;                        
+                        await ShowNotification("success", "Action", "Şifre sıfırlama kodunuz gönderildi.", null);
+                    }
+                    else
+                    {
+                        await ShowNotification("danger", "Action", $"{EmailResPas} kullanıcısı kayıtlı değil.", null);
+                    }
+                    await Task.Delay(500, _cts.Token);
+                    await LoadData();
+                }
+
+            });
+        }
+        protected async Task UserResPasCodeIsOk()
+        {
+            await ExecuteWithLock(nameof(UserResPasCodeIsOk), async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
                 _Users = await db.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == EmailResPas, _cts.Token);
                 if (_Users != null && !string.IsNullOrWhiteSpace(EmailResPas))
                 {
-                    // Use injected EmailSender (constructed by DI) instead of creating a new instance
-                    await ApiEmailSender.SendAccountPasswordResetCodeInformationEmailAsync(_Users.Language ?? "en", EmailResPas);
 
-                    await ShowNotification("success", "Başarılı", "Şifre sıfırlama kodunuz gönderildi.", null);
                 }
                 else
                 {
-                    await ShowNotification("danger", "Hata", $"{EmailResPas} kullanıcısı kayıtlı değil.", null);
+                    await ShowNotification("danger", "Action", $"{EmailResPas} kullanıcısı kayıtlı değil.", null);
                 }
                 await Task.Delay(500, _cts.Token);
                 await LoadData();

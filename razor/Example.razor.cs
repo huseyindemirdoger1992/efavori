@@ -9,7 +9,6 @@ namespace razor
 {
     public partial class Example : ComponentBase, IAsyncDisposable
     {
-        #region 
         [Parameter] public Users? use { get; set; }
 
         #region Services 
@@ -35,7 +34,6 @@ namespace razor
             _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(10));
         }
 
-        // Repetitive Tasks
         private async Task StartAutoRefreshLoop(TimeSpan interval)
         {
             using var timer = new PeriodicTimer(interval);
@@ -63,33 +61,20 @@ namespace razor
         #endregion
 
         #region Button Management
-        /// <summary>
-        /// Tıklanan butonun işlem durumunu kontrol eder
-        /// </summary>
         protected bool IsButtonProcessing(string buttonKey)
         {
             return _processingStates.GetValueOrDefault(buttonKey, false);
         }
 
-        /// <summary>
-        /// Butona tıklandığında çalışacak belirli süre butonu devre dışı bırakır
-        /// </summary>
         protected async Task HandleButtonClick(string buttonKey, Func<Task> action)
         {
-            // Eğer buton zaten işlem yapıyorsa, tekrar tıklanmasını engelle
             if (IsButtonProcessing(buttonKey))
                 return;
-
             try
             {
-                // Butonu işlem durumuna al
                 _processingStates[buttonKey] = true;
                 StateHasChanged();
-
-                // Asıl işlemi gerçekleştir
                 await action();
-
-                // İşlem bittikten sonra 4 saniye bekle
                 await Task.Delay(3000, _cts.Token);
             }
             catch (OperationCanceledException) { }
@@ -99,13 +84,11 @@ namespace razor
             }
             finally
             {
-                // Butonu tekrar aktif hale getir
                 _processingStates[buttonKey] = false;
                 StateHasChanged();
             }
         }
         #endregion
-
 
         #region  Helpers
         private async Task LogError(string action, Exception ex)
@@ -207,8 +190,7 @@ namespace razor
                 await LoadData();
             });
         }
-
         #endregion
-   
+
     }
 }

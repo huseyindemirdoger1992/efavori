@@ -128,7 +128,7 @@ namespace api
             }
         }
 
-        // security@efavori.com--------------------------------------------------------------------------+
+        // security@efavori.com | Yeni kullanıcı hesabı oluşturulduğunda
         public async Task SendNewRegisterInfoEmailAsync(string Culture, string Email)
         {
             var attachments = new List<Attachment>();
@@ -682,7 +682,7 @@ namespace api
             }
         }
 
-        //security@efavori.com---------------------------------------------------------------------------+
+        //security@efavori.com | Doğru şekilde giriş yapıldığında
         public async Task SendLoginInfoEmailAsync(string Culture, string Email)
         {
             var attachments = new List<Attachment>();
@@ -1297,7 +1297,7 @@ namespace api
 
         }
 
-        //security@efavori.com---------------------------------------------------------------------------+
+        //security@efavori.com | Yanlış girilen şifre bildirimi
         public async Task SendLoginErrorInfoEmailAsync(string Culture, string Email)
         {
             var attachments = new List<Attachment>();
@@ -1970,7 +1970,7 @@ namespace api
 
         }
 
-        //security@efavori.com---------------------------------------------------------------------------+
+        //security@efavori.com | Email doğrulama kodu
         public async Task SendAccountActivationCodeInfoEmailAsync(string Culture, string Email)
         {
             Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
@@ -2509,7 +2509,561 @@ namespace api
             }
         }
 
-        //security@efavori.com---------------------------------------------------------------------------+
+        //security@efavori.com | Email doğrulandı
+        public async Task SendAccountEmailAddressVerifiedNotificationAsync(string Culture, string Email)
+        {
+            Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
+
+            var attachments = new List<Attachment>();
+
+            var details = _userInfos.GetCurrentUserDetails();
+            string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
+            string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
+            string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
+
+            if (Culture == "tr")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>E-posta Adresiniz Doğrulandı</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Hesabınız başarıyla aktif edilmiştir.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Sayın <strong>{use.ContactInformation.Email}</strong>,<br>
+            E-posta adresiniz başarıyla doğrulanmıştır ve hesabınız artık tamamen aktiftir.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>İşlem Bilgileri</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Tarih</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Adresi</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Cihaz</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Eğer bu işlemi siz yapmadıysanız lütfen derhal hesabınızı güvenceye alın ve destek ekibimizle iletişime geçin.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Bu mail otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+            <br>İşlem Kayıt No: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ E-posta Adresiniz Doğrulandı", emailBody, attachments);
+            }
+            if (Culture == "en")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>Your Email Address Has Been Verified</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Your account has been successfully activated.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Dear <strong>{use.ContactInformation.Email}</strong>,<br>
+            Your email address has been successfully verified and your account is now fully active.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Transaction Details</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Date</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Address</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Device</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            If you did not perform this action, please secure your account immediately and contact our support team.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            This is an automated email. Please do not reply.
+            <br>Trace ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Your Email Address Has Been Verified", emailBody, attachments);
+            }
+            if (Culture == "az")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>E-poçt Ünvanınız Təsdiqləndi</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Hesabınız uğurla aktivləşdirilmişdir.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Hörmətli <strong>{use.ContactInformation.Email}</strong>,<br>
+            E-poçt ünvanınız uğurla təsdiqlənmişdir və hesabınız indi tamamilə aktivdir.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Əməliyyat Məlumatları</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Tarix</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Ünvanı</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Cihaz</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Əgər bu əməliyyatı siz etməmisinizsə, lütfən dərhal hesabınızın təhlükəsizliyini təmin edin və dəstək komandamızla əlaqə saxlayın.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Bu e-poçt avtomatik olaraq göndərilib. Lütfən cavab yazmayın.
+            <br>Əməliyyat nömrəsi: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ E-poçt Ünvanınız Təsdiqləndi", emailBody, attachments);
+            }
+            if (Culture == "de")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>Ihre E-Mail-Adresse Wurde Bestätigt</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Ihr Konto wurde erfolgreich aktiviert.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Sehr geehrte/r <strong>{use.ContactInformation.Email}</strong>,<br>
+            Ihre E-Mail-Adresse wurde erfolgreich bestätigt und Ihr Konto ist jetzt vollständig aktiv.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Transaktionsdetails</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Datum</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP-Adresse</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Gerät</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Wenn Sie diese Anfrage nicht gestellt haben, sichern Sie bitte sofort Ihr Konto und kontaktieren Sie unser Support-Team.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Dies ist eine automatisch generierte E-Mail. Bitte antworten Sie nicht darauf.
+            <br>Trace-ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Ihre E-Mail-Adresse Wurde Bestätigt", emailBody, attachments);
+            }
+            if (Culture == "es")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>Su Dirección de Correo Ha Sido Verificada</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Su cuenta ha sido activada exitosamente.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Estimado/a <strong>{use.ContactInformation.Email}</strong>,<br>
+            Su dirección de correo electrónico ha sido verificada exitosamente y su cuenta ahora está completamente activa.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Información de la Operación</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Fecha</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Dirección IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Dispositivo</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Si no ha realizado esta acción, por favor asegure su cuenta inmediatamente y contacte a nuestro equipo de soporte.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Este correo ha sido enviado automáticamente. Por favor, no responda.
+            <br>ID de Seguimiento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Su Dirección de Correo Ha Sido Verificada", emailBody, attachments);
+            }
+            if (Culture == "fr")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>Votre Adresse E-mail a Été Vérifiée</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Votre compte a été activé avec succès.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Cher/Chère <strong>{use.ContactInformation.Email}</strong>,<br>
+            Votre adresse e-mail a été vérifiée avec succès et votre compte est maintenant entièrement actif.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Informations sur la Transaction</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Date</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Adresse IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Appareil</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Si vous n'êtes pas à l'origine de cette demande, veuillez sécuriser immédiatement votre compte et contacter notre équipe de support.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Ceci est un message automatique. Veuillez ne pas y répondre.
+            <br>ID de suivi : {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Votre Adresse E-mail a Été Vérifiée", emailBody, attachments);
+            }
+            if (Culture == "hi")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>आपका ईमेल पता सत्यापित हो गया है</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>आपका खाता सफलतापूर्वक सक्रिय हो गया है।</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            प्रिय <strong>{use.ContactInformation.Email}</strong>,<br>
+            आपका ईमेल पता सफलतापूर्वक सत्यापित हो गया है और आपका खाता अब पूरी तरह से सक्रिय है।
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>लेनदेन की जानकारी</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>दिनांक</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>आईपी पता</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>डिवाइस</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            यदि आपने यह क्रिया नहीं की है, तो कृपया तुरंत अपना खाता सुरक्षित करें और हमारी सहायता टीम से संपर्क करें।
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            यह ईमेल स्वचालित रूप से भेजा गया है। कृपया इसका उत्तर न दें।
+            <br>ट्रेस आईडी: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ आपका ईमेल पता सत्यापित हो गया है", emailBody, attachments);
+            }
+            if (Culture == "pt")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>Seu Endereço de E-mail Foi Verificado</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Sua conta foi ativada com sucesso.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Prezado(a) <strong>{use.ContactInformation.Email}</strong>,<br>
+            Seu endereço de e-mail foi verificado com sucesso e sua conta agora está totalmente ativa.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Informações da Operação</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Data</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Endereço IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Dispositivo</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Se você não solicitou esta operação, por favor, proteja sua conta imediatamente e entre em contato com nossa equipe de suporte.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Este e-mail foi enviado automaticamente. Por favor, não responda.
+            <br>ID da Transação: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Seu Endereço de E-mail Foi Verificado", emailBody, attachments);
+            }
+            if (Culture == "ru")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>Ваш Адрес Электронной Почты Подтвержден</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>Ваш аккаунт успешно активирован.</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            Уважаемый(ая) <strong>{use.ContactInformation.Email}</strong>,<br>
+            Ваш адрес электронной почты успешно подтвержден и ваш аккаунт теперь полностью активен.
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Информация о транзакции</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Дата</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP-адрес</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Устройство</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Если вы не совершали этого действия, пожалуйста, немедленно обезопасьте свой аккаунт и свяжитесь с нашей службой поддержки.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Это письмо отправлено автоматически. Пожалуйста, не отвечайте на него.
+            <br>ID транзакции: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Ваш Адрес Электронной Почты Подтвержден", emailBody, attachments);
+            }
+            if (Culture == "zh")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <div style='background-color: #e8f5e9; border: 2px solid #4caf50; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <div style='font-size: 48px; color: #4caf50; margin-bottom: 10px;'>✓</div>
+            <h2 style='color: #2e7d32; font-size: 20px; font-weight: 600; margin-bottom: 10px;'>您的电子邮件地址已验证</h2>
+            <p style='font-size: 14px; color: #555; margin: 0;'>您的账户已成功激活。</p>
+        </div>
+
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
+            尊敬的 <strong>{use.ContactInformation.Email}</strong>,<br>
+            您的电子邮件地址已成功验证，您的账户现已完全激活。
+        </p>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>交易信息</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>日期</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP 地址</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>设备</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            如果这不是您的操作，请立即采取措施保护您的账户并联系我们的支持团队。
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            这是一封自动发送的电子邮件，请勿回复。
+            <br>追踪 ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ 您的电子邮件地址已验证", emailBody, attachments);
+            }
+        }
+
+        //security@efavori.com | Çıkış işlemi
         public async Task SendLogOutInfoEmailAsync(string Culture, string Email)
         {
             var attachments = new List<Attachment>();

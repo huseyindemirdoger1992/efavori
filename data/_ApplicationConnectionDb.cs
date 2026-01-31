@@ -88,13 +88,29 @@ namespace data
             {
                 var optionsBuilder = new DbContextOptionsBuilder<_ApplicationConnectionDb>();
 
+                // Mevcut çalışma dizinini al
+                string basePath = AppContext.BaseDirectory;
+
+                // Eğer yerelde geliştirme yapıyorsan ve appsettings.json "web" klasöründeyse
+                // canlıda ise direkt ana dizindeyse bu kontrol hayat kurtarır:
+                if (!File.Exists(Path.Combine(basePath, "appsettings.json")))
+                {
+                    // Eğer dosya direkt base'de yoksa, yerel geliştirme ortamındaki "../web" yolunu dene
+                    basePath = Path.Combine(Directory.GetCurrentDirectory(), "../web");
+                }
+
                 IConfigurationRoot configuration = new ConfigurationBuilder()
-                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                    .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../web"))
+                    .SetBasePath(basePath)
                     .AddJsonFile("appsettings.json", optional: false)
                     .Build();
 
                 var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    throw new Exception("Bağlantı cümlesi (ConnectionString) bulunamadı! Lütfen appsettings.json dosyasını kontrol edin.");
+                }
+
                 optionsBuilder.UseSqlServer(connectionString);
 
                 return new _ApplicationConnectionDb(optionsBuilder.Options);

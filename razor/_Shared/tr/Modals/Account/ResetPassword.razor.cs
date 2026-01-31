@@ -205,7 +205,7 @@ namespace razor._Shared.tr.Modals.Account
                     if (use != null && !string.IsNullOrWhiteSpace(ResetPassEmailAddress))
                     {
                         // Use injected EmailSender (constructed by DI) instead of creating a new instance
-                        await ApiEmailSender.SendAccountPasswordResetCodeInformationEmailAsync(use.Language ?? "en", ResetPassEmailAddress);
+                        await ApiEmailSender.SendAccountAccountPasswordResetMailCodeInformationEmailAsync(use.Language ?? "en", ResetPassEmailAddress);
                         IsSendRessPassCode = true;
                         await ShowNotification("success", "Action", "Şifre sıfırlama kodunuz gönderildi.", null);
                     }

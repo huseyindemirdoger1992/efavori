@@ -89,6 +89,7 @@ namespace data
                 var optionsBuilder = new DbContextOptionsBuilder<_ApplicationConnectionDb>();
 
                 IConfigurationRoot configuration = new ConfigurationBuilder()
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                     .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../web"))
                     .AddJsonFile("appsettings.json", optional: false)
                     .Build();

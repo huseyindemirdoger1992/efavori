@@ -84,7 +84,7 @@ namespace razor._Shared.tr.Modals.Account
                 if (user.Password != password)
                 {
                     await LogFailedLoginAttempt(user.Id, userDetails, "Şifre hatalı");
-                    await ShowNotification("danger", "Hata", "Girilen bilgilere ait kullanıcı bulunamadı.", null);
+                    await ShowNotification("danger", "Hata", "E-posta ile girilen şifre eşleşmiyor.", null);
                     emailSender.SendLoginErrorInfoEmailAsync(user.Language, email);
                     return;
                 }

@@ -186,8 +186,69 @@
                     }
                     <div class="col-md-12 mb-3">
                         <label class="form-label text-white"><i class="fa fa-key"></i> Şifreniz </label>
-                        <input type="email" class="form-control bg-transparent text-white border-light-3" @bind="_user.Password">
+                        <input type="email" class="form-control bg-transparent text-white border-light-3" id="NewPasswordInput" @bind="_user.Password">
                     </div>
+                    <span style="margin-top:12px; display: block;">
+                        <p>Yeni şifreniz aşağıdaki kriterleri sağlamalıdır:</p>
+                        <ul id="password-criteria" style="list-style: none; padding-left: 0;">
+                            <li id="len"><span class="status-icon"></span> En az 8 karakter</li>
+                            <li id="upper"><span class="status-icon"></span> Büyük harf (A-Z)</li>
+                            <li id="lower"><span class="status-icon"></span> Küçük harf (a-z)</li>
+                            <li id="num"><span class="status-icon"></span> Rakam (0-9)</li>
+                            <li id="spec"><span class="status-icon"></span> Özel karakter (!, #, $, vb.)</li>
+                        </ul>
+                    </span>
+
+                    <style>
+                        /* Başlangıçta gri renk */
+                        #password-criteria li {
+                            color: #fff5f5;
+                            transition: all 0.3s ease;
+                        }
+
+                            /* Kural gerçekleşince yeşil renk */
+                            #password-criteria li.valid {
+                                color: #c7ffc8;
+                                font-weight: bold;
+                            }
+
+                                /* Tik işareti ekleme */
+                                #password-criteria li.valid .status-icon::before {
+                                    content: '✔ ';
+                                    margin-right: 5px;
+                                }
+                    </style>
+                    <script>
+                            document.getElementById('NewPasswordInput').addEventListener('input', function () {
+                            const password = this.value;
+
+                            const criteria = {
+                                len: password.length >= 8,
+                                upper: /[A-Z]/.test(password),
+                                lower: /[a-z]/.test(password),
+                                num: /[0-9]/.test(password),
+                                spec: /[!@@#$%^&*(),.?":{}|<>]/.test(password)
+                            };
+
+                            // Her bir kuralı kontrol et ve sınıfı güncelle
+                            Object.keys(criteria).forEach(key => {
+                                const element = document.getElementById(key);
+                                if (criteria[key]) {
+                                    element.classList.add('valid');
+                                } else {
+                                    element.classList.remove('valid');
+                                }
+                            });
+                        });
+                    </script>
+
+
+
+
+
+
+
+
                 </div>
             </div>
             <div class="modal-footer border-top border-secondary">

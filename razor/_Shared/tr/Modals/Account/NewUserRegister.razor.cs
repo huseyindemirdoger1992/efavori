@@ -234,138 +234,164 @@ namespace razor._Shared.tr.Modals.Account
                 return;
             }
 
-            // --- 2. VERİ HAZIRLAMA VE ÖN KONTROLLER ---
+            var validationResult = PasswordValidator.ValidatePassword(_user.Password);
 
-            TextualFunctions tf = new TextualFunctions();
-            var normalizedPhone = tf.NormalizePhoneNumberEditor(_UserPhoneNumber);
-
-            // Sponsor ve kullanıcı e-postası aynı mı?
-            if (!string.IsNullOrWhiteSpace(_Sponsored) && _UserEmail.Trim().ToLower() == _Sponsored.Trim().ToLower())
+            if (!validationResult.IsValid)
             {
-                await ShowNotification("danger", "Kayıt Hatası", "Kullanıcı e-posta adresi ile sponsor e-posta adresi aynı olamaz.", null);
+                await ShowNotification("danger", "Şifre Hataası", validationResult.Message, null);
                 await Task.Delay(4000);
                 Btn_isProcessing_01 = false;
                 return;
             }
 
-            try
+            // Şifre güç seviyesi
+            int strength = PasswordValidator.CalculatePasswordStrength(_user.Password);
+
+            // Çok zayıf şifre varsa uyar (opsiyonel)
+            if (strength < 60)
             {
+                await ShowNotification("warning", "Dikkat", $"Şifreniz zayıf gözüküyor.", null);
+                await Task.Delay(4000);
+                Btn_isProcessing_01 = false;
+                return;
+            }
+            else
+            {
+                // --- 2. VERİ HAZIRLAMA VE ÖN KONTROLLER ---
 
-                using var db = await DbFactory.CreateDbContextAsync();
+                TextualFunctions tf = new TextualFunctions();
+                var normalizedPhone = tf.NormalizePhoneNumberEditor(_UserPhoneNumber);
 
-                // --- 3. VERİTABANI ÇAKIŞMA KONTROLÜ ---
-
-                // Hem e-posta hem de telefon için benzersizlik kontrolü
-                var existingUser = await db.Users
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u =>
-                        u.ContactInformation != null &&
-                        (u.ContactInformation.Email.ToLower() == _UserEmail.ToLower() ||
-                         u.ContactInformation.PhoneNumber == normalizedPhone));
-
-                if (existingUser != null)
+                // Sponsor ve kullanıcı e-postası aynı mı?
+                if (!string.IsNullOrWhiteSpace(_Sponsored) && _UserEmail.Trim().ToLower() == _Sponsored.Trim().ToLower() && _user.UsersType == "Vendor")
                 {
-                    // Hangi verinin çakıştığını kullanıcıya daha net belirtmek isterseniz:
-                    string duplicateType = existingUser.ContactInformation.Email.ToLower() == _UserEmail.ToLower()
-                        ? "E-posta adresi"
-                        : "Telefon numarası";
-
-                    await ShowNotification("danger", "Mükerrer Kayıt", $"Bu {duplicateType} zaten sistemde kayıtlı.", null);
+                    await ShowNotification("danger", "Kayıt Hatası", "Kullanıcı e-posta adresi ile sponsor e-posta adresi aynı olamaz.", null);
                     await Task.Delay(4000);
                     Btn_isProcessing_01 = false;
                     return;
                 }
 
-                // --- 4. KAYIT İŞLEMİ ---
-
-                _user.ContactInformation = new ContactInformation
+                try
                 {
-                    CountryPhoneCode = _SelectedPhoneCode,
-                    PhoneNumber = normalizedPhone,
-                    Email = _UserEmail.Trim().ToLower()
-                };
 
-                _user.UserSponsorEmail = _Sponsored?.Trim().ToLower();
-                _user.HeaderMenuType = _user.UsersType;
-                _user.IsActive = true;
-                _user.RegistrationDate = DateTime.UtcNow;
-                _user.AccountActivationMailDeadline = DateTime.UtcNow.AddDays(3);
-                _user.AccountActivationMailStatu = false;
+                    using var db = await DbFactory.CreateDbContextAsync();
 
-                var attachments = new List<Attachment>();
+                    // --- 3. VERİTABANI ÇAKIŞMA KONTROLÜ ---
 
-                var details = UserInfos.GetCurrentUserDetails();
-                string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
-                string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
-                string displayDate = DateTime.UtcNow.ToString("dd MMMM yyyy HH:mm");
+                    // Hem e-posta hem de telefon için benzersizlik kontrolü
+                    var existingUser = await db.Users
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(u =>
+                            u.ContactInformation != null &&
+                            (u.ContactInformation.Email.ToLower() == _UserEmail.ToLower() ||
+                             u.ContactInformation.PhoneNumber == normalizedPhone));
 
-                #region Kayıt Emaili Gönderir
-                await emailSender.SendNewRegisterInfoEmailAsync(_user.Language, _user.ContactInformation.Email);
-                #endregion
+                    if (existingUser != null)
+                    {
+                        // Hangi verinin çakıştığını kullanıcıya daha net belirtmek isterseniz:
+                        string duplicateType = existingUser.ContactInformation.Email.ToLower() == _UserEmail.ToLower()
+                            ? "E-posta adresi"
+                            : "Telefon numarası";
 
-                db.Users.Add(_user);
-                await db.SaveChangesAsync();
+                        await ShowNotification("danger", "Mükerrer Kayıt", $"Bu {duplicateType} zaten sistemde kayıtlı.", null);
+                        await Task.Delay(4000);
+                        Btn_isProcessing_01 = false;
+                        return;
+                    }
 
-                // Başarılı işlem bildirimi
-                await ShowNotification("success", "İşlem Tamamlandı", "Kullanıcı kaydı başarıyla oluşturuldu.", null);
+                    // --- 4. KAYIT İŞLEMİ ---
+
+                    _user.ContactInformation = new ContactInformation
+                    {
+                        CountryPhoneCode = _SelectedPhoneCode,
+                        PhoneNumber = normalizedPhone,
+                        Email = _UserEmail.Trim().ToLower()
+                    };
+
+                    _user.UserSponsorEmail = _Sponsored?.Trim().ToLower();
+                    _user.HeaderMenuType = _user.UsersType;
+                    _user.IsActive = true;
+                    _user.RegistrationDate = DateTime.UtcNow;
+                    _user.AccountActivationMailDeadline = DateTime.UtcNow.AddDays(3);
+                    _user.AccountActivationMailStatu = false;
+
+                    var attachments = new List<Attachment>();
+
+                    var details = UserInfos.GetCurrentUserDetails();
+                    string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
+                    string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
+                    string displayDate = DateTime.UtcNow.ToString("dd MMMM yyyy HH:mm");
+
+                    #region Kayıt Emaili Gönderir
+                    await emailSender.SendNewRegisterInfoEmailAsync(_user.Language, _user.ContactInformation.Email);
+                    #endregion
+
+                    db.Users.Add(_user);
+                    await db.SaveChangesAsync();
+
+                    // Başarılı işlem bildirimi
+                    await ShowNotification("success", "İşlem Tamamlandı", "Kullanıcı kaydı başarıyla oluşturuldu.", null);
 
 
 
-                var userDetail = UserInfos.GetCurrentUserDetails();
-                var log = new Logs
-                {
-                    UserId = _user?.Id ?? null,
-                    PageNameSpaceTitle = "namespace razor._Shared.tr.Modals.Account",
-                    Action = "UserSave",
-                    IpAddress = userDetail.IpAddress,
-                    UserAgent = userDetail.UserAgent,
-                    RequestPath = userDetail.RequestPath,
-                    Languages = userDetail.Languages,
-                    Exception = null,
-                    StackTrace = null,
-                    Date = DateTime.UtcNow
-                };
-                db.Logs.Add(log);
-                await db.SaveChangesAsync();
+                    var userDetail = UserInfos.GetCurrentUserDetails();
+                    var log = new Logs
+                    {
+                        UserId = _user?.Id ?? null,
+                        PageNameSpaceTitle = "namespace razor._Shared.tr.Modals.Account",
+                        Action = "UserSave",
+                        IpAddress = userDetail.IpAddress,
+                        UserAgent = userDetail.UserAgent,
+                        RequestPath = userDetail.RequestPath,
+                        Languages = userDetail.Languages,
+                        Exception = null,
+                        StackTrace = null,
+                        Date = DateTime.UtcNow
+                    };
+                    db.Logs.Add(log);
+                    await db.SaveChangesAsync();
 
-                await Task.Delay(3000);
-                Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+                    await Task.Delay(3000);
+                    Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
 
-            }
-            catch (Exception ex)
-            {
-                // Kullanıcı ve istek detaylarını al
-                var userDetail = UserInfos.GetCurrentUserDetails();
-
-                // Hata detaylarını logla
-                var log = new Logs
-                {
-                    UserId = _user?.Id ?? null,
-                    PageNameSpaceTitle = "namespace razor._Shared.tr.Modals.Account",
-                    Action = "UserSave",
-                    IpAddress = userDetail.IpAddress,
-                    UserAgent = userDetail.UserAgent,
-                    RequestPath = userDetail.RequestPath,
-                    Languages = userDetail.Languages,
-                    Exception = ex.Message,
-                    StackTrace = ex.StackTrace,
-                    Date = DateTime.UtcNow
-                };
-
-                // Yeni bir context ile log kaydını ekle (db context dispose edilmiş olabilir)
-                using (var dbLog = await DbFactory.CreateDbContextAsync())
-                {
-                    dbLog.Logs.Add(log);
-                    await dbLog.SaveChangesAsync();
                 }
+                catch (Exception ex)
+                {
+                    // Kullanıcı ve istek detaylarını al
+                    var userDetail = UserInfos.GetCurrentUserDetails();
 
-                // Kullanıcıya hata bildirimi göster
-                await ShowNotification("danger", "Sistem Hatası", "Kayıt sırasında teknik bir hata oluştu. Lütfen tekrar deneyiniz.", null);
-            }
-            finally
-            {
-                await Task.Delay(4000);
-                Btn_isProcessing_01 = false;
+                    // Hata detaylarını logla
+                    var log = new Logs
+                    {
+                        UserId = _user?.Id ?? null,
+                        PageNameSpaceTitle = "namespace razor._Shared.tr.Modals.Account",
+                        Action = "UserSave",
+                        IpAddress = userDetail.IpAddress,
+                        UserAgent = userDetail.UserAgent,
+                        RequestPath = userDetail.RequestPath,
+                        Languages = userDetail.Languages,
+                        Exception = ex.Message,
+                        StackTrace = ex.StackTrace,
+                        Date = DateTime.UtcNow
+                    };
+
+                    // Yeni bir context ile log kaydını ekle (db context dispose edilmiş olabilir)
+                    using (var dbLog = await DbFactory.CreateDbContextAsync())
+                    {
+                        dbLog.Logs.Add(log);
+                        await Task.Delay(4000);
+                        Btn_isProcessing_01 = false;
+                        await dbLog.SaveChangesAsync();
+                    }
+
+                    // Kullanıcıya hata bildirimi göster
+                    await ShowNotification("danger", "Sistem Hatası", "Kayıt sırasında teknik bir hata oluştu. Lütfen tekrar deneyiniz.", null);
+                }
+                finally
+                {
+                    await Task.Delay(4000);
+                    Btn_isProcessing_01 = false;
+                }
             }
         }
     }

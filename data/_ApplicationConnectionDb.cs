@@ -108,7 +108,7 @@ namespace data
 
                 if (string.IsNullOrEmpty(connectionString))
                 {
-                    throw new Exception("Bağlantı cümlesi (ConnectionString) bulunamadı! Lütfen appsettings.json dosyasını kontrol edin.");
+                    throw new Exception("A (ConnectionString) error occurred! Please check the appsettings.json values.");
                 }
 
                 optionsBuilder.UseSqlServer(connectionString);

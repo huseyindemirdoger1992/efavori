@@ -3646,101 +3646,590 @@ namespace api.tr
         }
 
         // security@efavori.com | Şifre sıfırlama kodu  
-        public async Task SendAccountPasswordResetCodeInformationEmailAsync(string Culture, string Email)
+        public async Task SendAccountAccountPasswordResetMailCodeInformationEmailAsync(string Culture, string Email)
         {
             Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
-
-            // Generate a new password reset code
             use.AccountPasswordResetMailCode = Random.Shared.Next(100000, 999999);
             _context.Users.Update(use);
             await _context.SaveChangesAsync(_cts.Token);
 
             var attachments = new List<Attachment>();
+
             var details = _userInfos.GetCurrentUserDetails();
             string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
             string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
             string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
 
-            // Helper to generate the standardized HTML wrapper with localized content
-            string GetHtmlBody(string title, string description, string codeLabel, string infoTitle, string dateLabel, string ipLabel, string deviceLabel, string warning, string footer, string traceLabel)
+            if (Culture == "tr")
             {
-                return $@"
-        <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
-            <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-                <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
-            </div>
-            <div style='padding: 0 40px 30px 40px;'>
-                <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>{title}</h2>
-                <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>{description}</p>
-                <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
-                    <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>{codeLabel}</span>
-                    <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
-                </div>
-                <div style='border-top: 1px solid #eee; padding-top: 20px;'>
-                    <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>{infoTitle}</p>
-                    <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
-                        <tr>
-                            <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>{dateLabel}</td>
-                            <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
-                        </tr>
-                        <tr>
-                            <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>{ipLabel}</td>
-                            <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
-                        </tr>
-                        <tr>
-                            <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>{deviceLabel}</td>
-                            <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
-                        </tr>
-                    </table>
-                </div>
-                <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>{warning}</p>
-            </div>
-            <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
-                <p style='font-size: 10px; color: #bbb; margin: 0;'>{footer}<br>{traceLabel}: {details.TraceId}</p>
-            </div>
-        </div>";
+                // Şifre sıfırlama kodu ve güvenlik bilgilerini içeren mail içeriği
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Şifre Sıfırlama</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Şifrenizi sıfırlamak için aşağıdaki kodu kullanın.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Şifre Sıfırlama Kodunuz</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Güvenlik Uyarısı</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>Bu işlemi siz yapmadıysanız, lütfen derhal şifrenizi değiştirin ve hesabınızı güvenceye alın.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>İşlem Bilgileri</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Tarih</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Adresi</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Cihaz</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Bu kodun süresi 3 dakika geçerlidir. Kod yalnızca bir kez kullanılabilir.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Bu mail otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+            <br>İşlem Kayıt No: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Şifre Sıfırlama Kodunuz", emailBody, attachments);
             }
-
-            string body = "";
-            string subject = "";
-
-            switch (Culture.ToLower())
+            if (Culture == "en")
             {
-                case "tr":
-                    subject = $"{use.AccountPasswordResetMailCode} - Şifre Sıfırlama Kodunuz";
-                    body = GetHtmlBody("Şifre Sıfırlama", "Şifrenizi sıfırlamak için aşağıdaki kodu kullanın.", "Sıfırlama Kodunuz", "İşlem Bilgileri", "Tarih", "IP Adresi", "Cihaz", "Bu kod 3 dakika geçerlidir. İşlemi siz yapmadıysanız hesabınızı güvenceye alın.", "Bu mail otomatik gönderilmiştir. Lütfen yanıtlamayınız.", "İşlem Kayıt No");
-                    break;
-                case "en":
-                    subject = $"{use.AccountPasswordResetMailCode} - Your Password Reset Code";
-                    body = GetHtmlBody("Password Reset", "Please use the code below to reset your password.", "Your Reset Code", "Transaction Details", "Date", "IP Address", "Device", "This code is valid for 3 minutes. If you didn't request this, please secure your account.", "This is an automated email. Please do not reply.", "Trace ID");
-                    break;
-                case "az":
-                    subject = $"{use.AccountPasswordResetMailCode} - Şifrə Sıfırlama Kodunuz";
-                    body = GetHtmlBody("Şifrə Sıfırlama", "Şifrənizi sıfırlamaq üçün aşağıdakı kodu istifadə edin.", "Sıfırlama Kodunuz", "Əməliyyat Məlumatları", "Tarix", "IP Ünvanı", "Cihaz", "Bu kod 3 dəqiqə etibarlıdır. Əgər siz etməmisinizsə, hesabınızı qoruyun.", "Bu e-poçt avtomatik göndərilib. Lütfən cavab yazmayın.", "Əməliyyat nömrəsi");
-                    break;
-                case "de":
-                    subject = $"{use.AccountPasswordResetMailCode} - Ihr Passwort-Rücksetzcode";
-                    body = GetHtmlBody("Passwort zurücksetzen", "Verwenden Sie den Code, um Ihr Passwort zurückzusetzen.", "Ihr Rücksetzcode", "Transaktionsdetails", "Datum", "IP-Adresse", "Gerät", "Code 3 Min. gültig. Falls nicht angefordert, Konto sichern.", "Automatisch generierte E-Mail. Bitte nicht antworten.", "Trace-ID");
-                    break;
-                case "es":
-                    subject = $"{use.AccountPasswordResetMailCode} - Su código de restablecimiento";
-                    body = GetHtmlBody("Restablecer Contraseña", "Use el código para restablecer su contraseña.", "Su Código", "Información de la Operación", "Fecha", "Dirección IP", "Dispositivo", "Válido por 3 minutos. Si no fue usted, asegure su cuenta.", "Correo automático. No responda.", "ID de Seguimiento");
-                    break;
-                case "fr":
-                    subject = $"{use.AccountPasswordResetMailCode} - Votre code de réinitialisation";
-                    body = GetHtmlBody("Réinitialisation de mot de passe", "Utilisez ce code pour réinitialiser votre mot de passe.", "Votre Code", "Infos Transaction", "Date", "Adresse IP", "Appareil", "Valable 3 minutes. Si ce n'est pas vous, sécurisez votre compte.", "Message automatique. Ne pas répondre.", "ID de suivi");
-                    break;
-                case "ru":
-                    subject = $"{use.AccountPasswordResetMailCode} - Код сброса пароля";
-                    body = GetHtmlBody("Сброс пароля", "Используйте код ниже для сброса пароля.", "Ваш код", "Детали транзакции", "Дата", "IP-адрес", "Устройство", "Код действителен 3 минуты. Если это не вы, защитите аккаунт.", "Автоматическое письмо. Не отвечайте.", "Trace ID");
-                    break;
-                default: // Fallback to English
-                    subject = $"{use.AccountPasswordResetMailCode} - Your Password Reset Code";
-                    body = GetHtmlBody("Password Reset", "Please use the code below to reset your password.", "Your Reset Code", "Transaction Details", "Date", "IP Address", "Device", "This code is valid for 3 minutes. If you didn't request this, please secure your account.", "This is an automated email. Please do not reply.", "Trace ID");
-                    break;
-            }
+                // Password reset code and security information email content
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
 
-            await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, subject, body, attachments);
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Password Reset</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Use the code below to reset your password.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Your Password Reset Code</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Security Warning</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>If you did not request this, please change your password immediately and secure your account.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Transaction Details</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Date</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Address</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Device</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            This code is valid for 3 minutes. The code can only be used once.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            This is an automated email. Please do not reply.
+            <br>Trace ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Your Password Reset Code", emailBody, attachments);
+            }
+            if (Culture == "az")
+            {
+                // Şifrə sıfırlama kodu və təhlükəsizlik məlumatlarını ehtiva edən mail məzmunu
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Şifrə Sıfırlama</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Şifrənizi sıfırlamaq üçün aşağıdakı kodu istifadə edin.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Şifrə Sıfırlama Kodunuz</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Təhlükəsizlik Xəbərdarlığı</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>Bu əməliyyatı siz etməmisinizsə, lütfən dərhal şifrənizi dəyişdirin və hesabınızın təhlükəsizliyini təmin edin.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Əməliyyat Məlumatları</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Tarix</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP Ünvanı</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Cihaz</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Bu kodun etibarlılıq müddəti 3 dəqiqədir. Kod yalnız bir dəfə istifadə edilə bilər.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Bu e-poçt avtomatik olaraq göndərilib. Lütfən cavab yazmayın.
+            <br>Əməliyyat nömrəsi: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Şifrə Sıfırlama Kodunuz", emailBody, attachments);
+            }
+            if (Culture == "de")
+            {
+                // E-Mail-Inhalt mit Passwort-Zurücksetzungscode und Sicherheitsinformationen
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Passwort Zurücksetzen</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Verwenden Sie den folgenden Code, um Ihr Passwort zurückzusetzen.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ihr Code zum Zurücksetzen</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Sicherheitswarnung</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>Wenn Sie diese Anfrage nicht gestellt haben, ändern Sie bitte sofort Ihr Passwort und sichern Sie Ihr Konto.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Transaktionsdetails</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Datum</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP-Adresse</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Gerät</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Dieser Code ist 3 Minuten lang gültig. Der Code kann nur einmal verwendet werden.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Dies ist eine automatisch generierte E-Mail. Bitte antworten Sie nicht darauf.
+            <br>Trace-ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Ihr Code zum Passwort zurücksetzen", emailBody, attachments);
+            }
+            if (Culture == "es")
+            {
+                // Contenido del correo con código de restablecimiento de contraseña e información de seguridad
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Restablecer Contraseña</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Utilice el siguiente código para restablecer su contraseña.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Su Código de Restablecimiento</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Advertencia de Seguridad</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>Si no solicitó esto, cambie su contraseña inmediatamente y asegure su cuenta.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Información de la Operación</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Fecha</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Dirección IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Dispositivo</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Este código es válido por 3 minutos. El código solo se puede usar una vez.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Este correo ha sido enviado automáticamente. Por favor, no responda.
+            <br>ID de Seguimiento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Su código de restablecimiento de contraseña", emailBody, attachments);
+            }
+            if (Culture == "fr")
+            {
+                // Contenu de l'e-mail avec code de réinitialisation de mot de passe et informations de sécurité
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Réinitialisation du Mot de Passe</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Utilisez le code ci-dessous pour réinitialiser votre mot de passe.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Votre Code de Réinitialisation</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Avertissement de Sécurité</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>Si vous n'êtes pas à l'origine de cette demande, changez immédiatement votre mot de passe et sécurisez votre compte.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Informations sur la Transaction</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Date</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Adresse IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Appareil</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Ce code est valable pendant 3 minutes. Le code ne peut être utilisé qu'une seule fois.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Ceci est un message automatique. Veuillez ne pas y répondre.
+            <br>ID de suivi : {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Votre code de réinitialisation de mot de passe", emailBody, attachments);
+            }
+            if (Culture == "hi")
+            {
+                // पासवर्ड रीसेट कोड और सुरक्षा जानकारी वाला ईमेल विषय वस्तु
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>पासवर्ड रीसेट</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>अपना पासवर्ड रीसेट करने के लिए नीचे दिए गए कोड का उपयोग करें।</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>आपका रीसेट कोड</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ सुरक्षा चेतावनी</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>यदि आपने यह अनुरोध नहीं किया है, तो कृपया तुरंत अपना पासवर्ड बदलें और अपने खाते को सुरक्षित करें।</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>लेनदेन की जानकारी</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>दिनांक</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>आईपी पता</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>डिवाइस</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            यह कोड 3 मिनट के लिए वैध है। कोड का उपयोग केवल एक बार किया जा सकता है।
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            यह ईमेल स्वचालित रूप से भेजा गया है। कृपया इसका उत्तर न दें।
+            <br>ट्रेस आईडी: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - आपका पासवर्ड रीसेट कोड", emailBody, attachments);
+            }
+            if (Culture == "pt")
+            {
+                // Conteúdo do e-mail com código de redefinição de senha e informações de segurança
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Redefinição de Senha</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Utilize o código abaixo para redefinir sua senha.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Seu Código de Redefinição</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Aviso de Segurança</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>Se você não solicitou esta operação, altere sua senha imediatamente e proteja sua conta.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Informações da Operação</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Data</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Endereço IP</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Dispositivo</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Este código é válido por 3 minutos. O código só pode ser usado uma vez.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Este e-mail foi enviado automaticamente. Por favor, não responda.
+            <br>ID da Transação: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Seu Código de Redefinição de Senha", emailBody, attachments);
+            }
+            if (Culture == "ru")
+            {
+                // Содержимое письма с кодом сброса пароля и информацией о безопасности
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>Сброс Пароля</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>Используйте приведенный ниже код для сброса вашего пароля.</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ваш код сброса пароля</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ Предупреждение о Безопасности</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>Если вы не запрашивали это, немедленно измените свой пароль и обезопасьте свой аккаунт.</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>Информация о транзакции</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>Дата</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP-адрес</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>Устройство</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            Этот код действителен в течение 3 минут. Код можно использовать только один раз.
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            Это письмо отправлено автоматически. Пожалуйста, не отвечайте на него.
+            <br>ID транзакции: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Ваш код сброса пароля", emailBody, attachments);
+            }
+            if (Culture == "zh")
+            {
+                // 包含密码重置代码和安全信息的邮件内容
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #c62828; font-size: 20px; font-weight: 600; margin-bottom: 10px; text-align: center;'>密码重置</h2>
+        <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>请使用以下代码重置您的密码。</p>
+        
+        <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
+            <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>您的重置代码</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+        </div>
+
+        <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
+            <p style='font-size: 12px; color: #e65100; margin: 0; font-weight: 600;'>⚠️ 安全警告</p>
+            <p style='font-size: 11px; color: #bf360c; margin: 5px 0 0 0;'>如果这不是您的操作，请立即更改密码并保护您的账户。</p>
+        </div>
+
+        <div style='border-top: 1px solid #eee; padding-top: 20px;'>
+            <p style='font-size: 12px; font-weight: bold; color: #888; margin-bottom: 10px; text-transform: uppercase;'>交易信息</p>
+            <table style='width: 100%; border-collapse: collapse; background-color: #fcfcfc; border-radius: 6px;'>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>日期</td>
+                    <td style='padding: 8px 12px; font-size: 12px; color: #444; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px; border-bottom: 1px solid #f0f0f0;'>IP 地址</td>
+                    <td style='padding: 8px 12px; font-size: 12px; font-family: monospace; color: #444; border-bottom: 1px solid #f0f0f0;'>{safeIp}</td>
+                </tr>
+                <tr>
+                    <td style='padding: 8px 12px; font-weight: 600; color: #666; font-size: 12px;'>设备</td>
+                    <td style='padding: 8px 12px; font-size: 11px; color: #444;'>{safeDevice}</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style='font-size: 12px; color: #999; text-align: center; margin-top: 25px;'>
+            此代码在 3 分钟内有效。代码只能使用一次。
+        </p>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 10px; color: #bbb; margin: 0;'>
+            这是一封自动发送的电子邮件，请勿回复。
+            <br>追踪 ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+
+                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - 您的密码重置代码", emailBody, attachments);
+            }
         }
     }
 }

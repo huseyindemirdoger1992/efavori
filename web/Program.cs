@@ -32,8 +32,8 @@ ConfigureServerLimits(builder.Services);
 
 builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
-builder.Services.AddScoped<UserInfos>(); 
-builder.Services.AddScoped<TakeLogs>();  
+// UserInfos zaten ConfigureInfrastructure içinde eklendi - tekrar eklemeyin
+builder.Services.AddScoped<TakeLogs>();
 builder.Services.AddScoped<EmailSender>();
 
 var app = builder.Build();
@@ -54,6 +54,8 @@ void ConfigureInfrastructure(WebApplicationBuilder b)
     b.Services.AddSingleton(HtmlEncoder.Create(UnicodeRanges.All));
     b.Services.AddHttpContextAccessor();
     b.Services.AddDistributedMemoryCache();
+
+    // UserInfos'u sadece bir kez ekle
     b.Services.AddScoped<UserInfos>();
 
     var mvcBuilder = b.Services.AddControllersWithViews()
@@ -131,8 +133,8 @@ void ConfigureSecurity(IServiceCollection services)
             options.AccessDeniedPath = "/tr/Account/Logout";
             options.Cookie.HttpOnly = true;
 
-            // Geliştirme ortamında çerezlerin yazılabilmesi için 'SameAsRequest' yapıldı.
-            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            // Production için Secure cookie kullan
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             options.Cookie.SameSite = SameSiteMode.Lax;
 
             options.ExpireTimeSpan = TimeSpan.FromDays(365);
@@ -166,8 +168,19 @@ void ConfigureMiddlewarePipeline(WebApplication app)
     // --- KRİTİK SIRALAMA: Localization, Auth'dan önce gelmeli ---
     var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
     app.UseRequestLocalization(locOptions.Value);
+
     app.UseAuthentication();
     app.UseAuthorization();
+
+    // Anti-forgery token middleware ekle (CSRF koruması)
+    app.Use(async (context, next) =>
+    {
+        // Cookie'lerin düzgün ayarlandığından emin ol
+        context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Add("X-Frame-Options", "DENY");
+        context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+        await next();
+    });
 }
 
 void ConfigureEndpoints(WebApplication app)

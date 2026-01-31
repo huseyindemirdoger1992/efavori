@@ -9,56 +9,61 @@ using Microsoft.EntityFrameworkCore;
 
 namespace web.Account.Controllers
 {
-    // Rota tanımını netleştirdik, [controller] kullanımı esneklik sağlar
     [Route("{culture}/Account/[action]")]
     public class AccountController : Controller
     {
         private readonly _ApplicationConnectionDb _db;
-        private readonly UserInfos _userInfos; // 1. UserInfos servisi
-        private readonly EmailSender emailSender; // 2. EmailSender servisi
+        private readonly UserInfos _userInfos;
+        private readonly EmailSender _emailSender;
+        private readonly ILogger<AccountController> _logger;
 
-        // 3. Constructor'a servisleri ekleyin
-        public AccountController(_ApplicationConnectionDb db, UserInfos userInfos, EmailSender _emailSender)
+        public AccountController(
+            _ApplicationConnectionDb db,
+            UserInfos userInfos,
+            EmailSender emailSender,
+            ILogger<AccountController> logger)
         {
             _db = db;
             _userInfos = userInfos;
-            emailSender = _emailSender;
+            _emailSender = emailSender;
+            _logger = logger;
         }
 
         [HttpPost]
         [IgnoreAntiforgeryToken]
-        // JSON (Fetch/Axios) ile çağrılacağı için
         public async Task<IActionResult> Login([FromForm] LoginRequest model, string culture = "en")
         {
-            var userDetails = _userInfos.GetCurrentUserDetails();
-
             try
             {
                 // 1. Temel Kontroller
                 if (model == null || string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Password))
                 {
+                    _logger.LogWarning("Login attempt with missing email or password");
                     return BadRequest(new { message = "E-posta ve şifre zorunludur." });
                 }
 
-                // 2. Kullanıcı Sorgulama (AsNoTracking performansı artırır)
+                // 2. Kullanıcı Sorgulama
                 var user = await _db.Users
                     .AsNoTracking()
                     .Include(u => u.ContactInformation)
                     .FirstOrDefaultAsync(u => u.ContactInformation.Email == model.Email);
 
-                // 3. Doğrulama (Not: Şifreleme/Hashing kullanmanı şiddetle öneririm)
+                // 3. Doğrulama
                 if (user == null)
                 {
+                    _logger.LogWarning("Login attempt for non-existent email: {Email}", model.Email);
                     return Unauthorized(new { message = "E-posta veya şifre hatalı." });
                 }
 
                 if (user.Password != model.Password)
                 {
+                    _logger.LogWarning("Failed login attempt for email: {Email}", model.Email);
                     return Unauthorized(new { message = "E-posta veya şifre hatalı." });
                 }
 
                 if (user.IsActive != true)
                 {
+                    _logger.LogWarning("Login attempt for inactive user: {Email}", model.Email);
                     return Unauthorized(new { message = "Hesabınız aktif değil." });
                 }
 
@@ -69,7 +74,7 @@ namespace web.Account.Controllers
                     new Claim(ClaimTypes.Email, user.ContactInformation.Email ?? ""),
                     new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
                     new Claim(ClaimTypes.Role, user.UsersType ?? "Customer"),
-                    new Claim("LastLogin", DateTime.UtcNow.ToString())
+                    new Claim("LastLogin", DateTime.UtcNow.ToString("o"))
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -77,7 +82,7 @@ namespace web.Account.Controllers
                 // 5. Auth Özellikleri
                 var authProperties = new AuthenticationProperties
                 {
-                    IsPersistent = true, // "Beni Hatırla" aktif
+                    IsPersistent = true,
                     ExpiresUtc = DateTimeOffset.UtcNow.AddYears(1),
                     AllowRefresh = true,
                     IssuedUtc = DateTimeOffset.UtcNow
@@ -89,52 +94,104 @@ namespace web.Account.Controllers
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties);
 
-                culture = (user.Language != null) ? user.Language : "en";
+                culture = !string.IsNullOrEmpty(user.Language) ? user.Language : "en";
 
-                // 7. Giriş bilgileri e-postası gönder
-                await emailSender.SendLoginInfoEmailAsync(culture, model.Email);
+                _logger.LogInformation("User logged in successfully: {Email}", model.Email);
 
-                // 8. Başarılı Yanıt ve Yönlendirme URL'i dönüyoruz
+                // 7. E-posta gönderme işlemini arka planda yap (hata olsa bile login'i engellemesin)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _emailSender.SendLoginInfoEmailAsync(culture, model.Email);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send login email to {Email}", model.Email);
+                    }
+                });
+
+                // 8. Başarılı Yanıt
                 return Redirect($"/{culture}/Customer/Home/Index");
+            }
+            catch (DbUpdateException dbEx)
+            {
+                _logger.LogError(dbEx, "Database error during login for email: {Email}", model?.Email ?? "unknown");
+                return StatusCode(500, new { message = "Veritabanı hatası oluştu. Lütfen daha sonra tekrar deneyiniz." });
             }
             catch (Exception ex)
             {
-                // Hata loglaması
-                await LogException(ex, userDetails, "Login");
+                _logger.LogError(ex, "Unexpected error during login for email: {Email}", model?.Email ?? "unknown");
+
+                // Kullanıcı bilgilerini güvenli şekilde al
+                UserDetail? userDetails = null;
+                try
+                {
+                    userDetails = _userInfos.GetCurrentUserDetails();
+                }
+                catch (Exception userInfoEx)
+                {
+                    _logger.LogError(userInfoEx, "Failed to get user details for logging");
+                }
+
+                // Log kaydı yap
+                if (userDetails != null)
+                {
+                    await LogException(ex, userDetails, "Login");
+                }
+
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyiniz." });
             }
         }
 
-        [HttpGet, HttpPost] // Her iki yöntemi de desteklesin
+        [HttpGet, HttpPost]
         public async Task<IActionResult> Logout(string culture = "en")
         {
-            var userDetails = _userInfos.GetCurrentUserDetails();
-
             try
             {
-                // Oturum kapatmadan önce kullanıcı bilgisini al
-                var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+                // Kullanıcı bilgisini al
+                var userEmail = User?.FindFirst(ClaimTypes.Email)?.Value;
+                var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                _logger.LogInformation("User logging out: {Email}", userEmail ?? "unknown");
 
                 // Oturumu kapat
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
-                // Logout e-postası gönder
+                // Logout e-postası gönder (arka planda)
                 if (!string.IsNullOrWhiteSpace(userEmail))
                 {
-                    await emailSender.SendLogOutInfoEmailAsync(culture, userEmail);
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _emailSender.SendLogOutInfoEmailAsync(culture, userEmail);
+                        }
+                        catch (Exception emailEx)
+                        {
+                            _logger.LogError(emailEx, "Failed to send logout email to {Email}", userEmail);
+                        }
+                    });
                 }
 
-                return Redirect($"/{culture}/Customer/Home/Index"); // Ana sayfaya dön
+                return Redirect($"/{culture}/Customer/Home/Index");
             }
             catch (Exception ex)
             {
-                // Hata loglaması
-                await LogException(ex, userDetails, "Logout");
-                return StatusCode(500, new { message = "Çıkış sırasında bir hata oluştu." });
+                _logger.LogError(ex, "Error during logout");
+
+                // Hata olsa bile logout yapsın
+                try
+                {
+                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                }
+                catch { }
+
+                return Redirect($"/{culture}/Customer/Home/Index");
             }
         }
 
-        #region Hata Logları (Logs)
+        #region Hata Logları
 
         private async Task LogException(Exception ex, UserDetail userDetails, string action)
         {
@@ -160,7 +217,7 @@ namespace web.Account.Controllers
             }
             catch (Exception logEx)
             {
-                System.Diagnostics.Debug.WriteLine($"Hata loglama başarısız: {logEx.Message}");
+                _logger.LogError(logEx, "Failed to write exception log to database");
             }
         }
 
@@ -168,14 +225,20 @@ namespace web.Account.Controllers
 
         #region Yardımcı Metodlar
 
-        /// <summary>
-        /// Mevcut kullanıcının ID'sini veya null'ı döndürür
-        /// </summary>
         private Guid? GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (Guid.TryParse(userIdClaim, out var userId))
-                return userId;
+            try
+            {
+                var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out var userId))
+                {
+                    return userId;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get current user ID");
+            }
 
             return null;
         }
@@ -183,10 +246,9 @@ namespace web.Account.Controllers
         #endregion
     }
 
-    // Login isteği için yardımcı sınıf
     public class LoginRequest
     {
-        public string Email { get; set; }
-        public string Password { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

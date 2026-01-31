@@ -2,7 +2,7 @@
 using System;
 using System.Linq;
 
-namespace api
+namespace api.tr
 {
     public class UserInfos
     {

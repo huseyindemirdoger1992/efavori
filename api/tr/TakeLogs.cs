@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading.Tasks;
 
-namespace api
+namespace api.tr
 {
     public class TakeLogs
     {

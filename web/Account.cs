@@ -1,6 +1,6 @@
 ﻿using System.Net.Mail;
 using System.Security.Claims;
-using api;
+using api.tr;
 using data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;

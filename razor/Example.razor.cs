@@ -1,4 +1,4 @@
-﻿using api;
+﻿using api.tr;
 using data;
 using Data;
 using Microsoft.AspNetCore.Components;

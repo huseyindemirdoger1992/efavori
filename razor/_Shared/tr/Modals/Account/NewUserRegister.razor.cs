@@ -1,4 +1,4 @@
-﻿using api;
+﻿using api.tr;
 using data;
 using data._Shared;
 using Microsoft.AspNetCore.Components;

@@ -1,4 +1,4 @@
-﻿using api;
+﻿using api.tr;
 using data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
@@ -160,29 +160,24 @@ namespace razor._Shared.tr.Modals.Account
         // ------------------------------------------------------- Crud Actions -------------------------------------------------------
 
         #region Data Operations
-
-        protected List<Country>? Country_;
-        protected List<Users>? Users_;
-        protected Users? _Users;
-
         protected virtual async Task LoadData()
         {
             try
             {
-                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                //await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-                Country_ = await db.Country
-                    .AsNoTracking()
-                    .ToListAsync(_cts.Token);
+                //Country_ = await db.Country
+                //    .AsNoTracking()
+                //    .ToListAsync(_cts.Token);
 
-                Users_ = await db.Users
-                    .AsNoTracking()
-                    .Where(x => x.FirstName == "Deneme" && x.LastName == "Test")
-                    .ToListAsync(_cts.Token);
+                //Users_ = await db.Users
+                //    .AsNoTracking()
+                //    .Where(x => x.FirstName == "Deneme" && x.LastName == "Test")
+                //    .ToListAsync(_cts.Token);
 
-                _Users = await db.Users
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.FirstName == "Deneme" && x.LastName == "Test", _cts.Token);
+                //use = await db.Users
+                //    .AsNoTracking()
+                //    .FirstOrDefaultAsync(x => x.FirstName == "Deneme" && x.LastName == "Test", _cts.Token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -191,31 +186,32 @@ namespace razor._Shared.tr.Modals.Account
             }
         }
 
-        protected string? EmailResPas = null;
+        protected string? ResetPassEmailAddress = null;
         protected bool? IsSendRessPassCode = false;
-        protected string? RessPassCode = null;
+
+        // Şifre Sıfırlama Kodu Maili Gönder
         protected async Task Action()
         {
             await ExecuteWithLock(nameof(Action), async () =>
             {
-                if (string.IsNullOrEmpty(EmailResPas))
+                if (string.IsNullOrEmpty(ResetPassEmailAddress))
                 {
                     await ShowNotification("danger", "Hata", $"E-posta alanını boş geçemezsiniz.", null);
                 }
                 else
                 {
                     await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-                    _Users = await db.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == EmailResPas, _cts.Token);
-                    if (_Users != null && !string.IsNullOrWhiteSpace(EmailResPas))
+                    use = await db.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == ResetPassEmailAddress, _cts.Token);
+                    if (use != null && !string.IsNullOrWhiteSpace(ResetPassEmailAddress))
                     {
                         // Use injected EmailSender (constructed by DI) instead of creating a new instance
-                        await ApiEmailSender.SendAccountPasswordResetCodeInformationEmailAsync(_Users.Language ?? "en", EmailResPas);
-                        IsSendRessPassCode = true;                        
+                        await ApiEmailSender.SendAccountPasswordResetCodeInformationEmailAsync(use.Language ?? "en", ResetPassEmailAddress);
+                        IsSendRessPassCode = true;
                         await ShowNotification("success", "Action", "Şifre sıfırlama kodunuz gönderildi.", null);
                     }
                     else
                     {
-                        await ShowNotification("danger", "Action", $"{EmailResPas} kullanıcısı kayıtlı değil.", null);
+                        await ShowNotification("danger", "Action", $"{ResetPassEmailAddress} kullanıcısı kayıtlı değil.", null);
                     }
                     await Task.Delay(500, _cts.Token);
                     await LoadData();
@@ -223,24 +219,92 @@ namespace razor._Shared.tr.Modals.Account
 
             });
         }
+
+        protected int? RessPassCode = null;
+        protected bool? IsResPasCodeOk = false;
+
+        // Şifre Sıfırlama Mail Kodunu Doğrula
         protected async Task UserResPasCodeIsOk()
         {
-            await ExecuteWithLock(nameof(UserResPasCodeIsOk), async () =>
-            {
-                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-                _Users = await db.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == EmailResPas, _cts.Token);
-                if (_Users != null && !string.IsNullOrWhiteSpace(EmailResPas))
-                {
 
+            await using var Updatedb = await DbFactory.CreateDbContextAsync(_cts.Token);
+            Users UpdateUse = await Updatedb.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == ResetPassEmailAddress, _cts.Token);
+            if (UpdateUse != null && !string.IsNullOrWhiteSpace(ResetPassEmailAddress))
+            {
+                try
+                {
+                    if (UpdateUse.AccountPasswordResetMailCode == RessPassCode)
+                    {
+                        await ShowNotification("success", "Durum", $"Şifre sıfırlama kodunuz eşleşti.", null);
+                        IsResPasCodeOk = true;
+                    }
+                    else
+                    {
+                        await ShowNotification("danger", "Hata", $"Şifre sıfırlama kodunuz eşleşmedi.", null);
+                    }
+                }
+                catch
+                {
+                    await ShowNotification("danger", "Hata", $"Lütfen geçerli bir değergirin", null);
+                }
+            }
+            else
+            {
+                await ShowNotification("danger", "Action", $"{ResetPassEmailAddress} kullanıcısı kayıtlı değil.", null);
+            }
+            await Task.Delay(500, _cts.Token);
+            await LoadData();
+        }
+
+
+        protected string? NewPassword = null;
+
+        // Şifre güç seviyesi
+        protected int strength = 0;
+        protected string strengthLabel = "";
+
+        protected async Task UserResPasCodeIsOkAction()
+        {
+            await using var _db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            use = await _db.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == ResetPassEmailAddress, _cts.Token);
+            if (use != null && !string.IsNullOrWhiteSpace(ResetPassEmailAddress))
+            {
+                var validationResult = PasswordValidator.ValidatePassword(NewPassword);
+                if (!validationResult.IsValid)
+                {
+                    await ShowNotification("danger", "Şifre Hataası", validationResult.Message, null);
+                    return;
+                }
+
+                // Şifre güç seviyesi
+                strength = PasswordValidator.CalculatePasswordStrength(NewPassword);
+                strengthLabel = PasswordValidator.GetPasswordStrengthLabel(strength);
+
+                // Çok zayıf şifre varsa uyar (opsiyonel)
+                if (strength < 60)
+                {
+                    await ShowNotification("warning", "Dikkat", $"Şifreniz zayıf gözüküyor.", null);
                 }
                 else
                 {
-                    await ShowNotification("danger", "Action", $"{EmailResPas} kullanıcısı kayıtlı değil.", null);
+                    // Şifreyi güncelle
+                    use.Password = NewPassword;
+                    use.AccountPasswordResetMailCode = 0; // Sıfırlama kodunu temizle
+                    _db.Users.Update(use);
+                    await _db.SaveChangesAsync(_cts.Token);
+                    await ShowNotification("success", "Başarılı", "Şifreniz başarıyla güncellendi.", null);
+                    await Task.Delay(3000);
+                    Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
                 }
-                await Task.Delay(500, _cts.Token);
-                await LoadData();
-            });
+            }
+            else
+            {
+                await ShowNotification("danger", "Action", $"{ResetPassEmailAddress} kullanıcısı kayıtlı değil.", null);
+            }
+            await Task.Delay(500, _cts.Token);
+            await LoadData();
         }
+
         #endregion
 
     }

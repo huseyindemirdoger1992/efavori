@@ -1,4 +1,4 @@
-﻿using api;
+﻿using api.tr;
 using data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;

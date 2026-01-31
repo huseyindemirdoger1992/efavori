@@ -7,7 +7,7 @@ using System.IO;
 using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks;
 
-namespace api
+namespace api.tr
 {
     /// <summary>
     /// Medya işleme operasyonlarını yüksek performans ve detaylı izlenebilirlik ile yönetir.

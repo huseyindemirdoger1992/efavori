@@ -11,7 +11,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace api
+namespace api.tr
 {
     public class EmailSender
     {

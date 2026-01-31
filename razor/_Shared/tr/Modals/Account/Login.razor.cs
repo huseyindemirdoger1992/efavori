@@ -2,7 +2,7 @@
 using System.Net.Http.Json;
 using System.Net.Mail;
 using System.Threading.Tasks;
-using api;
+using api.tr;
 using data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;

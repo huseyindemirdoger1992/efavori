@@ -1,4 +1,4 @@
-﻿using api;
+﻿using api.tr;
 using data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;

@@ -10,6 +10,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\documents\rss.xml" />
+	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\others\rss.xml" />
+	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\pictures\rss.xml" />
+	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\videos\rss.xml" />
+	  <Content Include="files\xml\sitemap\rss.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.2" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />

@@ -12,9 +12,18 @@ using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+
+// ============================================================================
+// STARTUP ERROR HANDLING - Production Resilient
+// ============================================================================
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+
+    // ============================================================================
+    // CRITICAL: Validate Configuration Before Startup
+    // ============================================================================
+    ValidateConfiguration(builder.Configuration);
 
     // --- 1. Altyapı ve Kodlama Ayarları ---
     ConfigureInfrastructure(builder);
@@ -32,12 +41,15 @@ try
     ConfigureServerLimits(builder.Services);
 
     builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
-
-    // UserInfos zaten ConfigureInfrastructure içinde eklendi - tekrar eklemeyin
     builder.Services.AddScoped<TakeLogs>();
     builder.Services.AddScoped<EmailSender>();
 
     var app = builder.Build();
+
+    // ============================================================================
+    // CRITICAL: Validate Database Connection at Startup
+    // ============================================================================
+    await ValidateDatabaseConnection(app);
 
     // --- 6. Middleware Pipeline (Sıralama Düzenlendi) ---
     ConfigureMiddlewarePipeline(app);
@@ -46,17 +58,84 @@ try
     ConfigureEndpoints(app);
     app.MapControllers();
 
+    Console.WriteLine("✓ Application started successfully");
     app.Run();
 
     #region Configuration Methods
+
+    void ValidateConfiguration(IConfiguration config)
+    {
+        Console.WriteLine("=== Validating Configuration ===");
+
+        var connString = config.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connString))
+        {
+            throw new InvalidOperationException(
+                "FATAL ERROR: Connection string 'DefaultConnection' not found in appsettings.json. " +
+                "Please ensure appsettings.json exists and contains valid connection string.");
+        }
+
+        // Validate connection string format
+        if (!connString.Contains("Server=") || !connString.Contains("Database="))
+        {
+            throw new InvalidOperationException(
+                "FATAL ERROR: Invalid connection string format. " +
+                $"Current: {connString.Substring(0, Math.Min(50, connString.Length))}...");
+        }
+
+        Console.WriteLine("✓ Configuration validated");
+    }
+
+    async Task ValidateDatabaseConnection(WebApplication app)
+    {
+        Console.WriteLine("=== Validating Database Connection ===");
+
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+
+            // Test connection with timeout
+            var canConnect = await dbContext.Database.CanConnectAsync();
+
+            if (!canConnect)
+            {
+                Console.WriteLine("⚠ WARNING: Cannot connect to database. Application will start but database operations may fail.");
+                Console.WriteLine("⚠ Please check:");
+                Console.WriteLine("  1. SQL Server is running and accessible");
+                Console.WriteLine("  2. Firewall allows connection to port 1433");
+                Console.WriteLine("  3. Connection string credentials are correct");
+
+                // Don't throw in production - let app start and show error page instead
+                if (app.Environment.IsDevelopment())
+                {
+                    throw new InvalidOperationException("Database connection failed in Development mode");
+                }
+            }
+            else
+            {
+                Console.WriteLine("✓ Database connection successful");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠ Database validation error: {ex.Message}");
+
+            if (app.Environment.IsDevelopment())
+            {
+                throw;
+            }
+
+            // In production, log but continue - error will show on first DB access
+            Console.WriteLine("⚠ Application will start but database errors are expected");
+        }
+    }
 
     void ConfigureInfrastructure(WebApplicationBuilder b)
     {
         b.Services.AddSingleton(HtmlEncoder.Create(UnicodeRanges.All));
         b.Services.AddHttpContextAccessor();
         b.Services.AddDistributedMemoryCache();
-
-        // UserInfos'u sadece bir kez ekle
         b.Services.AddScoped<UserInfos>();
 
         var mvcBuilder = b.Services.AddControllersWithViews()
@@ -108,8 +187,11 @@ try
         var connectionString = b.Configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
+        Console.WriteLine($"Database Server: {ExtractServerFromConnectionString(connectionString)}");
+
         b.Services.AddDbContextPool<_ApplicationConnectionDb>(options =>
-            ConfigureDbOptions(options, connectionString, b.Environment));
+            ConfigureDbOptions(options, connectionString, b.Environment),
+            poolSize: 128); // Optimize pool size
 
         b.Services.AddDbContextFactory<_ApplicationConnectionDb>(
             options => ConfigureDbOptions(options, connectionString, b.Environment),
@@ -121,13 +203,26 @@ try
         options.UseSqlServer(connectionStr, sqlOptions =>
         {
             sqlOptions.CommandTimeout(30);
-            sqlOptions.EnableRetryOnFailure(5, TimeSpan.FromSeconds(10), null);
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null);
+
+            // Improve connection resilience
+            sqlOptions.MinBatchSize(1);
+            sqlOptions.MaxBatchSize(100);
         });
 
+        // Only enable detailed logging in Development
         if (env.IsDevelopment())
         {
             options.EnableDetailedErrors();
             options.EnableSensitiveDataLogging();
+        }
+        else
+        {
+            // Production optimizations
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         }
     }
 
@@ -139,7 +234,7 @@ try
             {
                 options.Cookie.Name = ".Efavori.Auth.Identity";
                 options.Cookie.Path = "/";
-                options.LoginPath = "/en";  // Default culture
+                options.LoginPath = "/en";
                 options.LogoutPath = "/en/Account/Logout";
                 options.AccessDeniedPath = "/en/Account/Logout";
                 options.Cookie.HttpOnly = true;
@@ -150,7 +245,6 @@ try
                     : CookieSecurePolicy.Always;
 
                 options.Cookie.SameSite = SameSiteMode.Lax;
-
                 options.ExpireTimeSpan = TimeSpan.FromDays(365);
                 options.SlidingExpiration = true;
                 options.Cookie.MaxAge = options.ExpireTimeSpan;
@@ -184,13 +278,23 @@ try
 
     void ConfigureServerLimits(IServiceCollection services)
     {
-        const long maxRequestLimit = 134217728;
-        services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = maxRequestLimit);
-        services.Configure<KestrelServerOptions>(options => options.Limits.MaxRequestBodySize = maxRequestLimit);
+        const long maxRequestLimit = 134217728; // 128MB
+        services.Configure<IISServerOptions>(options =>
+        {
+            options.MaxRequestBodySize = maxRequestLimit;
+            options.AllowSynchronousIO = false; // Security best practice
+        });
+
+        services.Configure<KestrelServerOptions>(options =>
+        {
+            options.Limits.MaxRequestBodySize = maxRequestLimit;
+            options.AddServerHeader = false; // Security: hide server header
+        });
     }
 
     void ConfigureMiddlewarePipeline(WebApplication app)
     {
+        // Production-specific error handling
         if (!app.Environment.IsDevelopment())
         {
             app.UseExceptionHandler("/Home/Error");
@@ -203,7 +307,6 @@ try
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
-
         app.UseRouting();
 
         // --- KRİTİK SIRALAMA: Localization, Auth'dan ÖNCE gelmeli ---
@@ -219,6 +322,7 @@ try
             context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
             context.Response.Headers.Add("X-Frame-Options", "DENY");
             context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+            context.Response.Headers.Add("Referrer-Policy", "strict-origin-when-cross-origin");
             await next();
         });
     }
@@ -297,12 +401,61 @@ try
 
         return defaultCulture;
     }
+
+    string ExtractServerFromConnectionString(string connectionString)
+    {
+        var serverPart = connectionString.Split(';')
+            .FirstOrDefault(s => s.Trim().StartsWith("Server=", StringComparison.OrdinalIgnoreCase));
+        return serverPart?.Replace("Server=", "").Trim() ?? "Unknown";
+    }
+
     #endregion
 }
 catch (Exception ex)
 {
-    // CRITICAL: Startup hatalarını loglayın
-    Console.WriteLine($"FATAL ERROR during startup: {ex.Message}");
-    Console.WriteLine($"Stack trace: {ex.StackTrace}");
-    throw;
+    // ============================================================================
+    // CRITICAL STARTUP ERROR LOGGING
+    // ============================================================================
+    var errorMessage = $@"
+================================================================================
+FATAL ERROR DURING APPLICATION STARTUP
+================================================================================
+Time: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+Error: {ex.Message}
+Type: {ex.GetType().Name}
+
+Stack Trace:
+{ex.StackTrace}
+
+Inner Exception: {ex.InnerException?.Message ?? "None"}
+================================================================================
+
+TROUBLESHOOTING STEPS:
+1. Check appsettings.json exists and has valid connection string
+2. Verify SQL Server is accessible: mssql02.trwww.com:1433
+3. Check ASP.NET Core Hosting Bundle is installed
+4. Review logs folder for detailed error logs
+5. Ensure all required DLLs are present in application folder
+
+For detailed diagnosis, use web.debug.config temporarily.
+================================================================================
+";
+
+    Console.WriteLine(errorMessage);
+
+    // Try to write to log file
+    try
+    {
+        var logPath = Path.Combine(AppContext.BaseDirectory, "logs");
+        Directory.CreateDirectory(logPath);
+        var logFile = Path.Combine(logPath, $"startup-error-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log");
+        File.WriteAllText(logFile, errorMessage);
+        Console.WriteLine($"Error logged to: {logFile}");
+    }
+    catch
+    {
+        // If we can't write log, at least we printed to console
+    }
+
+    throw; // Re-throw to ensure IIS sees the error
 }

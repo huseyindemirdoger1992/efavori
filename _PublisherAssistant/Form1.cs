@@ -37,13 +37,6 @@ namespace _PublisherAssistant
                 foreach (string file in files)
                 {
                     FileInfo fInfo = new FileInfo(file);
-
-                    // DOSYA ATALAMA KONTROLÜ: Eğer dosya adı web.config ise (büyük/küçük harf duyarsız) bu adımı geç.
-                    if (fInfo.Name.Equals("web.config", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
                     totalFileCount++;
                     totalByteSize += fInfo.Length;
 

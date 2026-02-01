@@ -13,8 +13,8 @@ namespace data
     {
 
         // Media
-         public DbSet<Media> Media { get; set; } = default!;
-         public DbSet<ItemGallery> ItemGallery { get; set; } = default!;
+        public DbSet<Media> Media { get; set; } = default!;
+        public DbSet<ItemGallery> ItemGallery { get; set; } = default!;
 
         // Logs
         public DbSet<Logs> Logs { get; set; } = default!;
@@ -49,8 +49,8 @@ namespace data
         public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
 
         // Products & Stores
-         public DbSet<Store> Stores { get; set; } = default!;
-         public DbSet<Pricing> Pricing { get; set; } = default!;
+        public DbSet<Store> Stores { get; set; } = default!;
+        public DbSet<Pricing> Pricing { get; set; } = default!;
 
         // public DbSet<Product> Product { get; set; } = default!;
 
@@ -72,12 +72,41 @@ namespace data
             // EĞER options dışarıdan (Program.cs'den) gelmemişse, manuel yapılandır
             if (!optionsBuilder.IsConfigured)
             {
+                // ========================================================================
+                // FIX: Production environment için path resolution düzeltildi
+                // ========================================================================
+                string basePath = AppContext.BaseDirectory;
+
+                // appsettings.json'ı bul - önce mevcut dizinde, sonra üst dizinlerde ara
+                if (!File.Exists(Path.Combine(basePath, "appsettings.json")))
+                {
+                    // Development ortamı için fallback
+                    var devPath = Path.Combine(Directory.GetCurrentDirectory(), "../web");
+                    if (Directory.Exists(devPath) && File.Exists(Path.Combine(devPath, "appsettings.json")))
+                    {
+                        basePath = devPath;
+                    }
+                    else
+                    {
+                        // Production: Mevcut dizini kullan
+                        basePath = Directory.GetCurrentDirectory();
+                    }
+                }
+
                 IConfigurationRoot configuration = new ConfigurationBuilder()
-                    .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "../web"))
-                    .AddJsonFile("appsettings.json", optional: false)
+                    .SetBasePath(basePath)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
                     .Build();
 
                 var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+                if (string.IsNullOrEmpty(connectionString))
+                {
+                    throw new InvalidOperationException(
+                        $"Connection string 'DefaultConnection' not found. " +
+                        $"Searched in: {Path.Combine(basePath, "appsettings.json")}");
+                }
+
                 optionsBuilder.UseSqlServer(connectionString);
             }
         }
@@ -88,15 +117,24 @@ namespace data
             {
                 var optionsBuilder = new DbContextOptionsBuilder<_ApplicationConnectionDb>();
 
-                // Mevcut çalışma dizinini al
+                // ========================================================================
+                // FIX: Design-time için path resolution düzeltildi
+                // ========================================================================
                 string basePath = AppContext.BaseDirectory;
 
-                // Eğer yerelde geliştirme yapıyorsan ve appsettings.json "web" klasöründeyse
-                // canlıda ise direkt ana dizindeyse bu kontrol hayat kurtarır:
+                // appsettings.json'ı bul
                 if (!File.Exists(Path.Combine(basePath, "appsettings.json")))
                 {
-                    // Eğer dosya direkt base'de yoksa, yerel geliştirme ortamındaki "../web" yolunu dene
-                    basePath = Path.Combine(Directory.GetCurrentDirectory(), "../web");
+                    // Eğer dosya direkt base'de yoksa, development path'i dene
+                    var devPath = Path.Combine(Directory.GetCurrentDirectory(), "../web");
+                    if (Directory.Exists(devPath))
+                    {
+                        basePath = devPath;
+                    }
+                    else
+                    {
+                        basePath = Directory.GetCurrentDirectory();
+                    }
                 }
 
                 IConfigurationRoot configuration = new ConfigurationBuilder()
@@ -108,7 +146,9 @@ namespace data
 
                 if (string.IsNullOrEmpty(connectionString))
                 {
-                    throw new Exception("A (ConnectionString) error occurred! Please check the appsettings.json values.");
+                    throw new Exception(
+                        $"ERROR: Connection string 'DefaultConnection' not found in appsettings.json. " +
+                        $"Searched path: {Path.Combine(basePath, "appsettings.json")}");
                 }
 
                 optionsBuilder.UseSqlServer(connectionString);

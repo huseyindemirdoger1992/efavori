@@ -1,1 +1,318 @@
-﻿
+﻿@using Microsoft.AspNetCore.Http
+@using api.tr
+@using Microsoft.AspNetCore.Components.Forms
+@inject Media MediaService
+@rendermode InteractiveServer
+<razor._Shared.Notification @ref="notificationRef" />
+<div class="card bg-transparent border border-light-3 shadow-none">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12">
+                <div class="position-relative mb-3">
+                    <InputFile @key="inputFileId"
+                               OnChange="HandleFilesSelected"
+                               multiple
+                               accept="@string.Join(',', allowedExtensions)"
+                               id="image-uploadify"
+                               class="position-absolute w-100 h-100 opacity-0"
+                               style="top:0; left:0; cursor: pointer; z-index: 2;"
+                               @ondragover:preventdefault
+                               @ondrop:preventdefault />
+                    <div class="border border-2 border-dashed border-light-3 rounded-3 p-3 text-center bg-dark-transparent transition-300">
+                        <div class="py-2">
+                            <i class="fa fa-cloud-upload text-white opacity-50 mb-2" style="font-size: 2.5rem;"></i>
+                            <h6 class="text-white mb-1">Dosyaları Buraya Sürükleyin</h6> <div class="mb-2">
+                                <i class="fa fa-file-image-o me-2 small text-white-50"></i>
+                                <i class="fa fa-file-video-o me-2 small text-white-50"></i>
+                                <i class="fa fa-file-pdf-o me-2 small text-white-50"></i>
+                                <i class="fa fa-file-archive-o me-2 small text-white-50"></i>
+                            </div>
+                            <p class="text-white-50 small mb-2" style="font-size: 0.75rem;">veya seçmek için tıklayın</p>
+                            <button type="button" class="btn btn-light btn-sm px-3 py-1">
+                                <i class="fa fa-folder-open me-1"></i>Seçim Yap
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mb-2">
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
+                        Desteklenen Görsel Formatları: ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".raw", ".svg", ".ico", ".tga"
+                    </span>
+                    <br />
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
+                        Desteklenen Video Formatları: ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg"
+                    </span>
+                    <br />
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
+                        Desteklenen Ses Formatları: ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".wma", ".opus"
+                    </span>
+                    <br />
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
+                        Desteklenen Döküman Formatları: ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt"
+                    </span>
+                    <br />
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
+                        Desteklenen Diğer Formatlar: ".zip", ".rar", ".7z", ".tar", ".gz", ".iso", ".mp3", ".wav"
+                    </span>
+                </div>
+            </div>
+        </div>
+        @if (selectedFiles.Any())
+        {
+            <div class="mb-4 px-2">
+                <div class="d-flex justify-content-between text-white mb-2 small">
+                    <span class="fw-bold">Yükleme Durumu</span>
+                    <span>%@totalProgress</span>
+                </div>
+                <div class="progress rounded-pill" style="height: 8px; background: rgba(255,255,255,0.1);">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-info"
+                         role="progressbar"
+                         style="width: @totalProgress%"></div>
+                </div>
+            </div>
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+                @foreach (var file in selectedFiles)
+                {
+                    <div class="col">
+                        <div class="card bg-dark-transparent border-light-3 h-100 overflow-hidden shadow-sm">
+                            <div class="position-relative">
+                                @{
+                                    var ext = Path.GetExtension(file.Name).ToLower();
+                                }
+                                @if (allowedExtensions_image.Contains(ext) && file.PreviewUrl != null)
+                                {
+                                    <img src="@file.PreviewUrl" class="card-img-top" style="height: 120px; object-fit: cover;" />
+                                }
+                                else if (allowedExtensions_videos.Contains(ext) && file.PreviewUrl != null)
+                                {
+                                    <video class="card-img-top" style="height: 120px; object-fit: cover;">
+                                        <source src="@file.PreviewUrl" type="@file.File.ContentType">
+                                    </video>
+                                }
+                                else if (allowedExtensions_videos.Contains(ext))
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 120px;">
+                                        <i class="fa fa-file-video-o fa-3x"></i>
+                                    </div>
+                                }
+                                else if (allowedExtensions_sountds.Contains(ext))
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 120px;">
+                                        <i class="fa fa-file-audio-o fa-3x"></i>
+                                    </div>
+                                }
+                                else if (allowedExtensions_documents.Contains(ext))
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 120px;">
+                                        @if (ext == ".pdf")
+                                        {
+                                            <i class="fa fa-file-pdf-o fa-3x"></i>
+                                        }
+                                        else if (ext == ".doc" || ext == ".docx")
+                                        {
+                                            <i class="fa fa-file-word-o fa-3x"></i>
+                                        }
+                                        else if (ext == ".xls" || ext == ".xlsx")
+                                        {
+                                            <i class="fa fa-file-excel-o fa-3x"></i>
+                                        }
+                                        else if (ext == ".ppt" || ext == ".pptx")
+                                        {
+                                            <i class="fa fa-file-powerpoint-o fa-3x"></i>
+                                        }
+                                        else if (ext == ".txt" || ext == ".rtf")
+                                        {
+                                            <i class="fa fa-file-text-o fa-3x"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa fa-file-o fa-3x"></i>
+                                        }
+                                    </div>
+                                }
+                                else if (allowedExtensions_others.Contains(ext))
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 120px;">
+                                        <i class="fa fa-file-archive-o fa-3x"></i>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 120px;">
+                                        <i class="fa fa-file-o fa-3x"></i>
+                                    </div>
+                                }
+                                @if (file.IsCompleted)
+                                {
+                                    <div class="position-absolute top-0 end-0 m-1">
+                                        <span class="badge rounded-circle bg-success p-1">
+                                            <i class="fa fa-check text-white"></i>
+                                        </span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="position-absolute top-0 end-0 m-1">
+                                        <span class="badge rounded-circle bg-info p-1 shadow-sm">
+                                            <i class="fa fa-spinner fa-spin text-white"></i>
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                            <div class="card-body p-2">
+                                <p class="card-text small text-white text-truncate mb-2 text-center">@file.Name</p>
+                                <div class="progress" style="height: 4px; background: rgba(255,255,255,0.1);">
+                                    <div class="progress-bar @(file.IsCompleted ? "bg-success" : "bg-warning")"
+                                         style="width: @file.Progress%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+@code {
+    private List<FileUploadModel> selectedFiles = new();
+    private int totalProgress = 0;
+    private Guid inputFileId = Guid.NewGuid();
+    private Notification? notificationRef;
+    private readonly string[] allowedExtensions =
+        {
+    // Images
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".raw", ".svg", ".ico", ".tga", ".psd", ".jp2",
+    // Videos
+    ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg",
+    // Sountds
+    ".mp3",".wav",   ".ogg",   ".m4a",   ".flac",  ".aac",   ".wma",   ".opus",
+    // Documents
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt", ".csv", ".xml", ".json", ".pages", ".numbers", ".key", ".epub",
+    // Others
+    ".zip", ".rar", ".7z", ".tar", ".gz", ".iso"
+    };
+    private readonly string[] allowedExtensions_image = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".raw", ".svg", ".ico", ".tga", ".psd", ".jp2" };
+    private readonly string[] allowedExtensions_videos = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg" };
+    private readonly string[] allowedExtensions_sountds = { ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".wma", ".opus" };
+    private readonly string[] allowedExtensions_documents = { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt", ".csv", ".xml", ".json", ".pages", ".numbers", ".key", ".epub" };
+    private readonly string[] allowedExtensions_others = { ".zip", ".rar", ".7z", ".tar", ".gz", ".iso" };
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+    private async Task HandleFilesSelected(InputFileChangeEventArgs e)
+    {
+        const int MaxAllowedFiles = 16;
+        selectedFiles.Clear();
+        totalProgress = 0;
+        try
+        {
+            var files = e.GetMultipleFiles(MaxAllowedFiles);
+            await ShowNotification("success", "İşleniyor", "Seçtiğiniz dosyalar yükleniyor.", null);
+            foreach (var file in files)
+            {
+                var ext = Path.GetExtension(file.Name).ToLower();
+                if (allowedExtensions.Contains(ext))
+                {
+                    var model = new FileUploadModel { Name = file.Name, File = file };
+                    if (allowedExtensions_image.Contains(ext))
+                    {
+                        if (file.Size < 5 * 1024 * 1024)
+                        {
+                            var resizedFile = await file.RequestImageFileAsync(file.ContentType, 200, 200);
+                            using var stream = resizedFile.OpenReadStream();
+                            using var ms = new MemoryStream();
+                            await stream.CopyToAsync(ms);
+                            model.PreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+                        }
+                    }
+                    selectedFiles.Add(model);
+                }
+            }
+            await ProcessUploads();
+        }
+        catch (InvalidOperationException ex)
+        {
+            await ShowNotification("danger", "Hata", "En fazla 16 seçim yapabilirsiniz.", null);
+            await Clean();
+        }
+    }
+    private async Task HandleExceededFileCount()
+    {
+        Console.WriteLine("Hata: Maksimum 16 dosya seçebilirsiniz.");
+        await ShowNotification("danger", "Hata", "En fazla 16 seçim yapabilirsiniz.", null);
+        await Task.Delay(2000);
+        Clean();
+    }
+    private async Task Clean()
+    {
+        await Task.Delay(2000);
+        selectedFiles.Clear();
+        totalProgress = 0;
+        inputFileId = Guid.NewGuid();
+        StateHasChanged();
+    }
+    private async Task ProcessUploads()
+    {
+        int processedCount = 0;
+        foreach (var fileModel in selectedFiles)
+        {
+            fileModel.Progress = 30;
+            StateHasChanged();
+            using var stream = fileModel.File.OpenReadStream(maxAllowedSize: 1024 * 1024 * 100);
+            var userEmail = (!string.IsNullOrEmpty(use.ContactInformation.Email)) ? use.ContactInformation.Email : "null@null.com";
+            var userId = Guid.NewGuid();
+            var ext = Path.GetExtension(fileModel.File.Name).ToLower();
+            if (allowedExtensions_image.Contains(ext))
+            {
+                await MediaService.ConvertToAvifWithLogAsync(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+            }
+            else if (allowedExtensions_videos.Contains(ext))
+            {
+                await MediaService.allowedExtensions_videos(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+            }
+            else if (allowedExtensions_sountds.Contains(ext))
+            {
+                await MediaService.allowedExtensions_sountds(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+            }
+            else if (allowedExtensions_documents.Contains(ext))
+            {
+                await MediaService.allowedExtensions_documents(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+            }
+            else if (allowedExtensions_others.Contains(ext))
+            {
+                await MediaService.allowedExtensions_others(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+            }
+            fileModel.Progress = 100;
+            fileModel.IsCompleted = true;
+            processedCount++;
+            totalProgress = (processedCount * 100) / selectedFiles.Count;
+            StateHasChanged();
+        }
+        await Clean();
+    }
+    public class FileUploadModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public IBrowserFile File { get; set; } = null!;
+        public string? PreviewUrl { get; set; }
+        public int Progress { get; set; }
+        public bool IsCompleted { get; set; }
+    }
+    private class FormFileWrapper : IFormFile
+    {
+        private readonly Stream _stream;
+        public FormFileWrapper(Stream stream, string name) { _stream = stream; FileName = name; Length = stream.Length; }
+        public string ContentType => "image/unknown";
+        public string ContentDisposition => "";
+        public IHeaderDictionary Headers => new HeaderDictionary();
+        public long Length { get; }
+        public string Name => "file";
+        public string FileName { get; }
+        public Stream OpenReadStream() => _stream;
+        public void CopyTo(Stream target) => _stream.CopyTo(target);
+        public Task CopyToAsync(Stream target, CancellationToken cancellationToken = default) => _stream.CopyToAsync(target, cancellationToken);
+    }
+}

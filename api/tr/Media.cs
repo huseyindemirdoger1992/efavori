@@ -1,121 +1,278 @@
 ﻿using data;
 using ImageMagick;
 using Microsoft.AspNetCore.Http;
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Runtime.Intrinsics.X86;
-using System.Threading.Tasks;
 
-namespace api.tr
+namespace api.tr;
+
+public class Media(UserInfos userInfos)
 {
-    /// <summary>
-    /// Medya işleme operasyonlarını yüksek performans ve detaylı izlenebilirlik ile yönetir.
-    /// </summary>
-    public class Media
+    private readonly UserInfos _userInfos = userInfos ?? throw new ArgumentNullException(nameof(userInfos));
+
+    public async Task<(string FileName, Logs LogData)> ConvertToAvifWithLogAsync(IFormFile file, string userEmail, Guid? userId)
     {
-        public readonly UserInfos _userInfos;
+        var watch = Stopwatch.StartNew();
+        var detail = _userInfos.GetCurrentUserDetails();
 
-        public Media(UserInfos userInfos)
+        var logEntry = new Logs
         {
-            _userInfos = userInfos ?? throw new ArgumentNullException(nameof(userInfos));
+            Id = Guid.NewGuid(),
+            UserId = userId ?? Guid.Empty,
+            PageNameSpaceTitle = "namespace api.tr",
+            Action = "ConvertToAvifWithLogAsync",
+            IpAddress = detail.IpAddress,
+            UserAgent = detail.UserAgent,
+            RequestPath = detail.RequestPath,
+            Languages = detail.Languages,
+            Date = DateTime.UtcNow
+        };
+
+        // 1. Klasör Yollarının Hazırlanması
+        string baseUserPath = Path.Combine(Directory.GetCurrentDirectory(), "_files", "users", userEmail, "images");
+        string avifFolder = Path.Combine(baseUserPath, "avif");
+        string originalFolder = Path.Combine(baseUserPath, "original");
+
+        // Klasörler yoksa oluştur
+        if (!Directory.Exists(avifFolder)) Directory.CreateDirectory(avifFolder);
+        if (!Directory.Exists(originalFolder)) Directory.CreateDirectory(originalFolder);
+
+        // 2. Dosya İsimlerinin Hazırlanması
+        string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+        string guidPart = Guid.NewGuid().ToString("N");
+        string cleanFileName = Path.GetFileNameWithoutExtension(file.FileName);
+
+        string originalExtension = Path.GetExtension(file.FileName);
+        string uniqueFileNameAvif = $"{timestamp}_{guidPart}_{cleanFileName}.avif";
+        string uniqueFileNameOriginal = $"{timestamp}_{guidPart}_{cleanFileName}{originalExtension}";
+
+        string fullPathAvif = Path.Combine(avifFolder, uniqueFileNameAvif);
+        string fullPathOriginal = Path.Combine(originalFolder, uniqueFileNameOriginal);
+
+        // 3. İşlem Akışı
+        using var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream);
+
+        // --- Orijinal Dosyayı Kaydet ---
+        // MemoryStream'i diske yazıyoruz (Dosya akışını bozmamak için kopyasını alıyoruz)
+        await File.WriteAllBytesAsync(fullPathOriginal, memoryStream.ToArray());
+
+        // --- ImageMagick Dönüşüm İşlemi ---
+        memoryStream.Position = 0;
+        using var image = new MagickImage();
+        await image.ReadAsync(memoryStream);
+
+        image.Format = MagickFormat.Avif;
+        image.Quality = 64;
+        image.ColorSpace = ColorSpace.sRGB;
+
+        await image.WriteAsync(fullPathAvif);
+
+        watch.Stop();
+        logEntry.Exception = "Success";
+
+        // 4. Veritabanı Kaydı
+        using var db = new _ApplicationConnectionDb();
+        db.Logs.Add(logEntry);
+        await db.SaveChangesAsync();
+
+        return (uniqueFileNameAvif, logEntry);
+    }
+
+    public async Task allowedExtensions_videos(IFormFile file, string userEmail, Guid? userId)
+    {
+        var watch = Stopwatch.StartNew();
+        var detail = _userInfos.GetCurrentUserDetails();
+
+        // 1. Klasör Yollarının Hazırlanması
+        // Hedef: _files/users/{email}/videos
+        string baseUserPath = Path.Combine(Directory.GetCurrentDirectory(), "_files", "users", userEmail, "videos");
+
+        if (!Directory.Exists(baseUserPath))
+            Directory.CreateDirectory(baseUserPath);
+
+        // 2. Dosya İsimlerinin Hazırlanması (Çakışmayı önlemek için benzersiz isim)
+        string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+        string guidPart = Guid.NewGuid().ToString("N");
+        string extension = Path.GetExtension(file.FileName);
+        string cleanFileName = Path.GetFileNameWithoutExtension(file.FileName);
+
+        string uniqueFileName = $"{timestamp}_{guidPart}_{cleanFileName}{extension}";
+        string fullPath = Path.Combine(baseUserPath, uniqueFileName);
+
+        // 3. Dosyayı Kaydetme İşlemi
+        // MemoryStream yerine doğrudan FileStream kullanarak RAM kullanımını minimize ediyoruz
+        using (var stream = new FileStream(fullPath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
         }
 
-        // <summary>
-        // Gelen görseli AVIF formatına dönüştürür, meta verileri korur ve süreci atomik olarak loglar.
-        // </summary>
-        
-        // --------------------------------------------------------------------------------------------------
-        // TANIMLANAN/DESTEKLENEN RESİM DOSYA FORMATLARI
-        // Modern Web: AVIF, WEBP, HEIC, HEIF (iPhone), SVG
-        // Standart:   JPG, JPEG, PNG, BMP, GIF, ICO
-        // Profesyonel: PSD (Photoshop), AI (Illustrator), EPS, TIFF, TIF, PDF
-        // Fotoğrafçı: DNG (Adobe Digital Negative), CR2, NEF, ARW (Raw Kamera Formatları - Temel Destek)
-        // Teknik:     TGA, DDS (Oyun Kaplamaları), HDR, EXR (Yüksek Dinamik Aralıklı Görüntüler)
-        // --------------------------------------------------------------------------------------------------
-        public async Task<(string FileName, Logs LogData)> ConvertToAvifWithLogAsync( IFormFile file, string userEmail, Guid? userId)
+        watch.Stop();
+
+        // 4. Log Kaydı
+        var logEntry = new Logs
         {
-            // Performans ölçümü ve kullanıcı detaylarını başlangıçta yakala
-            var watch = Stopwatch.StartNew();
-            var detail = _userInfos.GetCurrentUserDetails();
+            Id = Guid.NewGuid(),
+            UserId = userId ?? Guid.Empty,
+            PageNameSpaceTitle = "namespace api.tr",
+            Action = "VideoUploadSuccess",
+            IpAddress = detail.IpAddress,
+            UserAgent = detail.UserAgent,
+            RequestPath = detail.RequestPath,
+            Languages = detail.Languages,
+            Date = DateTime.UtcNow,
+            Exception = "Success"
+        };
 
-            // Log nesnesini zengin içerikle ilklendir
-            var logEntry = new Logs
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId ?? Guid.Empty,
-                PageNameSpaceTitle = "MediaService",
-                Action = "ConvertToAvif",
-                IpAddress = detail.IpAddress,
-                UserAgent = detail.UserAgent,
-                RequestPath = detail.RequestPath,
-                Languages = detail.Languages,
-                Date = DateTime.UtcNow
-            };
+        using var db = new _ApplicationConnectionDb();
+        db.Logs.Add(logEntry);
+        await db.SaveChangesAsync();
+    }
 
-            try
-            {
-                // 1. Validasyon: Dosya varlığı ve içeriği
-                if (file == null || file.Length == 0)
-                {
-                    throw new FileNotFoundException("İşlem yapılacak dosya bulunamadı veya boş.");
-                }
+    public async Task allowedExtensions_sountds(IFormFile file, string userEmail, Guid? userId)
+    {
+        var watch = Stopwatch.StartNew();
+        var detail = _userInfos.GetCurrentUserDetails();
 
-                // 2. Güvenli Dosya Adı Yönetimi (Collision riskini minimize eder)
-                string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-                string fileNameOnly = Path.GetFileNameWithoutExtension(file.FileName);
-                // Dosya adındaki geçersiz karakterleri temizle ve benzersiz hale getir
-                string sanitizedFileName = string.Join("_", fileNameOnly.Split(Path.GetInvalidFileNameChars()));
-                string uniqueFileName = $"{timestamp}_{Guid.NewGuid():N}_{sanitizedFileName}.avif";
+        // 1. Klasör Yollarının Hazırlanması
+        // Hedef: _files/users/{email}/sounds
+        string baseUserPath = Path.Combine(Directory.GetCurrentDirectory(), "_files", "users", userEmail, "sounds");
 
-                // 3. Dizin Hiyerarşisi (Sistem güvenliği için wwwroot köklü)
-                string uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", userEmail, "images");
-                if (!Directory.Exists(uploadFolder))
-                {
-                    Directory.CreateDirectory(uploadFolder);
-                }
+        if (!Directory.Exists(baseUserPath))
+            Directory.CreateDirectory(baseUserPath);
 
-                string fullPath = Path.Combine(uploadFolder, uniqueFileName);
+        // 2. Dosya İsimlendirme (Benzersizlik ve Güvenlik için)
+        string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+        string guidPart = Guid.NewGuid().ToString("N");
+        string extension = Path.GetExtension(file.FileName);
+        string cleanFileName = Path.GetFileNameWithoutExtension(file.FileName);
 
-                // 4. Görsel İşleme (Magick.NET Bellek Yönetimi)
-                using (var stream = file.OpenReadStream())
-                {
-                    using (var image = new MagickImage(stream))
-                    {
-                        // Modern web standartları: AVIF, sRGB ve Optimize edilmiş kalite
-                        image.Format = MagickFormat.Avif;
-                        image.Quality = 64; // Visual/Size dengesi için ideal oran
-                        image.ColorSpace = ColorSpace.sRGB;
+        string uniqueFileName = $"{timestamp}_{guidPart}_{cleanFileName}{extension}";
+        string fullPath = Path.Combine(baseUserPath, uniqueFileName);
 
-                        // Dosyayı asenkron olarak diske yaz
-                        await image.WriteAsync(fullPath);
-                    }
-                }
-
-                // Operasyon başarıyla tamamlandı
-                watch.Stop();
-                logEntry.Exception = "Success";
-
-                return (uniqueFileName, logEntry);
-            }
-            catch (Exception ex)
-            {
-                // Kritik hata yönetimi: Hatanın tüm izlerini kaydet
-                watch.Stop();
-                logEntry.Exception = ex.Message;
-                logEntry.StackTrace = ex.StackTrace;
-
-                // Üst katmanın (Controller) hatadan haberdar olması sağlanır
-                throw;
-            }
-            finally
-            {
-                using (data._ApplicationConnectionDb db = new data._ApplicationConnectionDb())
-                {
-                    db.Logs.Add(logEntry);
-                    await db.SaveChangesAsync();
-                }
-            }
+        // 3. Kayıt İşlemi (Doğrudan Stream kullanarak)
+        using (var stream = new FileStream(fullPath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
         }
+
+        watch.Stop();
+
+        // 4. Log Kaydı
+        var logEntry = new Logs
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId ?? Guid.Empty,
+            PageNameSpaceTitle = "namespace api.tr",
+            Action = "SoundUploadSuccess",
+            IpAddress = detail.IpAddress,
+            UserAgent = detail.UserAgent,
+            RequestPath = detail.RequestPath,
+            Languages = detail.Languages,
+            Date = DateTime.UtcNow,
+            Exception = "Success"
+        };
+
+        using var db = new _ApplicationConnectionDb();
+        db.Logs.Add(logEntry);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task allowedExtensions_documents(IFormFile file, string userEmail, Guid? userId)
+    {
+        var watch = Stopwatch.StartNew();
+        var detail = _userInfos.GetCurrentUserDetails();
+
+        // 1. Klasör Yollarının Hazırlanması
+        // Hedef: _files/users/{email}/documents
+        string baseUserPath = Path.Combine(Directory.GetCurrentDirectory(), "_files", "users", userEmail, "documents");
+
+        if (!Directory.Exists(baseUserPath))
+            Directory.CreateDirectory(baseUserPath);
+
+        // 2. Dosya İsimlendirme
+        string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+        string guidPart = Guid.NewGuid().ToString("N");
+        string extension = Path.GetExtension(file.FileName);
+        string cleanFileName = Path.GetFileNameWithoutExtension(file.FileName);
+
+        string uniqueFileName = $"{timestamp}_{guidPart}_{cleanFileName}{extension}";
+        string fullPath = Path.Combine(baseUserPath, uniqueFileName);
+
+        // 3. Dosyayı Kaydetme (Async Stream)
+        using (var stream = new FileStream(fullPath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        watch.Stop();
+
+        // 4. Log Kaydı
+        var logEntry = new Logs
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId ?? Guid.Empty,
+            PageNameSpaceTitle = "namespace api.tr",
+            Action = "DocumentUploadSuccess",
+            IpAddress = detail.IpAddress,
+            UserAgent = detail.UserAgent,
+            RequestPath = detail.RequestPath,
+            Languages = detail.Languages,
+            Date = DateTime.UtcNow,
+            Exception = "Success"
+        };
+
+        using var db = new _ApplicationConnectionDb();
+        db.Logs.Add(logEntry);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task allowedExtensions_others(IFormFile file, string userEmail, Guid? userId)
+    {
+        var watch = Stopwatch.StartNew();
+        var detail = _userInfos.GetCurrentUserDetails();
+
+        // 1. Klasör Yollarının Hazırlanması
+        // Hedef: _files/users/{email}/others
+        string baseUserPath = Path.Combine(Directory.GetCurrentDirectory(), "_files", "users", userEmail, "others");
+
+        if (!Directory.Exists(baseUserPath))
+            Directory.CreateDirectory(baseUserPath);
+
+        // 2. Dosya İsimlendirme
+        string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+        string guidPart = Guid.NewGuid().ToString("N");
+        string extension = Path.GetExtension(file.FileName);
+        string cleanFileName = Path.GetFileNameWithoutExtension(file.FileName);
+
+        // Güvenlik: Dosya ismindeki geçersiz karakterleri temizlemek gerekirse buraya müdahale edilebilir.
+        string uniqueFileName = $"{timestamp}_{guidPart}_{cleanFileName}{extension}";
+        string fullPath = Path.Combine(baseUserPath, uniqueFileName);
+
+        // 3. Dosyayı Kaydetme
+        using (var stream = new FileStream(fullPath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        watch.Stop();
+
+        // 4. Log Kaydı
+        var logEntry = new Logs
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId ?? Guid.Empty,
+            PageNameSpaceTitle = "namespace api.tr",
+            Action = "OtherFileUploadSuccess",
+            IpAddress = detail.IpAddress,
+            UserAgent = detail.UserAgent,
+            RequestPath = detail.RequestPath,
+            Languages = detail.Languages,
+            Date = DateTime.UtcNow,
+            Exception = "Success"
+        };
+
+        using var db = new _ApplicationConnectionDb();
+        db.Logs.Add(logEntry);
+        await db.SaveChangesAsync();
     }
 }

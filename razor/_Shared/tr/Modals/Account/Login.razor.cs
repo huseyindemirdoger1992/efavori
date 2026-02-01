@@ -41,7 +41,7 @@ namespace razor._Shared.tr.Modals.Account
         }
 
         private string? email = "huseyindemirdoger1992@gmail.com";
-        private string? password = "9090";
+        private string? password = "Dragonfire0!";
 
         private async Task LoginUserAsync()
         {

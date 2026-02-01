@@ -43,6 +43,8 @@ try
     builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
     builder.Services.AddScoped<TakeLogs>();
     builder.Services.AddScoped<EmailSender>();
+    builder.Services.AddScoped<api.tr.Media>();
+    builder.Services.AddScoped<api.tr.UserInfos>();
 
     var app = builder.Build();
 

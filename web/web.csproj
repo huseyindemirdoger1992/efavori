@@ -10,11 +10,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\documents\rss.xml" />
-	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\others\rss.xml" />
-	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\pictures\rss.xml" />
-	  <Content Include="files\users\huseyindemirdoger1992%40gmail.com\videos\rss.xml" />
-	  <Content Include="files\xml\sitemap\rss.xml" />
+	  <Content Include="_files\xml\sitemap\rss.xml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -32,6 +28,7 @@
 	<ItemGroup>
 		<Folder Include="Areas\Vendor\Controllers\" />
 		<Folder Include="Areas\Vendor\Views\" />
+		<Folder Include="_files\users\" />
 	</ItemGroup>
 
 	<ItemGroup>

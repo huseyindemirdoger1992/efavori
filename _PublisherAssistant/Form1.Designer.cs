@@ -134,6 +134,7 @@
             button1.TabIndex = 19;
             button1.Text = "FTP (Clear Server)";
             button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
             // 
             // button2
             // 

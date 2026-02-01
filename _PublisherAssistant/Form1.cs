@@ -60,5 +60,10 @@ namespace _PublisherAssistant
                 label4.Text = $"Total Time: {(DateTime.Now - DateTime.Parse(label2.Text.Replace("Action Start At: ", ""))).TotalSeconds} seconds";
             }
         }
+
+        private async void button1_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

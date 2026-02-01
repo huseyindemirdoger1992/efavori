@@ -142,29 +142,31 @@
                                         <i class="fa fa-file-o fa-3x"></i>
                                     </div>
                                 }
-                                @if (file.IsCompleted)
+                                @if (file.Progress < 100)
                                 {
-                                    <div class="position-absolute top-0 end-0 m-1">
-                                        <span class="badge rounded-circle bg-success p-1">
-                                            <i class="fa fa-check text-white"></i>
-                                        </span>
+                                    <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75">
+                                        <div class="spinner-border text-light" role="status">
+                                            <span class="visually-hidden">Yükleniyor...</span>
+                                        </div>
                                     </div>
                                 }
-                                else
+                                else if (file.IsCompleted)
                                 {
-                                    <div class="position-absolute top-0 end-0 m-1">
-                                        <span class="badge rounded-circle bg-info p-1 shadow-sm">
-                                            <i class="fa fa-spinner fa-spin text-white"></i>
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-success rounded-circle p-1">
+                                            <i class="fa fa-check"></i>
                                         </span>
                                     </div>
                                 }
                             </div>
                             <div class="card-body p-2">
-                                <p class="card-text small text-white text-truncate mb-2 text-center">@file.Name</p>
-                                <div class="progress" style="height: 4px; background: rgba(255,255,255,0.1);">
-                                    <div class="progress-bar @(file.IsCompleted ? "bg-success" : "bg-warning")"
+                                <p class="text-white small mb-1 text-truncate" title="@file.Name">@file.Name</p>
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar @(file.IsCompleted ? "bg-success" : "bg-info")"
+                                         role="progressbar"
                                          style="width: @file.Progress%"></div>
                                 </div>
+                                <small class="text-white-50">%@file.Progress</small>
                             </div>
                         </div>
                     </div>
@@ -173,6 +175,7 @@
         }
     </div>
 </div>
+
 @code {
     private List<FileUploadModel> selectedFiles = new();
     private int totalProgress = 0;
@@ -259,32 +262,45 @@
         int processedCount = 0;
         foreach (var fileModel in selectedFiles)
         {
-            fileModel.Progress = 30;
+            fileModel.Progress = 0;
             StateHasChanged();
-            using var stream = fileModel.File.OpenReadStream(maxAllowedSize: 1024 * 1024 * 100);
+
             var userEmail = (!string.IsNullOrEmpty(use.ContactInformation.Email)) ? use.ContactInformation.Email : "null@null.com";
             var userId = Guid.NewGuid();
             var ext = Path.GetExtension(fileModel.File.Name).ToLower();
+
+            // Progress callback fonksiyonu
+            var progressCallback = new Progress<int>(percent =>
+            {
+                fileModel.Progress = percent;
+                totalProgress = selectedFiles.Sum(f => f.Progress) / selectedFiles.Count;
+                InvokeAsync(StateHasChanged);
+            });
+
+            using var stream = fileModel.File.OpenReadStream(maxAllowedSize: 1024 * 1024 * 500); // 500MB
+            var progressStream = new ProgressStream(stream, fileModel.File.Size, progressCallback);
+
             if (allowedExtensions_image.Contains(ext))
             {
-                await MediaService.ConvertToAvifWithLogAsync(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+                await MediaService.ConvertToAvifWithLogAsync(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
             }
             else if (allowedExtensions_videos.Contains(ext))
             {
-                await MediaService.allowedExtensions_videos(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+                await MediaService.allowedExtensions_videos(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
             }
             else if (allowedExtensions_sountds.Contains(ext))
             {
-                await MediaService.allowedExtensions_sountds(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+                await MediaService.allowedExtensions_sountds(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
             }
             else if (allowedExtensions_documents.Contains(ext))
             {
-                await MediaService.allowedExtensions_documents(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+                await MediaService.allowedExtensions_documents(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
             }
             else if (allowedExtensions_others.Contains(ext))
             {
-                await MediaService.allowedExtensions_others(new FormFileWrapper(stream, fileModel.File.Name), userEmail, userId);
+                await MediaService.allowedExtensions_others(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
             }
+
             fileModel.Progress = 100;
             fileModel.IsCompleted = true;
             processedCount++;
@@ -293,6 +309,79 @@
         }
         await Clean();
     }
+
+    // Progress tracking için Stream wrapper
+    private class ProgressStream : Stream
+    {
+        private readonly Stream _baseStream;
+        private readonly long _totalBytes;
+        private readonly IProgress<int> _progress;
+        private long _bytesRead;
+
+        public ProgressStream(Stream baseStream, long totalBytes, IProgress<int> progress)
+        {
+            _baseStream = baseStream;
+            _totalBytes = totalBytes;
+            _progress = progress;
+            _bytesRead = 0;
+        }
+
+        public override bool CanRead => _baseStream.CanRead;
+        public override bool CanSeek => _baseStream.CanSeek;
+        public override bool CanWrite => false;
+        public override long Length => _baseStream.Length;
+        public override long Position
+        {
+            get => _baseStream.Position;
+            set => _baseStream.Position = value;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int bytesRead = _baseStream.Read(buffer, offset, count);
+            UpdateProgress(bytesRead);
+            return bytesRead;
+        }
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            int bytesRead = await _baseStream.ReadAsync(buffer, offset, count, cancellationToken);
+            UpdateProgress(bytesRead);
+            return bytesRead;
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            int bytesRead = await _baseStream.ReadAsync(buffer, cancellationToken);
+            UpdateProgress(bytesRead);
+            return bytesRead;
+        }
+
+        private void UpdateProgress(int bytesRead)
+        {
+            _bytesRead += bytesRead;
+            if (_totalBytes > 0)
+            {
+                int percent = (int)((_bytesRead * 100) / _totalBytes);
+                _progress?.Report(Math.Min(percent, 99)); // 99'da dur, 100'ü sadece tamamlandığında göster
+            }
+        }
+
+        public override void Flush() => _baseStream.Flush();
+        public override long Seek(long offset, SeekOrigin origin) => _baseStream.Seek(offset, origin);
+        public override void SetLength(long value) => _baseStream.SetLength(value);
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _baseStream?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+
     public class FileUploadModel
     {
         public string Name { get; set; } = string.Empty;
@@ -301,14 +390,23 @@
         public int Progress { get; set; }
         public bool IsCompleted { get; set; }
     }
+
     private class FormFileWrapper : IFormFile
     {
         private readonly Stream _stream;
-        public FormFileWrapper(Stream stream, string name) { _stream = stream; FileName = name; Length = stream.Length; }
-        public string ContentType => "image/unknown";
+        private readonly long _length;
+
+        public FormFileWrapper(Stream stream, string name, long length)
+        {
+            _stream = stream;
+            FileName = name;
+            _length = length;
+        }
+
+        public string ContentType => "application/octet-stream";
         public string ContentDisposition => "";
         public IHeaderDictionary Headers => new HeaderDictionary();
-        public long Length { get; }
+        public long Length => _length;
         public string Name => "file";
         public string FileName { get; }
         public Stream OpenReadStream() => _stream;

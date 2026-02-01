@@ -9,7 +9,7 @@ namespace data._Shared
     public class IsDeleted
     {
         // Silinme durumu (Soft Delete)
-        public bool IsDeletedStatu { get; set; } = false;
+        public bool? IsDeletedStatu { get; set; } = false;
 
         // Silinme tarihi
         public DateTime? DeletedAtDate { get; set; }

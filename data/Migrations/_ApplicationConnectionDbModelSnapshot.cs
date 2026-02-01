@@ -38,6 +38,9 @@ namespace data.Migrations
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DeletedAtDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("FileExtensionType")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
@@ -58,8 +61,18 @@ namespace data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool?>("IsDeletedStatu")
+                        .HasColumnType("bit");
+
                     b.Property<long?>("OriginalSize")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("OrjFilePhysicalPathRoad")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OrjFileUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
@@ -979,30 +992,6 @@ namespace data.Migrations
                     b.ToTable("UsersRoles");
                 });
 
-            modelBuilder.Entity("Data.Media", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("MediaId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("MediaId");
-
-                            b1.ToTable("Media");
-
-                            b1.WithOwner()
-                                .HasForeignKey("MediaId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
             modelBuilder.Entity("data.Addresses", b =>
                 {
                     b.OwnsOne("data._Shared.AddressInfo", "AddressInfo", b1 =>
@@ -1053,7 +1042,7 @@ namespace data.Migrations
                             b1.Property<DateTime?>("DeletedAtDate")
                                 .HasColumnType("datetime2");
 
-                            b1.Property<bool>("IsDeletedStatu")
+                            b1.Property<bool?>("IsDeletedStatu")
                                 .HasColumnType("bit");
 
                             b1.HasKey("AddressesId");

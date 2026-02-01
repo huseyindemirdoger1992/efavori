@@ -32,6 +32,19 @@ namespace Data
         // Dosyanın fiziksel veya göreceli yolu
         public string? FilePhysicalPathRoad { get; set; }
 
+
+
+
+        [Required]
+        // Dosyanın erişim adresi (CDN veya Local URL)
+        public string? OrjFileUrl { get; set; }
+
+        // Dosyanın fiziksel veya göreceli yolu
+        public string? OrjFilePhysicalPathRoad { get; set; }
+
+
+
+
         [MaxLength(10)]
         // Dosya uzantısı (Örn: .png, .mp4)
         public string? FileExtensionType { get; set; }
@@ -49,7 +62,10 @@ namespace Data
         // Yükleme tarihi
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Silinme durumu
-        public IsDeleted? IsDeleted { get; set; }
+        // Silinme durumu (Soft Delete)
+        public bool? IsDeletedStatu { get; set; } = false;
+
+        // Silinme tarihi
+        public DateTime? DeletedAtDate { get; set; }
     }
 }

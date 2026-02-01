@@ -1,122 +1,63 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
+using System.Net;
+using System.Runtime.Intrinsics.X86;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Drawing;
-
 namespace _PublisherAssistant
 {
     public partial class Form1 : Form
     {
         private long totalFileCount = 0;
         private long totalByteSize = 0;
-
         public Form1()
         {
             InitializeComponent();
             Directory_Structure_ListBox.Font = new Font("Consolas", 10F, FontStyle.Regular);
         }
-
-        private async Task ListDirectoryContentsAsync(string path, string rootPath)
+        private async void TestButton_Click(object sender, EventArgs e)
         {
+            label2.Text = $"Action Start At: {DateTime.Now}";
+            TestButton.Enabled = false;
+            string serverUrl = "ftp://94.199.202.149/";
+            string userName = "efavoriconnectionftp";
+            string password = "FeneriAslanYedi0!";
+
             try
             {
-                string[] directories = await Task.Run(() => Directory.GetDirectories(path));
-                string[] files = await Task.Run(() => Directory.GetFiles(path));
+                // 1. WebRequest oluştururken metodu ListDirectory olarak değiştiriyoruz
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create(serverUrl);
+                request.Method = WebRequestMethods.Ftp.ListDirectory;
+                request.Credentials = new NetworkCredential(userName, password);
 
-                foreach (string directory in directories)
+                // Güvenlik ayarları
+                request.EnableSsl = true;
+                request.UsePassive = true;
+                request.KeepAlive = false;
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                ServicePointManager.ServerCertificateValidationCallback = (s, cert, chain, ssl) => true;
+
+                // 2. Yanıtı ASENKRON olarak almayı dene
+                using (FtpWebResponse response = (FtpWebResponse)await request.GetResponseAsync())
                 {
-                    await ListDirectoryContentsAsync(directory, rootPath);
-                }
-
-                // rootPath: "C:\Users\...\Publish"
-                // file:     "C:\Users\...\Publish\wwwroot\assets\css\app.css"
-                // Sonuç:    "\wwwroot\assets\css\app.css"
-                int trimLength = rootPath.Length;
-
-                foreach (string file in files)
-                {
-                    FileInfo fInfo = new FileInfo(file);
-                    totalFileCount++;
-                    totalByteSize += fInfo.Length;
-
-                    // Dosya yolunun başından rootPath kısmını atıyoruz
-                    string displayPath = file.Substring(trimLength);
-
-                    // Eğer path başında "\" yoksa ekliyoruz (Görsel tutarlılık için)
-                    if (!displayPath.StartsWith("\\"))
-                    {
-                        displayPath = "\\" + displayPath;
-                    }
-
-                    Directory_Structure_ListBox.Items.Add(displayPath);
+                    // Buraya ulaştıysa bağlantı başarılıdır
+                    this.ActionHistoryList.Items.Add("CONNECTION SUCCESSFUL!");
+                    this.ActionHistoryList.Items.Add($"Server Status:{response.StatusDescription}");
                 }
             }
-            catch (UnauthorizedAccessException) { }
-            catch (Exception ex)
+            catch (WebException webEx)
             {
-                Directory_Structure_ListBox.Items.Add("[Error]: " + ex.Message);
+                // Hata varsa buraya düşer
+                string status = (webEx.Response != null) ? ((FtpWebResponse)webEx.Response).StatusDescription : "Detay Yok";
+                this.ActionHistoryList.Items.Add($"Hata: {webEx.Message} Server Response:{status}");
             }
-        }
-
-        private async void Directory_Structure_btn_Click(object sender, EventArgs e)
-        {
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
+            finally
             {
-                folderDialog.Description = "Select target directory";
-                if (folderDialog.ShowDialog() == DialogResult.OK)
-                {
-                    string selectedPath = folderDialog.SelectedPath;
-                    Directory_Structure_txt.Text = selectedPath;
-
-                    Directory_Structure_ListBox.Items.Clear();
-                    totalFileCount = 0;
-                    totalByteSize = 0;
-                    Total_Number_Of_Files_Lbl.Text = "Files: 0";
-                    Total_File_Size_Lbl.Text = "Size: 0 KB";
-
-                    Directory_Structure_ListBox.BeginUpdate();
-                    Directory_Structure_btn.Enabled = false;
-
-                    // Seçilen yolu olduğu gibi gönderiyoruz
-                    await ListDirectoryContentsAsync(selectedPath, selectedPath);
-
-                    Total_Number_Of_Files_Lbl.Text = $"Total Files: {totalFileCount:N0}";
-                    Total_File_Size_Lbl.Text = $"Total Size: {FormatSize(totalByteSize)}";
-
-                    Directory_Structure_ListBox.EndUpdate();
-                    Directory_Structure_btn.Enabled = true;
-                }
-            }
-        }
-        private string FormatSize(long bytes)
-        {
-            string[] suf = { "B", "KB", "MB", "GB", "TB" };
-            if (bytes == 0) return "0 B";
-            long bytesAbs = Math.Abs(bytes);
-            int place = Convert.ToInt32(Math.Floor(Math.Log(bytesAbs, 1024)));
-            double num = Math.Round(bytesAbs / Math.Pow(1024, place), 1);
-            return (Math.Sign(bytes) * num).ToString() + " " + suf[place];
-        }
-
-        private void Web_Config_btn_Click(object sender, EventArgs e)
-        {
-            using (OpenFileDialog fileDialog = new OpenFileDialog())
-            {
-                fileDialog.Title = "Select Web.Config file";
-                fileDialog.Filter = "Configuration Files|web.config|All Files (*.*)|*.*";
-
-                if (fileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    if (Path.GetFileName(fileDialog.FileName).Equals("web.config", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Web_Config_txt.Text = fileDialog.FileName;
-                    }
-                    else
-                    {
-                        MessageBox.Show("Please select a file named 'web.config'!", "Invalid File", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    }
-                }
+                TestButton.Enabled = true;
+                label3.Text = $"Action Finish At: {DateTime.Now}";
+                label4.Text = $"Total Time: {(DateTime.Now - DateTime.Parse(label2.Text.Replace("Action Start At: ", ""))).TotalSeconds} seconds";
             }
         }
     }

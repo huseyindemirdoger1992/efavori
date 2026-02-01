@@ -30,19 +30,24 @@
         {
             Directory_Structure_txt = new TextBox();
             label1 = new Label();
-            label2 = new Label();
-            Web_Config_txt = new TextBox();
             Directory_Structure_btn = new Button();
-            Web_Config_btn = new Button();
             Directory_Structure_ListBox = new ListBox();
             Total_Number_Of_Files_Lbl = new Label();
             Total_File_Size_Lbl = new Label();
+            TestButton = new Button();
+            ActionProgressBar = new ProgressBar();
+            ActionHistoryList = new ListBox();
+            button1 = new Button();
+            button2 = new Button();
+            label2 = new Label();
+            label3 = new Label();
+            label4 = new Label();
             SuspendLayout();
             // 
             // Directory_Structure_txt
             // 
             Directory_Structure_txt.Enabled = false;
-            Directory_Structure_txt.Location = new Point(12, 32);
+            Directory_Structure_txt.Location = new Point(12, 85);
             Directory_Structure_txt.Name = "Directory_Structure_txt";
             Directory_Structure_txt.Size = new Size(861, 27);
             Directory_Structure_txt.TabIndex = 0;
@@ -50,48 +55,20 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(12, 9);
+            label1.Location = new Point(12, 62);
             label1.Name = "label1";
             label1.Size = new Size(133, 20);
             label1.TabIndex = 1;
             label1.Text = "Directory Structure";
             // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(12, 62);
-            label2.Name = "label2";
-            label2.Size = new Size(86, 20);
-            label2.TabIndex = 2;
-            label2.Text = "Web.Config";
-            // 
-            // Web_Config_txt
-            // 
-            Web_Config_txt.Enabled = false;
-            Web_Config_txt.Location = new Point(12, 85);
-            Web_Config_txt.Name = "Web_Config_txt";
-            Web_Config_txt.Size = new Size(861, 27);
-            Web_Config_txt.TabIndex = 3;
-            // 
             // Directory_Structure_btn
             // 
-            Directory_Structure_btn.Location = new Point(879, 12);
+            Directory_Structure_btn.Location = new Point(879, 85);
             Directory_Structure_btn.Name = "Directory_Structure_btn";
-            Directory_Structure_btn.Size = new Size(54, 47);
+            Directory_Structure_btn.Size = new Size(54, 27);
             Directory_Structure_btn.TabIndex = 4;
             Directory_Structure_btn.Text = "...";
             Directory_Structure_btn.UseVisualStyleBackColor = true;
-            Directory_Structure_btn.Click += Directory_Structure_btn_Click;
-            // 
-            // Web_Config_btn
-            // 
-            Web_Config_btn.Location = new Point(879, 65);
-            Web_Config_btn.Name = "Web_Config_btn";
-            Web_Config_btn.Size = new Size(54, 47);
-            Web_Config_btn.TabIndex = 5;
-            Web_Config_btn.Text = "...";
-            Web_Config_btn.UseVisualStyleBackColor = true;
-            Web_Config_btn.Click += Web_Config_btn_Click;
             // 
             // Directory_Structure_ListBox
             // 
@@ -99,13 +76,13 @@
             Directory_Structure_ListBox.Location = new Point(12, 118);
             Directory_Structure_ListBox.Name = "Directory_Structure_ListBox";
             Directory_Structure_ListBox.SelectionMode = SelectionMode.MultiSimple;
-            Directory_Structure_ListBox.Size = new Size(921, 324);
+            Directory_Structure_ListBox.Size = new Size(921, 144);
             Directory_Structure_ListBox.TabIndex = 6;
             // 
             // Total_Number_Of_Files_Lbl
             // 
             Total_Number_Of_Files_Lbl.AutoSize = true;
-            Total_Number_Of_Files_Lbl.Location = new Point(12, 445);
+            Total_Number_Of_Files_Lbl.Location = new Point(12, 465);
             Total_Number_Of_Files_Lbl.Name = "Total_Number_Of_Files_Lbl";
             Total_Number_Of_Files_Lbl.Size = new Size(167, 20);
             Total_Number_Of_Files_Lbl.TabIndex = 7;
@@ -114,24 +91,105 @@
             // Total_File_Size_Lbl
             // 
             Total_File_Size_Lbl.AutoSize = true;
-            Total_File_Size_Lbl.Location = new Point(12, 465);
+            Total_File_Size_Lbl.Location = new Point(12, 485);
             Total_File_Size_Lbl.Name = "Total_File_Size_Lbl";
             Total_File_Size_Lbl.Size = new Size(116, 20);
             Total_File_Size_Lbl.TabIndex = 8;
             Total_File_Size_Lbl.Text = "Total File Size: X";
             // 
+            // TestButton
+            // 
+            TestButton.Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold, GraphicsUnit.Point, 162);
+            TestButton.ForeColor = Color.Olive;
+            TestButton.Location = new Point(12, 12);
+            TestButton.Name = "TestButton";
+            TestButton.Size = new Size(921, 47);
+            TestButton.TabIndex = 9;
+            TestButton.Text = "Connection Test";
+            TestButton.UseVisualStyleBackColor = true;
+            TestButton.Click += TestButton_Click;
+            // 
+            // ActionProgressBar
+            // 
+            ActionProgressBar.Location = new Point(12, 268);
+            ActionProgressBar.Name = "ActionProgressBar";
+            ActionProgressBar.Size = new Size(921, 29);
+            ActionProgressBar.TabIndex = 11;
+            // 
+            // ActionHistoryList
+            // 
+            ActionHistoryList.FormattingEnabled = true;
+            ActionHistoryList.Location = new Point(12, 303);
+            ActionHistoryList.Name = "ActionHistoryList";
+            ActionHistoryList.Size = new Size(921, 124);
+            ActionHistoryList.TabIndex = 12;
+            // 
+            // button1
+            // 
+            button1.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 162);
+            button1.ForeColor = Color.Maroon;
+            button1.Location = new Point(12, 433);
+            button1.Name = "button1";
+            button1.Size = new Size(248, 29);
+            button1.TabIndex = 19;
+            button1.Text = "FTP (Clear Server)";
+            button1.UseVisualStyleBackColor = true;
+            // 
+            // button2
+            // 
+            button2.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 162);
+            button2.ForeColor = Color.Teal;
+            button2.Location = new Point(685, 433);
+            button2.Name = "button2";
+            button2.Size = new Size(248, 29);
+            button2.TabIndex = 20;
+            button2.Text = "Release the New Structure";
+            button2.UseVisualStyleBackColor = true;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(12, 505);
+            label2.Name = "label2";
+            label2.Size = new Size(109, 20);
+            label2.TabIndex = 21;
+            label2.Text = "Action Start At:";
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(12, 525);
+            label3.Name = "label3";
+            label3.Size = new Size(115, 20);
+            label3.TabIndex = 22;
+            label3.Text = "Action Finish At:";
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Location = new Point(12, 545);
+            label4.Name = "label4";
+            label4.Size = new Size(82, 20);
+            label4.TabIndex = 23;
+            label4.Text = "Total Time:";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(945, 526);
+            ClientSize = new Size(945, 589);
+            Controls.Add(label4);
+            Controls.Add(label3);
+            Controls.Add(label2);
+            Controls.Add(button2);
+            Controls.Add(button1);
+            Controls.Add(ActionHistoryList);
+            Controls.Add(ActionProgressBar);
+            Controls.Add(TestButton);
             Controls.Add(Total_File_Size_Lbl);
             Controls.Add(Total_Number_Of_Files_Lbl);
             Controls.Add(Directory_Structure_ListBox);
-            Controls.Add(Web_Config_btn);
             Controls.Add(Directory_Structure_btn);
-            Controls.Add(Web_Config_txt);
-            Controls.Add(label2);
             Controls.Add(label1);
             Controls.Add(Directory_Structure_txt);
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -147,12 +205,17 @@
 
         private TextBox Directory_Structure_txt;
         private Label label1;
-        private Label label2;
-        private TextBox Web_Config_txt;
         private Button Directory_Structure_btn;
-        private Button Web_Config_btn;
         private ListBox Directory_Structure_ListBox;
         private Label Total_Number_Of_Files_Lbl;
         private Label Total_File_Size_Lbl;
+        private Button TestButton;
+        private ProgressBar ActionProgressBar;
+        private ListBox ActionHistoryList;
+        private Button button1;
+        private Button button2;
+        private Label label2;
+        private Label label3;
+        private Label label4;
     }
 }

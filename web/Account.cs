@@ -4,6 +4,7 @@ using api.tr;
 using data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -67,19 +68,38 @@ namespace web.Account.Controllers
                     return Unauthorized(new { message = "Hesabınız aktif değil." });
                 }
 
-                // 4. Claim Oluşturma
+                // 4. Culture ayarla (kullanıcının tercih ettiği dil veya varsayılan)
+                culture = !string.IsNullOrEmpty(user.Language) ? user.Language.ToLower() : culture;
+
+                // Culture cookie'sini ayarla
+                Response.Cookies.Append(
+                    ".Efavori.Culture",
+                    CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                    new CookieOptions
+                    {
+                        Expires = DateTimeOffset.UtcNow.AddYears(1),
+                        HttpOnly = false,
+                        IsEssential = true,
+                        Path = "/",
+                        SameSite = SameSiteMode.Lax,
+                        Secure = Request.IsHttps
+                    }
+                );
+
+                // 5. Claim Oluşturma
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(ClaimTypes.Email, user.ContactInformation.Email ?? ""),
                     new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
                     new Claim(ClaimTypes.Role, user.UsersType ?? "Customer"),
+                    new Claim("Language", culture),
                     new Claim("LastLogin", DateTime.UtcNow.ToString("o"))
                 };
 
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
-                // 5. Auth Özellikleri
+                // 6. Auth Özellikleri
                 var authProperties = new AuthenticationProperties
                 {
                     IsPersistent = true,
@@ -88,17 +108,15 @@ namespace web.Account.Controllers
                     IssuedUtc = DateTimeOffset.UtcNow
                 };
 
-                // 6. Giriş İşlemi
+                // 7. Giriş İşlemi
                 await HttpContext.SignInAsync(
                     CookieAuthenticationDefaults.AuthenticationScheme,
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties);
 
-                culture = !string.IsNullOrEmpty(user.Language) ? user.Language : "en";
+                _logger.LogInformation("User logged in successfully: {Email}, Culture: {Culture}", model.Email, culture);
 
-                _logger.LogInformation("User logged in successfully: {Email}", model.Email);
-
-                // 7. E-posta gönderme işlemini arka planda yap (hata olsa bile login'i engellemesin)
+                // 8. E-posta gönderme işlemini arka planda yap (hata olsa bile login'i engellemesin)
                 _ = Task.Run(async () =>
                 {
                     try
@@ -111,8 +129,11 @@ namespace web.Account.Controllers
                     }
                 });
 
-                // 8. Başarılı Yanıt
-                return Redirect($"/{culture}/Customer/Home/Index");
+                // 9. Başarılı Yanıt - Culture ile birlikte yönlendir
+                var redirectUrl = $"/{culture}/Customer/Home/Index";
+                _logger.LogInformation("Redirecting to: {Url}", redirectUrl);
+
+                return Redirect(redirectUrl);
             }
             catch (DbUpdateException dbEx)
             {
@@ -152,6 +173,7 @@ namespace web.Account.Controllers
                 // Kullanıcı bilgisini al
                 var userEmail = User?.FindFirst(ClaimTypes.Email)?.Value;
                 var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userCulture = User?.FindFirst("Language")?.Value ?? culture;
 
                 _logger.LogInformation("User logging out: {Email}", userEmail ?? "unknown");
 
@@ -165,7 +187,7 @@ namespace web.Account.Controllers
                     {
                         try
                         {
-                            await _emailSender.SendLogOutInfoEmailAsync(culture, userEmail);
+                            await _emailSender.SendLogOutInfoEmailAsync(userCulture, userEmail);
                         }
                         catch (Exception emailEx)
                         {
@@ -174,7 +196,11 @@ namespace web.Account.Controllers
                     });
                 }
 
-                return Redirect($"/{culture}/Customer/Home/Index");
+                // Culture cookie'yi koru (logout sonrası da dil tercihi korunsun)
+                var redirectUrl = $"/{userCulture}/Customer/Home/Index";
+                _logger.LogInformation("Logout successful, redirecting to: {Url}", redirectUrl);
+
+                return Redirect(redirectUrl);
             }
             catch (Exception ex)
             {

@@ -11,4 +11,5 @@
   <Project Path="data/data.csproj" />
   <Project Path="razor/razor.csproj" />
   <Project Path="web/web.csproj" />
+  <Project Path="_PublisherAssistant/_PublisherAssistant.csproj" Id="380fa68f-49e5-48fa-94ba-5bc0b8990582" />
 </Solution>

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace web._files.xml
+namespace web._files.xml.pages.sountds
 {
     //🔁 Cache’li sitemap
 
@@ -14,9 +14,9 @@ namespace web._files.xml
 
     //🧠 Otomatik DB sayım + page hesaplama
 
-    // URL: https://efavori.com/_files/xml/media_documents.xml?page=1
-    [Route("_files/xml/media_documents.xml")]
-    public class media_documents : Controller
+    // URL: https://efavori.com/_files/xml/media_sountds.xml?page=1
+    [Route("_files/xml/media_sountds.xml")]
+    public class media_sountds : Controller
     {
     }
 }

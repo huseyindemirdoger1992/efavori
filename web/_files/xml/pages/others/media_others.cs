@@ -4,7 +4,7 @@ using razor._Shared.tr.Header;
 using System.Text;
 using static System.Net.Mime.MediaTypeNames;
 
-namespace web._files.xml
+namespace web._files.xml.pages.others
 {
     //🔁 Cache’li sitemap
 

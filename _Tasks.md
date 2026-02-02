@@ -1,25 +1,40 @@
-*** Bilgiler ***
+ï»¿*** Bilgiler ***
 Theme= "DASHTREME TRANSPARENT ARCHITECT"
 Icons= "Font Awesome 4.7.0"
 Version= "Bootstrap 5.3"
 Target Framework= "NET 10.0"
 
 *** Talepler ***
-Dosya yükleme boyu en fazla 128 MB olabilir.
-Dosya yükleme işi bittikten sonra, yeni yüklenen dosyaya erişmek için bir tetikleyici sağlanacaktır.
-Yüklenen dosyayı arama input ("Ara...") yapısı eklenecek.
-Yüklenen dosyalar listelenecek.(12 Tane)[Her satırda 6 tane olabilir]
-Dosya ismi, Boyut, Yüklenme Tarihi bilgileri gösterilecek.
-Lazy load özelliği eklenecek.
-Resim ve Video İçin ön izleme olacak, Diğer yapılar için ikon kullanılacak.
-Resimler için:Detay, Düzenle(Ad)[Modal İle], Kırp[Modal İle], Yeni Sekmede Aç, Bağlantıyı Kopyala, Sil[Modal İle] butonları eklenecek.
-Videolar İçin için:Detay, Düzenle(Ad)[Modal İle], Yeni Sekmede Aç, Bağlantıyı Kopyala, Sil[Modal İle] butonları eklenecek.
-Sesler İçin için:Detay, Düzenle(Ad)[Modal İle], Yeni Sekmede Aç, Bağlantıyı Kopyala, Sil[Modal İle] butonları eklenecek.
-Dökümanlar İçin için:Detay, Düzenle(Ad)[Modal İle], Yeni Sekmede Aç, Bağlantıyı Kopyala, Sil[Modal İle] butonları eklenecek.
-Diğerleri İçin için:Detay, Düzenle(Ad)[Modal İle], Yeni Sekmede Aç, Bağlantıyı Kopyala, Sil[Modal İle] butonları eklenecek.
-Daha fazla göster butonu eklenecek.(12 Tane Daha)
+Dosya yÃ¼kleme boyu en fazla 128 MB olabilir.
+Dosya yÃ¼kleme iÅŸi bittikten sonra, yeni yÃ¼klenen dosyaya eriÅŸmek iÃ§in bir tetikleyici saÄŸlanacaktÄ±r.
+YÃ¼klenen dosyayÄ± arama input ("Ara...") yapÄ±sÄ± eklenecek.
+YÃ¼klenen dosyalar listelenecek.(12 Tane)[Her satÄ±rda 6 tane olabilir]
+Dosya ismi, Boyut, YÃ¼klenme Tarihi bilgileri gÃ¶sterilecek.
+Lazy load Ã¶zelliÄŸi eklenecek.
+Resim ve Video Ä°Ã§in Ã¶n izleme olacak, DiÄŸer yapÄ±lar iÃ§in ikon kullanÄ±lacak.
+Resimler iÃ§in:Detay, DÃ¼zenle(Ad)[Modal Ä°le], KÄ±rp[Modal Ä°le], Yeni Sekmede AÃ§, BaÄŸlantÄ±yÄ± Kopyala, Sil[Modal Ä°le] butonlarÄ± eklenecek.
+Videolar Ä°Ã§in iÃ§in:Detay, DÃ¼zenle(Ad)[Modal Ä°le], Yeni Sekmede AÃ§, BaÄŸlantÄ±yÄ± Kopyala, Sil[Modal Ä°le] butonlarÄ± eklenecek.
+Sesler Ä°Ã§in iÃ§in:Detay, DÃ¼zenle(Ad)[Modal Ä°le], Yeni Sekmede AÃ§, BaÄŸlantÄ±yÄ± Kopyala, Sil[Modal Ä°le] butonlarÄ± eklenecek.
+DÃ¶kÃ¼manlar Ä°Ã§in iÃ§in:Detay, DÃ¼zenle(Ad)[Modal Ä°le], Yeni Sekmede AÃ§, BaÄŸlantÄ±yÄ± Kopyala, Sil[Modal Ä°le] butonlarÄ± eklenecek.
+DiÄŸerleri Ä°Ã§in iÃ§in:Detay, DÃ¼zenle(Ad)[Modal Ä°le], Yeni Sekmede AÃ§, BaÄŸlantÄ±yÄ± Kopyala, Sil[Modal Ä°le] butonlarÄ± eklenecek.
+Daha fazla gÃ¶ster butonu eklenecek.(12 Tane Daha)
 
 
 Kurallar:
 Upload.razor ve List.razor haricinde dosya istemiyorum.
-Sadece buı iki dosyada[Upload.razor, List.razor] kod olacak.
+Sadece buÄ± iki dosyada[Upload.razor, List.razor] kod olacak.
+
+
+
+
+//ğŸ” Cacheâ€™li sitemap
+
+//âš¡ Redis destekli sitemap
+
+//ğŸŒ Multi-language sitemap
+
+//ğŸ–¼ Image sitemap
+
+//ğŸ¥ Video sitemap
+
+//ğŸ§  Otomatik DB sayÄ±m + page hesaplama

@@ -1,11 +1,12 @@
 ﻿@using Microsoft.EntityFrameworkCore
 @using Data
 @using Microsoft.Extensions.DependencyInjection
+@using System.Threading.Tasks
 @using data
 @inject IJSRuntime JSRuntime
 @inject IServiceScopeFactory ScopeFactory
 @rendermode InteractiveServer
-
+@inject FileUploadService FileService
 <razor._Shared.Notification @ref="notificationRef" />
 
 <div class="card bg-transparent border border-light-3 shadow-none">
@@ -141,7 +142,6 @@
                                     <button type="button" class="btn btn-sm btn-outline-danger flex-fill" @onclick="() => ShowDeleteModal(media)" title="Sil">
                                         <i class="fa fa-trash"></i>
                                     </button>
-
                                 </div>
                             </div>
                         </div>
@@ -365,6 +365,15 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadMediaItems();
+        FileService.OnFileUploaded += NotifyHandler;
+    }
+
+    private async void NotifyHandler()
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadMediaItems();
+        });
     }
 
     public async Task LoadMediaItems()
@@ -378,7 +387,7 @@
             var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
 
             var query = dbContext.Media
-                .Where(m => m.IsDeletedStatu == false || m.IsDeletedStatu == null)
+                .Where(m => m.IsDeletedStatu != true && m.UserId == use.Id)
                 .OrderByDescending(m => m.CreatedAt)
                 .AsQueryable();
 
@@ -612,7 +621,7 @@
         }
     }
 
-    public void Dispose()
+    public async Task Dispose()
     {
         searchDebounceTimer?.Dispose();
     }

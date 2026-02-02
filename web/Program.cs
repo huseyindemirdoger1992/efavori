@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using razor._Shared.tr.Media;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
@@ -47,6 +48,7 @@ try
     builder.Services.AddScoped<api.tr.Media>();
     builder.Services.AddScoped<api.tr.UserInfos>();
     builder.Services.AddScoped<Media>();
+    builder.Services.AddScoped<FileUploadService>();
 
 
     var app = builder.Build();
@@ -355,6 +357,11 @@ try
             name: "account",
             pattern: "{culture}/Account/{action=Login}",
             defaults: new { controller = "Account" });
+
+        app.MapControllerRoute(
+        name: "xml",
+        pattern: "/_files/xml/{controller=Home}/{action=Index}/{id?}");
+
 
         // Root redirect
         app.MapGet("/", context =>

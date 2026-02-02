@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject Media MediaService
 @rendermode InteractiveServer
+@inject FileUploadService FileService
 <razor._Shared.Notification @ref="notificationRef" />
 <div class="card bg-transparent border border-light-3 shadow-none">
     <div class="card-body">
@@ -34,25 +35,25 @@
                         </div>
                     </div>
                 </div>
-                <div class="text-center mb-2">
+                <div class="text-left mb-2">
                     <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
-                        Desteklenen Görsel Formatları: ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".raw", ".svg", ".ico", ".tga"
+                        <b>Görsel:</b>  ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"...
                     </span>
                     <br />
-                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
-                        Desteklenen Video Formatları: ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg"
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal" style="margin-top:4px">
+                        <b>Video:</b>  ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv"...
                     </span>
                     <br />
-                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
-                        Desteklenen Ses Formatları: ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".wma", ".opus"
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal" style="margin-top:4px">
+                        <b>Ses:</b>  ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac"...
                     </span>
                     <br />
-                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
-                        Desteklenen Döküman Formatları: ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt"
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal" style="margin-top:4px">
+                        <b>Döküman:</b>  ".pdf", ".doc", ".docx", ".xls", ".xlsx"...
                     </span>
                     <br />
-                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal">
-                        Desteklenen Diğer Formatlar: ".zip", ".rar", ".7z", ".tar", ".gz", ".iso", ".mp3", ".wav"
+                    <span class="badge bg-dark-transparent border border-light-3 text-white fw-normal" style="margin-top:4px">
+                        <b>Diğer:</b>  ".zip", ".rar", ".7z", ".tar", ".gz", ".iso"...
                     </span>
                 </div>
             </div>
@@ -266,7 +267,7 @@
             StateHasChanged();
 
             var userEmail = (!string.IsNullOrEmpty(use.ContactInformation.Email)) ? use.ContactInformation.Email : "null@null.com";
-            var userId = Guid.NewGuid();
+            var userId = (use?.Id!= null) ? use.Id : new Guid();
             var ext = Path.GetExtension(fileModel.File.Name).ToLower();
 
             // Progress callback fonksiyonu
@@ -305,6 +306,7 @@
             fileModel.IsCompleted = true;
             processedCount++;
             totalProgress = (processedCount * 100) / selectedFiles.Count;
+            FileService.NotifyFileUploaded();
             StateHasChanged();
         }
         await Clean();

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Localization.Routing;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text.Encodings.Web;
@@ -45,6 +46,8 @@ try
     builder.Services.AddScoped<EmailSender>();
     builder.Services.AddScoped<api.tr.Media>();
     builder.Services.AddScoped<api.tr.UserInfos>();
+    builder.Services.AddScoped<Media>();
+
 
     var app = builder.Build();
 
@@ -309,6 +312,12 @@ try
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(
+                Path.Combine(builder.Environment.ContentRootPath, "_files")),
+            RequestPath = "/_files"
+        });
         app.UseRouting();
 
         // --- KRİTİK SIRALAMA: Localization, Auth'dan ÖNCE gelmeli ---

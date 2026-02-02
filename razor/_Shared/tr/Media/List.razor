@@ -1,1 +1,619 @@
-﻿@rendermode InteractiveServer
+﻿@using Microsoft.EntityFrameworkCore
+@using Data
+@using Microsoft.Extensions.DependencyInjection
+@using data
+@inject IJSRuntime JSRuntime
+@inject IServiceScopeFactory ScopeFactory
+@rendermode InteractiveServer
+
+<razor._Shared.Notification @ref="notificationRef" />
+
+<div class="card bg-transparent border border-light-3 shadow-none">
+    <div class="card-body">
+        <!-- Search Bar -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="input-group">
+                    <span class="input-group-text bg-dark-transparent border-light-3 text-white-50">
+                        <i class="fa fa-search"></i>
+                    </span>
+                    <input type="text"
+                           class="form-control bg-dark-transparent border-light-3 text-white"
+                           placeholder="Ara..."
+                           @bind="searchQuery"
+                           @bind:event="oninput"
+                           @onkeyup="OnSearchChanged" />
+                    @if (!string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <button class="btn btn-outline-light border-light-3" type="button" @onclick="ClearSearch">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Media Grid -->
+        @if (isLoading && !mediaItems.Any())
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-light" role="status">
+                    <span class="visually-hidden">Yükleniyor...</span>
+                </div>
+            </div>
+        }
+        else if (!mediaItems.Any())
+        {
+            <div class="text-center py-5">
+                <i class="fa fa-folder-open fa-3x text-white-50 mb-3"></i>
+                <p class="text-white-50">@(string.IsNullOrWhiteSpace(searchQuery) ? "Henüz dosya yüklenmemiş" : "Sonuç bulunamadı")</p>
+            </div>
+        }
+        else
+        {
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+                @foreach (var media in mediaItems.Take(displayedItemsCount))
+                {
+                    <div class="col">
+                        <div class="card bg-dark-transparent border-light-3 h-100 overflow-hidden shadow-sm position-relative media-card">
+                            <!-- Preview Area -->
+                            <div class="position-relative media-preview">
+                                @{
+                                    var ext = media.FileExtensionType?.ToLower() ?? "";
+                                    var isImage = IsImageFile(ext);
+                                    var isVideo = IsVideoFile(ext);
+                                    var isAudio = IsAudioFile(ext);
+                                    var isDocument = IsDocumentFile(ext);
+                                }
+
+                                @if (isImage)
+                                {
+                                    <img src="@media.FileUrl"
+                                         class="card-img-top lazy-load"
+                                         style="height: 150px; object-fit: cover; cursor: pointer;"
+                                         @onclick="() => ShowDetail(media)"
+                                         alt="@media.FileName"
+                                         loading="lazy" />
+                                }
+                                else if (isVideo)
+                                {
+                                    <a href="@media.FileUrl" target="_blank" class="text-decoration-none">
+                                        <div class="position-relative" style="height: 150px; background: #000;">
+                                            <video class="w-100 h-100" style="object-fit: cover;">
+                                                <source src="@media.FileUrl" type="@media.ContentType">
+                                            </video>
+                                            <div class="position-absolute top-50 start-50 translate-middle">
+                                                <i class="fa fa-play-circle fa-3x text-white opacity-75"></i>
+                                            </div>
+                                        </div>
+                                    </a>
+                                }
+                                else if (isAudio)
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 150px;">
+                                        <i class="fa fa-file-audio-o fa-4x"></i>
+                                    </div>
+                                }
+                                else if (isDocument)
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 150px;">
+                                        @GetDocumentIcon(ext)
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height: 150px;">
+                                        <i class="fa fa-file-archive-o fa-4x"></i>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Card Body -->
+                            <div class="card-body p-2">
+                                <div class="text-white small text-truncate mb-1" title="@media.FileName">
+                                    <i class="fa fa-file-o me-1"></i>@media.FileName
+                                </div>
+                                <div class="text-white-50" style="font-size: 0.7rem;">
+                                    <div>@FormatFileSize(media.CompressedSize ?? media.OriginalSize ?? 0)</div>
+                                    <div>@media.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="card-footer bg-dark-transparent border-light-3 p-2">
+                                <div class="btn-group w-100 flex-wrap" role="group" aria-label="Media Actions">
+                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => ShowDetail(media)" title="Detay">
+                                        <i class="fa fa-info-circle"></i>
+                                    </button>
+
+                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => ShowEditModal(media)" title="Düzenle">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+
+                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => OpenInNewTab(media.FileUrl)" title="Yeni Sekmede Aç">
+                                        <i class="fa fa-external-link"></i>
+                                    </button>
+
+                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => CopyLink(media.FileUrl)" title="Bağlantıyı Kopyala">
+                                        <i class="fa fa-copy"></i>
+                                    </button>
+
+                                    <button type="button" class="btn btn-sm btn-outline-danger flex-fill" @onclick="() => ShowDeleteModal(media)" title="Sil">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Load More Button -->
+            @if (displayedItemsCount < filteredTotalCount)
+            {
+                <div class="text-center mt-4">
+                    <button class="btn btn-outline-light px-4" @onclick="LoadMore" disabled="@isLoadingMore">
+                        @if (isLoadingMore)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        <i class="fa fa-arrow-down me-2"></i>Daha Fazla Göster (12 Tane Daha)
+                    </button>
+                    <div class="text-white-50 small mt-2">
+                        Gösterilen: @displayedItemsCount / @filteredTotalCount
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<!-- Detail Modal -->
+@if (showDetailModal && selectedMedia != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-dark border-light-3">
+                <div class="modal-header border-light-3">
+                    <h5 class="modal-title text-white">
+                        <i class="fa fa-info-circle me-2"></i>Dosya Detayları
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDetailModal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Preview -->
+                    <div class="text-center mb-3">
+                        @{
+                            var ext = selectedMedia.FileExtensionType?.ToLower() ?? "";
+                        }
+                        @if (IsImageFile(ext))
+                        {
+                            <img src="@selectedMedia.FileUrl" class="img-fluid rounded" style="max-height: 400px;" alt="@selectedMedia.FileName" />
+                        }
+                        else if (IsVideoFile(ext))
+                        {
+                            <video controls class="w-100 rounded" style="max-height: 400px;">
+                                <source src="@selectedMedia.FileUrl" type="@selectedMedia.ContentType">
+                            </video>
+                        }
+                        else if (IsAudioFile(ext))
+                        {
+                            <div class="p-5 bg-dark-transparent rounded">
+                                <i class="fa fa-file-audio-o fa-5x text-white-50 mb-3"></i>
+                                <audio controls class="w-100">
+                                    <source src="@selectedMedia.FileUrl" type="@selectedMedia.ContentType">
+                                </audio>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Details -->
+                    <div class="table-responsive">
+                        <table class="table table-dark table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th class="text-white-50" style="width: 30%;">Dosya Adı</th>
+                                    <td class="text-white">@selectedMedia.FileName</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-white-50">Depolanan Ad</th>
+                                    <td class="text-white">@selectedMedia.FileStoredName</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-white-50">Uzantı</th>
+                                    <td class="text-white">@selectedMedia.FileExtensionType</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-white-50">İçerik Türü</th>
+                                    <td class="text-white">@selectedMedia.ContentType</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-white-50">Orijinal Boyut</th>
+                                    <td class="text-white">@FormatFileSize(selectedMedia.OriginalSize ?? 0)</td>
+                                </tr>
+                                @if (selectedMedia.CompressedSize.HasValue && selectedMedia.CompressedSize != selectedMedia.OriginalSize)
+                                {
+                                    <tr>
+                                        <th class="text-white-50">Sıkıştırılmış Boyut</th>
+                                        <td class="text-white">@FormatFileSize(selectedMedia.CompressedSize.Value)</td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <th class="text-white-50">Yüklenme Tarihi</th>
+                                    <td class="text-white">@selectedMedia.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-white-50">URL</th>
+                                    <td class="text-white">
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <input type="text" class="form-control form-control-sm bg-dark-transparent border-light-3 text-white" readonly value="@selectedMedia.FileUrl" />
+                                            <button class="btn btn-sm btn-outline-light" @onclick="() => CopyLink(selectedMedia.FileUrl)">
+                                                <i class="fa fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-light-3">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDetailModal">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Modal -->
+@if (showEditModal && selectedMedia != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-light-3">
+                <div class="modal-header border-light-3">
+                    <h5 class="modal-title text-white">
+                        <i class="fa fa-edit me-2"></i>Dosya Adını Düzenle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-white-50">Dosya Adı</label>
+                        <input type="text" class="form-control bg-dark-transparent border-light-3 text-white" @bind="editFileName" />
+                    </div>
+                </div>
+                <div class="modal-footer border-light-3">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">İptal</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveFileName" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        <i class="fa fa-save me-2"></i>Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Modal -->
+@if (showDeleteModal && selectedMedia != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-light-3">
+                <div class="modal-header border-light-3">
+                    <h5 class="modal-title text-white">
+                        <i class="fa fa-exclamation-triangle me-2 text-danger"></i>Dosyayı Sil
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger bg-dark-transparent border-danger">
+                        <i class="fa fa-warning me-2"></i>
+                        Bu dosyayı silmek istediğinizden emin misiniz?
+                    </div>
+                    <div class="text-white">
+                        <strong>Dosya Adı:</strong> @selectedMedia.FileName<br />
+                        <strong>Boyut:</strong> @FormatFileSize(selectedMedia.CompressedSize ?? selectedMedia.OriginalSize ?? 0)
+                    </div>
+                </div>
+                <div class="modal-footer border-light-3">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">İptal</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteFile" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        <i class="fa fa-trash me-2"></i>Sil
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private razor._Shared.Notification notificationRef = default!;
+
+    private List<Media> mediaItems = new();
+    private string searchQuery = string.Empty;
+    private int displayedItemsCount = 12;
+    private int filteredTotalCount = 0;
+    private bool isLoading = true;
+    private bool isLoadingMore = false;
+    private System.Threading.Timer? searchDebounceTimer;
+
+    // Modal states
+    private bool showDetailModal = false;
+    private bool showEditModal = false;
+    private bool showDeleteModal = false;
+    private Media? selectedMedia = null;
+    private string editFileName = string.Empty;
+    private bool isSaving = false;
+    private bool isDeleting = false;
+
+    // File type extensions
+    private readonly string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".raw", ".svg", ".ico", ".tga", ".avif" };
+    private readonly string[] videoExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg" };
+    private readonly string[] audioExtensions = { ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".wma", ".opus" };
+    private readonly string[] documentExtensions = { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMediaItems();
+    }
+
+    public async Task LoadMediaItems()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+
+            var query = dbContext.Media
+                .Where(m => m.IsDeletedStatu == false || m.IsDeletedStatu == null)
+                .OrderByDescending(m => m.CreatedAt)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var search = searchQuery.ToLower();
+                query = query.Where(m =>
+                    (m.FileName != null && m.FileName.ToLower().Contains(search)) ||
+                    (m.FileExtensionType != null && m.FileExtensionType.ToLower().Contains(search)) ||
+                    (m.ContentType != null && m.ContentType.ToLower().Contains(search))
+                );
+            }
+
+            filteredTotalCount = await query.CountAsync();
+            mediaItems = await query.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            await ShowNotification("Hata", $"Medya dosyaları yüklenirken hata oluştu: {ex.Message}", "danger");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnSearchChanged()
+    {
+        searchDebounceTimer?.Dispose();
+        searchDebounceTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                displayedItemsCount = 12;
+                await LoadMediaItems();
+            });
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private async Task ClearSearch()
+    {
+        searchQuery = string.Empty;
+        displayedItemsCount = 12;
+        await LoadMediaItems();
+    }
+
+    private async Task LoadMore()
+    {
+        isLoadingMore = true;
+        StateHasChanged();
+
+        await Task.Delay(300); // Simulate loading
+        displayedItemsCount += 12;
+
+        isLoadingMore = false;
+        StateHasChanged();
+    }
+
+    // File type checks
+    private bool IsImageFile(string ext) => imageExtensions.Contains(ext);
+    private bool IsVideoFile(string ext) => videoExtensions.Contains(ext);
+    private bool IsAudioFile(string ext) => audioExtensions.Contains(ext);
+    private bool IsDocumentFile(string ext) => documentExtensions.Contains(ext);
+
+    private RenderFragment GetDocumentIcon(string ext) => ext switch
+    {
+        ".pdf" => @<i class="fa fa-file-pdf-o fa-4x"></i>,
+        ".doc" or ".docx" => @<i class="fa fa-file-word-o fa-4x"></i>,
+        ".xls" or ".xlsx" => @<i class="fa fa-file-excel-o fa-4x"></i>,
+        ".ppt" or ".pptx" => @<i class="fa fa-file-powerpoint-o fa-4x"></i>,
+        ".txt" or ".rtf" => @<i class="fa fa-file-text-o fa-4x"></i>,
+        _ => @<i class="fa fa-file-o fa-4x"></i>
+    };
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    // Modal actions
+    private void ShowDetail(Media media)
+    {
+        selectedMedia = media;
+        showDetailModal = true;
+    }
+
+    private void CloseDetailModal()
+    {
+        showDetailModal = false;
+        selectedMedia = null;
+    }
+
+    private void ShowEditModal(Media media)
+    {
+        selectedMedia = media;
+        editFileName = media.FileName ?? "";
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        selectedMedia = null;
+        editFileName = string.Empty;
+    }
+
+    private async Task SaveFileName()
+    {
+        if (selectedMedia == null || string.IsNullOrWhiteSpace(editFileName))
+        {
+            await ShowNotification("Uyarı", "Dosya adı boş olamaz", "warning");
+            return;
+        }
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+
+            var media = await dbContext.Media.FindAsync(selectedMedia.Id);
+            if (media != null)
+            {
+                media.FileName = editFileName;
+                await dbContext.SaveChangesAsync();
+
+                selectedMedia.FileName = editFileName;
+                var index = mediaItems.FindIndex(m => m.Id == selectedMedia.Id);
+                if (index >= 0)
+                {
+                    mediaItems[index].FileName = editFileName;
+                }
+
+                await ShowNotification("Başarılı", "Dosya adı güncellendi", "success");
+                CloseEditModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowNotification("Hata", $"Dosya adı güncellenirken hata oluştu: {ex.Message}", "danger");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowDeleteModal(Media media)
+    {
+        selectedMedia = media;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        selectedMedia = null;
+    }
+
+    private async Task DeleteFile()
+    {
+        if (selectedMedia == null) return;
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            using var scope = ScopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+
+            var media = await dbContext.Media.FindAsync(selectedMedia.Id);
+            if (media != null)
+            {
+                media.IsDeletedStatu = true;
+                media.DeletedAtDate = DateTime.UtcNow;
+                await dbContext.SaveChangesAsync();
+
+                mediaItems.RemoveAll(m => m.Id == selectedMedia.Id);
+                filteredTotalCount--;
+
+                await ShowNotification("Başarılı", "Dosya silindi", "success");
+                CloseDeleteModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowNotification("Hata", $"Dosya silinirken hata oluştu: {ex.Message}", "danger");
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenInNewTab(string? url)
+    {
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+    }
+
+    private async Task CopyLink(string? url)
+    {
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"https://efavori.com{url}");
+            await ShowNotification("Başarılı", "Bağlantı kopyalandı", "success");
+        }
+    }
+
+    private async Task ShowNotification(string title, string message, string type)
+    {
+        if (notificationRef != null)
+        {
+            await notificationRef.Launch(type, title, message, null);
+        }
+    }
+
+    public void Dispose()
+    {
+        searchDebounceTimer?.Dispose();
+    }
+}

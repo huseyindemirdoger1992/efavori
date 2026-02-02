@@ -6,6 +6,7 @@
     <File Path="TakeLog.txt" />
     <File Path="Text.txt" />
     <File Path="_Rules.txt" />
+    <File Path="_Tasks.md" />
   </Folder>
   <Project Path="api/api.csproj" />
   <Project Path="data/data.csproj" />

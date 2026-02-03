@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="Button.txt" />
+    <File Path="main.txt" />
     <File Path="Modal.txt" />
     <File Path="Notification.txt" />
     <File Path="TakeLog.txt" />

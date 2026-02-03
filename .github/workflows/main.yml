@@ -48,7 +48,7 @@ jobs:
       run: Start-Sleep -s 10
       shell: pwsh
 
-    # --- 2. ADIM: SENKRONİZASYON ---
+# --- 2. ADIM: SENKRONİZASYON (İyileştirilmiş) ---
     - name: 📂 Sync Project Files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -58,6 +58,13 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         state-name: .ftp-deploy-sync-state.json
+        # --- KRİTİK AYARLAR BURADA ---
+        protocol: ftp
+        port: 21
+        parallel: 1          # Aynı anda sadece 1 dosya gönder (Hata payını azaltır)
+        timeout: 90000       # Zaman aşımını 90 saniyeye çıkar
+        retries: 10          # Bağlantı koparsa 10 kez yeniden dene
+        # -----------------------------
         exclude: |
           **/appsettings.Development.json
           **/.git*

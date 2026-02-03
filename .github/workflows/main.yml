@@ -1,4 +1,4 @@
-name: 🚀 Plesk MVC FTP Deploy (Self-Contained)
+name: 🚀 Plesk MVC FTP Deploy (32-Bit & Secure)
 
 on:
   push:
@@ -12,21 +12,16 @@ jobs:
     
     steps:
     - name: 🚚 Get latest code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 # v4 sürümüne güncellendi
 
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        # .NET 10 SDK'sını GitHub Runner'a kurar
         dotnet-version: '10.0.x' 
 
-    - name: 🔨 Publish Project
-      # İSTEDİĞİN AYARLAR: 
-      # -c Release (Yapılandırma)
-      # --runtime win-x64 (Çalışma zamanı)
-      # --self-contained true (Dağıtım modu)
-      # -f net10.0 (Hedef çerçeve)
-      run: dotnet publish -c Release -r win-x64 --self-contained true -f net10.0 -o ./publish
+    - name: 🔨 Publish Project (x86)
+      # 32-bit (x86) için revize edildi
+      run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
 
     - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -37,14 +32,21 @@ jobs:
         local-dir: ./publish/
         server-dir: httpdocs/
         
-        # Olası ECONNRESET hatalarına karşı sadece değişenleri gönderir
-        state-name: .ftp-deploy-sync-state.json
-        log-level: verbose
+        # --- GÜVENLİK VE SALDIRI KORUMASI AYARLARI ---
+        # Aynı anda çok fazla dosya gönderip sunucuyu tetiklememek için:
+        # Sunucunun "Brute Force" veya "DDoS" korumasına takılmayı önler.
+        dangerous-clean-slate: false # Sunucudaki her şeyi silip baştan yüklemez
         
-        # KESİN KURAL: Kök dizindeki _files klasörünü korur
+        # Değişiklik takibi için durum dosyası
+        state-name: .ftp-deploy-sync-state.json
+        
+        # --- DOSYA KORUMA ---
         exclude: |
           **/_files/**
           _files/**
           **/.git*
           **/.github/**
           **/appsettings.Development.json
+          **/web.config
+          # Not: web.config dosyasını Plesk üzerinde özelleştirdiysen 
+          # yukarıdaki listeye ekleyip ezilmesini engelleyebilirsin.

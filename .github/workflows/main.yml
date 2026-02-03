@@ -16,7 +16,7 @@ jobs:
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.0.x' # Projenin versiyonuna göre (6.0, 7.0 vb.) değiştirebilirsin
+        dotnet-version: '10.0.2' # Projenin versiyonuna göre (6.0, 7.0 vb.) değiştirebilirsin
 
     - name: 🔨 Publish Project
       # MVC projesini derleyip 'publish' klasörüne hazırlar

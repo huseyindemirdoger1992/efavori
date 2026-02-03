@@ -8,7 +8,9 @@ on:
 jobs:
   web-deploy:
     name: 🎉 Deploy
-    runs-on: ubuntu-latest
+    # HATA ÇÖZÜMÜ: Ubuntu yerine windows-latest kullanıyoruz
+    runs-on: windows-latest 
+    
     steps:
     - name: 🚚 Get latest code
       uses: actions/checkout@v3
@@ -16,11 +18,10 @@ jobs:
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        # HATA BURADAYDI: Sürümü projenin gerçek sürümüyle eşitle.
-        # Eğer projen .NET 8 ise '8.0.x', .NET 9 ise '9.0.x' yapmalısın.
         dotnet-version: '8.0.x' 
 
     - name: 🔨 Publish Project
+      # Windows üzerinde derleme yapıyoruz
       run: dotnet publish -c Release -o ./publish
 
     - name: 📂 Sync files via FTP
@@ -30,9 +31,10 @@ jobs:
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./publish/
-        # Plesk için gerekirse aktif et: server-dir: ./httpdocs/
+        # Plesk klasör yapısına göre gerekirse aktif et: 
+        # server-dir: ./httpdocs/
         
-        # KURAL: _files klasörünü ve içeriğini asla silme veya değiştirme
+        # KURAL: _files klasörü ve içeriği asla silinmeyecek
         exclude: |
           **/_files/**
           _files/**

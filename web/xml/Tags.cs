@@ -1,4 +1,4 @@
-﻿namespace web._files.xml
+﻿namespace web.xml
 {
     public class Tags
     {

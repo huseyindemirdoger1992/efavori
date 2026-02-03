@@ -52,7 +52,6 @@ try
     builder.Services.AddScoped<FileUploadService>();
     builder.Services.AddHostedService<AllBackgroundServices>();
 
-
     var app = builder.Build();
 
     // ============================================================================

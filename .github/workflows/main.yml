@@ -22,166 +22,197 @@ jobs:
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
       
-    # --- 1. ADIM: DURDURMA ---
-    - name: 🛑 Stop App
+    # ========================================
+    # 1. ADIM: IIS'İ DURDUR VE BEKLE
+    # ========================================
+    
+    - name: 🛑 Create app_offline.htm
       shell: pwsh
       run: |
         $path = "${{ github.workspace }}/publish/app_offline.htm"
-        "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath $path -Encoding utf8
-        if (Test-Path $path) { Write-Host "✅ app_offline.htm oluşturuldu." }
+        @"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='utf-8'>
+            <meta http-equiv='refresh' content='10'>
+            <title>Güncelleme</title>
+        </head>
+        <body style='font-family:Arial;text-align:center;padding:50px;'>
+            <h1>🔄 Sistem Güncelleniyor</h1>
+            <p>Lütfen birkaç saniye bekleyin...</p>
+        </body>
+        </html>
+        "@ | Out-File -FilePath $path -Encoding UTF8
         
-    - name: 📤 Upload app_offline
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
-        server-dir: httpdocs/
-        dangerous-clean-slate: false
-        protocol: ftp               # ← Düz FTP dene (FTPS sorunlu olabilir)
-        port: 21
-        timeout: 30000              # ← 30 saniyeye düşür
-        log-level: verbose          # ← Detaylı log için
-        only: |
-          app_offline.htm
-          
-    - name: ⏳ Wait for IIS
-      run: Start-Sleep -s 10
-      shell: pwsh
-
-    # --- 2. ADIM: ULTRA-SAFE SENKRONİZASYON ---
-    
-    # Aşama 1: Sadece değişen küçük dosyaları gönder
-    - name: 📦 Stage 1 - Config & Small Files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
-        server-dir: httpdocs/
-        state-name: .ftp-deploy-stage1.json
-        protocol: ftp               # ← Düz FTP
-        port: 21
-        parallel: 1                 # ← TEK DOSYA (en güvenli)
-        timeout: 60000              # ← 1 dakika per dosya
-        retries: 25                 # ← Maksimum retry
-        retry-delay: 2000           # ← 2 saniye ara
-        exclude: |
-          **/appsettings.Development.json
-          **/.git*
-          **/.github/**
-          _files/**
-          **/_files/**
-          **/*.dll
-          **/*.exe
-          **/*.pdb
-          **/*.so
-          **/*.dylib
-          
-    - name: ⏸️ Cooldown 1 (Connection Reset)
-      run: Start-Sleep -s 8
-      shell: pwsh
-      
-    # Aşama 2: DLL dosyaları (en kritik kısım)
-    - name: 🔧 Stage 2 - DLL Files (Sequential)
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
-        server-dir: httpdocs/
-        state-name: .ftp-deploy-stage2.json
-        protocol: ftp
-        port: 21
-        parallel: 1                 # ← TEK TEK gönder
-        timeout: 90000              # ← 90 saniye per dosya
-        retries: 30                 # ← 30 deneme
-        retry-delay: 3000           # ← 3 saniye ara
-        only: |
-          **/*.dll
-          
-    - name: ⏸️ Cooldown 2 (Connection Reset)
-      run: Start-Sleep -s 8
-      shell: pwsh
-      
-    # Aşama 3: EXE ve PDB dosyaları
-    - name: 🏗️ Stage 3 - EXE & PDB Files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
-        server-dir: httpdocs/
-        state-name: .ftp-deploy-stage3.json
-        protocol: ftp
-        port: 21
-        parallel: 1
-        timeout: 90000
-        retries: 30
-        retry-delay: 3000
-        only: |
-          **/*.exe
-          **/*.pdb
-          
-    - name: ⏸️ Cooldown 3 (Connection Reset)
-      run: Start-Sleep -s 8
-      shell: pwsh
-      
-    # Aşama 4: Final verification sync
-    - name: 🔄 Stage 4 - Final Verification Sync
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
-        server-dir: httpdocs/
-        state-name: .ftp-deploy-final.json
-        protocol: ftp
-        port: 21
-        parallel: 1
-        timeout: 120000             # ← 2 dakika final sync için
-        retries: 25
-        retry-delay: 3000
-        exclude: |
-          **/appsettings.Development.json
-          **/.git*
-          **/.github/**
-          _files/**
-          **/_files/**
-
-    # --- 3. ADIM: BAŞLATMA VE DOĞRULAMA ---
-    - name: 🚀 Start App (Safe Remove)
-      shell: pwsh
-      run: |
-        Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force -ErrorAction SilentlyContinue
-        Write-Host "✅ Yerel app_offline silindi."
-        
-    - name: 🧹 Clean Remote & Online
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
-        server-dir: httpdocs/
-        protocol: ftp
-        port: 21
-        timeout: 60000
-        retries: 10
-        
-    - name: 🌡️ Warm Up Site
-      shell: pwsh
-      run: |
-        Write-Host "Site uyandırılıyor..."
-        Start-Sleep -s 5
-        try {
-            $response = Invoke-WebRequest -Uri "https://efavori.com" -UseBasicParsing -TimeoutSec 30
-            Write-Host "✅ Site yanıt verdi: $($response.StatusCode)"
-        } catch {
-            Write-Warning "⚠️ Site henüz hazır değil veya hata döndürdü: $_"
+        if (Test-Path $path) { 
+            Write-Host "✅ app_offline.htm oluşturuldu ($(( Get-Item $path).Length) bytes)"
         }
+        
+    - name: 📤 Upload app_offline.htm ONLY
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        port: 21
+        timeout: 30000
+        dangerous-clean-slate: false
+        dry-run: false
+        exclude: |
+          **/*
+          !app_offline.htm
+          
+    - name: ⏳ Wait for IIS to Release Files (CRITICAL)
+      shell: pwsh
+      run: |
+        Write-Host "⏸️  IIS'in dosyaları serbest bırakması bekleniyor..."
+        Write-Host "Timestamp: $(Get-Date -Format 'HH:mm:ss')"
+        Start-Sleep -s 30  # 30 saniye bekle (Plesk için kritik!)
+        Write-Host "✅ IIS lock süresi doldu: $(Get-Date -Format 'HH:mm:ss')"
+
+    # ========================================
+    # 2. ADIM: DOSYALARI YÜKLE (IIS KAPALI)
+    # ========================================
+    
+    - name: 🔧 Install LFTP
+      shell: pwsh
+      run: |
+        Write-Host "Installing LFTP..."
+        choco install lftp -y --no-progress
+        lftp --version
+        
+    - name: 📂 Deploy Files with LFTP
+      shell: pwsh
+      env:
+        FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        FTP_USER: ${{ secrets.FTP_ACCOUNT }}
+        FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+      run: |
+        # LFTP config
+        $script = @"
+        set ftp:ssl-allow no
+        set ftp:passive-mode on
+        set net:timeout 90
+        set net:max-retries 15
+        set net:reconnect-interval-base 5
+        set net:reconnect-interval-multiplier 1
+        set net:connection-limit 1
+        set ftp:sync-mode off
+        set file:charset UTF-8
+        
+        open ftp://${env:FTP_USER}:${env:FTP_PASS}@${env:FTP_SERVER}
+        
+        lcd ${{ github.workspace }}/publish
+        cd httpdocs
+        
+        # Mirror with excludes
+        mirror -R \
+          --verbose \
+          --no-perms \
+          --no-umask \
+          --parallel=1 \
+          --exclude-glob .git* \
+          --exclude-glob .github/ \
+          --exclude-glob _files/ \
+          --exclude-glob **/_files/ \
+          --exclude-glob appsettings.Development.json \
+          --exclude app_offline.htm \
+          ./ ./
+        
+        bye
+        "@
+        
+        $script | Out-File -FilePath lftp-deploy.txt -Encoding ASCII
+        
+        Write-Host "📤 Starting deployment..."
+        lftp -f lftp-deploy.txt
+        
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "❌ Deployment failed!"
+          exit 1
+        }
+        
+        Write-Host "✅ All files uploaded successfully!"
+
+    # ========================================
+    # 3. ADIM: IIS'İ YENİDEN BAŞLAT
+    # ========================================
+    
+    - name: 🧹 Delete Local app_offline.htm
+      shell: pwsh
+      run: |
+        $file = "${{ github.workspace }}/publish/app_offline.htm"
+        if (Test-Path $file) {
+          Remove-Item $file -Force
+          Write-Host "✅ Local app_offline.htm deleted"
+        }
+        
+    - name: 🔥 Delete Remote app_offline.htm (via FTP command)
+      shell: pwsh
+      env:
+        FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        FTP_USER: ${{ secrets.FTP_ACCOUNT }}
+        FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+      run: |
+        # LFTP ile app_offline.htm'i sil
+        $deleteScript = @"
+        set ftp:ssl-allow no
+        set ftp:passive-mode on
+        open ftp://${env:FTP_USER}:${env:FTP_PASS}@${env:FTP_SERVER}
+        cd httpdocs
+        rm -f app_offline.htm
+        bye
+        "@
+        
+        $deleteScript | Out-File -FilePath lftp-delete.txt -Encoding ASCII
+        lftp -f lftp-delete.txt
+        
+        Write-Host "✅ Remote app_offline.htm silindi - IIS yeniden başlıyor!"
+        
+    - name: ⏳ Wait for IIS Restart
+      shell: pwsh
+      run: |
+        Write-Host "⏸️  IIS'in başlaması bekleniyor..."
+        Start-Sleep -s 15
+        Write-Host "✅ IIS hazır!"
+
+    # ========================================
+    # 4. ADIM: DOĞRULAMA
+    # ========================================
+    
+    - name: 🌡️ Warm Up & Verify Site
+      shell: pwsh
+      run: |
+        Write-Host "🔥 Site uyandırılıyor ve test ediliyor..."
+        
+        $maxAttempts = 5
+        $attempt = 0
+        $success = $false
+        
+        while ($attempt -lt $maxAttempts -and -not $success) {
+          $attempt++
+          Write-Host "`n🔍 Deneme $attempt/$maxAttempts..."
+          
+          try {
+            Start-Sleep -s 3
+            $response = Invoke-WebRequest -Uri "https://efavori.com" -UseBasicParsing -TimeoutSec 30
+            
+            if ($response.StatusCode -eq 200) {
+              Write-Host "✅ Site BAŞARILI! Status: $($response.StatusCode)"
+              Write-Host "📄 Content Length: $($response.Content.Length) bytes"
+              $success = $true
+            }
+          } catch {
+            Write-Warning "⚠️  Deneme $attempt başarısız: $($_.Exception.Message)"
+            if ($attempt -eq $maxAttempts) {
+              Write-Error "❌ Site $maxAttempts denemede yanıt vermedi!"
+              exit 1
+            }
+          }
+        }
+        
+        Write-Host "`n🎉 DEPLOYMENT TAMAMLANDI!"

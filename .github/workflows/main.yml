@@ -1,0 +1,43 @@
+name: 🚀 Plesk MVC FTP Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v3
+
+    - name: ⚙️ Setup .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x' # Projenin versiyonuna göre (6.0, 7.0 vb.) değiştirebilirsin
+
+    - name: 🔨 Publish Project
+      # MVC projesini derleyip 'publish' klasörüne hazırlar
+      run: dotnet publish -c Release -o ./publish
+
+    - name: 📂 Sync files via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        # GitHub'daki derlenmiş dosyaların yolu
+        local-dir: ./publish/ 
+        # Plesk üzerinde genellikle ana dizin 'httpdocs' olur. 
+        # Eğer FTP doğrudan bu klasöre girmiyorsa aşağıdaki satırı aktif et:
+        # server-dir: ./httpdocs/
+        
+        # KRİTİK AYARLAR:
+        exclude: |
+          **/_files/**
+          _files/**
+          **/.git*
+          **/.github/**
+          **/appsettings.Development.json

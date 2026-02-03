@@ -39,11 +39,10 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         dangerous-clean-slate: false
-        protocol: ftps              # FTPS kullanmayı dene
+        protocol: ftp               # ← Düz FTP dene (FTPS sorunlu olabilir)
         port: 21
-        security: loose             # Sertifika kontrolünü gevşet
-        timeout: 60000
-        log-level: minimal
+        timeout: 30000              # ← 30 saniyeye düşür
+        log-level: verbose          # ← Detaylı log için
         only: |
           app_offline.htm
           
@@ -51,10 +50,10 @@ jobs:
       run: Start-Sleep -s 10
       shell: pwsh
 
-    # --- 2. ADIM: SENKRONİZASYON (3 Aşamalı Strateji) ---
+    # --- 2. ADIM: ULTRA-SAFE SENKRONİZASYON ---
     
-    # Aşama 1: Küçük dosyaları gönder (hızlı tamamlanır)
-    - name: 📦 Stage 1 - Small Files (<100KB)
+    # Aşama 1: Sadece değişen küçük dosyaları gönder
+    - name: 📦 Stage 1 - Config & Small Files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -63,14 +62,12 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         state-name: .ftp-deploy-stage1.json
-        protocol: ftps
+        protocol: ftp               # ← Düz FTP
         port: 21
-        security: loose
-        dry-run: false
-        parallel: 2              # Küçük dosyalar için 2 paralel
-        timeout: 120000          # 2 dakika
-        retries: 15
-        retry-delay: 3000        # 3 saniye ara
+        parallel: 1                 # ← TEK DOSYA (en güvenli)
+        timeout: 60000              # ← 1 dakika per dosya
+        retries: 25                 # ← Maksimum retry
+        retry-delay: 2000           # ← 2 saniye ara
         exclude: |
           **/appsettings.Development.json
           **/.git*
@@ -80,13 +77,15 @@ jobs:
           **/*.dll
           **/*.exe
           **/*.pdb
+          **/*.so
+          **/*.dylib
           
-    - name: ⏸️ Cooldown 1
-      run: Start-Sleep -s 5
+    - name: ⏸️ Cooldown 1 (Connection Reset)
+      run: Start-Sleep -s 8
       shell: pwsh
       
-    # Aşama 2: DLL ve binary dosyaları gönder
-    - name: 🔧 Stage 2 - Binary Files (DLL/EXE)
+    # Aşama 2: DLL dosyaları (en kritik kısım)
+    - name: 🔧 Stage 2 - DLL Files (Sequential)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -95,24 +94,45 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         state-name: .ftp-deploy-stage2.json
-        protocol: ftps
+        protocol: ftp
         port: 21
-        security: loose
-        parallel: 1              # Binary dosyalar için tek tek
-        timeout: 180000          # 3 dakika
-        retries: 20
-        retry-delay: 5000
+        parallel: 1                 # ← TEK TEK gönder
+        timeout: 90000              # ← 90 saniye per dosya
+        retries: 30                 # ← 30 deneme
+        retry-delay: 3000           # ← 3 saniye ara
         only: |
           **/*.dll
+          
+    - name: ⏸️ Cooldown 2 (Connection Reset)
+      run: Start-Sleep -s 8
+      shell: pwsh
+      
+    # Aşama 3: EXE ve PDB dosyaları
+    - name: 🏗️ Stage 3 - EXE & PDB Files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-stage3.json
+        protocol: ftp
+        port: 21
+        parallel: 1
+        timeout: 90000
+        retries: 30
+        retry-delay: 3000
+        only: |
           **/*.exe
           **/*.pdb
           
-    - name: ⏸️ Cooldown 2
-      run: Start-Sleep -s 5
+    - name: ⏸️ Cooldown 3 (Connection Reset)
+      run: Start-Sleep -s 8
       shell: pwsh
       
-    # Aşama 3: Kalan tüm dosyaları gönder (final sync)
-    - name: 🔄 Stage 3 - Final Sync
+    # Aşama 4: Final verification sync
+    - name: 🔄 Stage 4 - Final Verification Sync
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -121,13 +141,12 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         state-name: .ftp-deploy-final.json
-        protocol: ftps
+        protocol: ftp
         port: 21
-        security: loose
         parallel: 1
-        timeout: 180000
-        retries: 20
-        retry-delay: 5000
+        timeout: 120000             # ← 2 dakika final sync için
+        retries: 25
+        retry-delay: 3000
         exclude: |
           **/appsettings.Development.json
           **/.git*
@@ -150,10 +169,10 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        protocol: ftps
+        protocol: ftp
         port: 21
-        security: loose
         timeout: 60000
+        retries: 10
         
     - name: 🌡️ Warm Up Site
       shell: pwsh

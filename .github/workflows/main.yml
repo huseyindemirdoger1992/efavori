@@ -1,10 +1,8 @@
 name: 🚀 Plesk MVC FTP Deploy (Zero Error)
-
 on:
   push:
     branches:
       - master
-
 jobs:
   web-deploy:
     name: 🎉 Deploy
@@ -15,15 +13,15 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
+        
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x' 
-
+        
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
-
+      
     # --- 1. ADIM: DURDURMA ---
     - name: 🛑 Stop App
       shell: pwsh
@@ -31,7 +29,7 @@ jobs:
         $path = "${{ github.workspace }}/publish/app_offline.htm"
         "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath $path -Encoding utf8
         if (Test-Path $path) { Write-Host "✅ app_offline.htm oluşturuldu." }
-
+        
     - name: 📤 Upload app_offline
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -41,15 +39,22 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         dangerous-clean-slate: false
+        protocol: ftps              # FTPS kullanmayı dene
+        port: 21
+        security: loose             # Sertifika kontrolünü gevşet
+        timeout: 60000
+        log-level: minimal
         only: |
           app_offline.htm
-
+          
     - name: ⏳ Wait for IIS
       run: Start-Sleep -s 10
       shell: pwsh
 
-# --- 2. ADIM: SENKRONİZASYON (İyileştirilmiş) ---
-    - name: 📂 Sync Project Files
+    # --- 2. ADIM: SENKRONİZASYON (3 Aşamalı Strateji) ---
+    
+    # Aşama 1: Küçük dosyaları gönder (hızlı tamamlanır)
+    - name: 📦 Stage 1 - Small Files (<100KB)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -57,14 +62,72 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        state-name: .ftp-deploy-sync-state.json
-        # --- KRİTİK AYARLAR BURADA ---
-        protocol: ftp
+        state-name: .ftp-deploy-stage1.json
+        protocol: ftps
         port: 21
-        parallel: 1          # Aynı anda sadece 1 dosya gönder (Hata payını azaltır)
-        timeout: 90000       # Zaman aşımını 90 saniyeye çıkar
-        retries: 10          # Bağlantı koparsa 10 kez yeniden dene
-        # -----------------------------
+        security: loose
+        dry-run: false
+        parallel: 2              # Küçük dosyalar için 2 paralel
+        timeout: 120000          # 2 dakika
+        retries: 15
+        retry-delay: 3000        # 3 saniye ara
+        exclude: |
+          **/appsettings.Development.json
+          **/.git*
+          **/.github/**
+          _files/**
+          **/_files/**
+          **/*.dll
+          **/*.exe
+          **/*.pdb
+          
+    - name: ⏸️ Cooldown 1
+      run: Start-Sleep -s 5
+      shell: pwsh
+      
+    # Aşama 2: DLL ve binary dosyaları gönder
+    - name: 🔧 Stage 2 - Binary Files (DLL/EXE)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-stage2.json
+        protocol: ftps
+        port: 21
+        security: loose
+        parallel: 1              # Binary dosyalar için tek tek
+        timeout: 180000          # 3 dakika
+        retries: 20
+        retry-delay: 5000
+        only: |
+          **/*.dll
+          **/*.exe
+          **/*.pdb
+          
+    - name: ⏸️ Cooldown 2
+      run: Start-Sleep -s 5
+      shell: pwsh
+      
+    # Aşama 3: Kalan tüm dosyaları gönder (final sync)
+    - name: 🔄 Stage 3 - Final Sync
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-final.json
+        protocol: ftps
+        port: 21
+        security: loose
+        parallel: 1
+        timeout: 180000
+        retries: 20
+        retry-delay: 5000
         exclude: |
           **/appsettings.Development.json
           **/.git*
@@ -76,10 +139,9 @@ jobs:
     - name: 🚀 Start App (Safe Remove)
       shell: pwsh
       run: |
-        # ErrorAction SilentlyContinue sayesinde dosya yoksa hata vermez
         Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force -ErrorAction SilentlyContinue
-        Write-Host "✅ Yerel app_offline silindi, sunucudan silinmesi için son sync tetikleniyor."
-
+        Write-Host "✅ Yerel app_offline silindi."
+        
     - name: 🧹 Clean Remote & Online
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -88,7 +150,11 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-
+        protocol: ftps
+        port: 21
+        security: loose
+        timeout: 60000
+        
     - name: 🌡️ Warm Up Site
       shell: pwsh
       run: |

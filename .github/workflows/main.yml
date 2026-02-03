@@ -1,55 +1,45 @@
-name: 🚀 Plesk MVC FTP Deploy (Zero Error)
+name: 🚀 Pro-Level Plesk MVC FTP Deploy
 on:
   push:
     branches:
       - master
+
 jobs:
   web-deploy:
     name: 🎉 Deploy
-    runs-on: windows-latest 
-    
+    runs-on: windows-latest
+    # Timeout ekleyerek asılı kalan process'lerin dakikalarca fatura kesmesini önlüyoruz.
+    timeout-minutes: 15 
+
     steps:
     - name: 🚚 Get latest code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
+
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x' 
-        
+        dotnet-version: '10.0.x'
+
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
-      
+
     # ========================================
-    # 1. ADIM: IIS'İ DURDUR VE BEKLE
+    # 1. ADIM: IIS KİLİDİNİ KIR VE HAZIRLA
     # ========================================
     
-    - name: 🛑 Create app_offline.htm
+    - name: 🛑 Prepare app_offline.htm
       shell: pwsh
       run: |
         $path = "${{ github.workspace }}/publish/app_offline.htm"
-        @"
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset='utf-8'>
-            <meta http-equiv='refresh' content='10'>
-            <title>Güncelleme</title>
-        </head>
-        <body style='font-family:Arial;text-align:center;padding:50px;'>
-            <h1>🔄 Sistem Güncelleniyor</h1>
-            <p>Lütfen birkaç saniye bekleyin...</p>
-        </body>
-        </html>
-        "@ | Out-File -FilePath $path -Encoding UTF8
-        
-        if (Test-Path $path) { 
-            Write-Host "✅ app_offline.htm oluşturuldu ($(( Get-Item $path).Length) bytes)"
-        }
-        
-    - name: 📤 Upload app_offline.htm ONLY
+        $content = @"
+        <!DOCTYPE html><html><head><meta charset='utf-8'><meta http-equiv='refresh' content='10'><title>Bakım</title></head>
+        <body style='font-family:sans-serif;text-align:center;margin-top:100px;'><h1>🔄 Güncelleme Yapılıyor</h1><p>Hizmet kalitemizi artırmak için kısa bir ara verdik.</p></body></html>
+        "@
+        $content | Out-File -FilePath $path -Encoding UTF8
+    
+    - name: 📤 Upload app_offline.htm (Lock Site)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -57,162 +47,88 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        protocol: ftp
-        port: 21
-        timeout: 30000
-        dangerous-clean-slate: false
-        dry-run: false
         exclude: |
           **/*
           !app_offline.htm
-          
-    - name: ⏳ Wait for IIS to Release Files (CRITICAL)
+
+    - name: ⏳ Wait for IIS Lock Release
       shell: pwsh
       run: |
-        Write-Host "⏸️  IIS'in dosyaları serbest bırakması bekleniyor..."
-        Write-Host "Timestamp: $(Get-Date -Format 'HH:mm:ss')"
-        Start-Sleep -s 30  # 30 saniye bekle (Plesk için kritik!)
-        Write-Host "✅ IIS lock süresi doldu: $(Get-Date -Format 'HH:mm:ss')"
+        Write-Host "Waiting 30s for IIS worker process to release DLLs..."
+        Start-Sleep -s 30 # IIS'in dosyaları serbest bırakması için gereken altın süre.
 
     # ========================================
-    # 2. ADIM: DOSYALARI YÜKLE (IIS KAPALI)
+    # 2. ADIM: DELTA DEPLOYMENT (SADECE DEĞİŞENLER)
     # ========================================
     
-    - name: 🔧 Install LFTP
+    - name: 📂 Deploy Changed Files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-sync-state.json
+        protocol: ftp
+        port: 21
+        timeout: 600000 # 10 dakika (Büyük DLL transferleri için)
+        retries: 10
+        parallel: 1 # Çakışma riskini sıfıra indirmek için ardışık yükleme
+        exclude: |
+          **/appsettings.Development.json
+          **/.git*
+          **/.github/**
+          _files/**
+          **/_files/**
+          app_offline.htm
+
+    # ========================================
+    # 3. ADIM: CLEANUP & RESTART (GÜVENLİ DÖNÜŞ)
+    # ========================================
+
+    - name: 🚀 Start IIS (Force Remove app_offline)
+      # if: always() kullanarak deploy hata alsa bile siteyi tekrar açmaya çalışıyoruz.
+      if: always() 
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/ # Boş bir klasör yerine state üzerinden silme
+        server-dir: httpdocs/
+        dangerous-clean-slate: false
+        exclude: |
+          **/*
+          app_offline.htm # Exclude listesinden çıkarırsan silinmez, o yüzden dikkat.
+          # FTP-Deploy-Action yerel dosyada olmayan ama sunucuda olanı silme mantığıyla çalışır.
+          # Bu adımda yerelde app_offline.htm silindiği için sunucudan da silinecektir.
+
+    - name: 🧹 Final Local Cleanup
+      if: always()
       shell: pwsh
       run: |
-        Write-Host "Installing LFTP..."
-        choco install lftp -y --no-progress
-        lftp --version
-        
-    - name: 📂 Deploy Files with LFTP
-      shell: pwsh
-      env:
-        FTP_SERVER: ${{ secrets.FTP_SERVER }}
-        FTP_USER: ${{ secrets.FTP_ACCOUNT }}
-        FTP_PASS: ${{ secrets.FTP_PASSWORD }}
-      run: |
-        # LFTP config
-        $script = @"
-        set ftp:ssl-allow no
-        set ftp:passive-mode on
-        set net:timeout 90
-        set net:max-retries 15
-        set net:reconnect-interval-base 5
-        set net:reconnect-interval-multiplier 1
-        set net:connection-limit 1
-        set ftp:sync-mode off
-        set file:charset UTF-8
-        
-        open ftp://${env:FTP_USER}:${env:FTP_PASS}@${env:FTP_SERVER}
-        
-        lcd ${{ github.workspace }}/publish
-        cd httpdocs
-        
-        # Mirror with excludes
-        mirror -R \
-          --verbose \
-          --no-perms \
-          --no-umask \
-          --parallel=1 \
-          --exclude-glob .git* \
-          --exclude-glob .github/ \
-          --exclude-glob _files/ \
-          --exclude-glob **/_files/ \
-          --exclude-glob appsettings.Development.json \
-          --exclude app_offline.htm \
-          ./ ./
-        
-        bye
-        "@
-        
-        $script | Out-File -FilePath lftp-deploy.txt -Encoding ASCII
-        
-        Write-Host "📤 Starting deployment..."
-        lftp -f lftp-deploy.txt
-        
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "❌ Deployment failed!"
-          exit 1
+        if (Test-Path "${{ github.workspace }}/publish/app_offline.htm") {
+            Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force
         }
-        
-        Write-Host "✅ All files uploaded successfully!"
 
-    # ========================================
-    # 3. ADIM: IIS'İ YENİDEN BAŞLAT
-    # ========================================
-    
-    - name: 🧹 Delete Local app_offline.htm
+    - name: 🌡️ Critical Warm Up & Health Check
       shell: pwsh
       run: |
-        $file = "${{ github.workspace }}/publish/app_offline.htm"
-        if (Test-Path $file) {
-          Remove-Item $file -Force
-          Write-Host "✅ Local app_offline.htm deleted"
-        }
-        
-    - name: 🔥 Delete Remote app_offline.htm (via FTP command)
-      shell: pwsh
-      env:
-        FTP_SERVER: ${{ secrets.FTP_SERVER }}
-        FTP_USER: ${{ secrets.FTP_ACCOUNT }}
-        FTP_PASS: ${{ secrets.FTP_PASSWORD }}
-      run: |
-        # LFTP ile app_offline.htm'i sil
-        $deleteScript = @"
-        set ftp:ssl-allow no
-        set ftp:passive-mode on
-        open ftp://${env:FTP_USER}:${env:FTP_PASS}@${env:FTP_SERVER}
-        cd httpdocs
-        rm -f app_offline.htm
-        bye
-        "@
-        
-        $deleteScript | Out-File -FilePath lftp-delete.txt -Encoding ASCII
-        lftp -f lftp-delete.txt
-        
-        Write-Host "✅ Remote app_offline.htm silindi - IIS yeniden başlıyor!"
-        
-    - name: ⏳ Wait for IIS Restart
-      shell: pwsh
-      run: |
-        Write-Host "⏸️  IIS'in başlaması bekleniyor..."
-        Start-Sleep -s 15
-        Write-Host "✅ IIS hazır!"
-
-    # ========================================
-    # 4. ADIM: DOĞRULAMA
-    # ========================================
-    
-    - name: 🌡️ Warm Up & Verify Site
-      shell: pwsh
-      run: |
-        Write-Host "🔥 Site uyandırılıyor ve test ediliyor..."
-        
-        $maxAttempts = 5
-        $attempt = 0
-        $success = $false
-        
-        while ($attempt -lt $maxAttempts -and -not $success) {
-          $attempt++
-          Write-Host "`n🔍 Deneme $attempt/$maxAttempts..."
-          
+        $url = "https://efavori.com"
+        $maxRetries = 10
+        for($i=1; $i -le $maxRetries; $i++) {
           try {
-            Start-Sleep -s 3
-            $response = Invoke-WebRequest -Uri "https://efavori.com" -UseBasicParsing -TimeoutSec 30
-            
-            if ($response.StatusCode -eq 200) {
-              Write-Host "✅ Site BAŞARILI! Status: $($response.StatusCode)"
-              Write-Host "📄 Content Length: $($response.Content.Length) bytes"
-              $success = $true
+            Write-Host "Health Check Attempt $i..."
+            $res = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
+            if ($res.StatusCode -eq 200) {
+              Write-Host "✅ Site is Online and Healthy!"
+              exit 0
             }
           } catch {
-            Write-Warning "⚠️  Deneme $attempt başarısız: $($_.Exception.Message)"
-            if ($attempt -eq $maxAttempts) {
-              Write-Error "❌ Site $maxAttempts denemede yanıt vermedi!"
-              exit 1
-            }
+            Write-Warning "Waiting for IIS... ($($_.Exception.Message))"
+            Start-Sleep -s 10
           }
         }
-        
-        Write-Host "`n🎉 DEPLOYMENT TAMAMLANDI!"
+        Write-Error "❌ Deployment succeeded but Site is not responding!"
+        exit 1

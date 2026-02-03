@@ -1,40 +1,60 @@
-name: 🚀 Pro-Level Plesk MVC FTP Deploy
+name: 🚀 Pro-Level Plesk MVC FTP Deploy (Modernized)
 on:
   push:
     branches:
       - master
 
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
+  build-and-publish:
+    name: 🔨 Build & Artifact
     runs-on: windows-latest
-    timeout-minutes: 20 
-
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
+    - uses: actions/checkout@v4
+    
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
 
-    - name: 🔨 Publish Project
-      run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
+    - name: 🔨 Modern Publish (32-bit Optimized)
+      # ReadyToRun: İlk açılış hızını artırır. DebugType: Gereksiz dosyaları temizler.
+      run: |
+        dotnet publish -c Release `
+          -r win-x86 `
+          --self-contained true `
+          -p:PublishReadyToRun=true `
+          -p:DebugType=None `
+          -p:DebugSymbols=false `
+          -o ${{ github.workspace }}/publish
+
+    - name: 📦 Store Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: publish-files
+        path: ${{ github.workspace }}/publish/
+
+  deploy:
+    name: 📤 Secure FTP Deploy
+    needs: build-and-publish # Build bitmeden deploy başlamaz
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+    - name: 📥 Download Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: publish-files
+        path: ${{ github.workspace }}/publish
 
     # ========================================
-    # 1. ADIM: IIS KİLİDİNİ KIR (STABİL BAĞLANTI İLE)
+    # 1. ADIM: SITE LOCKING
     # ========================================
-    
-    - name: 🛑 Prepare app_offline.htm
+    - name: 🛑 Prepare & Upload app_offline.htm
       shell: pwsh
       run: |
-        $path = "${{ github.workspace }}/publish/app_offline.htm"
-        "<!DOCTYPE html><html><body style='font-family:sans-serif;text-align:center;padding-top:50px;'><h1>🔄 Sistem Guncelleniyor</h1><p>Lutfen bekleyin...</p></body></html>" | Out-File -FilePath $path -Encoding UTF8
-    
-    - name: 📤 Upload app_offline.htm
+        $offlineContent = "<!DOCTYPE html><html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>🔄 Guncelleme Yapiliyor</h1><p>Hizmetimiz kısa süre içinde dönecektir.</p></body></html>"
+        $offlineContent | Out-File -FilePath "${{ github.workspace }}/publish/app_offline.htm" -Encoding UTF8
+
+    - name: 📤 Lock Site
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -42,25 +62,19 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        # --- BAĞLANTI HATASINI ÇÖZEN AYARLAR ---
-        protocol: ftp
-        port: 21
-        # ECONNRESET hatası için kritik ayar:
-        security: loose 
-        # ---------------------------------------
+        security: loose
         exclude: |
           **/*
           !app_offline.htm
 
-    - name: ⏳ Wait for IIS Lock Release
+    - name: ⏳ Wait for IIS Lock
       shell: pwsh
-      run: Start-Sleep -s 30
+      run: Start-Sleep -s 20
 
     # ========================================
-    # 2. ADIM: DELTA DEPLOYMENT (HATA TOLERANSLI)
+    # 2. ADIM: DELTA DEPLOY
     # ========================================
-    
-    - name: 📂 Deploy Changed Files
+    - name: 📂 Sync Files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -69,27 +83,22 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         state-name: .ftp-deploy-sync-state.json
-        # --- BAĞLANTI STABİLİZASYONU ---
         protocol: ftp
         port: 21
-        timeout: 900000 # 15 Dakika
-        retries: 20
-        retry-delay: 10000 # Bağlantı koptuğunda 10sn bekle ve tekrar dene
-        # -------------------------------
+        timeout: 900000
+        retries: 15
+        security: loose
         exclude: |
           **/appsettings.Development.json
-          **/.git*
-          **/.github/**
           _files/**
-          **/_files/**
+          **/.git*
           app_offline.htm
 
     # ========================================
-    # 3. ADIM: RESTART & HEALTH CHECK
+    # 3. ADIM: CLEANUP & HEALTH CHECK
     # ========================================
-
-    - name: 🚀 Start IIS (Remove app_offline)
-      if: always() 
+    - name: 🚀 Start IIS (Unlock Site)
+      if: always()
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -97,20 +106,20 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        # app_offline'ı silmek için state-name kullanıyoruz
         state-name: .ftp-deploy-sync-state.json
         exclude: |
           **/*
-          app_offline.htm 
+          app_offline.htm
 
     - name: 🌡️ Health Check
       shell: pwsh
       run: |
         $url = "https://efavori.com"
-        for($i=1; $i -le 10; $i++) {
+        for($i=1; $i -le 5; $i++) {
           try {
-            $res = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
-            if ($res.StatusCode -eq 200) { exit 0 }
+            Write-Host "Checking site... Attempt $i"
+            $res = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15
+            if ($res.StatusCode -eq 200) { Write-Host "✅ Online!"; exit 0 }
           } catch { Start-Sleep -s 10 }
         }
         exit 1

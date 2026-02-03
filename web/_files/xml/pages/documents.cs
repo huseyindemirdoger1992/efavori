@@ -1,7 +1,9 @@
-﻿namespace web._files.xml.pages
-{
+﻿using Microsoft.AspNetCore.Mvc;
 
-    public class documents
+namespace web._files.xml.pages
+{
+    [Route("_files/xml/pages/Documents.xml")]
+    public class Documents : Controller
     {
     }
 }

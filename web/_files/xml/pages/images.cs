@@ -1,6 +1,9 @@
-﻿namespace web._files.xml.pages
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace web._files.xml.pages
 {
-    public class images
+    [Route("_files/xml/pages/Images.xml")]
+    public class Images : Controller
     {
     }
 }

@@ -1,6 +1,9 @@
-﻿namespace web._files.xml.pages
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace web._files.xml.pages
 {
-    public class sountds
+    [Route("_files/xml/pages/Sountds.xml")]
+    public class Sountds : Controller
     {
     }
 }

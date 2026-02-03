@@ -10,6 +10,7 @@ env:
   DOTNET_VERSION: '10.0.x'
   BUILD_CONFIGURATION: Release
   PUBLISH_OUTPUT: ./publish
+  PROJECT_PATH: '_PublisherAssistant/_PublisherAssistant.csproj'
   
 jobs:
   build-and-deploy:
@@ -35,67 +36,97 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
       
       # ============================================
-      # 3️⃣ RESTORE DEPENDENCIES
+      # 3️⃣ ENABLE WINDOWS TARGETING (Linux Runner'da)
+      # ============================================
+      - name: 🔧 Configure Cross-Platform Build
+        run: |
+          echo "EnableWindowsTargeting=true" >> $GITHUB_ENV
+      
+      # ============================================
+      # 4️⃣ RESTORE DEPENDENCIES
       # ============================================
       - name: 📦 Restore NuGet Packages
-        run: dotnet restore
+        run: dotnet restore ${{ env.PROJECT_PATH }} -p:EnableWindowsTargeting=true
       
       # ============================================
-      # 4️⃣ BUILD PROJECT
+      # 5️⃣ BUILD PROJECT
       # ============================================
       - name: 🔨 Build Project
-        run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+        run: |
+          dotnet build ${{ env.PROJECT_PATH }} \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --no-restore \
+            -p:EnableWindowsTargeting=true
       
       # ============================================
-      # 5️⃣ RUN TESTS (Optional)
+      # 6️⃣ RUN TESTS (Optional)
       # ============================================
       - name: 🧪 Run Unit Tests
-        run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+        run: |
+          dotnet test \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --no-build \
+            --verbosity normal \
+            -p:EnableWindowsTargeting=true
         continue-on-error: true
       
       # ============================================
-      # 6️⃣ PUBLISH - PORTABLE (Linux/Windows Uyumlu)
+      # 7️⃣ PUBLISH - PORTABLE (Linux/Windows Uyumlu)
       # ============================================
-      - name: 📦 Publish Application (Framework-Dependent)
+      - name: 📦 Publish Application (Portable)
         run: |
-          dotnet publish \
+          dotnet publish ${{ env.PROJECT_PATH }} \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --output ${{ env.PUBLISH_OUTPUT }} \
             --no-build \
-            --verbosity normal \
-            /p:PublishSingleFile=false \
-            /p:DebugType=None \
-            /p:DebugSymbols=false
+            -p:EnableWindowsTargeting=true \
+            -p:PublishSingleFile=false \
+            -p:SelfContained=false \
+            -p:DebugType=None \
+            -p:DebugSymbols=false
       
       # ============================================
-      # 7️⃣ OPTIMIZE - Remove Unnecessary Files
+      # 8️⃣ OPTIMIZE - Remove Unnecessary Files
       # ============================================
       - name: 🧹 Clean Publish Output
         run: |
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.pdb" -delete
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.xml" -delete
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "appsettings.Development.json" -delete
+          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.pdb" -delete || true
+          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.xml" -delete || true
+          find ${{ env.PUBLISH_OUTPUT }} -type f -name "appsettings.Development.json" -delete || true
+          echo "✅ Cleanup completed"
         
       # ============================================
-      # 8️⃣ CREATE DEPLOYMENT METADATA
+      # 9️⃣ CREATE DEPLOYMENT METADATA
       # ============================================
       - name: 📝 Generate Deployment Info
         run: |
-          echo "BUILD_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
-          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          mkdir -p ${{ env.PUBLISH_OUTPUT }}
           cat > ${{ env.PUBLISH_OUTPUT }}/deployment-info.json <<EOF
           {
             "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
             "gitCommit": "$(git rev-parse HEAD)",
+            "gitCommitShort": "$(git rev-parse --short HEAD)",
             "gitBranch": "$(git rev-parse --abbrev-ref HEAD)",
             "buildNumber": "${{ github.run_number }}",
-            "deployedBy": "${{ github.actor }}"
+            "deployedBy": "${{ github.actor }}",
+            "workflowRun": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           }
           EOF
+          echo "📋 Deployment metadata created"
       
       # ============================================
-      # 9️⃣ DEPLOY VIA FTP
+      # 🔟 VERIFY PUBLISH OUTPUT
+      # ============================================
+      - name: 🔍 Verify Publish Directory
+        run: |
+          echo "📂 Published files:"
+          ls -lah ${{ env.PUBLISH_OUTPUT }}
+          echo ""
+          echo "📊 Directory size:"
+          du -sh ${{ env.PUBLISH_OUTPUT }}
+      
+      # ============================================
+      # 1️⃣1️⃣ DEPLOY VIA FTP
       # ============================================
       - name: 🚀 Deploy to Production Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -120,19 +151,22 @@ jobs:
             **/appsettings.*.json
             **/*.pdb
             **/*.xml
-            **/deployment-info.json
       
       # ============================================
-      # 🔟 POST-DEPLOYMENT VERIFICATION
+      # 1️⃣2️⃣ POST-DEPLOYMENT SUMMARY
       # ============================================
-      - name: ✅ Verify Deployment
+      - name: ✅ Deployment Summary
         if: success()
         run: |
-          echo "✅ Deployment completed successfully!"
-          echo "📅 Build Time: ${{ env.BUILD_TIME }}"
-          echo "🔖 Git Commit: ${{ env.GIT_COMMIT }}"
-          echo "🌿 Git Branch: ${{ env.GIT_BRANCH }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ DEPLOYMENT SUCCESSFUL"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📅 Deployed At: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo "🔖 Git Commit: $(git rev-parse --short HEAD)"
+          echo "🌿 Git Branch: $(git rev-parse --abbrev-ref HEAD)"
           echo "🔢 Build Number: ${{ github.run_number }}"
+          echo "👤 Deployed By: ${{ github.actor }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       
       # ============================================
       # ⚠️ DEPLOYMENT FAILURE NOTIFICATION
@@ -140,7 +174,12 @@ jobs:
       - name: ❌ Deployment Failed
         if: failure()
         run: |
-          echo "❌ Deployment failed! Please check the logs above."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "❌ DEPLOYMENT FAILED"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Please check the logs above for details"
+          echo "Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           exit 1
 
 # ============================================
@@ -152,5 +191,3 @@ jobs:
 # FTP_PROTOCOL        - (Opsiyonel) ftp, ftps, veya ftps-legacy (varsayılan: ftps)
 # FTP_PORT            - (Opsiyonel) FTP portu (varsayılan: 21)
 # FTP_SERVER_DIR      - (Opsiyonel) Sunucu dizini (varsayılan: httpdocs/)
-
-## 🎯 **Yapılan İyileştirmeler**

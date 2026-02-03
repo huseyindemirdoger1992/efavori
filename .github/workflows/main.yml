@@ -1,4 +1,4 @@
-name: 🚀 Plesk MVC FTP Deploy (Zero-Lock Strategy)
+name: 🚀 Plesk MVC FTP Deploy (Zero Error)
 
 on:
   push:
@@ -17,69 +17,79 @@ jobs:
         fetch-depth: 0
 
     - name: ⚙️ Setup .NET Core
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x' 
 
-    - name: 🔨 Publish Project (x86)
-      run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
+    - name: 🔨 Publish Project
+      run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
 
-    # --- ADIM 1: SADECE APP_OFFLINE.HTM GÖNDER (KİLİDİ AÇMAK İÇİN) ---
-    - name: 🛑 Stop App (Upload app_offline only)
+    # --- 1. ADIM: DURDURMA ---
+    - name: 🛑 Stop App
       shell: pwsh
       run: |
-        mkdir ./offline_stage
-        "<html><body><h1>Bakim Calismasi</h1></body></html>" | Out-File -FilePath ./offline_stage/app_offline.htm -Encoding utf8
+        $path = "${{ github.workspace }}/publish/app_offline.htm"
+        "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath $path -Encoding utf8
+        if (Test-Path $path) { Write-Host "✅ app_offline.htm oluşturuldu." }
 
-    - name: 📤 Upload app_offline.htm
+    - name: 📤 Upload app_offline
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./offline_stage/
+        local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
+        dangerous-clean-slate: false
+        only: |
+          app_offline.htm
 
-    # --- ADIM 2: BEKLEME SÜRESİ (OPSİYONEL AMA GARANTİ) ---
-    - name: ⏳ Wait for IIS to release locks
-      run: Start-Sleep -s 5
+    - name: ⏳ Wait for IIS
+      run: Start-Sleep -s 10
       shell: pwsh
 
-    # --- ADIM 3: ASIL PROJEYİ GÖNDER ---
+    # --- 2. ADIM: SENKRONİZASYON ---
     - name: 📂 Sync Project Files
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./publish/
+        local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        state-name: .ftp-deploy-sync-state.json # Değişenleri takip eder
-        protocol: ftp
-        port: 21
-        # app_offline.htm dosyasının silinmemesi için burada exclude etmiyoruz 
-        # Böylece publish içindekiyle senkronize kalır.
+        state-name: .ftp-deploy-sync-state.json
         exclude: |
-          **/_files/**
-          _files/**
+          **/appsettings.Development.json
           **/.git*
           **/.github/**
-          **/appsettings.Development.json
-          **/web.config
+          _files/**
+          **/_files/**
 
-    # --- ADIM 4: SİTEYİ TEKRAR AÇ (APP_OFFLINE.HTM'İ SİL) ---
-    - name: 🚀 Start App (Delete app_offline)
+    # --- 3. ADIM: BAŞLATMA VE DOĞRULAMA ---
+    - name: 🚀 Start App (Safe Remove)
       shell: pwsh
       run: |
-        # Publish klasöründen dosyayı siliyoruz
-        Remove-Item ./publish/app_offline.htm -Force
-    
-    - name: 🧹 Final Sync to Remove app_offline
+        # ErrorAction SilentlyContinue sayesinde dosya yoksa hata vermez
+        Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force -ErrorAction SilentlyContinue
+        Write-Host "✅ Yerel app_offline silindi, sunucudan silinmesi için son sync tetikleniyor."
+
+    - name: 🧹 Clean Remote & Online
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./publish/
+        local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        # Bu adımda yerelde olmayan app_offline.htm sunucudan silinecektir.
+
+    - name: 🌡️ Warm Up Site
+      shell: pwsh
+      run: |
+        Write-Host "Site uyandırılıyor..."
+        Start-Sleep -s 5
+        try {
+            $response = Invoke-WebRequest -Uri "https://efavori.com" -UseBasicParsing -TimeoutSec 30
+            Write-Host "✅ Site yanıt verdi: $($response.StatusCode)"
+        } catch {
+            Write-Warning "⚠️ Site henüz hazır değil veya hata döndürdü: $_"
+        }

@@ -1,193 +1,50 @@
-name: 🚀 Production Deployment Pipeline
+name: 🚀 Plesk MVC FTP Deploy (Self-Contained)
 
 on:
   push:
     branches:
       - master
-  workflow_dispatch:
 
-env:
-  DOTNET_VERSION: '10.0.x'
-  BUILD_CONFIGURATION: Release
-  PUBLISH_OUTPUT: ./publish
-  PROJECT_PATH: '_PublisherAssistant/_PublisherAssistant.csproj'
-  
 jobs:
-  build-and-deploy:
-  
-    name: 🎯 Build & Deploy to Production
-    runs-on: ubuntu-latest
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: windows-latest 
     
     steps:
-      # ============================================
-      # 1️⃣ CHECKOUT
-      # ============================================
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      # ============================================
-      # 2️⃣ SETUP .NET
-      # ============================================
-      - name: ⚙️ Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-      
-      # ============================================
-      # 3️⃣ ENABLE WINDOWS TARGETING (Linux Runner'da)
-      # ============================================
-      - name: 🔧 Configure Cross-Platform Build
-        run: |
-          echo "EnableWindowsTargeting=true" >> $GITHUB_ENV
-      
-      # ============================================
-      # 4️⃣ RESTORE DEPENDENCIES
-      # ============================================
-      - name: 📦 Restore NuGet Packages
-        run: dotnet restore ${{ env.PROJECT_PATH }} -p:EnableWindowsTargeting=true
-      
-      # ============================================
-      # 5️⃣ BUILD PROJECT
-      # ============================================
-      - name: 🔨 Build Project
-        run: |
-          dotnet build ${{ env.PROJECT_PATH }} \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore \
-            -p:EnableWindowsTargeting=true
-      
-      # ============================================
-      # 6️⃣ RUN TESTS (Optional)
-      # ============================================
-      - name: 🧪 Run Unit Tests
-        run: |
-          dotnet test \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-build \
-            --verbosity normal \
-            -p:EnableWindowsTargeting=true
-        continue-on-error: true
-      
-      # ============================================
-      # 7️⃣ PUBLISH - PORTABLE (Linux/Windows Uyumlu)
-      # ============================================
-      - name: 📦 Publish Application (Portable)
-        run: |
-          dotnet publish ${{ env.PROJECT_PATH }} \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --output ${{ env.PUBLISH_OUTPUT }} \
-            --no-build \
-            -p:EnableWindowsTargeting=true \
-            -p:PublishSingleFile=false \
-            -p:SelfContained=false \
-            -p:DebugType=None \
-            -p:DebugSymbols=false
-      
-      # ============================================
-      # 8️⃣ OPTIMIZE - Remove Unnecessary Files
-      # ============================================
-      - name: 🧹 Clean Publish Output
-        run: |
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.pdb" -delete || true
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.xml" -delete || true
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "appsettings.Development.json" -delete || true
-          echo "✅ Cleanup completed"
-        
-      # ============================================
-      # 9️⃣ CREATE DEPLOYMENT METADATA
-      # ============================================
-      - name: 📝 Generate Deployment Info
-        run: |
-          mkdir -p ${{ env.PUBLISH_OUTPUT }}
-          cat > ${{ env.PUBLISH_OUTPUT }}/deployment-info.json <<EOF
-          {
-            "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
-            "gitCommit": "$(git rev-parse HEAD)",
-            "gitCommitShort": "$(git rev-parse --short HEAD)",
-            "gitBranch": "$(git rev-parse --abbrev-ref HEAD)",
-            "buildNumber": "${{ github.run_number }}",
-            "deployedBy": "${{ github.actor }}",
-            "workflowRun": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }
-          EOF
-          echo "📋 Deployment metadata created"
-      
-      # ============================================
-      # 🔟 VERIFY PUBLISH OUTPUT
-      # ============================================
-      - name: 🔍 Verify Publish Directory
-        run: |
-          echo "📂 Published files:"
-          ls -lah ${{ env.PUBLISH_OUTPUT }}
-          echo ""
-          echo "📊 Directory size:"
-          du -sh ${{ env.PUBLISH_OUTPUT }}
-      
-      # ============================================
-      # 1️⃣1️⃣ DEPLOY VIA FTP
-      # ============================================
-      - name: 🚀 Deploy to Production Server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ secrets.FTP_PORT || 21 }}
-          local-dir: ${{ env.PUBLISH_OUTPUT }}/
-          server-dir: ${{ secrets.FTP_SERVER_DIR || 'httpdocs/' }}
-          state-name: .ftp-deploy-sync-state.json
-          log-level: verbose
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.github/**
-            **/node_modules/**
-            **/_files/**
-            _files/**
-            **/appsettings.Development.json
-            **/appsettings.*.json
-            **/*.pdb
-            **/*.xml
-      
-      # ============================================
-      # 1️⃣2️⃣ POST-DEPLOYMENT SUMMARY
-      # ============================================
-      - name: ✅ Deployment Summary
-        if: success()
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ DEPLOYMENT SUCCESSFUL"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📅 Deployed At: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-          echo "🔖 Git Commit: $(git rev-parse --short HEAD)"
-          echo "🌿 Git Branch: $(git rev-parse --abbrev-ref HEAD)"
-          echo "🔢 Build Number: ${{ github.run_number }}"
-          echo "👤 Deployed By: ${{ github.actor }}"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      
-      # ============================================
-      # ⚠️ DEPLOYMENT FAILURE NOTIFICATION
-      # ============================================
-      - name: ❌ Deployment Failed
-        if: failure()
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "❌ DEPLOYMENT FAILED"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Please check the logs above for details"
-          echo "Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          exit 1
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v3
 
-# ============================================
-# 📋 REQUIRED GITHUB SECRETS
-# ============================================
-# FTP_SERVER          - FTP sunucu adresi (örn: ftp.example.com)
-# FTP_USERNAME        - FTP kullanıcı adı
-# FTP_PASSWORD        - FTP şifresi
-# FTP_PROTOCOL        - (Opsiyonel) ftp, ftps, veya ftps-legacy (varsayılan: ftps)
-# FTP_PORT            - (Opsiyonel) FTP portu (varsayılan: 21)
-# FTP_SERVER_DIR      - (Opsiyonel) Sunucu dizini (varsayılan: httpdocs/)
+    - name: ⚙️ Setup .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        # .NET 10 SDK'sını GitHub Runner'a kurar
+        dotnet-version: '10.0.x' 
+
+    - name: 🔨 Publish Project
+      # İSTEDİĞİN AYARLAR: 
+      # -c Release (Yapılandırma)
+      # --runtime win-x64 (Çalışma zamanı)
+      # --self-contained true (Dağıtım modu)
+      # -f net10.0 (Hedef çerçeve)
+      run: dotnet publish -c Release -r win-x64 --self-contained true -f net10.0 -o ./publish
+
+    - name: 📂 Sync files via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./publish/
+        server-dir: httpdocs/
+        
+        # Olası ECONNRESET hatalarına karşı sadece değişenleri gönderir
+        state-name: .ftp-deploy-sync-state.json
+        log-level: verbose
+        
+        # KESİN KURAL: Kök dizindeki _files klasörünü korur
+        exclude: |
+          **/_files/**
+          _files/**
+          **/.git*
+          **/.github/**
+          **/appsettings.Development.json

@@ -1,9 +1,10 @@
-name: 🚀 Production Deployment Pipeline
+name: 🚀 Production Deployment (Debug)
 
 on:
   push:
     branches:
       - master
+      - main
   workflow_dispatch:
 
 env:
@@ -15,65 +16,44 @@ env:
 jobs:
   build-and-deploy:
   
-    name: 🎯 Build & Deploy to Production
+    name: 🎯 Build & Deploy
     runs-on: ubuntu-latest
     
     steps:
-      # ============================================
-      # 1️⃣ CHECKOUT
-      # ============================================
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      # ============================================
-      # 2️⃣ SETUP .NET
-      # ============================================
-      - name: ⚙️ Setup .NET SDK
+
+      - name: ⚙️ Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-      
-      # ============================================
-      # 3️⃣ ENABLE WINDOWS TARGETING (Linux Runner'da)
-      # ============================================
-      - name: 🔧 Configure Cross-Platform Build
+
+      - name: 🔍 Debug - Check Project File
         run: |
-          echo "EnableWindowsTargeting=true" >> $GITHUB_ENV
-      
-      # ============================================
-      # 4️⃣ RESTORE DEPENDENCIES
-      # ============================================
-      - name: 📦 Restore NuGet Packages
-        run: dotnet restore ${{ env.PROJECT_PATH }} -p:EnableWindowsTargeting=true
-      
-      # ============================================
-      # 5️⃣ BUILD PROJECT
-      # ============================================
-      - name: 🔨 Build Project
+          echo "📂 Project structure:"
+          ls -la
+          echo ""
+          echo "📄 Project file exists:"
+          test -f ${{ env.PROJECT_PATH }} && echo "✅ Found" || echo "❌ Not found"
+          echo ""
+          echo "📋 Project content:"
+          cat ${{ env.PROJECT_PATH }} || echo "Cannot read file"
+
+      - name: 📦 Restore
+        run: |
+          dotnet restore ${{ env.PROJECT_PATH }} \
+            -p:EnableWindowsTargeting=true \
+            --verbosity detailed
+
+      - name: 🔨 Build
         run: |
           dotnet build ${{ env.PROJECT_PATH }} \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
             --no-restore \
-            -p:EnableWindowsTargeting=true
-      
-      # ============================================
-      # 6️⃣ RUN TESTS (Optional)
-      # ============================================
-      - name: 🧪 Run Unit Tests
-        run: |
-          dotnet test \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-build \
-            --verbosity normal \
-            -p:EnableWindowsTargeting=true
-        continue-on-error: true
-      
-      # ============================================
-      # 7️⃣ PUBLISH - PORTABLE (Linux/Windows Uyumlu)
-      # ============================================
-      - name: 📦 Publish Application (Portable)
+            -p:EnableWindowsTargeting=true \
+            --verbosity detailed
+
+      - name: 📦 Publish
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} \
             --configuration ${{ env.BUILD_CONFIGURATION }} \
@@ -81,113 +61,55 @@ jobs:
             --no-build \
             -p:EnableWindowsTargeting=true \
             -p:PublishSingleFile=false \
-            -p:SelfContained=false \
-            -p:DebugType=None \
-            -p:DebugSymbols=false
-      
-      # ============================================
-      # 8️⃣ OPTIMIZE - Remove Unnecessary Files
-      # ============================================
-      - name: 🧹 Clean Publish Output
-        run: |
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.pdb" -delete || true
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.xml" -delete || true
-          find ${{ env.PUBLISH_OUTPUT }} -type f -name "appsettings.Development.json" -delete || true
-          echo "✅ Cleanup completed"
-        
-      # ============================================
-      # 9️⃣ CREATE DEPLOYMENT METADATA
-      # ============================================
-      - name: 📝 Generate Deployment Info
-        run: |
-          mkdir -p ${{ env.PUBLISH_OUTPUT }}
-          cat > ${{ env.PUBLISH_OUTPUT }}/deployment-info.json <<EOF
-          {
-            "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
-            "gitCommit": "$(git rev-parse HEAD)",
-            "gitCommitShort": "$(git rev-parse --short HEAD)",
-            "gitBranch": "$(git rev-parse --abbrev-ref HEAD)",
-            "buildNumber": "${{ github.run_number }}",
-            "deployedBy": "${{ github.actor }}",
-            "workflowRun": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          }
-          EOF
-          echo "📋 Deployment metadata created"
-      
-      # ============================================
-      # 🔟 VERIFY PUBLISH OUTPUT
-      # ============================================
-      - name: 🔍 Verify Publish Directory
+            -p:SelfContained=false
+
+      - name: 🔍 Verify Published Files
         run: |
           echo "📂 Published files:"
           ls -lah ${{ env.PUBLISH_OUTPUT }}
           echo ""
-          echo "📊 Directory size:"
+          echo "📊 File count:"
+          find ${{ env.PUBLISH_OUTPUT }} -type f | wc -l
+          echo ""
+          echo "📏 Total size:"
           du -sh ${{ env.PUBLISH_OUTPUT }}
-      
-      # ============================================
-      # 1️⃣1️⃣ DEPLOY VIA FTP
-      # ============================================
-      - name: 🚀 Deploy to Production Server
+
+      - name: 🧹 Cleanup
+        run: |
+          rm -f ${{ env.PUBLISH_OUTPUT }}/*.pdb || true
+          rm -f ${{ env.PUBLISH_OUTPUT }}/*.xml || true
+          rm -f ${{ env.PUBLISH_OUTPUT }}/appsettings.Development.json || true
+          echo "✅ Cleanup done"
+
+      - name: 🔍 Debug - Check FTP Secrets
+        run: |
+          echo "FTP_SERVER: ${{ secrets.FTP_SERVER != '' && '✅ Set' || '❌ Missing' }}"
+          echo "FTP_USERNAME: ${{ secrets.FTP_USERNAME != '' && '✅ Set' || '❌ Missing' }}"
+          echo "FTP_PASSWORD: ${{ secrets.FTP_PASSWORD != '' && '✅ Set' || '❌ Missing' }}"
+
+      - name: 🚀 Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
-          port: ${{ secrets.FTP_PORT || 21 }}
+          protocol: ftp
+          port: 21
           local-dir: ${{ env.PUBLISH_OUTPUT }}/
-          server-dir: ${{ secrets.FTP_SERVER_DIR || 'httpdocs/' }}
-          state-name: .ftp-deploy-sync-state.json
+          server-dir: ./
           log-level: verbose
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.github/**
-            **/node_modules/**
-            **/_files/**
-            _files/**
-            **/appsettings.Development.json
-            **/appsettings.*.json
-            **/*.pdb
-            **/*.xml
-      
-      # ============================================
-      # 1️⃣2️⃣ POST-DEPLOYMENT SUMMARY
-      # ============================================
-      - name: ✅ Deployment Summary
+          timeout: 600000
+        continue-on-error: true
+
+      - name: ✅ Success
         if: success()
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ DEPLOYMENT SUCCESSFUL"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📅 Deployed At: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-          echo "🔖 Git Commit: $(git rev-parse --short HEAD)"
-          echo "🌿 Git Branch: $(git rev-parse --abbrev-ref HEAD)"
-          echo "🔢 Build Number: ${{ github.run_number }}"
-          echo "👤 Deployed By: ${{ github.actor }}"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      
-      # ============================================
-      # ⚠️ DEPLOYMENT FAILURE NOTIFICATION
-      # ============================================
-      - name: ❌ Deployment Failed
+          echo "✅ Deployment successful!"
+          echo "📅 Time: $(date)"
+
+      - name: ❌ Failed
         if: failure()
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "❌ DEPLOYMENT FAILED"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Please check the logs above for details"
-          echo "Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "❌ Deployment failed!"
+          echo "Check logs above"
           exit 1
-
-# ============================================
-# 📋 REQUIRED GITHUB SECRETS
-# ============================================
-# FTP_SERVER          - FTP sunucu adresi (örn: ftp.example.com)
-# FTP_USERNAME        - FTP kullanıcı adı
-# FTP_PASSWORD        - FTP şifresi
-# FTP_PROTOCOL        - (Opsiyonel) ftp, ftps, veya ftps-legacy (varsayılan: ftps)
-# FTP_PORT            - (Opsiyonel) FTP portu (varsayılan: 21)
-# FTP_SERVER_DIR      - (Opsiyonel) Sunucu dizini (varsayılan: httpdocs/)

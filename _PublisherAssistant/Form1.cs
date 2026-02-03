@@ -22,7 +22,7 @@ namespace _PublisherAssistant
             label2.Text = $"Action Start At: {DateTime.Now}";
             TestButton.Enabled = false;
             string serverUrl = "ftp://94.199.202.149/";
-            string userName = "efavoric";
+            string userName = "efavoric"; 
             string password = "u1jQ7.2PChO-1rSc!0";
 
             try

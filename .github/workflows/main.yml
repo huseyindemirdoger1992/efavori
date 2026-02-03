@@ -1,50 +1,156 @@
-name: 🚀 Plesk MVC FTP Deploy (Self-Contained)
+name: 🚀 Production Deployment Pipeline
 
 on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
+env:
+  DOTNET_VERSION: '10.0.x'
+  BUILD_CONFIGURATION: Release
+  PUBLISH_OUTPUT: ./publish
+  
 jobs:
-  web-deploy:
-    name: 🎉 Deploy
-    runs-on: windows-latest 
+  build-and-deploy:
+  
+    name: 🎯 Build & Deploy to Production
+    runs-on: ubuntu-latest
     
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v3
-
-    - name: ⚙️ Setup .NET Core
-      uses: actions/setup-dotnet@v3
-      with:
-        # .NET 10 SDK'sını GitHub Runner'a kurar
-        dotnet-version: '10.0.x' 
-
-    - name: 🔨 Publish Project
-      # İSTEDİĞİN AYARLAR: 
-      # -c Release (Yapılandırma)
-      # --runtime win-x64 (Çalışma zamanı)
-      # --self-contained true (Dağıtım modu)
-      # -f net10.0 (Hedef çerçeve)
-      run: dotnet publish -c Release -r win-x64 --self-contained true -f net10.0 -o ./publish
-
-    - name: 📂 Sync files via FTP
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./publish/
-        server-dir: httpdocs/
+      # ============================================
+      # 1️⃣ CHECKOUT
+      # ============================================
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      # ============================================
+      # 2️⃣ SETUP .NET
+      # ============================================
+      - name: ⚙️ Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      
+      # ============================================
+      # 3️⃣ RESTORE DEPENDENCIES
+      # ============================================
+      - name: 📦 Restore NuGet Packages
+        run: dotnet restore
+      
+      # ============================================
+      # 4️⃣ BUILD PROJECT
+      # ============================================
+      - name: 🔨 Build Project
+        run: dotnet build --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+      
+      # ============================================
+      # 5️⃣ RUN TESTS (Optional)
+      # ============================================
+      - name: 🧪 Run Unit Tests
+        run: dotnet test --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
+        continue-on-error: true
+      
+      # ============================================
+      # 6️⃣ PUBLISH - PORTABLE (Linux/Windows Uyumlu)
+      # ============================================
+      - name: 📦 Publish Application (Framework-Dependent)
+        run: |
+          dotnet publish \
+            --configuration ${{ env.BUILD_CONFIGURATION }} \
+            --output ${{ env.PUBLISH_OUTPUT }} \
+            --no-build \
+            --verbosity normal \
+            /p:PublishSingleFile=false \
+            /p:DebugType=None \
+            /p:DebugSymbols=false
+      
+      # ============================================
+      # 7️⃣ OPTIMIZE - Remove Unnecessary Files
+      # ============================================
+      - name: 🧹 Clean Publish Output
+        run: |
+          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.pdb" -delete
+          find ${{ env.PUBLISH_OUTPUT }} -type f -name "*.xml" -delete
+          find ${{ env.PUBLISH_OUTPUT }} -type f -name "appsettings.Development.json" -delete
         
-        # Olası ECONNRESET hatalarına karşı sadece değişenleri gönderir
-        state-name: .ftp-deploy-sync-state.json
-        log-level: verbose
-        
-        # KESİN KURAL: Kök dizindeki _files klasörünü korur
-        exclude: |
-          **/_files/**
-          _files/**
-          **/.git*
-          **/.github/**
-          **/appsettings.Development.json
+      # ============================================
+      # 8️⃣ CREATE DEPLOYMENT METADATA
+      # ============================================
+      - name: 📝 Generate Deployment Info
+        run: |
+          echo "BUILD_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+          echo "GIT_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          cat > ${{ env.PUBLISH_OUTPUT }}/deployment-info.json <<EOF
+          {
+            "deployedAt": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "gitCommit": "$(git rev-parse HEAD)",
+            "gitBranch": "$(git rev-parse --abbrev-ref HEAD)",
+            "buildNumber": "${{ github.run_number }}",
+            "deployedBy": "${{ github.actor }}"
+          }
+          EOF
+      
+      # ============================================
+      # 9️⃣ DEPLOY VIA FTP
+      # ============================================
+      - name: 🚀 Deploy to Production Server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          local-dir: ${{ env.PUBLISH_OUTPUT }}/
+          server-dir: ${{ secrets.FTP_SERVER_DIR || 'httpdocs/' }}
+          state-name: .ftp-deploy-sync-state.json
+          log-level: verbose
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/node_modules/**
+            **/_files/**
+            _files/**
+            **/appsettings.Development.json
+            **/appsettings.*.json
+            **/*.pdb
+            **/*.xml
+            **/deployment-info.json
+      
+      # ============================================
+      # 🔟 POST-DEPLOYMENT VERIFICATION
+      # ============================================
+      - name: ✅ Verify Deployment
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "📅 Build Time: ${{ env.BUILD_TIME }}"
+          echo "🔖 Git Commit: ${{ env.GIT_COMMIT }}"
+          echo "🌿 Git Branch: ${{ env.GIT_BRANCH }}"
+          echo "🔢 Build Number: ${{ github.run_number }}"
+      
+      # ============================================
+      # ⚠️ DEPLOYMENT FAILURE NOTIFICATION
+      # ============================================
+      - name: ❌ Deployment Failed
+        if: failure()
+        run: |
+          echo "❌ Deployment failed! Please check the logs above."
+          exit 1
+
+# ============================================
+# 📋 REQUIRED GITHUB SECRETS
+# ============================================
+# FTP_SERVER          - FTP sunucu adresi (örn: ftp.example.com)
+# FTP_USERNAME        - FTP kullanıcı adı
+# FTP_PASSWORD        - FTP şifresi
+# FTP_PROTOCOL        - (Opsiyonel) ftp, ftps, veya ftps-legacy (varsayılan: ftps)
+# FTP_PORT            - (Opsiyonel) FTP portu (varsayılan: 21)
+# FTP_SERVER_DIR      - (Opsiyonel) Sunucu dizini (varsayılan: httpdocs/)
+
+## 🎯 **Yapılan İyileştirmeler**

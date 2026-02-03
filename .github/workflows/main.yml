@@ -1,4 +1,4 @@
-name: 🚀 Plesk MVC FTP Deploy
+name: 🚀 Plesk MVC FTP Deploy (Advanced)
 
 on:
   push:
@@ -20,7 +20,8 @@ jobs:
         dotnet-version: '8.0.x' 
 
     - name: 🔨 Publish Project
-      run: dotnet publish -c Release -o ./publish
+      # --no-self-contained: Sunucudaki mevcut runtime'ı kullanarak dosya boyutunu küçültür
+      run: dotnet publish -c Release -o ./publish --no-self-contained
 
     - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -29,14 +30,23 @@ jobs:
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./publish/
-        
-        # ÇÖZÜM BURADA: Dosyaları doğrudan httpdocs klasörüne yazar
+        # Plesk kök dizinine göre hedef klasör
         server-dir: httpdocs/
         
-        # KURAL: httpdocs içerisindeki _files klasörü korunur
+        # --- KRİTİK GÜVENLİK VE PERFORMANS AYARLARI ---
+        
+        # 1. Sadece değişen dosyaları gönderir (ECONNRESET hatasını önlemek için en iyi yöntem)
+        state-name: .ftp-deploy-sync-state.json
+        
+        # 2. Bağlantı sorunlarına karşı agresif olmayan transfer
+        log-level: verbose
+        
+        # 3. Klasör Koruma Kuralları
         exclude: |
           **/_files/**
           _files/**
           **/.git*
           **/.github/**
           **/appsettings.Development.json
+          **/web.config.original
+          **/logs/**

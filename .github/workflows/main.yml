@@ -1,4 +1,4 @@
-name: 🚀 Plesk MVC FTP Deploy (Advanced)
+name: 🚀 Plesk MVC FTP Deploy (Final)
 
 on:
   push:
@@ -17,11 +17,14 @@ jobs:
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.0.x' 
+        # ÖNEMLİ: Eğer projen .NET 8 ise burayı 8.0.x yap. 
+        # Hata logunda net10.0 gördüğüm için 10.0.x yazıyorum.
+        dotnet-version: '10.0.x' 
 
     - name: 🔨 Publish Project
-      # --no-self-contained: Sunucudaki mevcut runtime'ı kullanarak dosya boyutunu küçültür
-      run: dotnet publish -c Release -o ./publish --no-self-contained
+      # ÇÖZÜM: Hangi projeyi publish edeceğini tam olarak belirtiyoruz.
+      # 'web.csproj' yerine kendi ana projenin dosya adını yazmalısın.
+      run: dotnet publish web/web.csproj -c Release -o ./publish --no-self-contained
 
     - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -30,23 +33,17 @@ jobs:
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./publish/
-        # Plesk kök dizinine göre hedef klasör
         server-dir: httpdocs/
         
-        # --- KRİTİK GÜVENLİK VE PERFORMANS AYARLARI ---
-        
-        # 1. Sadece değişen dosyaları gönderir (ECONNRESET hatasını önlemek için en iyi yöntem)
+        # Hız ve Stabilite Ayarları
         state-name: .ftp-deploy-sync-state.json
-        
-        # 2. Bağlantı sorunlarına karşı agresif olmayan transfer
         log-level: verbose
         
-        # 3. Klasör Koruma Kuralları
+        # KURAL: Sunucudaki _files klasörü ve hassas dosyalar korunur
         exclude: |
           **/_files/**
           _files/**
           **/.git*
           **/.github/**
           **/appsettings.Development.json
-          **/web.config.original
           **/logs/**

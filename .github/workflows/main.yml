@@ -8,8 +8,7 @@ jobs:
   web-deploy:
     name: 🎉 Deploy
     runs-on: windows-latest
-    # Timeout ekleyerek asılı kalan process'lerin dakikalarca fatura kesmesini önlüyoruz.
-    timeout-minutes: 15 
+    timeout-minutes: 20 
 
     steps:
     - name: 🚚 Get latest code
@@ -26,20 +25,16 @@ jobs:
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
 
     # ========================================
-    # 1. ADIM: IIS KİLİDİNİ KIR VE HAZIRLA
+    # 1. ADIM: IIS KİLİDİNİ KIR (STABİL BAĞLANTI İLE)
     # ========================================
     
     - name: 🛑 Prepare app_offline.htm
       shell: pwsh
       run: |
         $path = "${{ github.workspace }}/publish/app_offline.htm"
-        $content = @"
-        <!DOCTYPE html><html><head><meta charset='utf-8'><meta http-equiv='refresh' content='10'><title>Bakım</title></head>
-        <body style='font-family:sans-serif;text-align:center;margin-top:100px;'><h1>🔄 Güncelleme Yapılıyor</h1><p>Hizmet kalitemizi artırmak için kısa bir ara verdik.</p></body></html>
-        "@
-        $content | Out-File -FilePath $path -Encoding UTF8
+        "<!DOCTYPE html><html><body style='font-family:sans-serif;text-align:center;padding-top:50px;'><h1>🔄 Sistem Guncelleniyor</h1><p>Lutfen bekleyin...</p></body></html>" | Out-File -FilePath $path -Encoding UTF8
     
-    - name: 📤 Upload app_offline.htm (Lock Site)
+    - name: 📤 Upload app_offline.htm
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -47,18 +42,22 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
+        # --- BAĞLANTI HATASINI ÇÖZEN AYARLAR ---
+        protocol: ftp
+        port: 21
+        # ECONNRESET hatası için kritik ayar:
+        security: loose 
+        # ---------------------------------------
         exclude: |
           **/*
           !app_offline.htm
 
     - name: ⏳ Wait for IIS Lock Release
       shell: pwsh
-      run: |
-        Write-Host "Waiting 30s for IIS worker process to release DLLs..."
-        Start-Sleep -s 30 # IIS'in dosyaları serbest bırakması için gereken altın süre.
+      run: Start-Sleep -s 30
 
     # ========================================
-    # 2. ADIM: DELTA DEPLOYMENT (SADECE DEĞİŞENLER)
+    # 2. ADIM: DELTA DEPLOYMENT (HATA TOLERANSLI)
     # ========================================
     
     - name: 📂 Deploy Changed Files
@@ -70,11 +69,13 @@ jobs:
         local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
         state-name: .ftp-deploy-sync-state.json
+        # --- BAĞLANTI STABİLİZASYONU ---
         protocol: ftp
         port: 21
-        timeout: 600000 # 10 dakika (Büyük DLL transferleri için)
-        retries: 10
-        parallel: 1 # Çakışma riskini sıfıra indirmek için ardışık yükleme
+        timeout: 900000 # 15 Dakika
+        retries: 20
+        retry-delay: 10000 # Bağlantı koptuğunda 10sn bekle ve tekrar dene
+        # -------------------------------
         exclude: |
           **/appsettings.Development.json
           **/.git*
@@ -84,51 +85,32 @@ jobs:
           app_offline.htm
 
     # ========================================
-    # 3. ADIM: CLEANUP & RESTART (GÜVENLİ DÖNÜŞ)
+    # 3. ADIM: RESTART & HEALTH CHECK
     # ========================================
 
-    - name: 🚀 Start IIS (Force Remove app_offline)
-      # if: always() kullanarak deploy hata alsa bile siteyi tekrar açmaya çalışıyoruz.
+    - name: 🚀 Start IIS (Remove app_offline)
       if: always() 
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/ # Boş bir klasör yerine state üzerinden silme
+        local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        dangerous-clean-slate: false
+        # app_offline'ı silmek için state-name kullanıyoruz
+        state-name: .ftp-deploy-sync-state.json
         exclude: |
           **/*
-          app_offline.htm # Exclude listesinden çıkarırsan silinmez, o yüzden dikkat.
-          # FTP-Deploy-Action yerel dosyada olmayan ama sunucuda olanı silme mantığıyla çalışır.
-          # Bu adımda yerelde app_offline.htm silindiği için sunucudan da silinecektir.
+          app_offline.htm 
 
-    - name: 🧹 Final Local Cleanup
-      if: always()
-      shell: pwsh
-      run: |
-        if (Test-Path "${{ github.workspace }}/publish/app_offline.htm") {
-            Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force
-        }
-
-    - name: 🌡️ Critical Warm Up & Health Check
+    - name: 🌡️ Health Check
       shell: pwsh
       run: |
         $url = "https://efavori.com"
-        $maxRetries = 10
-        for($i=1; $i -le $maxRetries; $i++) {
+        for($i=1; $i -le 10; $i++) {
           try {
-            Write-Host "Health Check Attempt $i..."
             $res = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20
-            if ($res.StatusCode -eq 200) {
-              Write-Host "✅ Site is Online and Healthy!"
-              exit 0
-            }
-          } catch {
-            Write-Warning "Waiting for IIS... ($($_.Exception.Message))"
-            Start-Sleep -s 10
-          }
+            if ($res.StatusCode -eq 200) { exit 0 }
+          } catch { Start-Sleep -s 10 }
         }
-        Write-Error "❌ Deployment succeeded but Site is not responding!"
         exit 1

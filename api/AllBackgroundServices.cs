@@ -20,7 +20,7 @@ namespace api
                 try
                 {
                     // 2. ADIM: 1'den 100'e kadar sayan basit bir döngü.
-                    for (int sayac = 1; sayac <= 10000; sayac++)
+                    for (int sayac = 1; sayac <= 100; sayac++)
                     {
                         // Eğer tam sayarken birisi programı kapatırsa, saymayı yarıda kes.
                         if (durdurmaSinyali.IsCancellationRequested) break;

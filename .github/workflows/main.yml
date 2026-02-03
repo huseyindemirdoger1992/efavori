@@ -16,10 +16,11 @@ jobs:
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '10.0.2' # Projenin versiyonuna göre (6.0, 7.0 vb.) değiştirebilirsin
+        # HATA BURADAYDI: Sürümü projenin gerçek sürümüyle eşitle.
+        # Eğer projen .NET 8 ise '8.0.x', .NET 9 ise '9.0.x' yapmalısın.
+        dotnet-version: '8.0.x' 
 
     - name: 🔨 Publish Project
-      # MVC projesini derleyip 'publish' klasörüne hazırlar
       run: dotnet publish -c Release -o ./publish
 
     - name: 📂 Sync files via FTP
@@ -28,13 +29,10 @@ jobs:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
-        # GitHub'daki derlenmiş dosyaların yolu
-        local-dir: ./publish/ 
-        # Plesk üzerinde genellikle ana dizin 'httpdocs' olur. 
-        # Eğer FTP doğrudan bu klasöre girmiyorsa aşağıdaki satırı aktif et:
-        # server-dir: ./httpdocs/
+        local-dir: ./publish/
+        # Plesk için gerekirse aktif et: server-dir: ./httpdocs/
         
-        # KRİTİK AYARLAR:
+        # KURAL: _files klasörünü ve içeriğini asla silme veya değiştirme
         exclude: |
           **/_files/**
           _files/**

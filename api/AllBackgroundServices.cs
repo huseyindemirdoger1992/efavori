@@ -20,11 +20,10 @@ namespace api
                 try
                 {
                     // 2. ADIM: 1'den 100'e kadar sayan basit bir döngü.
-                    for (int sayac = 1; sayac <= 10; sayac++)
+                    for (int sayac = 1; sayac <= 100; sayac++)
                     {
                         // Eğer tam sayarken birisi programı kapatırsa, saymayı yarıda kes.
                         if (durdurmaSinyali.IsCancellationRequested) break;
-
                         // Sayıyı ekrana yazdırıyoruz.
                         Console.WriteLine("Şu anki sayı: " + sayac);
                     }
@@ -45,3 +44,4 @@ namespace api
         }
     }
 }
+

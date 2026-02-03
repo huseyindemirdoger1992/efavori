@@ -8,7 +8,6 @@ on:
 jobs:
   web-deploy:
     name: 🎉 Deploy
-    # HATA ÇÖZÜMÜ: Ubuntu yerine windows-latest kullanıyoruz
     runs-on: windows-latest 
     
     steps:
@@ -21,7 +20,6 @@ jobs:
         dotnet-version: '8.0.x' 
 
     - name: 🔨 Publish Project
-      # Windows üzerinde derleme yapıyoruz
       run: dotnet publish -c Release -o ./publish
 
     - name: 📂 Sync files via FTP
@@ -31,10 +29,11 @@ jobs:
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./publish/
-        # Plesk klasör yapısına göre gerekirse aktif et: 
-        # server-dir: ./httpdocs/
         
-        # KURAL: _files klasörü ve içeriği asla silinmeyecek
+        # ÇÖZÜM BURADA: Dosyaları doğrudan httpdocs klasörüne yazar
+        server-dir: httpdocs/
+        
+        # KURAL: httpdocs içerisindeki _files klasörü korunur
         exclude: |
           **/_files/**
           _files/**

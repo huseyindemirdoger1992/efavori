@@ -1,115 +1,50 @@
-name: 🚀 Production Deployment (Debug)
+name: 🚀 Plesk MVC FTP Deploy (Self-Contained)
 
 on:
   push:
     branches:
       - master
-      - main
-  workflow_dispatch:
 
-env:
-  DOTNET_VERSION: '10.0.x'
-  BUILD_CONFIGURATION: Release
-  PUBLISH_OUTPUT: ./publish
-  PROJECT_PATH: '_PublisherAssistant/_PublisherAssistant.csproj'
-  
 jobs:
-  build-and-deploy:
-  
-    name: 🎯 Build & Deploy
-    runs-on: ubuntu-latest
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: windows-latest 
     
     steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v3
 
-      - name: ⚙️ Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: ⚙️ Setup .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        # .NET 10 SDK'sını GitHub Runner'a kurar
+        dotnet-version: '10.0.x' 
 
-      - name: 🔍 Debug - Check Project File
-        run: |
-          echo "📂 Project structure:"
-          ls -la
-          echo ""
-          echo "📄 Project file exists:"
-          test -f ${{ env.PROJECT_PATH }} && echo "✅ Found" || echo "❌ Not found"
-          echo ""
-          echo "📋 Project content:"
-          cat ${{ env.PROJECT_PATH }} || echo "Cannot read file"
+    - name: 🔨 Publish Project
+      # İSTEDİĞİN AYARLAR: 
+      # -c Release (Yapılandırma)
+      # --runtime win-x64 (Çalışma zamanı)
+      # --self-contained true (Dağıtım modu)
+      # -f net10.0 (Hedef çerçeve)
+      run: dotnet publish -c Release -r win-x64 --self-contained true -f net10.0 -o ./publish
 
-      - name: 📦 Restore
-        run: |
-          dotnet restore ${{ env.PROJECT_PATH }} \
-            -p:EnableWindowsTargeting=true \
-            --verbosity detailed
-
-      - name: 🔨 Build
-        run: |
-          dotnet build ${{ env.PROJECT_PATH }} \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --no-restore \
-            -p:EnableWindowsTargeting=true \
-            --verbosity detailed
-
-      - name: 📦 Publish
-        run: |
-          dotnet publish ${{ env.PROJECT_PATH }} \
-            --configuration ${{ env.BUILD_CONFIGURATION }} \
-            --output ${{ env.PUBLISH_OUTPUT }} \
-            --no-build \
-            -p:EnableWindowsTargeting=true \
-            -p:PublishSingleFile=false \
-            -p:SelfContained=false
-
-      - name: 🔍 Verify Published Files
-        run: |
-          echo "📂 Published files:"
-          ls -lah ${{ env.PUBLISH_OUTPUT }}
-          echo ""
-          echo "📊 File count:"
-          find ${{ env.PUBLISH_OUTPUT }} -type f | wc -l
-          echo ""
-          echo "📏 Total size:"
-          du -sh ${{ env.PUBLISH_OUTPUT }}
-
-      - name: 🧹 Cleanup
-        run: |
-          rm -f ${{ env.PUBLISH_OUTPUT }}/*.pdb || true
-          rm -f ${{ env.PUBLISH_OUTPUT }}/*.xml || true
-          rm -f ${{ env.PUBLISH_OUTPUT }}/appsettings.Development.json || true
-          echo "✅ Cleanup done"
-
-      - name: 🔍 Debug - Check FTP Secrets
-        run: |
-          echo "FTP_SERVER: ${{ secrets.FTP_SERVER != '' && '✅ Set' || '❌ Missing' }}"
-          echo "FTP_USERNAME: ${{ secrets.FTP_USERNAME != '' && '✅ Set' || '❌ Missing' }}"
-          echo "FTP_PASSWORD: ${{ secrets.FTP_PASSWORD != '' && '✅ Set' || '❌ Missing' }}"
-
-      - name: 🚀 Deploy to FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
-          port: 21
-          local-dir: ${{ env.PUBLISH_OUTPUT }}/
-          server-dir: ./
-          log-level: verbose
-          timeout: 600000
-        continue-on-error: true
-
-      - name: ✅ Success
-        if: success()
-        run: |
-          echo "✅ Deployment successful!"
-          echo "📅 Time: $(date)"
-
-      - name: ❌ Failed
-        if: failure()
-        run: |
-          echo "❌ Deployment failed!"
-          echo "Check logs above"
-          exit 1
+    - name: 📂 Sync files via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./publish/
+        server-dir: httpdocs/
+        
+        # Olası ECONNRESET hatalarına karşı sadece değişenleri gönderir
+        state-name: .ftp-deploy-sync-state.json
+        log-level: verbose
+        
+        # KESİN KURAL: Kök dizindeki _files klasörünü korur
+        exclude: |
+          **/_files/**
+          _files/**
+          **/.git*
+          **/.github/**
+          **/appsettings.Development.json

@@ -1,4 +1,4 @@
-name: 🚀 Plesk MVC FTP Deploy (Final)
+name: 🚀 Plesk MVC FTP Deploy (Self-Contained)
 
 on:
   push:
@@ -17,14 +17,16 @@ jobs:
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v3
       with:
-        # ÖNEMLİ: Eğer projen .NET 8 ise burayı 8.0.x yap. 
-        # Hata logunda net10.0 gördüğüm için 10.0.x yazıyorum.
+        # .NET 10 SDK'sını GitHub Runner'a kurar
         dotnet-version: '10.0.x' 
 
     - name: 🔨 Publish Project
-      # ÇÖZÜM: Hangi projeyi publish edeceğini tam olarak belirtiyoruz.
-      # 'web.csproj' yerine kendi ana projenin dosya adını yazmalısın.
-      run: dotnet publish web/web.csproj -c Release -o ./publish --no-self-contained
+      # İSTEDİĞİN AYARLAR: 
+      # -c Release (Yapılandırma)
+      # --runtime win-x64 (Çalışma zamanı)
+      # --self-contained true (Dağıtım modu)
+      # -f net10.0 (Hedef çerçeve)
+      run: dotnet publish -c Release -r win-x64 --self-contained true -f net10.0 -o ./publish
 
     - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -35,15 +37,14 @@ jobs:
         local-dir: ./publish/
         server-dir: httpdocs/
         
-        # Hız ve Stabilite Ayarları
+        # Olası ECONNRESET hatalarına karşı sadece değişenleri gönderir
         state-name: .ftp-deploy-sync-state.json
         log-level: verbose
         
-        # KURAL: Sunucudaki _files klasörü ve hassas dosyalar korunur
+        # KESİN KURAL: Kök dizindeki _files klasörünü korur
         exclude: |
           **/_files/**
           _files/**
           **/.git*
           **/.github/**
           **/appsettings.Development.json
-          **/logs/**

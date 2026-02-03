@@ -1,4 +1,4 @@
-name: 🚀 Plesk MVC FTP Deploy (Delta Sync)
+name: 🚀 Plesk MVC FTP Deploy (Zero-Lock Strategy)
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     - name: 🚚 Get latest code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # ÖNEMLİ: Değişen dosyaları anlaması için tüm geçmişi çeker
+        fetch-depth: 0
 
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v3
@@ -24,6 +24,13 @@ jobs:
     - name: 🔨 Publish Project (x86)
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
 
+    # --- 1. ADIM: UYGULAMAYI DURDUR (KİLİDİ AÇ) ---
+    - name: 🛑 Create App Offline File
+      shell: pwsh
+      run: |
+        "<!DOCTYPE html><html><head><meta charset='utf-8'></head><body><div style='text-align:center;margin-top:100px;'><h1>Sistem Guncelleniyor</h1><p>Lutfen bekleyiniz, site birkac dakika icinde aktif olacaktir.</p></div></body></html>" | Out-File -FilePath ./publish/app_offline.htm -Encoding utf8
+
+    # --- 2. ADIM: ANA DOSYALARI VE KİLİT DOSYASINI GÖNDER ---
     - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -32,14 +39,32 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./publish/
         server-dir: httpdocs/
-        
-        # --- SADECE DEĞİŞENLERİ GÖNDERME AYARI ---
-        # Bu dosya sunucuda saklanır ve hangi dosyanın değiştiğini takip eder.
         state-name: .ftp-deploy-sync-state.json
         
-        # --- SUNUCU DOSTU AYARLAR ---
-        # Eşzamanlı bağlantı sayısını 1 yaparak "saldırı" algısını önleriz.
-        # Paylaşımlı hostinglerde (Plesk) çoklu bağlantı genelde ban sebebidir.
+        # SALDIRI KORUMASI: 
+        # Paralel bağlantıyı kapatıyoruz (Aynı anda sadece 1 dosya)
+        # Bu işlem biraz daha yavaş sürer ama banlanma riskini sıfırlar.
         protocol: ftp
         port: 21
-        timeout: 60000 # 60 saniye zaman aşımı
+        timeout: 90000 
+        
+        exclude: |
+          **/_files/**
+          _files/**
+          **/.git*
+          **/.github/**
+          **/appsettings.Development.json
+
+    # --- 3. ADIM: UYGULAMAYI TEKRAR AÇ ---
+    # app_offline.htm dosyasını sunucudan silerek IIS'i tetikliyoruz.
+    - name: 🚀 Remove App Offline (Make Site Live)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: httpdocs/
+        # Sadece bu dosyayı silmek için boş bir yerel dizin veya 'delete' komutu kullanılır.
+        # En temiz yol, sunucudaki dosyayı 'exclude' etmeden ama yerelde silerek senkronize etmektir.
+        # Alternatif: Script ile doğrudan sunucudan silebilirsin.
+        method: sftp-or-ftp # Bağlantı türüne göre

@@ -3,7 +3,7 @@ name: 🚀 Plesk MVC FTP Deploy
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   web-deploy:

@@ -1,4 +1,5 @@
 ﻿@rendermode InteractiveServer
+<razor._Shared.Notification @ref="notificationRef" />
 @inject razor._Shared.tr.Media.FileUploadService FileService
 
 <div class="container-fluid py-4">
@@ -11,41 +12,63 @@
         <div class="card-body">
             @if (use != null)
             {
-                <!-- Dosya Yükleme -->
-                <div class="mb-4">
-                    <h5 class="text-white mb-3">
-                        <i class="fa fa-upload me-2"></i>Dosya Yükle
-                    </h5>
-                    <razor._Shared.tr.Media.Upload use="@use" />
-                </div>
-
-                <hr class="border-light-3" />
-
                 <!-- Tekli Seçim -->
-                <div class="mb-4">
-                    <h5 class="text-white mb-3">
-                        <i class="fa fa-hand-pointer-o me-2"></i>Tekli Resim Seçimi
-                    </h5>
-                    <razor._Shared.tr.Media.List use="@use" IsMultiSelect="false" />
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#SingleSelectFile">
+                    Tekli Seçim Yap
+                </button>
+                <div class="modal fade" id="SingleSelectFile" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-xl">
+                        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                            <div class="modal-header border-bottom border-secondary">
+                                <h5 class="modal-title text-white">
+                                    <i class="fa fa-folder-open-o"></i> Çoklu Seçim Yapabilirsiniz
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <razor._Shared.tr.Media.Upload use="@use" />
+                                <razor._Shared.tr.Media.List use="@use" IsMultiSelect="false" />
+                            </div>
+                            <div class="modal-footer border-top border-secondary">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <hr class="border-light-3" />
+
 
                 <!-- Çoklu Seçim -->
-                <div class="mb-4">
-                    <h5 class="text-white mb-3">
-                        <i class="fa fa-check-square-o me-2"></i>Çoklu Resim Seçimi
-                    </h5>
-                    <razor._Shared.tr.Media.List use="@use" IsMultiSelect="true" />
+                <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#MultiSelectFile">
+                    Çoklu Seçim Yap
+                </button>
+                <div class="modal fade" id="MultiSelectFile" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-xl">
+                        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                            <div class="modal-header border-bottom border-secondary">
+                                <h5 class="modal-title text-white">
+                                    <i class="fa fa-folder-open-o"></i> Çoklu Seçim Yapabilirsiniz
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <razor._Shared.tr.Media.Upload use="@use" />
+                                <razor._Shared.tr.Media.List use="@use" IsMultiSelect="true" />
+                            </div>
+                            <div class="modal-footer border-top border-secondary">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             }
+      
         </div>
     </div>
 
     <!-- Seçilen Dosyaları Gösterme Alanı -->
     <div class="row">
         <!-- Tekli Seçim Sonucu -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-12 mb-4">
             <div class="card bg-transparent border border-light-3 shadow-sm">
                 <div class="card-header bg-dark-transparent border-light-3">
                     <h5 class="text-white mb-0">
@@ -108,9 +131,8 @@
                 </div>
             </div>
         </div>
-
         <!-- Çoklu Seçim Sonucu -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-lg-12 mb-4">
             <div class="card bg-transparent border border-light-3 shadow-sm">
                 <div class="card-header bg-dark-transparent border-light-3 d-flex justify-content-between align-items-center">
                     <h5 class="text-white mb-0">
@@ -130,15 +152,23 @@
                 <div class="card-body">
                     @if (selectedMultipleFiles.Count > 0)
                     {
-                        <div class="row row-cols-1 row-cols-md-2 g-3">
-                            @foreach (var file in selectedMultipleFiles)
+                        <div class="row row-cols-2 row-cols-lg-6 g-3" id="sortable-container">
+                            @for (int i = 0; i < selectedMultipleFiles.Count; i++)
                             {
+                                var file = selectedMultipleFiles[i];
+                                var index = i;
                                 var ext = file.FileExtensionType?.ToLower() ?? "";
                                 var isImage = IsImageFile(ext);
 
-                                <div class="col">
-                                    <div class="card bg-dark-transparent border-light-3 h-100">
-                                        <div class="position-relative">
+                                <div class="col draggable-item"
+                                     draggable="true"
+                                     data-index="@index"
+                                     @ondragstart="@(() => HandleDragStart(index))"
+                                     @ondragenter="@(() => HandleDragEnter(index))"
+                                     @ondragover:preventDefault
+                                     @ondrop="@(() => HandleDrop(index))">
+                                    <div class="card bg-dark-transparent border-light-3 h-100 @(draggedIndex == index ? "dragging" : "") @(dragOverIndex == index ? "drag-over" : "")">
+                                        <div class="position-relative drag-handle">
                                             @if (isImage)
                                             {
                                                 <img src="@file.FileUrl"
@@ -155,6 +185,11 @@
                                             <div class="position-absolute top-0 end-0 m-2">
                                                 <span class="badge bg-primary">
                                                     <i class="fa fa-check"></i>
+                                                </span>
+                                            </div>
+                                            <div class="position-absolute top-0 start-0 m-2">
+                                                <span class="badge bg-warning">
+                                                    <div class="text-dark">#@(index + 1)</div>
                                                 </span>
                                             </div>
                                         </div>
@@ -174,14 +209,14 @@
                                                     <i class="fa fa-external-link"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-light"
-                                                        @onclick="() => CopyFileUrl(file.OrjFileUrl)"
+                                                        @onclick="() => CopyFileUrl(file.FileUrl)"
                                                         title="URL Kopyala">
                                                     <i class="fa fa-copy"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-light"
+                                                <button class="btn btn-sm btn-outline-danger"
                                                         @onclick="() => HandleRemoveFile(file)"
-                                                        title="Bunu Kaldır">
-                                                    <i class="fa fa-chain-broken"></i>
+                                                        title="Kaldır">
+                                                    <i class="fa fa-eraser"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -190,16 +225,13 @@
                             }
                         </div>
 
-                        <!-- Toplu İşlemler -->
-                        <div class="mt-3 pt-3 border-top border-light-3">
-                            <div class="d-flex gap-2 flex-wrap justify-content-center">
-                                <button class="btn btn-outline-light" @onclick="CopyAllUrls">
-                                    <i class="fa fa-copy me-1"></i>Tüm URL'leri Kopyala
-                                </button>
-                                <button class="btn btn-outline-light" @onclick="DownloadAllInfo">
-                                    <i class="fa fa-download me-1"></i>Bilgileri İndir
-                                </button>
-                            </div>
+                        <div class="mt-3 d-flex gap-2 flex-wrap">
+                            <button class="btn btn-outline-light" @onclick="CopyAllUrls">
+                                <i class="fa fa-copy me-1"></i>Tüm URL'leri Kopyala
+                            </button>
+                            <button class="btn btn-outline-light" @onclick="DownloadAllInfo">
+                                <i class="fa fa-download me-1"></i>Bilgileri İndir
+                            </button>
                         </div>
                     }
                     else
@@ -218,16 +250,6 @@
 
 <razor._Shared.Notification @ref="notificationRef" />
 
-<style>
-    .bg-dark-transparent {
-        background-color: rgba(0, 0, 0, 0.5) !important;
-    }
-
-    .border-light-3 {
-        border-color: rgba(255, 255, 255, 0.3) !important;
-    }
-</style>
-
 @code {
 
     private Data.Media? selectedSingleFile;
@@ -239,6 +261,11 @@
     private readonly string[] videoExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg" };
     private readonly string[] audioExtensions = { ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".wma", ".opus" };
     private readonly string[] documentExtensions = { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt" };
+
+    // Sürükle-Bırak için değişkenler
+    private int? draggedIndex = null;
+    private int? dragOverIndex = null;
+
     protected override void OnInitialized()
     {
         // FileService olaylarına abone ol
@@ -257,11 +284,13 @@
         selectedMultipleFiles = new List<Data.Media>(files);
         InvokeAsync(StateHasChanged);
     }
+
     private void HandleRemoveFile(Data.Media fileToRemove)
     {
         if (selectedMultipleFiles != null)
         {
             selectedMultipleFiles.RemoveAll(f => f.Id == fileToRemove.Id);
+            FileService.ToggleFileSelection(fileToRemove);
             InvokeAsync(StateHasChanged);
         }
     }
@@ -269,6 +298,36 @@
     private void ClearMultipleSelection()
     {
         FileService.ClearSelection();
+    }
+
+    // Sürükle-Bırak Metodları
+    private void HandleDragStart(int index)
+    {
+        draggedIndex = index;
+        StateHasChanged();
+    }
+
+    private void HandleDragEnter(int index)
+    {
+        if (draggedIndex.HasValue && draggedIndex.Value != index)
+        {
+            dragOverIndex = index;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleDrop(int dropIndex)
+    {
+        if (draggedIndex.HasValue && draggedIndex.Value != dropIndex)
+        {
+            var draggedItem = selectedMultipleFiles[draggedIndex.Value];
+            selectedMultipleFiles.RemoveAt(draggedIndex.Value);
+            selectedMultipleFiles.Insert(dropIndex, draggedItem);
+        }
+
+        draggedIndex = null;
+        dragOverIndex = null;
+        StateHasChanged();
     }
 
     private bool IsImageFile(string ext) => imageExtensions.Contains(ext);
@@ -336,7 +395,8 @@
     {
         if (selectedMultipleFiles.Count > 0)
         {
-            var info = string.Join("\n\n", selectedMultipleFiles.Select(f =>
+            var info = string.Join("\n\n", selectedMultipleFiles.Select((f, i) =>
+                $"Sıra: #{i + 1}\n" +
                 $"Dosya: {f.FileName}\n" +
                 $"Tür: {f.FileExtensionType}\n" +
                 $"Boyut: {FormatFileSize(f.CompressedSize ?? f.OriginalSize ?? 0)}\n" +

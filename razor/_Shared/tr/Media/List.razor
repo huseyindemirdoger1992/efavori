@@ -54,7 +54,7 @@
         }
         else
         {
-            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3">
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
                 @foreach (var media in mediaItems.Take(displayedItemsCount))
                 {
                     var isSelected = IsMultiSelect == true && selectedFiles.Contains(media);
@@ -121,23 +121,22 @@
                                 }
                             </div>
 
-                            <!-- Card Body -->
                             <div class="card-body p-2">
-                                <div class="text-white small text-truncate mb-1" title="@media.FileName">
-                                    <i class="fa fa-file-o me-1"></i>@media.FileName
+                                <div class="text-white small text-truncate mb-1 fw-bold" title="@media.FileName">
+                                    <i class="fa fa-file-text-o me-1 text-info"></i>@media.FileName
                                 </div>
-                                <div class="text-white-50" style="font-size: 0.7rem;">
-                                    <div>@FormatFileSize(media.CompressedSize ?? media.OriginalSize ?? 0)</div>
-                                    <div>@media.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
+                                <hr />
+                                <div class="d-flex justify-content-between align-items-center opacity-75 text-white" style="font-size: 0.65rem;">
+                                    <span><i class="fa fa-hdd-o me-1"></i>@FormatFileSize(media.CompressedSize ?? media.OriginalSize ?? 0)</span>
+                                    <span><i class="fa fa-calendar me-1"></i>@media.CreatedAt?.ToLocalTime().ToString("dd.MM.yy")</span>
                                 </div>
                             </div>
 
-                            <!-- Select Button -->
                             @if (IsMultiSelect == true)
                             {
-                                <div class="card-footer bg-dark-transparent border-light-3 p-2">
+                                <div class="px-2 pb-2">
                                     <button type="button"
-                                            class="btn btn-sm w-100 @(isSelected ? "btn-primary" : "btn-outline-light")"
+                                            class="btn btn-sm w-100 p-1 @(isSelected ? "btn-primary" : "btn-outline-light")"
                                             @onclick="() => ToggleSelection(media)">
                                         <i class="fa @(isSelected ? "fa-check-square-o" : "fa-square-o") me-1"></i>
                                         @(isSelected ? "Seçildi" : "Seç")
@@ -146,38 +145,38 @@
                             }
                             else
                             {
-                                <div class="card-footer bg-dark-transparent border-light-3 p-2">
+                                <div class="px-2 pb-2">
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-light w-100"
+                                            class="btn btn-sm btn-outline-light w-100 p-1"
+                                            data-bs-dismiss="modal" aria-label="Close"
                                             @onclick="() => SelectSingleFile(media)">
                                         <i class="fa fa-hand-pointer-o me-1"></i>Seç
                                     </button>
                                 </div>
                             }
 
-                            <!-- Action Buttons -->
-                            <div class="card-footer bg-dark-transparent border-light-3 p-2">
-                                <div class="btn-group w-100 flex-wrap" role="group" aria-label="Media Actions">
-                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => ShowDetail(media)" title="Detay">
+                            <div class="card-footer bg-dark-transparent border-light-3 p-1">
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-light border-0" @onclick="() => ShowDetail(media)" title="Detay">
                                         <i class="fa fa-info-circle"></i>
                                     </button>
 
-                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => ShowEditModal(media)" title="Düzenle">
+                                    <button type="button" class="btn btn-sm btn-outline-light border-0" @onclick="() => ShowEditModal(media)" title="Düzenle">
                                         <i class="fa fa-edit"></i>
                                     </button>
 
-                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => OpenInNewTab(media.OrjFileUrl)" title="Yeni Sekmede Aç">
+                                    <button type="button" class="btn btn-sm btn-outline-light border-0" @onclick="() => OpenInNewTab(media.OrjFileUrl)" title="Aç">
                                         <i class="fa fa-external-link"></i>
                                     </button>
 
-                                    <button type="button" class="btn btn-sm btn-outline-light flex-fill" @onclick="() => CopyLink(media.OrjFileUrl)" title="Bağlantıyı Kopyala">
+                                    <button type="button" class="btn btn-sm btn-outline-light border-0" @onclick="() => CopyLink(media.OrjFileUrl)" title="Kopyala">
                                         <i class="fa fa-copy"></i>
                                     </button>
 
-                                    <button type="button" class="btn btn-sm btn-outline-danger flex-fill" @onclick="() => ShowDeleteModal(media)" title="Sil">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
                                 </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => ShowDeleteModal(media)" title="Sil" style="width:100%;">
+                                    <i class="fa fa-trash"></i>
+                                </button>
                             </div>
                         </div>
                     </div>

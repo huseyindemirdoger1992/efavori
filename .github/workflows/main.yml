@@ -42,15 +42,11 @@ jobs:
         dotnet build --configuration Release --no-restore --verbosity normal
       continue-on-error: false
     
-    - name: Publish project
+    - name: Publish project (MVC - Framework-Dependent)
       run: |
-        dotnet publish --configuration Release `
+        dotnet publish efavori.slnx --configuration Release `
           --runtime win-x86 `
           --self-contained true `
-          -p:PublishSingleFile=true `
-          -p:IncludeNativeLibrariesForSelfExtract=true `
-          -p:PublishTrimmed=false `
-          -p:EnableCompressionInSingleFile=true `
           --output ./publish `
           --verbosity normal
       continue-on-error: false
@@ -62,7 +58,9 @@ jobs:
             exit 1
         }
         $fileCount = (Get-ChildItem -Path "./publish" -Recurse -File).Count
+        $totalSize = (Get-ChildItem -Path "./publish" -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
         Write-Host "✅ Published files count: $fileCount"
+        Write-Host "✅ Total size: $([math]::Round($totalSize, 2)) MB"
         if ($fileCount -eq 0) {
             Write-Error "No files found in publish folder!"
             exit 1
@@ -252,7 +250,8 @@ jobs:
                 "*/obj/*",
                 "*/bin/*",
                 "*.pdb",
-                "*.config.json"
+                "*.xml",
+                "web.config"
             )
             
             foreach ($pattern in $excludedPatterns) {

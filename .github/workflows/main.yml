@@ -23,13 +23,15 @@ jobs:
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
 
-    # 1. ADIM: app_offline.htm ile siteyi durdur
-    - name: 🛑 Stop App
+    # 1. ADIM: Her iki uzantıyı da oluştur
+    - name: 🛑 Prepare Offline Files
       shell: pwsh
       run: |
-        "<html><body><h1>Guncelleniyor...</h1></body></html>" | Out-File -FilePath "./publish/app_offline.htm" -Encoding utf8
+        $content = '<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Sistem Bakımda</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"></head><body class="bg-light"><div class="container"><div class="row min-vh-100 align-items-center justify-content-center"><div class="col-lg-8 col-xl-6"><div class="card shadow-lg border-0 rounded-4"><div class="card-body p-5"><div class="text-center mb-4"><div class="bg-primary bg-gradient rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px;"><i class="bi bi-gear-fill text-white" style="font-size: 3rem; animation: spin 3s linear infinite;"></i></div><h1 class="display-5 fw-bold text-dark mb-3">Sistem Güncelleniyor</h1><p class="lead text-muted mb-4">Sizlere daha iyi hizmet verebilmek için sistemimiz şu anda güncelleniyor. Lütfen birkaç dakika sonra tekrar deneyiniz.</p></div><div class="progress mb-4" style="height: 8px;"><div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 75%"></div></div><div class="alert alert-info border-0 shadow-sm mb-4" role="alert"><div class="d-flex align-items-center mb-3"><i class="bi bi-info-circle-fill me-2 fs-5"></i><h5 class="mb-0 fw-bold">Tahmini Süre: 5-10 Dakika</h5></div><p class="mb-0 small">Güncelleme tamamlandığında sistem otomatik olarak kullanıma açılacaktır.</p></div><div class="card bg-light border-0 mb-4"><div class="card-body"><h5 class="card-title fw-bold mb-3"><i class="bi bi-tools text-primary me-2"></i>Neler Yapılıyor?</h5><ul class="list-unstyled mb-0"><li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Performans iyileştirmeleri</li><li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Güvenlik güncellemeleri</li><li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Yeni özellikler ekleniyor</li><li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Veritabanı optimizasyonu</li><li class="mb-0"><i class="bi bi-check-circle-fill text-success me-2"></i>Sistem altyapısı güçlendiriliyor</li></ul></div></div><div class="row g-3"><div class="col-md-6"><div class="card border-primary border-2 h-100"><div class="card-body text-center"><i class="bi bi-shield-check text-primary fs-1 mb-3"></i><h6 class="fw-bold">Verileriniz Güvende</h6><p class="small text-muted mb-0">Tüm verileriniz güvenli bir şekilde korunmaktadır.</p></div></div></div><div class="col-md-6"><div class="card border-success border-2 h-100"><div class="card-body text-center"><i class="bi bi-rocket-takeoff text-success fs-1 mb-3"></i><h6 class="fw-bold">Yeni Özellikler</h6><p class="small text-muted mb-0">Kullanıcı deneyimini iyileştiren yenilikler geliyor.</p></div></div></div></div><div class="text-center mt-4 pt-3 border-top"><p class="text-muted small mb-2"><i class="bi bi-envelope me-2"></i>Acil durumlar için: destek@sirketiniz.com</p><p class="text-muted small mb-0"><i class="bi bi-telephone me-2"></i>Telefon: 0850 XXX XX XX</p></div></div></div><div class="text-center mt-4"><p class="text-muted small"><i class="bi bi-clock-history me-1"></i>Son güncelleme: ' . date('d.m.Y H:i') . '</p></div></div></div></div><style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script></body></html>';        
+        $content | Out-File -FilePath "./publish/app_offline.htm" -Encoding utf8
+        $content | Out-File -FilePath "./publish/app_offline.html" -Encoding utf8
 
-    - name: 📤 Upload app_offline
+    - name: 📤 Upload app_offline (Locking the App)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -40,13 +42,14 @@ jobs:
         protocol: ftp
         only: |
           app_offline.htm
+          app_offline.html
 
-    # 2. ADIM: IIS'e zaman tanı
+    # 2. ADIM: IIS'e zaman tanı (IIS'in dosyayı fark edip havuzu durdurması sürer)
     - name: ⏳ Wait for IIS
       run: Start-Sleep -s 20
       shell: pwsh
 
-    # 3. ADIM: AKILLI SENKRONİZASYON + RENAME STRATEJİSİ
+    # 3. ADIM: ANA TRANSFER
     - name: 📤 FTP Sync (Smart)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -57,7 +60,6 @@ jobs:
         server-dir: httpdocs/
         protocol: ftp
         port: 21
-        # Hata veren dosyalar için otomatik yeniden deneme ve kilit çözme
         retries: 10
         retry-delay: 5000
         dangerous-clean-slate: false
@@ -68,12 +70,15 @@ jobs:
           **/.git*
           **/.github/**
 
-    # 4. ADIM: app_offline sil ve yayına al
-    - name: 🚀 Go Online
+    # 4. ADIM: TEMİZLİK VE YAYINA ALMA
+    # Yerel klasörden siliyoruz ki FTP-Deploy-Action "sync" sırasında sunucudan da silsin.
+    - name: 🚀 Go Online (Remove Local Offline Files)
       shell: pwsh
-      run: Remove-Item "./publish/app_offline.htm" -Force
+      run: |
+        Remove-Item "./publish/app_offline.htm" -Force
+        Remove-Item "./publish/app_offline.html" -Force
 
-    - name: 🧹 Final Sync (Remove app_offline)
+    - name: 🧹 Final Sync (Cleanup Server)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -82,6 +87,8 @@ jobs:
         local-dir: ./publish/
         server-dir: httpdocs/
         protocol: ftp
+        # 'only' kullanmıyoruz çünkü sync mekanizması 
+        # yerelde olmayan app_offline dosyalarını sunucudan silecek.
         exclude: |
           **/_files/**
           _files/**

@@ -1,4 +1,4 @@
-name: 🚀 Optimized Plesk MVC FTP Deploy
+name: 🚀 Smart MVC Deploy (Sync Only Changes)
 
 on:
   push:
@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: 🚚 Get latest code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: ⚙️ Setup .NET
       uses: actions/setup-dotnet@v4
@@ -21,15 +23,12 @@ jobs:
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
 
-    # 1. ADIM: IIS'i durdurmak için app_offline.htm oluştur
     - name: 🛑 Prepare Offline Mode
       shell: pwsh
       run: |
         "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath "./publish/app_offline.htm" -Encoding utf8
 
-    # 2. ADIM: Tek seferde tam yükleme (En sağlıklı ve hızlı yöntem)
-    # FTP-Deploy-Action zaten sadece değişen dosyaları akıllıca seçer.
-    - name: 📤 FTP Upload (All Files)
+    - name: 📤 FTP Sync
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -39,22 +38,23 @@ jobs:
         server-dir: httpdocs/
         protocol: ftp
         port: 21
-        timeout: 120000 # 2 dakika
-        # Hata payını sıfırlamak için kritik ayarlar:
-        dry-run: false
-        dangerous-clean-slate: false
+        # KRİTİK AYARLAR:
+        dangerous-clean-slate: false # Sunucudaki yabancı dosyalara (örneğin _files) ASLA dokunmaz
         exclude: |
+          **/_files/** # Sunucudaki ve yereldeki _files klasörünü tamamen muaf tutar
+          _files/**
           **/appsettings.Development.json
           **/.git*
           **/.github/**
-
-    # 3. ADIM: Siteden app_offline.htm'i silerek sistemi aç (FTP ile silme)
-    # Not: Local publish klasöründen silip tekrar sync ediyoruz, bu en garanti yoldur.
+        
     - name: 🚀 Go Online
       shell: pwsh
-      run: Remove-Item "./publish/app_offline.htm" -Force
+      run: |
+        if (Test-Path "./publish/app_offline.htm") {
+            Remove-Item "./publish/app_offline.htm" -Force
+        }
 
-    - name: 🔄 Remove app_offline from Server
+    - name: 🧹 Final Clean (Remove app_offline)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -63,4 +63,6 @@ jobs:
         local-dir: ./publish/
         server-dir: httpdocs/
         protocol: ftp
-        port: 21
+        exclude: |
+          **/_files/**
+          _files/**

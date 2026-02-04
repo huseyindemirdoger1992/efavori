@@ -1,4 +1,4 @@
-name: 🚀 Smart MVC Deploy (Sync Only Changes)
+name: 🚀 Smart MVC Deploy (Zero Lock Error)
 
 on:
   push:
@@ -23,13 +23,13 @@ jobs:
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
 
-    # 1. ADIM: Sadece app_offline.htm dosyasını gönder ve durdur
-    - name: 🛑 Stop App (Upload app_offline)
+    # 1. ADIM: app_offline.htm ile siteyi durdur
+    - name: 🛑 Stop App
       shell: pwsh
       run: |
-        "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath "./publish/app_offline.htm" -Encoding utf8
+        "<html><body><h1>Guncelleniyor...</h1></body></html>" | Out-File -FilePath "./publish/app_offline.htm" -Encoding utf8
 
-    - name: 📤 Upload app_offline Only
+    - name: 📤 Upload app_offline
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -38,16 +38,15 @@ jobs:
         local-dir: ./publish/
         server-dir: httpdocs/
         protocol: ftp
-        port: 21
         only: |
           app_offline.htm
 
-    # 2. ADIM: IIS'in dosyaları serbest bırakması için bekle
-    - name: ⏳ Wait for IIS to Release Files
-      run: Start-Sleep -s 15
+    # 2. ADIM: IIS'e zaman tanı
+    - name: ⏳ Wait for IIS
+      run: Start-Sleep -s 20
       shell: pwsh
 
-    # 3. ADIM: Asıl dosyaları gönder (Kilitlenme riski artık minimum)
+    # 3. ADIM: AKILLI SENKRONİZASYON + RENAME STRATEJİSİ
     - name: 📤 FTP Sync (Smart)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
@@ -58,6 +57,9 @@ jobs:
         server-dir: httpdocs/
         protocol: ftp
         port: 21
+        # Hata veren dosyalar için otomatik yeniden deneme ve kilit çözme
+        retries: 10
+        retry-delay: 5000
         dangerous-clean-slate: false
         exclude: |
           **/_files/**
@@ -65,16 +67,13 @@ jobs:
           **/appsettings.Development.json
           **/.git*
           **/.github/**
-        
-    # 4. ADIM: Sistemi tekrar aç
+
+    # 4. ADIM: app_offline sil ve yayına al
     - name: 🚀 Go Online
       shell: pwsh
-      run: |
-        if (Test-Path "./publish/app_offline.htm") {
-            Remove-Item "./publish/app_offline.htm" -Force
-        }
+      run: Remove-Item "./publish/app_offline.htm" -Force
 
-    - name: 🧹 Final Clean
+    - name: 🧹 Final Sync (Remove app_offline)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}

@@ -23,12 +23,13 @@ jobs:
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
 
-    - name: 🛑 Prepare Offline Mode
+    # 1. ADIM: Sadece app_offline.htm dosyasını gönder ve durdur
+    - name: 🛑 Stop App (Upload app_offline)
       shell: pwsh
       run: |
         "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath "./publish/app_offline.htm" -Encoding utf8
 
-    - name: 📤 FTP Sync
+    - name: 📤 Upload app_offline Only
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
@@ -38,15 +39,34 @@ jobs:
         server-dir: httpdocs/
         protocol: ftp
         port: 21
-        # KRİTİK AYARLAR:
-        dangerous-clean-slate: false # Sunucudaki yabancı dosyalara (örneğin _files) ASLA dokunmaz
+        only: |
+          app_offline.htm
+
+    # 2. ADIM: IIS'in dosyaları serbest bırakması için bekle
+    - name: ⏳ Wait for IIS to Release Files
+      run: Start-Sleep -s 15
+      shell: pwsh
+
+    # 3. ADIM: Asıl dosyaları gönder (Kilitlenme riski artık minimum)
+    - name: 📤 FTP Sync (Smart)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        port: 21
+        dangerous-clean-slate: false
         exclude: |
-          **/_files/** # Sunucudaki ve yereldeki _files klasörünü tamamen muaf tutar
+          **/_files/**
           _files/**
           **/appsettings.Development.json
           **/.git*
           **/.github/**
         
+    # 4. ADIM: Sistemi tekrar aç
     - name: 🚀 Go Online
       shell: pwsh
       run: |
@@ -54,7 +74,7 @@ jobs:
             Remove-Item "./publish/app_offline.htm" -Force
         }
 
-    - name: 🧹 Final Clean (Remove app_offline)
+    - name: 🧹 Final Clean
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}

@@ -1,4 +1,4 @@
-name: 🚀 Pro-Level Plesk MVC FTP Deploy (Modernized)
+name: 🚀 Pro-Level Plesk Zip & PHP Bridge Deploy
 on:
   push:
     branches:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-publish:
-    name: 🔨 Build & Artifact
+    name: 🔨 Build & Package
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
@@ -16,8 +16,7 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    - name: 🔨 Modern Publish (32-bit Optimized)
-      # ReadyToRun: İlk açılış hızını artırır. DebugType: Gereksiz dosyaları temizler.
+    - name: 🔨 Publish Application
       run: |
         dotnet publish -c Release `
           -r win-x86 `
@@ -27,99 +26,100 @@ jobs:
           -p:DebugSymbols=false `
           -o ${{ github.workspace }}/publish
 
-    - name: 📦 Store Artifact
+    - name: 📦 Create ZIP Archive
+      shell: pwsh
+      run: |
+        # Publish klasörüne git ve içeriği zip'le (klasörün kendisini değil içindekileri)
+        Compress-Archive -Path "${{ github.workspace }}/publish/*" -DestinationPath "${{ github.workspace }}/deploy.zip"
+
+    - name: 📝 Create PHP Unzipper & Cleaner Bridge
+      shell: pwsh
+      run: |
+        # Bu script sunucuda çalışarak _files hariç her şeyi siler ve zip'i açar
+        $phpScript = @"
+        <?php
+        `$zipFile = 'deploy.zip';
+        `$excludeDir = '_files';
+
+        // 1. TEMİZLİK: _files hariç her şeyi sil
+        `$files = glob('*'); 
+        foreach (`$files as `$file) {
+            if (`$file != `$excludeDir && `$file != 'unzip.php' && `$file != `$zipFile) {
+                if (is_dir(`$file)) {
+                    system("rmdir /s /q " . escapeshellarg(`$file)); // Windows IIS uyumlu
+                } else {
+                    unlink(`$file);
+                }
+            }
+        }
+
+        // 2. ZIP ÇIKARMA
+        `$zip = new ZipArchive;
+        if (`$zip->open(`$zipFile) === TRUE) {
+            `$zip->extractTo('.');
+            `$zip->close();
+            echo "SUCCESS";
+            unlink(`$zipFile); // Zip'i sil
+        } else {
+            echo "ERROR: Zip opening failed";
+        }
+        ?>
+        "@
+        $phpScript | Out-File -FilePath "${{ github.workspace }}/unzip.php" -Encoding UTF8
+
+    - name: 📤 Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: publish-files
-        path: ${{ github.workspace }}/publish/
+        name: deploy-package
+        path: |
+          ${{ github.workspace }}/deploy.zip
+          ${{ github.workspace }}/unzip.php
 
   deploy:
-    name: 📤 Secure FTP Deploy
-    needs: build-and-publish # Build bitmeden deploy başlamaz
-    runs-on: windows-latest
-    timeout-minutes: 20
+    name: 📤 Deploy & Execute
+    needs: build-and-publish
+    runs-on: ubuntu-latest
     steps:
-    - name: 📥 Download Artifact
+    - name: 📥 Download Artifacts
       uses: actions/download-artifact@v4
       with:
-        name: publish-files
-        path: ${{ github.workspace }}/publish
+        name: deploy-package
+        path: ./
 
-    # ========================================
-    # 1. ADIM: SITE LOCKING
-    # ========================================
-    - name: 🛑 Prepare & Upload app_offline.htm
-      shell: pwsh
-      run: |
-        $offlineContent = "<!DOCTYPE html><html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>🔄 Guncelleme Yapiliyor</h1><p>Hizmetimiz kısa süre içinde dönecektir.</p></body></html>"
-        $offlineContent | Out-File -FilePath "${{ github.workspace }}/publish/app_offline.htm" -Encoding UTF8
-
-    - name: 📤 Lock Site
+    - name: 🛰️ FTP Upload (Zip & Bridge)
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
+        local-dir: ./
         server-dir: httpdocs/
-        security: loose
         exclude: |
-          **/*
-          !app_offline.htm
-
-    - name: ⏳ Wait for IIS Lock
-      shell: pwsh
-      run: Start-Sleep -s 20
-
-    # ========================================
-    # 2. ADIM: DELTA DEPLOY
-    # ========================================
-    - name: 📂 Sync Files
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
-        server-dir: httpdocs/
-        state-name: .ftp-deploy-sync-state.json
-        protocol: ftp
-        port: 21
-        timeout: 900000
-        retries: 15
-        security: loose
-        exclude: |
-          **/appsettings.Development.json
-          _files/**
           **/.git*
-          app_offline.htm
 
-    # ========================================
-    # 3. ADIM: CLEANUP & HEALTH CHECK
-    # ========================================
-    - name: 🚀 Start IIS (Unlock Site)
-      if: always()
+    - name: ⚡ Trigger Remote Unzip & Cleanup
+      run: |
+        # PHP scriptini HTTP üzerinden tetikler
+        RESPONSE=$(curl -s https://efavori.com/unzip.php)
+        echo "Server Response: $RESPONSE"
+        if [[ "$RESPONSE" != *"SUCCESS"* ]]; then
+          echo "Deployment failed during unzipping"
+          exit 1
+        fi
+
+    - name: 🧹 Delete Bridge File
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_ACCOUNT }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ${{ github.workspace }}/publish/
         server-dir: httpdocs/
-        state-name: .ftp-deploy-sync-state.json
+        method: delete
+        local-dir: ./
         exclude: |
           **/*
-          app_offline.htm
+          !unzip.php
 
     - name: 🌡️ Health Check
-      shell: pwsh
       run: |
-        $url = "https://efavori.com"
-        for($i=1; $i -le 5; $i++) {
-          try {
-            Write-Host "Checking site... Attempt $i"
-            $res = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 15
-            if ($res.StatusCode -eq 200) { Write-Host "✅ Online!"; exit 0 }
-          } catch { Start-Sleep -s 10 }
-        }
-        exit 1
+        curl -f https://efavori.com || exit 1

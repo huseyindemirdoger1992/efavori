@@ -31,4 +31,7 @@
 			<CopyToPublishDirectory>Always</CopyToPublishDirectory>
 		</None>
 	</ItemGroup>
+	<ItemGroup>
+		<Content Update="_files\**" CopyToPublishDirectory="Never" />
+	</ItemGroup>
 </Project>

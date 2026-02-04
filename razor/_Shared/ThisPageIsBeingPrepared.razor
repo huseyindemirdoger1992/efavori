@@ -169,14 +169,19 @@
                                         <div class="card-footer p-2 bg-dark-transparent border-light-3">
                                             <div class="btn-group w-100" role="group">
                                                 <button class="btn btn-sm btn-outline-light"
-                                                        @onclick="() => OpenFileInNewTab(file.FileUrl)"
+                                                        @onclick="() => OpenFileInNewTab(file.OrjFileUrl)"
                                                         title="Yeni Sekmede Aç">
                                                     <i class="fa fa-external-link"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-outline-light"
-                                                        @onclick="() => CopyFileUrl(file.FileUrl)"
+                                                        @onclick="() => CopyFileUrl(file.OrjFileUrl)"
                                                         title="URL Kopyala">
                                                     <i class="fa fa-copy"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-light"
+                                                        @onclick="() => HandleRemoveFile(file)"
+                                                        title="Bunu Kaldır">
+                                                    <i class="fa fa-chain-broken"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -252,6 +257,14 @@
         selectedMultipleFiles = new List<Data.Media>(files);
         InvokeAsync(StateHasChanged);
     }
+    private void HandleRemoveFile(Data.Media fileToRemove)
+    {
+        if (selectedMultipleFiles != null)
+        {
+            selectedMultipleFiles.RemoveAll(f => f.Id == fileToRemove.Id);
+            InvokeAsync(StateHasChanged);
+        }
+    }
 
     private void ClearMultipleSelection()
     {
@@ -276,18 +289,18 @@
     // Tekli Dosya İşlemleri
     private async Task CopySingleFileUrl()
     {
-        if (selectedSingleFile?.FileUrl != null)
+        if (selectedSingleFile?.OrjFileUrl != null)
         {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"https://efavori.com{selectedSingleFile.FileUrl}");
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"https://efavori.com{selectedSingleFile.OrjFileUrl}");
             await ShowNotification("Başarılı", "URL kopyalandı", "success");
         }
     }
 
     private async Task OpenSingleFileInNewTab()
     {
-        if (selectedSingleFile?.FileUrl != null)
+        if (selectedSingleFile?.OrjFileUrl != null)
         {
-            await JSRuntime.InvokeVoidAsync("open", selectedSingleFile.FileUrl, "_blank");
+            await JSRuntime.InvokeVoidAsync("open", selectedSingleFile.OrjFileUrl, "_blank");
         }
     }
 
@@ -313,7 +326,7 @@
     {
         if (selectedMultipleFiles.Count > 0)
         {
-            var urls = string.Join("\n", selectedMultipleFiles.Select(f => $"https://efavori.com{f.FileUrl}"));
+            var urls = string.Join("\n", selectedMultipleFiles.Select(f => $"https://efavori.com{f.OrjFileUrl}"));
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", urls);
             await ShowNotification("Başarılı", $"{selectedMultipleFiles.Count} URL kopyalandı", "success");
         }
@@ -328,7 +341,7 @@
                 $"Tür: {f.FileExtensionType}\n" +
                 $"Boyut: {FormatFileSize(f.CompressedSize ?? f.OriginalSize ?? 0)}\n" +
                 $"Tarih: {f.CreatedAt?.ToLocalTime():dd.MM.yyyy HH:mm}\n" +
-                $"URL: https://efavori.com{f.FileUrl}"
+                $"URL: https://efavori.com{f.OrjFileUrl}"
             ));
 
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", info);

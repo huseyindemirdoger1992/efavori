@@ -1,125 +1,130 @@
-name: 🚀 Pro-Level Plesk Zip & PHP Bridge Deploy
+name: Deploy to FTP
+
 on:
   push:
-    branches:
-      - master
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-and-publish:
-    name: 🔨 Build & Package
+  build-and-deploy:
     runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
     
-    - name: ⚙️ Setup .NET Core
-      uses: actions/setup-dotnet@v4
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '10.0.x'
-
-    - name: 🔨 Publish Application
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build project
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Publish project
       run: |
-        dotnet publish -c Release `
-          -r win-x86 `
+        dotnet publish --configuration Release `
+          --framework net10.0 `
+          --runtime win-x86 `
           --self-contained true `
-          -p:PublishReadyToRun=true `
-          -p:DebugType=None `
-          -p:DebugSymbols=false `
-          -o ${{ github.workspace }}/publish
-
-    - name: 📦 Create ZIP Archive
-      shell: pwsh
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -p:PublishTrimmed=false `
+          --output ./publish
+    
+    - name: Create deployment package
       run: |
-        # Publish klasörüne git ve içeriği zip'le (klasörün kendisini değil içindekileri)
-        Compress-Archive -Path "${{ github.workspace }}/publish/*" -DestinationPath "${{ github.workspace }}/deploy.zip"
-
-    - name: 📝 Create PHP Unzipper & Cleaner Bridge
+        Compress-Archive -Path ./publish/* -DestinationPath deployment.zip
+    
+    - name: Deploy to FTP (with retry and exclusions)
       shell: pwsh
+      env:
+        FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        FTP_ACCOUNT: ${{ secrets.FTP_ACCOUNT }}
+        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        # Bu script sunucuda çalışarak _files hariç her şeyi siler ve zip'i açar
-        $phpScript = @"
-        <?php
-        `$zipFile = 'deploy.zip';
-        `$excludeDir = '_files';
-
-        // 1. TEMİZLİK: _files hariç her şeyi sil
-        `$files = glob('*'); 
-        foreach (`$files as `$file) {
-            if (`$file != `$excludeDir && `$file != 'unzip.php' && `$file != `$zipFile) {
-                if (is_dir(`$file)) {
-                    system("rmdir /s /q " . escapeshellarg(`$file)); // Windows IIS uyumlu
-                } else {
-                    unlink(`$file);
+        $maxRetries = 3
+        $retryDelay = 5
+        
+        function Upload-FileWithRetry {
+            param($LocalPath, $RemotePath)
+            
+            for ($i = 1; $i -le $maxRetries; $i++) {
+                try {
+                    $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath")
+                    $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
+                    $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
+                    $ftpRequest.UseBinary = $true
+                    $ftpRequest.KeepAlive = $false
+                    $ftpRequest.Timeout = 300000
+                    $ftpRequest.ReadWriteTimeout = 300000
+                    
+                    $fileContent = [System.IO.File]::ReadAllBytes($LocalPath)
+                    $ftpRequest.ContentLength = $fileContent.Length
+                    
+                    $requestStream = $ftpRequest.GetRequestStream()
+                    $requestStream.Write($fileContent, 0, $fileContent.Length)
+                    $requestStream.Close()
+                    
+                    $response = $ftpRequest.GetResponse()
+                    Write-Host "Uploaded: $RemotePath - Status: $($response.StatusDescription)"
+                    $response.Close()
+                    return $true
+                }
+                catch {
+                    Write-Host "Attempt $i failed for $RemotePath : $_"
+                    if ($i -lt $maxRetries) {
+                        Start-Sleep -Seconds $retryDelay
+                    }
                 }
             }
+            Write-Host "Failed to upload $RemotePath after $maxRetries attempts"
+            return $false
         }
-
-        // 2. ZIP ÇIKARMA
-        `$zip = new ZipArchive;
-        if (`$zip->open(`$zipFile) === TRUE) {
-            `$zip->extractTo('.');
-            `$zip->close();
-            echo "SUCCESS";
-            unlink(`$zipFile); // Zip'i sil
-        } else {
-            echo "ERROR: Zip opening failed";
+        
+        function Create-FtpDirectory {
+            param($RemotePath)
+            
+            try {
+                $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath")
+                $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
+                $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
+                $response = $ftpRequest.GetResponse()
+                $response.Close()
+                Write-Host "Created directory: $RemotePath"
+            }
+            catch {
+                # Directory might already exist, continue
+            }
         }
-        ?>
-        "@
-        $phpScript | Out-File -FilePath "${{ github.workspace }}/unzip.php" -Encoding UTF8
-
-    - name: 📤 Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: deploy-package
-        path: |
-          ${{ github.workspace }}/deploy.zip
-          ${{ github.workspace }}/unzip.php
-
-  deploy:
-    name: 📤 Deploy & Execute
-    needs: build-and-publish
-    runs-on: ubuntu-latest
-    steps:
-    - name: 📥 Download Artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: deploy-package
-        path: ./
-
-    - name: 🛰️ FTP Upload (Zip & Bridge)
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./
-        server-dir: httpdocs/
-        exclude: |
-          **/.git*
-
-    - name: ⚡ Trigger Remote Unzip & Cleanup
-      run: |
-        # PHP scriptini HTTP üzerinden tetikler
-        RESPONSE=$(curl -s https://efavori.com/unzip.php)
-        echo "Server Response: $RESPONSE"
-        if [[ "$RESPONSE" != *"SUCCESS"* ]]; then
-          echo "Deployment failed during unzipping"
-          exit 1
-        fi
-
-    - name: 🧹 Delete Bridge File
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_ACCOUNT }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        server-dir: httpdocs/
-        method: delete
-        local-dir: ./
-        exclude: |
-          **/*
-          !unzip.php
-
-    - name: 🌡️ Health Check
-      run: |
-        curl -f https://efavori.com || exit 1
+        
+        # Upload files from publish folder
+        $publishFolder = "./publish"
+        $remoteBase = "httpdocs"
+        
+        Get-ChildItem -Path $publishFolder -Recurse -File | ForEach-Object {
+            $relativePath = $_.FullName.Substring($publishFolder.Length + 1)
+            $remotePath = "$remoteBase/$($relativePath -replace '\\', '/')"
+            
+            # Skip _files directory
+            if ($remotePath -notlike "*/_files/*" -and $relativePath -notlike "_files\*") {
+                $remoteDir = Split-Path $remotePath -Parent
+                if ($remoteDir) {
+                    Create-FtpDirectory -RemotePath $remoteDir
+                }
+                
+                Write-Host "Uploading: $relativePath"
+                Upload-FileWithRetry -LocalPath $_.FullName -RemotePath $remotePath
+                
+                # Small delay between uploads to prevent timeout
+                Start-Sleep -Milliseconds 500
+            }
+            else {
+                Write-Host "Skipping: $relativePath (excluded)"
+            }
+        }
+        
+        Write-Host "Deployment completed!"

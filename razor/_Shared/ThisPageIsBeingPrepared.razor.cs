@@ -10,6 +10,7 @@ namespace razor._Shared
     {
         // Gelen kullanıcı parametresi
         [Parameter] public Users? use { get; set; }
+        // kullanıcı bilgileri
 
     }
 }

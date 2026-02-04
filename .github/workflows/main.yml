@@ -42,33 +42,72 @@ jobs:
         dotnet build --configuration Release --no-restore --verbosity normal
       continue-on-error: false
     
-    - name: Publish project (MVC - Framework-Dependent)
+    - name: Find main project file
+      id: find-project
       run: |
-        dotnet publish efavori.slnx --configuration Release `
+        # Ana web projesini bul (startup project)
+        $webProjects = Get-ChildItem -Path . -Filter "*.csproj" -Recurse | Where-Object {
+            $content = Get-Content $_.FullName -Raw
+            $content -match '<Project Sdk="Microsoft.NET.Sdk.Web">'
+        }
+        
+        if ($webProjects.Count -eq 0) {
+            Write-Error "No web project found!"
+            exit 1
+        }
+        
+        $mainProject = $webProjects[0].FullName
+        Write-Host "✅ Found main project: $mainProject"
+        echo "PROJECT_PATH=$mainProject" >> $env:GITHUB_OUTPUT
+    
+    - name: Publish project
+      run: |
+        $projectPath = "${{ steps.find-project.outputs.PROJECT_PATH }}"
+        Write-Host "Publishing project: $projectPath"
+        
+        dotnet publish "$projectPath" `
+          --configuration Release `
           --runtime win-x86 `
           --self-contained true `
-          --output ./publish `
+          --output "${{ github.workspace }}/publish" `
           --verbosity normal
       continue-on-error: false
     
     - name: Verify publish output
       run: |
-        if (-not (Test-Path "./publish")) {
+        $publishPath = "${{ github.workspace }}/publish"
+        
+        if (-not (Test-Path $publishPath)) {
             Write-Error "Publish folder not found!"
             exit 1
         }
-        $fileCount = (Get-ChildItem -Path "./publish" -Recurse -File).Count
-        $totalSize = (Get-ChildItem -Path "./publish" -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
+        
+        Write-Host "=== Publish Directory Contents ==="
+        Get-ChildItem -Path $publishPath -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
+        
+        $fileCount = (Get-ChildItem -Path $publishPath -Recurse -File).Count
+        $totalSize = (Get-ChildItem -Path $publishPath -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
+        
+        Write-Host ""
         Write-Host "✅ Published files count: $fileCount"
         Write-Host "✅ Total size: $([math]::Round($totalSize, 2)) MB"
+        
         if ($fileCount -eq 0) {
             Write-Error "No files found in publish folder!"
             exit 1
         }
+        
+        # Check for wwwroot
+        if (Test-Path "$publishPath/wwwroot") {
+            Write-Host "✅ wwwroot folder found"
+        } else {
+            Write-Warning "⚠️ wwwroot folder not found - this might be normal for some projects"
+        }
     
     - name: Create deployment package (backup)
       run: |
-        Compress-Archive -Path ./publish/* -DestinationPath deployment.zip -Force
+        $publishPath = "${{ github.workspace }}/publish"
+        Compress-Archive -Path "$publishPath/*" -DestinationPath deployment.zip -Force
         $zipSize = (Get-Item "./deployment.zip").Length / 1MB
         Write-Host "✅ Deployment package created: $([math]::Round($zipSize, 2)) MB"
     
@@ -82,7 +121,7 @@ jobs:
         # Configuration
         $maxRetries = 5
         $retryDelay = 10
-        $connectionTimeout = 300000  # 5 minutes
+        $connectionTimeout = 300000
         $uploadedFiles = @()
         $skippedFiles = @()
         $failedFiles = @()
@@ -109,7 +148,7 @@ jobs:
         function Test-FtpConnection {
             try {
                 Write-Host "🔌 Testing FTP connection..."
-                $testRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/")
+                $testRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/httpdocs/")
                 $testRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
                 $testRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
                 $testRequest.Timeout = 30000
@@ -142,7 +181,60 @@ jobs:
                 return $size
             }
             catch {
-                return -1  # File doesn't exist or error
+                return -1
+            }
+        }
+        
+        # Function: Create FTP directory recursively
+        function Create-FtpDirectory {
+            param([string]$RemotePath)
+            
+            if ([string]::IsNullOrWhiteSpace($RemotePath)) {
+                return $true
+            }
+            
+            # Remove trailing slash
+            $RemotePath = $RemotePath.TrimEnd('/')
+            
+            # Check if already exists
+            try {
+                $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath/")
+                $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
+                $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
+                $ftpRequest.Timeout = 10000
+                $ftpRequest.KeepAlive = $false
+                
+                $response = $ftpRequest.GetResponse()
+                $response.Close()
+                return $true  # Directory exists
+            }
+            catch {
+                # Directory doesn't exist, try to create
+            }
+            
+            # Create parent directory first
+            $parentPath = Split-Path $RemotePath -Parent
+            if ($parentPath -and $parentPath -ne "") {
+                $parentPath = $parentPath -replace '\\', '/'
+                Create-FtpDirectory -RemotePath $parentPath
+            }
+            
+            # Create this directory
+            try {
+                $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath")
+                $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
+                $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
+                $ftpRequest.Timeout = 30000
+                $ftpRequest.KeepAlive = $false
+                
+                $response = $ftpRequest.GetResponse()
+                $response.Close()
+                Write-Host "  📁 Created directory: $RemotePath"
+                return $true
+            }
+            catch {
+                # Might already exist or permission issue
+                return $false
             }
         }
         
@@ -169,22 +261,17 @@ jobs:
                     $ftpRequest.Timeout = $connectionTimeout
                     $ftpRequest.ReadWriteTimeout = $connectionTimeout
                     
-                    # Read file content
                     $fileContent = [System.IO.File]::ReadAllBytes($LocalPath)
                     $ftpRequest.ContentLength = $fileContent.Length
                     
-                    # Upload with progress
                     $requestStream = $ftpRequest.GetRequestStream()
                     $requestStream.Write($fileContent, 0, $fileContent.Length)
                     $requestStream.Close()
                     $requestStream.Dispose()
                     
-                    # Get response
                     $response = $ftpRequest.GetResponse()
-                    $statusDescription = $response.StatusDescription
                     $response.Close()
                     
-                    # Verify upload
                     Start-Sleep -Milliseconds 500
                     $remoteSize = Get-FtpFileSize -RemotePath $RemotePath
                     
@@ -215,30 +302,6 @@ jobs:
             return $false
         }
         
-        # Function: Create FTP directory recursively
-        function Create-FtpDirectory {
-            param([string]$RemotePath)
-            
-            if ([string]::IsNullOrWhiteSpace($RemotePath) -or $RemotePath -eq "httpdocs") {
-                return
-            }
-            
-            try {
-                $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath")
-                $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
-                $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
-                $ftpRequest.Timeout = 30000
-                $ftpRequest.KeepAlive = $false
-                
-                $response = $ftpRequest.GetResponse()
-                $response.Close()
-                Write-Host "📁 Created directory: $RemotePath"
-            }
-            catch {
-                # Directory might already exist - this is fine
-            }
-        }
-        
         # Function: Check if path should be excluded
         function Test-ExcludedPath {
             param([string]$Path)
@@ -247,11 +310,8 @@ jobs:
                 "*/_files/*",
                 "_files\*",
                 "_files/*",
-                "*/obj/*",
-                "*/bin/*",
                 "*.pdb",
-                "*.xml",
-                "web.config"
+                "*.xml"
             )
             
             foreach ($pattern in $excludedPatterns) {
@@ -262,7 +322,7 @@ jobs:
             return $false
         }
         
-        # Test FTP connection first
+        # Test FTP connection
         if (-not (Test-FtpConnection)) {
             Write-Error "❌ Cannot proceed - FTP connection test failed!"
             exit 1
@@ -274,8 +334,8 @@ jobs:
         Write-Host "========================================="
         Write-Host ""
         
-        # Get all files from publish folder
-        $publishFolder = "./publish"
+        # Publish folder path (absolute)
+        $publishFolder = "${{ github.workspace }}/publish"
         $remoteBase = "httpdocs"
         
         if (-not (Test-Path $publishFolder)) {
@@ -283,6 +343,7 @@ jobs:
             exit 1
         }
         
+        # Get all files
         $allFiles = Get-ChildItem -Path $publishFolder -Recurse -File | Where-Object {
             -not (Test-ExcludedPath -Path $_.FullName)
         }
@@ -291,27 +352,36 @@ jobs:
         $currentFile = 0
         
         Write-Host "📊 Total files to process: $totalFiles"
+        Write-Host "📁 Publish folder: $publishFolder"
+        Write-Host "📁 Remote base: $remoteBase"
         Write-Host ""
         
         foreach ($file in $allFiles) {
             $currentFile++
-            $relativePath = $file.FullName.Substring($publishFolder.Length + 1)
-            $remotePath = "$remoteBase/$($relativePath -replace '\\', '/')"
+            
+            # DÜZELTME: Doğru relative path hesaplama
+            $relativePath = $file.FullName.Replace($publishFolder, "").TrimStart('\', '/')
+            $relativePath = $relativePath -replace '\\', '/'
+            
+            # Remote path oluştur
+            $remotePath = "$remoteBase/$relativePath"
             
             Write-Host "[$currentFile/$totalFiles] Processing: $relativePath"
+            Write-Host "  Local:  $($file.FullName)"
+            Write-Host "  Remote: $remotePath"
             
-            # Check if file is excluded
+            # Check exclusion
             if (Test-ExcludedPath -Path $relativePath) {
                 Write-Host "  🚫 Excluded by pattern"
                 $skippedFiles += $relativePath
                 continue
             }
             
-            # Get file sizes
+            # Get sizes
             $localSize = $file.Length
             $remoteSize = Get-FtpFileSize -RemotePath $remotePath
             
-            # Determine if upload is needed
+            # Check if upload needed
             $needsUpload = $false
             if ($remoteSize -eq -1) {
                 Write-Host "  📄 New file detected"
@@ -327,13 +397,15 @@ jobs:
                 continue
             }
             
-            # Create remote directory if needed
+            # Create directory
             $remoteDir = Split-Path $remotePath -Parent
-            if ($remoteDir) {
+            if ($remoteDir -and $remoteDir -ne $remoteBase) {
+                $remoteDir = $remoteDir -replace '\\', '/'
+                Write-Host "  📁 Ensuring directory exists: $remoteDir"
                 Create-FtpDirectory -RemotePath $remoteDir
             }
             
-            # Upload file
+            # Upload
             if (Upload-FileWithRetry -LocalPath $file.FullName -RemotePath $remotePath) {
                 $uploadedFiles += $relativePath
             }
@@ -341,7 +413,6 @@ jobs:
                 $failedFiles += $relativePath
             }
             
-            # Small delay to prevent overwhelming the server
             Start-Sleep -Milliseconds 200
             Write-Host ""
         }

@@ -1,449 +1,187 @@
-name: Deploy to FTP
-
+name: 🚀 Plesk MVC FTP Deploy (Zero Error)
 on:
   push:
-    branches: [ master ]
-  workflow_dispatch:
-
+    branches:
+      - master
 jobs:
-  build-and-deploy:
-    runs-on: windows-latest
-    timeout-minutes: 120
+  web-deploy:
+    name: 🎉 Deploy
+    runs-on: windows-latest 
     
     steps:
-    - name: Checkout code
+    - name: 🚚 Get latest code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
-    - name: Setup .NET
+        
+    - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
-    
-    - name: Verify .NET Installation
-      run: |
-        dotnet --version
-        dotnet --list-sdks
-    
-    - name: Clean previous builds
-      run: |
-        if (Test-Path "./publish") { Remove-Item -Path "./publish" -Recurse -Force }
-        if (Test-Path "./deployment.zip") { Remove-Item -Path "./deployment.zip" -Force }
-        dotnet clean --configuration Release
-    
-    - name: Restore dependencies
-      run: |
-        dotnet restore --verbosity normal
-      continue-on-error: false
-    
-    - name: Build project
-      run: |
-        dotnet build --configuration Release --no-restore --verbosity normal
-      continue-on-error: false
-    
-    - name: Find main project file
-      id: find-project
-      run: |
-        # Ana web projesini bul (startup project)
-        $webProjects = Get-ChildItem -Path . -Filter "*.csproj" -Recurse | Where-Object {
-            $content = Get-Content $_.FullName -Raw
-            $content -match '<Project Sdk="Microsoft.NET.Sdk.Web">'
-        }
+        dotnet-version: '10.0.x' 
         
-        if ($webProjects.Count -eq 0) {
-            Write-Error "No web project found!"
-            exit 1
-        }
-        
-        $mainProject = $webProjects[0].FullName
-        Write-Host "✅ Found main project: $mainProject"
-        echo "PROJECT_PATH=$mainProject" >> $env:GITHUB_OUTPUT
-    
-    - name: Publish project
-      run: |
-        $projectPath = "${{ steps.find-project.outputs.PROJECT_PATH }}"
-        Write-Host "Publishing project: $projectPath"
-        
-        dotnet publish "$projectPath" `
-          --configuration Release `
-          --runtime win-x86 `
-          --self-contained true `
-          --output "${{ github.workspace }}/publish" `
-          --verbosity normal
-      continue-on-error: false
-    
-    - name: Verify publish output
-      run: |
-        $publishPath = "${{ github.workspace }}/publish"
-        
-        if (-not (Test-Path $publishPath)) {
-            Write-Error "Publish folder not found!"
-            exit 1
-        }
-        
-        Write-Host "=== Publish Directory Contents ==="
-        Get-ChildItem -Path $publishPath -Recurse | Select-Object FullName, Length | Format-Table -AutoSize
-        
-        $fileCount = (Get-ChildItem -Path $publishPath -Recurse -File).Count
-        $totalSize = (Get-ChildItem -Path $publishPath -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
-        
-        Write-Host ""
-        Write-Host "✅ Published files count: $fileCount"
-        Write-Host "✅ Total size: $([math]::Round($totalSize, 2)) MB"
-        
-        if ($fileCount -eq 0) {
-            Write-Error "No files found in publish folder!"
-            exit 1
-        }
-        
-        # Check for wwwroot
-        if (Test-Path "$publishPath/wwwroot") {
-            Write-Host "✅ wwwroot folder found"
-        } else {
-            Write-Warning "⚠️ wwwroot folder not found - this might be normal for some projects"
-        }
-    
-    - name: Create deployment package (backup)
-      run: |
-        $publishPath = "${{ github.workspace }}/publish"
-        Compress-Archive -Path "$publishPath/*" -DestinationPath deployment.zip -Force
-        $zipSize = (Get-Item "./deployment.zip").Length / 1MB
-        Write-Host "✅ Deployment package created: $([math]::Round($zipSize, 2)) MB"
-    
-    - name: Deploy to FTP (Incremental with Enhanced Error Handling)
+    - name: 🔨 Publish Project
+      run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
+      
+    # --- 1. ADIM: DURDURMA ---
+    - name: 🛑 Stop App
       shell: pwsh
-      env:
-        FTP_SERVER: ${{ secrets.FTP_SERVER }}
-        FTP_ACCOUNT: ${{ secrets.FTP_ACCOUNT }}
-        FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
       run: |
-        # Configuration
-        $maxRetries = 5
-        $retryDelay = 10
-        $connectionTimeout = 300000
-        $uploadedFiles = @()
-        $skippedFiles = @()
-        $failedFiles = @()
+        $path = "${{ github.workspace }}/publish/app_offline.htm"
+        "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath $path -Encoding utf8
+        if (Test-Path $path) { Write-Host "✅ app_offline.htm oluşturuldu." }
         
-        # Validate FTP credentials
-        if ([string]::IsNullOrWhiteSpace($env:FTP_SERVER)) {
-            Write-Error "❌ FTP_SERVER secret is not set!"
-            exit 1
-        }
-        if ([string]::IsNullOrWhiteSpace($env:FTP_ACCOUNT)) {
-            Write-Error "❌ FTP_ACCOUNT secret is not set!"
-            exit 1
-        }
-        if ([string]::IsNullOrWhiteSpace($env:FTP_PASSWORD)) {
-            Write-Error "❌ FTP_PASSWORD secret is not set!"
-            exit 1
-        }
-        
-        Write-Host "🔧 FTP Server: $env:FTP_SERVER"
-        Write-Host "👤 FTP Account: $env:FTP_ACCOUNT"
-        Write-Host ""
-        
-        # Function: Test FTP Connection
-        function Test-FtpConnection {
-            try {
-                Write-Host "🔌 Testing FTP connection..."
-                $testRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/httpdocs/")
-                $testRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
-                $testRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
-                $testRequest.Timeout = 30000
-                $testRequest.KeepAlive = $false
-                
-                $response = $testRequest.GetResponse()
-                $response.Close()
-                Write-Host "✅ FTP connection successful!"
-                return $true
-            }
-            catch {
-                Write-Error "❌ FTP connection failed: $_"
-                return $false
-            }
-        }
-        
-        # Function: Get remote file size
-        function Get-FtpFileSize {
-            param($RemotePath)
-            try {
-                $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath")
-                $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
-                $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::GetFileSize
-                $ftpRequest.Timeout = 15000
-                $ftpRequest.KeepAlive = $false
-                
-                $response = $ftpRequest.GetResponse()
-                $size = $response.ContentLength
-                $response.Close()
-                return $size
-            }
-            catch {
-                return -1
-            }
-        }
-        
-        # Function: Create FTP directory recursively
-        function Create-FtpDirectory {
-            param([string]$RemotePath)
-            
-            if ([string]::IsNullOrWhiteSpace($RemotePath)) {
-                return $true
-            }
-            
-            # Remove trailing slash
-            $RemotePath = $RemotePath.TrimEnd('/')
-            
-            # Check if already exists
-            try {
-                $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath/")
-                $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
-                $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectory
-                $ftpRequest.Timeout = 10000
-                $ftpRequest.KeepAlive = $false
-                
-                $response = $ftpRequest.GetResponse()
-                $response.Close()
-                return $true  # Directory exists
-            }
-            catch {
-                # Directory doesn't exist, try to create
-            }
-            
-            # Create parent directory first
-            $parentPath = Split-Path $RemotePath -Parent
-            if ($parentPath -and $parentPath -ne "") {
-                $parentPath = $parentPath -replace '\\', '/'
-                Create-FtpDirectory -RemotePath $parentPath
-            }
-            
-            # Create this directory
-            try {
-                $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath")
-                $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
-                $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::MakeDirectory
-                $ftpRequest.Timeout = 30000
-                $ftpRequest.KeepAlive = $false
-                
-                $response = $ftpRequest.GetResponse()
-                $response.Close()
-                Write-Host "  📁 Created directory: $RemotePath"
-                return $true
-            }
-            catch {
-                # Might already exist or permission issue
-                return $false
-            }
-        }
-        
-        # Function: Upload file with retry logic
-        function Upload-FileWithRetry {
-            param(
-                [string]$LocalPath,
-                [string]$RemotePath
-            )
-            
-            $localFileInfo = Get-Item $LocalPath
-            $localSize = $localFileInfo.Length
-            
-            for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
-                try {
-                    Write-Host "  📤 Attempt $attempt/$maxRetries - Uploading: $($localFileInfo.Name) ($([math]::Round($localSize/1KB, 2)) KB)"
-                    
-                    $ftpRequest = [System.Net.FtpWebRequest]::Create("ftp://$env:FTP_SERVER/$RemotePath")
-                    $ftpRequest.Credentials = New-Object System.Net.NetworkCredential($env:FTP_ACCOUNT, $env:FTP_PASSWORD)
-                    $ftpRequest.Method = [System.Net.WebRequestMethods+Ftp]::UploadFile
-                    $ftpRequest.UseBinary = $true
-                    $ftpRequest.KeepAlive = $false
-                    $ftpRequest.UsePassive = $true
-                    $ftpRequest.Timeout = $connectionTimeout
-                    $ftpRequest.ReadWriteTimeout = $connectionTimeout
-                    
-                    $fileContent = [System.IO.File]::ReadAllBytes($LocalPath)
-                    $ftpRequest.ContentLength = $fileContent.Length
-                    
-                    $requestStream = $ftpRequest.GetRequestStream()
-                    $requestStream.Write($fileContent, 0, $fileContent.Length)
-                    $requestStream.Close()
-                    $requestStream.Dispose()
-                    
-                    $response = $ftpRequest.GetResponse()
-                    $response.Close()
-                    
-                    Start-Sleep -Milliseconds 500
-                    $remoteSize = Get-FtpFileSize -RemotePath $RemotePath
-                    
-                    if ($remoteSize -eq $localSize) {
-                        Write-Host "  ✅ Upload successful - Verified ($remoteSize bytes)"
-                        return $true
-                    }
-                    elseif ($remoteSize -gt 0) {
-                        Write-Warning "  ⚠️ Size mismatch! Local: $localSize, Remote: $remoteSize - Retrying..."
-                    }
-                    else {
-                        Write-Warning "  ⚠️ Could not verify upload - Assuming success"
-                        return $true
-                    }
-                }
-                catch {
-                    $errorMessage = $_.Exception.Message
-                    Write-Warning "  ⚠️ Attempt $attempt failed: $errorMessage"
-                    
-                    if ($attempt -lt $maxRetries) {
-                        Write-Host "  ⏳ Waiting $retryDelay seconds before retry..."
-                        Start-Sleep -Seconds $retryDelay
-                    }
-                }
-            }
-            
-            Write-Error "  ❌ Failed to upload after $maxRetries attempts: $RemotePath"
-            return $false
-        }
-        
-        # Function: Check if path should be excluded
-        function Test-ExcludedPath {
-            param([string]$Path)
-            
-            $excludedPatterns = @(
-                "*/_files/*",
-                "_files\*",
-                "_files/*",
-                "*.pdb",
-                "*.xml"
-            )
-            
-            foreach ($pattern in $excludedPatterns) {
-                if ($Path -like $pattern) {
-                    return $true
-                }
-            }
-            return $false
-        }
-        
-        # Test FTP connection
-        if (-not (Test-FtpConnection)) {
-            Write-Error "❌ Cannot proceed - FTP connection test failed!"
-            exit 1
-        }
-        
-        Write-Host ""
-        Write-Host "========================================="
-        Write-Host "🚀 Starting Incremental Deployment"
-        Write-Host "========================================="
-        Write-Host ""
-        
-        # Publish folder path (absolute)
-        $publishFolder = "${{ github.workspace }}/publish"
-        $remoteBase = "httpdocs"
-        
-        if (-not (Test-Path $publishFolder)) {
-            Write-Error "❌ Publish folder not found: $publishFolder"
-            exit 1
-        }
-        
-        # Get all files
-        $allFiles = Get-ChildItem -Path $publishFolder -Recurse -File | Where-Object {
-            -not (Test-ExcludedPath -Path $_.FullName)
-        }
-        
-        $totalFiles = $allFiles.Count
-        $currentFile = 0
-        
-        Write-Host "📊 Total files to process: $totalFiles"
-        Write-Host "📁 Publish folder: $publishFolder"
-        Write-Host "📁 Remote base: $remoteBase"
-        Write-Host ""
-        
-        foreach ($file in $allFiles) {
-            $currentFile++
-            
-            # DÜZELTME: Doğru relative path hesaplama
-            $relativePath = $file.FullName.Replace($publishFolder, "").TrimStart('\', '/')
-            $relativePath = $relativePath -replace '\\', '/'
-            
-            # Remote path oluştur
-            $remotePath = "$remoteBase/$relativePath"
-            
-            Write-Host "[$currentFile/$totalFiles] Processing: $relativePath"
-            Write-Host "  Local:  $($file.FullName)"
-            Write-Host "  Remote: $remotePath"
-            
-            # Check exclusion
-            if (Test-ExcludedPath -Path $relativePath) {
-                Write-Host "  🚫 Excluded by pattern"
-                $skippedFiles += $relativePath
-                continue
-            }
-            
-            # Get sizes
-            $localSize = $file.Length
-            $remoteSize = Get-FtpFileSize -RemotePath $remotePath
-            
-            # Check if upload needed
-            $needsUpload = $false
-            if ($remoteSize -eq -1) {
-                Write-Host "  📄 New file detected"
-                $needsUpload = $true
-            }
-            elseif ($remoteSize -ne $localSize) {
-                Write-Host "  🔄 File changed (Local: $localSize bytes, Remote: $remoteSize bytes)"
-                $needsUpload = $true
-            }
-            else {
-                Write-Host "  ⏭️ Unchanged - skipping"
-                $skippedFiles += $relativePath
-                continue
-            }
-            
-            # Create directory
-            $remoteDir = Split-Path $remotePath -Parent
-            if ($remoteDir -and $remoteDir -ne $remoteBase) {
-                $remoteDir = $remoteDir -replace '\\', '/'
-                Write-Host "  📁 Ensuring directory exists: $remoteDir"
-                Create-FtpDirectory -RemotePath $remoteDir
-            }
-            
-            # Upload
-            if (Upload-FileWithRetry -LocalPath $file.FullName -RemotePath $remotePath) {
-                $uploadedFiles += $relativePath
-            }
-            else {
-                $failedFiles += $relativePath
-            }
-            
-            Start-Sleep -Milliseconds 200
-            Write-Host ""
-        }
-        
-        # Summary
-        Write-Host ""
-        Write-Host "========================================="
-        Write-Host "📊 Deployment Summary"
-        Write-Host "========================================="
-        Write-Host "✅ Uploaded:  $($uploadedFiles.Count) files"
-        Write-Host "⏭️ Skipped:   $($skippedFiles.Count) files"
-        Write-Host "❌ Failed:    $($failedFiles.Count) files"
-        Write-Host "📦 Total:     $totalFiles files"
-        Write-Host "========================================="
-        
-        if ($failedFiles.Count -gt 0) {
-            Write-Host ""
-            Write-Host "❌ Failed files:"
-            $failedFiles | ForEach-Object { Write-Host "  - $_" }
-            Write-Host ""
-            Write-Error "Deployment completed with errors!"
-            exit 1
-        }
-        
-        Write-Host ""
-        Write-Host "🎉 Deployment completed successfully!"
-    
-    - name: Upload deployment package as artifact (on failure)
-      if: failure()
-      uses: actions/upload-artifact@v4
+    - name: 📤 Upload app_offline
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        name: deployment-package
-        path: deployment.zip
-        retention-days: 7
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        dangerous-clean-slate: false
+        protocol: ftp               # ← Düz FTP dene (FTPS sorunlu olabilir)
+        port: 21
+        timeout: 30000              # ← 30 saniyeye düşür
+        log-level: verbose          # ← Detaylı log için
+        only: |
+          app_offline.htm
+          
+    - name: ⏳ Wait for IIS
+      run: Start-Sleep -s 10
+      shell: pwsh
+
+    # --- 2. ADIM: ULTRA-SAFE SENKRONİZASYON ---
+    
+    # Aşama 1: Sadece değişen küçük dosyaları gönder
+    - name: 📦 Stage 1 - Config & Small Files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-stage1.json
+        protocol: ftp               # ← Düz FTP
+        port: 21
+        parallel: 1                 # ← TEK DOSYA (en güvenli)
+        timeout: 60000              # ← 1 dakika per dosya
+        retries: 25                 # ← Maksimum retry
+        retry-delay: 2000           # ← 2 saniye ara
+        exclude: |
+          **/appsettings.Development.json
+          **/.git*
+          **/.github/**
+          _files/**
+          **/_files/**
+          **/*.dll
+          **/*.exe
+          **/*.pdb
+          **/*.so
+          **/*.dylib
+          
+    - name: ⏸️ Cooldown 1 (Connection Reset)
+      run: Start-Sleep -s 8
+      shell: pwsh
+      
+    # Aşama 2: DLL dosyaları (en kritik kısım)
+    - name: 🔧 Stage 2 - DLL Files (Sequential)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-stage2.json
+        protocol: ftp
+        port: 21
+        parallel: 1                 # ← TEK TEK gönder
+        timeout: 90000              # ← 90 saniye per dosya
+        retries: 30                 # ← 30 deneme
+        retry-delay: 3000           # ← 3 saniye ara
+        only: |
+          **/*.dll
+          
+    - name: ⏸️ Cooldown 2 (Connection Reset)
+      run: Start-Sleep -s 8
+      shell: pwsh
+      
+    # Aşama 3: EXE ve PDB dosyaları
+    - name: 🏗️ Stage 3 - EXE & PDB Files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-stage3.json
+        protocol: ftp
+        port: 21
+        parallel: 1
+        timeout: 90000
+        retries: 30
+        retry-delay: 3000
+        only: |
+          **/*.exe
+          **/*.pdb
+          
+    - name: ⏸️ Cooldown 3 (Connection Reset)
+      run: Start-Sleep -s 8
+      shell: pwsh
+      
+    # Aşama 4: Final verification sync
+    - name: 🔄 Stage 4 - Final Verification Sync
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        state-name: .ftp-deploy-final.json
+        protocol: ftp
+        port: 21
+        parallel: 1
+        timeout: 120000             # ← 2 dakika final sync için
+        retries: 25
+        retry-delay: 3000
+        exclude: |
+          **/appsettings.Development.json
+          **/.git*
+          **/.github/**
+          _files/**
+          **/_files/**
+
+    # --- 3. ADIM: BAŞLATMA VE DOĞRULAMA ---
+    - name: 🚀 Start App (Safe Remove)
+      shell: pwsh
+      run: |
+        Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force -ErrorAction SilentlyContinue
+        Write-Host "✅ Yerel app_offline silindi."
+        
+    - name: 🧹 Clean Remote & Online
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        port: 21
+        timeout: 60000
+        retries: 10
+        
+    - name: 🌡️ Warm Up Site
+      shell: pwsh
+      run: |
+        Write-Host "Site uyandırılıyor..."
+        Start-Sleep -s 5
+        try {
+            $response = Invoke-WebRequest -Uri "https://efavori.com" -UseBasicParsing -TimeoutSec 30
+            Write-Host "✅ Site yanıt verdi: $($response.StatusCode)"
+        } catch {
+            Write-Warning "⚠️ Site henüz hazır değil veya hata döndürdü: $_"
+        }

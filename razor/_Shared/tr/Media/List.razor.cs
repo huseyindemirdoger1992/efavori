@@ -9,6 +9,6 @@ namespace razor._Shared.tr.Media
     public partial class List
     {
         [Parameter] public Users? use { get; set; }
-
+        [Parameter] public bool? IsMultiSelect { get; set; }
     }
 }

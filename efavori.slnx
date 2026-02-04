@@ -1,14 +1,5 @@
 <Solution>
-  <Folder Name="/Solution Items/">
-    <File Path="Button.txt" />
-    <File Path="main.txt" />
-    <File Path="Modal.txt" />
-    <File Path="Notification.txt" />
-    <File Path="TakeLog.txt" />
-    <File Path="Text.txt" />
-    <File Path="_Rules.txt" />
-    <File Path="_Tasks.md" />
-  </Folder>
+  <Folder Name="/Solution Items/" />
   <Project Path="api/api.csproj" />
   <Project Path="data/data.csproj" />
   <Project Path="razor/razor.csproj" />

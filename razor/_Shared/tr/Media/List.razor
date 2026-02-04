@@ -72,8 +72,12 @@
                                 </div>
                             }
 
-                            <!-- Preview Area -->
-                            <div class="position-relative media-preview" @onclick="() => HandleMediaClick(media)" style="cursor: pointer;">
+
+                            <div class="position-relative media-preview"
+                                 style="cursor: pointer;"
+                                 @onclick=" (IsMultiSelect ?? false) ? () =>HandleMediaClick(media) : () =>SelectSingleFile(media)"
+                                 data-bs-dismiss="@(!(IsMultiSelect ?? false) ? "modal" : null)">
+
                                 @{
                                     var ext = media.FileExtensionType?.ToLower() ?? "";
                                     var isImage = IsImageFile(ext);
@@ -192,7 +196,7 @@
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                         }
-                        <i class="fa fa-arrow-down me-2"></i>Daha Fazla Göster (12 Tane Daha)
+                        <i class="fa fa-arrow-down me-2"></i>Daha Fazla Göster (15 Tane Daha)
                     </button>
                     <div class="text-white-50 small mt-2">
                         Gösterilen: @displayedItemsCount / @filteredTotalCount
@@ -378,7 +382,7 @@
 
     private string searchQuery = string.Empty;
     private System.Threading.Timer? searchDebounceTimer;
-    private int displayedItemsCount = 12;
+    private int displayedItemsCount = 15;
     private int filteredTotalCount = 0;
 
     private bool isLoading = true;
@@ -494,7 +498,7 @@
         {
             await InvokeAsync(async () =>
             {
-                displayedItemsCount = 12;
+                displayedItemsCount = 15;
                 await LoadMedia();
             });
         }, null, 500, Timeout.Infinite);
@@ -503,7 +507,7 @@
     private async Task ClearSearch()
     {
         searchQuery = string.Empty;
-        displayedItemsCount = 12;
+        displayedItemsCount = 15;
         await LoadMedia();
     }
 
@@ -513,7 +517,7 @@
         StateHasChanged();
 
         await Task.Delay(300);
-        displayedItemsCount += 12;
+        displayedItemsCount += 15;
 
         isLoadingMore = false;
         StateHasChanged();

@@ -19,7 +19,6 @@ namespace api
     //                    if (durdurmaSinyali.IsCancellationRequested) break;
     //                    Console.WriteLine("Şu anki sayı: " + sayac);
     //                }
-
     //                Console.WriteLine("100'e kadar saydım. Şimdi 1 dakika dinleneceğim.");
     //            }
     //            catch (Exception hata)

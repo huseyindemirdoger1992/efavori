@@ -13,19 +13,16 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.2" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.2" />
 	</ItemGroup>
-
 	<ItemGroup>
 		<ProjectReference Include="..\api\api.csproj" />
 		<ProjectReference Include="..\data\data.csproj" />
 		<ProjectReference Include="..\razor\razor.csproj" />
 	</ItemGroup>
-
 	<ItemGroup>
 		<Folder Include="Areas\Vendor\Controllers\" />
 		<Folder Include="Areas\Vendor\Views\" />
 		<Folder Include="_files\" />
 	</ItemGroup>
-
 	<ItemGroup>
 		<None Update="web.config">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

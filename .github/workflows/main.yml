@@ -1,0 +1,94 @@
+name: 🚀 Smart MVC Deploy (Zero Lock Error)
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    name: 🎉 Deploy to Plesk
+    runs-on: windows-latest
+    
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: ⚙️ Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: 🔨 Publish Project
+      run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ./publish
+
+    # 1. ADIM: Her iki uzantıyı da oluştur
+    - name: 🛑 Prepare Offline Files
+      shell: pwsh
+      run: |
+        $content = "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1><p>Lutfen birkaç dakika sonra tekrar deneyiniz.</p></body></html>"
+        $content | Out-File -FilePath "./publish/app_offline.htm" -Encoding utf8
+        $content | Out-File -FilePath "./publish/app_offline.html" -Encoding utf8
+
+    - name: 📤 Upload app_offline (Locking the App)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        only: |
+          app_offline.htm
+          app_offline.html
+
+    # 2. ADIM: IIS'e zaman tanı (IIS'in dosyayı fark edip havuzu durdurması sürer)
+    - name: ⏳ Wait for IIS
+      run: Start-Sleep -s 20
+      shell: pwsh
+
+    # 3. ADIM: ANA TRANSFER
+    - name: 📤 FTP Sync (Smart)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        port: 21
+        retries: 10
+        retry-delay: 5000
+        dangerous-clean-slate: false
+        exclude: |
+          **/_files/**
+          _files/**
+          **/appsettings.Development.json
+          **/.git*
+          **/.github/**
+
+    # 4. ADIM: TEMİZLİK VE YAYINA ALMA
+    # Yerel klasörden siliyoruz ki FTP-Deploy-Action "sync" sırasında sunucudan da silsin.
+    - name: 🚀 Go Online (Remove Local Offline Files)
+      shell: pwsh
+      run: |
+        Remove-Item "./publish/app_offline.htm" -Force
+        Remove-Item "./publish/app_offline.html" -Force
+
+    - name: 🧹 Final Sync (Cleanup Server)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        # 'only' kullanmıyoruz çünkü sync mekanizması 
+        # yerelde olmayan app_offline dosyalarını sunucudan silecek.
+        exclude: |
+          **/_files/**
+          _files/**

@@ -1,0 +1,818 @@
+﻿@page "/github-commits"
+@using System.Net.Http
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@inject HttpClient Http
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="text-light">
+                <i class="bi bi-github"></i> GitHub Commits Listesi - efavori Repository
+            </h3>
+            <p class="text-warning">Repository: <strong>huseyindemirdoger1992/efavori</strong></p>
+            <hr />
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Yükleniyor...</span>
+            </div>
+            <p class="mt-3 h5">Commit'ler yükleniyor...</p>
+            <small class="text-muted">Lütfen bekleyin, veriler GitHub API'den çekiliyor...</small>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <h5 class="alert-heading"><i class="bi bi-exclamation-triangle"></i> Hata Oluştu!</h5>
+            <p><strong>Detay:</strong> @errorMessage</p>
+            <hr>
+            <p class="mb-0">
+                <button class="btn btn-danger" @onclick="LoadCommits">
+                    <i class="bi bi-arrow-clockwise"></i> Tekrar Dene
+                </button>
+            </p>
+        </div>
+    }
+    else if (commits != null && commits.Any())
+    {
+        <!-- Filtreler -->
+        <div class="row mb-4">
+            <div class="col-md-7">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Commit mesajında ara..." @bind="searchText" @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" @bind="selectedAuthor">
+                    <option value="">Tüm Yazarlar (@authors.Count)</option>
+                    @foreach (var author in authors)
+                    {
+                        <option value="@author">@author</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary btn-sm w-100" @onclick="LoadCommits">
+                    <i class="bi bi-arrow-clockwise"></i> Yenile
+                </button>
+            </div>
+        </div>
+
+        <!-- İstatistikler -->
+        @if (statistics != null)
+        {
+            <div class="row mb-4 g-3">
+                <div class="col-md-2">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <i class="bi bi-git fs-3 text-primary"></i>
+                            <h6 class="card-title mt-2">Toplam Commit</h6>
+                            <h3 class="text-primary mb-0">@statistics.TotalCommits</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <i class="bi bi-plus-circle fs-3 text-success"></i>
+                            <h6 class="card-title mt-2">Eklenen Satır</h6>
+                            <h3 class="text-success mb-0">+@statistics.TotalAdditions.ToString("N0")</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-danger">
+                        <div class="card-body text-center">
+                            <i class="bi bi-dash-circle fs-3 text-danger"></i>
+                            <h6 class="card-title mt-2">Silinen Satır</h6>
+                            <h3 class="text-danger mb-0">-@statistics.TotalDeletions.ToString("N0")</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <i class="bi bi-pencil-square fs-3 text-info"></i>
+                            <h6 class="card-title mt-2">Toplam Değişiklik</h6>
+                            <h3 class="text-info mb-0">@statistics.TotalChanges.ToString("N0")</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people fs-3 text-warning"></i>
+                            <h6 class="card-title mt-2">Katkıda Bulunan</h6>
+                            <h3 class="text-warning mb-0">@statistics.UniqueAuthors</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people fs-3 text-warning"></i>
+                            <h6 class="card-title mt-2">En Son Değişiklik</h6>
+                            <h3 class="text-light mb-0">@statistics.LastCommitDate?.ToString("dd/MM/yyyy")</h3>
+                        </div>
+                    </div>
+                </div>
+               
+            </div>
+        }
+
+        <!-- Commit Listesi -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <strong><i class="bi bi-list-ul"></i> Commit Geçmişi</strong>
+                        <span class="badge bg-light text-dark">@FilteredCommits.Count() commit gösteriliyor</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 80px;" class="text-center">Avatar</th>
+                                        <th style="width: 150px;">Yazar</th>
+                                        <th>Commit Mesajı</th>
+                                        <th style="width: 120px;" class="text-center">İstatistikler</th>
+                                        <th style="width: 140px;" class="text-center">Tarih</th>
+                                        <th style="width: 100px;">SHA</th>
+                                        <th style="width: 120px;" class="text-center">İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var commit in FilteredCommits.Take(displayCount))
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                @if (commit.Author?.AvatarUrl != null)
+                                                {
+                                                    <img src="@commit.Author.AvatarUrl" alt="@commit.Author.Login" class="rounded-circle" style="width: 50px; height: 50px;" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" style="width: 50px; height: 50px;">
+                                                        <i class="bi bi-person text-white fs-4"></i>
+                                                    </div>
+                                                }
+                                            </td>
+                                            <td>
+                                                <strong>@(commit.Author?.Login ?? commit.Commit?.Author?.Name ?? "Unknown")</strong>
+                                                <br />
+                                                <small class="text-warning">@commit.Commit?.Author?.Email</small>
+                                            </td>
+                                            <td>
+                                                <div class="commit-message">
+                                                    <strong>@GetCommitTitle(commit.Commit?.Message)</strong>
+                                                    @if (!string.IsNullOrEmpty(GetCommitDescription(commit.Commit?.Message)))
+                                                    {
+                                                        <br />
+                                                        <small class="text-light">@GetCommitDescription(commit.Commit?.Message)</small>
+                                                    }
+                                                </div>
+                                                @if (commit.Commit?.Verification?.Verified == true)
+                                                {
+                                                    <span class="badge bg-success mt-1">
+                                                        <i class="bi bi-shield-check"></i> Doğrulandı
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (commit.Stats != null)
+                                                {
+                                                    <div>
+                                                        <span class="badge bg-success">+@commit.Stats.Additions</span>
+                                                        <span class="badge bg-danger">-@commit.Stats.Deletions</span>
+                                                    </div>
+                                                    <small class="text-light d-block mt-1">
+                                                        @(commit.Files?.Count ?? 0) dosya
+                                                    </small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <div>
+                                                    <i class="bi bi-calendar3"></i>
+                                                    <small class="d-block">@commit.Commit?.Author?.Date.ToString("dd/MM/yyyy")</small>
+                                                    <i class="bi bi-clock"></i>
+                                                    <small class="d-block text-warning">@commit.Commit?.Author?.Date.ToString("HH:mm:ss")</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <code class="bg-info p-1 rounded" style="font-size: 0.8rem;">@commit.Sha?.Substring(0, 7)</code>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <button class="btn btn-outline-light" @onclick="() => ToggleCommitDetails(commit.Sha)" title="Detayları Göster/Gizle">
+                                                        @if (expandedCommits.Contains(commit.Sha))
+                                                        {
+                                                            <i class="fa fa-level-up" aria-hidden="true"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="fa fa-level-down" aria-hidden="true"></i>
+                                                        }
+                                                    </button>
+                                                    <a href="@commit.HtmlUrl" target="_blank" class="btn btn-outline-warning" title="GitHub'da Aç">
+                                                        <i class="fa fa-link"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        @if (expandedCommits.Contains(commit.Sha))
+                                        {
+                                            <tr>
+                                                <td colspan="7" class="bg-light">
+                                                    <div class="p-4">
+                                                        <div class="row">
+                                                            <div class="col-md-8">
+                                                                <h6 class="text-warning mb-3">
+                                                                    <i class="bi bi-file-earmark-diff"></i> Değişen Dosyalar (@(commit.Files?.Count ?? 0))
+                                                                </h6>
+                                                                @if (commit.Files != null && commit.Files.Any())
+                                                                {
+                                                                    <div class="table-responsive">
+                                                                        <table class="table table-sm table-bordered bg-white">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th class="text-primary">Dosya Adı</th>
+                                                                                    <th style="width: 100px;" class="text-center text-primary">Durum</th>
+                                                                                    <th style="width: 150px;" class="text-center text-primary">Değişiklikler</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                @foreach (var file in commit.Files)
+                                                                                {
+                                                                                    <tr>
+                                                                                        <td>
+                                                                                            <i class="bi bi-file-code"></i>
+                                                                                            <code>@file.Filename</code>
+                                                                                        </td>
+                                                                                        <td class="text-center">
+                                                                                            @if (file.Status == "added")
+                                                                                            {
+                                                                                                <span class="badge bg-success"><i class="bi bi-plus"></i> Eklendi</span>
+                                                                                            }
+                                                                                            else if (file.Status == "modified")
+                                                                                            {
+                                                                                                <span class="badge bg-warning"><i class="bi bi-pencil"></i> Değiştirildi</span>
+                                                                                            }
+                                                                                            else if (file.Status == "removed")
+                                                                                            {
+                                                                                                <span class="badge bg-danger"><i class="bi bi-trash"></i> Silindi</span>
+                                                                                            }
+                                                                                            else if (file.Status == "renamed")
+                                                                                            {
+                                                                                                <span class="badge bg-info"><i class="bi bi-arrow-left-right"></i> Yeniden Adlandırıldı</span>
+                                                                                            }
+                                                                                            else
+                                                                                            {
+                                                                                                <span class="badge bg-secondary">@file.Status</span>
+                                                                                            }
+                                                                                        </td>
+                                                                                        <td class="text-center">
+                                                                                            <span class="badge bg-success me-1">+@file.Additions</span>
+                                                                                            <span class="badge bg-danger me-1">-@file.Deletions</span>
+                                                                                            <small class="text-muted">(@file.Changes)</small>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                }
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <p class="text-muted"><i class="bi bi-info-circle"></i> Dosya bilgisi mevcut değil.</p>
+                                                                }
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                @if (commit.Parents != null && commit.Parents.Any())
+                                                                {
+                                                                    <h6 class="text-light mb-3">
+                                                                        <i class="bi bi-diagram-3"></i> Üst Commit'ler
+                                                                    </h6>
+                                                                    <ul class="list-group list-group-flush">
+                                                                        @foreach (var parent in commit.Parents)
+                                                                        {
+                                                                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                                                <code>@parent.Sha?.Substring(0, 7)</code>
+                                                                                <a href="@parent.HtmlUrl" target="_blank" class="btn btn-sm btn-outline-info">
+                                                                                    <i class="fa fa-code-fork"></i>
+                                                                                </a>
+                                                                            </li>
+                                                                        }
+                                                                    </ul>
+                                                                }
+
+                                                                <h6 class="text-dark mb-3 mt-3">
+                                                                    <i class="bi bi-info-circle"></i> Ek Bilgiler
+                                                                </h6>
+                                                                <ul class="list-unstyled">
+                                                                    <li><strong>Committer:</strong> @commit.Committer?.Login</li>
+                                                                    <li><strong>Node ID:</strong> <small>@commit.NodeId</small></li>
+                                                                    @if (commit.Commit?.CommentCount > 0)
+                                                                    {
+                                                                        <li><strong>Yorumlar:</strong> @commit.Commit.CommentCount</li>
+                                                                    }
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                @if (FilteredCommits.Count() > displayCount)
+                {
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary btn-lg" @onclick="LoadMore">
+                            <i class="bi bi-arrow-down-circle"></i> Daha Fazla Göster
+                            <span class="badge bg-light text-dark ms-2">@(FilteredCommits.Count() - displayCount) commit daha</span>
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info text-center py-5" role="alert">
+            <i class="bi bi-info-circle fs-1"></i>
+            <h4 class="mt-3">Henüz commit bulunamadı</h4>
+            <p class="mb-0">Repository'de commit bulunmuyor veya yükleme işlemi başlatılmadı.</p>
+        </div>
+    }
+</div>
+
+<style>
+    .commit-message {
+        max-width: 400px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .card {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+    }
+
+    code {
+        font-family: 'Courier New', monospace;
+    }
+
+    .badge {
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    // Models
+    public class GitHubUser
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("email")]
+        public string Email { get; set; }
+
+        [JsonPropertyName("date")]
+        public DateTime Date { get; set; }
+    }
+
+    public class CommitDetail
+    {
+        [JsonPropertyName("author")]
+        public GitHubUser Author { get; set; }
+
+        [JsonPropertyName("committer")]
+        public GitHubUser Committer { get; set; }
+
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+
+        [JsonPropertyName("tree")]
+        public TreeInfo Tree { get; set; }
+
+        [JsonPropertyName("comment_count")]
+        public int CommentCount { get; set; }
+
+        [JsonPropertyName("verification")]
+        public VerificationInfo Verification { get; set; }
+    }
+
+    public class TreeInfo
+    {
+        [JsonPropertyName("sha")]
+        public string Sha { get; set; }
+
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+    }
+
+    public class VerificationInfo
+    {
+        [JsonPropertyName("verified")]
+        public bool Verified { get; set; }
+
+        [JsonPropertyName("reason")]
+        public string Reason { get; set; }
+
+        [JsonPropertyName("signature")]
+        public string Signature { get; set; }
+
+        [JsonPropertyName("payload")]
+        public string Payload { get; set; }
+    }
+
+    public class GitHubProfile
+    {
+        [JsonPropertyName("login")]
+        public string Login { get; set; }
+
+        [JsonPropertyName("id")]
+        public long Id { get; set; }
+
+        [JsonPropertyName("avatar_url")]
+        public string AvatarUrl { get; set; }
+
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        [JsonPropertyName("html_url")]
+        public string HtmlUrl { get; set; }
+
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+    }
+
+    public class ParentCommit
+    {
+        [JsonPropertyName("sha")]
+        public string Sha { get; set; }
+
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        [JsonPropertyName("html_url")]
+        public string HtmlUrl { get; set; }
+    }
+
+    public class FileChange
+    {
+        [JsonPropertyName("sha")]
+        public string Sha { get; set; }
+
+        [JsonPropertyName("filename")]
+        public string Filename { get; set; }
+
+        [JsonPropertyName("status")]
+        public string Status { get; set; }
+
+        [JsonPropertyName("additions")]
+        public int Additions { get; set; }
+
+        [JsonPropertyName("deletions")]
+        public int Deletions { get; set; }
+
+        [JsonPropertyName("changes")]
+        public int Changes { get; set; }
+
+        [JsonPropertyName("blob_url")]
+        public string BlobUrl { get; set; }
+
+        [JsonPropertyName("raw_url")]
+        public string RawUrl { get; set; }
+
+        [JsonPropertyName("contents_url")]
+        public string ContentsUrl { get; set; }
+
+        [JsonPropertyName("patch")]
+        public string Patch { get; set; }
+    }
+
+    public class CommitStats
+    {
+        [JsonPropertyName("total")]
+        public int Total { get; set; }
+
+        [JsonPropertyName("additions")]
+        public int Additions { get; set; }
+
+        [JsonPropertyName("deletions")]
+        public int Deletions { get; set; }
+    }
+
+    public class GitHubCommit
+    {
+        [JsonPropertyName("sha")]
+        public string Sha { get; set; }
+
+        [JsonPropertyName("node_id")]
+        public string NodeId { get; set; }
+
+        [JsonPropertyName("commit")]
+        public CommitDetail Commit { get; set; }
+
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        [JsonPropertyName("html_url")]
+        public string HtmlUrl { get; set; }
+
+        [JsonPropertyName("comments_url")]
+        public string CommentsUrl { get; set; }
+
+        [JsonPropertyName("author")]
+        public GitHubProfile Author { get; set; }
+
+        [JsonPropertyName("committer")]
+        public GitHubProfile Committer { get; set; }
+
+        [JsonPropertyName("parents")]
+        public List<ParentCommit> Parents { get; set; }
+
+        [JsonPropertyName("stats")]
+        public CommitStats Stats { get; set; }
+
+        [JsonPropertyName("files")]
+        public List<FileChange> Files { get; set; }
+    }
+
+    public class CommitStatistics
+    {
+        public int TotalCommits { get; set; }
+        public int TotalAdditions { get; set; }
+        public int TotalDeletions { get; set; }
+        public int TotalChanges { get; set; }
+        public int UniqueAuthors { get; set; }
+        public DateTime? FirstCommitDate { get; set; }
+        public DateTime? LastCommitDate { get; set; }
+    }
+
+    // Configuration - Doğrudan hard-coded
+    private const string GitHubToken = "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";
+    private const string UserName = "huseyindemirdoger1992";
+    private const string RepoName = "efavori";
+
+    // Fields
+    private List<GitHubCommit> commits = new List<GitHubCommit>();
+    private List<string> authors = new List<string>();
+    private CommitStatistics statistics;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string searchText = string.Empty;
+    private string selectedAuthor = string.Empty;
+    private HashSet<string> expandedCommits = new HashSet<string>();
+    private int pageSize = 2147483647;
+    private int displayCount = 2147483647;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCommits();
+    }
+
+    private async Task LoadCommits()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        commits.Clear();
+        StateHasChanged();
+
+        try
+        {
+            // HttpClient yapılandırması
+            Http.DefaultRequestHeaders.Clear();
+            Http.DefaultRequestHeaders.Add("User-Agent", "GitHubCommitsApp");
+            Http.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
+            Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {GitHubToken}");
+            Http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+
+            // Ana commit listesini çek
+            var listUrl = $"https://api.github.com/repos/{UserName}/{RepoName}/commits?per_page=100";
+
+            Console.WriteLine($"API URL: {listUrl}");
+
+            var listResponse = await Http.GetAsync(listUrl);
+
+            if (!listResponse.IsSuccessStatusCode)
+            {
+                var errorContent = await listResponse.Content.ReadAsStringAsync();
+                errorMessage = $"API Hatası ({listResponse.StatusCode}): {errorContent}";
+                Console.WriteLine(errorMessage);
+                return;
+            }
+
+            var listJson = await listResponse.Content.ReadAsStringAsync();
+            Console.WriteLine($"Response length: {listJson.Length}");
+
+            var commitList = JsonSerializer.Deserialize<List<GitHubCommit>>(listJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (commitList == null || !commitList.Any())
+            {
+                errorMessage = "Repository'de commit bulunamadı.";
+                return;
+            }
+
+            Console.WriteLine($"Toplam {commitList.Count} commit bulundu");
+
+            // Her commit için detaylı bilgi çek (ilk 30 commit için)
+            var detailTasks = new List<Task<GitHubCommit>>();
+            var commitsToDetail = commitList.Take(30).ToList();
+
+            foreach (var commit in commitsToDetail)
+            {
+                detailTasks.Add(GetCommitDetail(commit.Sha));
+            }
+
+            var detailedCommits = await Task.WhenAll(detailTasks);
+            commits = detailedCommits.Where(c => c != null).ToList();
+
+            Console.WriteLine($"{commits.Count} commit detayı yüklendi");
+
+            // Yazarları topla
+            authors = commits
+                .Where(c => c.Author != null && !string.IsNullOrEmpty(c.Author.Login))
+                .Select(c => c.Author.Login)
+                .Distinct()
+                .OrderBy(a => a)
+                .ToList();
+
+            // İstatistikleri hesapla
+            CalculateStatistics();
+
+            Console.WriteLine("İstatistikler hesaplandı");
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Bağlantı Hatası: {ex.Message}";
+            Console.WriteLine($"HttpRequestException: {ex}");
+        }
+        catch (JsonException ex)
+        {
+            errorMessage = $"JSON Parse Hatası: {ex.Message}";
+            Console.WriteLine($"JsonException: {ex}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Beklenmeyen Hata: {ex.Message}";
+            Console.WriteLine($"Exception: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<GitHubCommit> GetCommitDetail(string sha)
+    {
+        try
+        {
+            var detailUrl = $"https://api.github.com/repos/{UserName}/{RepoName}/commits/{sha}";
+            var response = await Http.GetAsync(detailUrl);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"Commit detayı alınamadı ({sha}): {response.StatusCode}");
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            var commit = JsonSerializer.Deserialize<GitHubCommit>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            // Rate limit için kısa bekleme
+            await Task.Delay(50);
+
+            return commit;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Commit detay hatası ({sha}): {ex.Message}");
+            return null;
+        }
+    }
+
+    private void CalculateStatistics()
+    {
+        if (commits == null || !commits.Any())
+        {
+            statistics = null;
+            return;
+        }
+
+        statistics = new CommitStatistics
+        {
+            TotalCommits = commits.Count,
+            TotalAdditions = commits.Where(c => c.Stats != null).Sum(c => c.Stats.Additions),
+            TotalDeletions = commits.Where(c => c.Stats != null).Sum(c => c.Stats.Deletions),
+            TotalChanges = commits.Where(c => c.Stats != null).Sum(c => c.Stats.Total),
+            UniqueAuthors = commits.Where(c => c.Author != null).Select(c => c.Author.Login).Distinct().Count(),
+            FirstCommitDate = commits.OrderBy(c => c.Commit.Author.Date).FirstOrDefault()?.Commit.Author.Date,
+            LastCommitDate = commits.OrderByDescending(c => c.Commit.Author.Date).FirstOrDefault()?.Commit.Author.Date
+        };
+    }
+
+    private IEnumerable<GitHubCommit> FilteredCommits
+    {
+        get
+        {
+            var filtered = commits.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                filtered = filtered.Where(c =>
+                    c.Commit?.Message?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedAuthor))
+            {
+                filtered = filtered.Where(c => c.Author?.Login == selectedAuthor);
+            }
+
+            return filtered.OrderByDescending(c => c.Commit?.Author?.Date);
+        }
+    }
+
+    private void ToggleCommitDetails(string sha)
+    {
+        if (expandedCommits.Contains(sha))
+        {
+            expandedCommits.Remove(sha);
+        }
+        else
+        {
+            expandedCommits.Add(sha);
+        }
+    }
+
+    private void LoadMore()
+    {
+        displayCount += pageSize;
+    }
+
+    private string GetCommitTitle(string message)
+    {
+        if (string.IsNullOrEmpty(message))
+            return string.Empty;
+
+        var lines = message.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        return lines.Length > 0 ? lines[0] : string.Empty;
+    }
+
+    private string GetCommitDescription(string message)
+    {
+        if (string.IsNullOrEmpty(message))
+            return string.Empty;
+
+        var lines = message.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length > 1)
+        {
+            var description = string.Join(" ", lines.Skip(1)).Trim();
+            return description.Length > 150 ? description.Substring(0, 150) + "..." : description;
+        }
+
+        return string.Empty;
+    }
+}

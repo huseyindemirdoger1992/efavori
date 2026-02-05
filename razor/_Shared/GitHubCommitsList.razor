@@ -238,18 +238,18 @@
                                                     <div class="p-4">
                                                         <div class="row">
                                                             <div class="col-md-8">
-                                                                <h6 class="text-warning mb-3">
+                                                                <h6 class="text-light mb-3">
                                                                     <i class="bi bi-file-earmark-diff"></i> Değişen Dosyalar (@(commit.Files?.Count ?? 0))
                                                                 </h6>
                                                                 @if (commit.Files != null && commit.Files.Any())
                                                                 {
                                                                     <div class="table-responsive">
-                                                                        <table class="table table-sm table-bordered bg-white">
+                                                                        <table class="table table-sm table-bordered">
                                                                             <thead>
                                                                                 <tr>
-                                                                                    <th class="text-primary">Dosya Adı</th>
-                                                                                    <th style="width: 100px;" class="text-center text-primary">Durum</th>
-                                                                                    <th style="width: 150px;" class="text-center text-primary">Değişiklikler</th>
+                                                                                    <th class="text-warning">Dosya Adı</th>
+                                                                                    <th style="width: 100px;" class="text-center text-warning">Durum</th>
+                                                                                    <th style="width: 150px;" class="text-center text-warning">Değişiklikler</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
@@ -258,7 +258,7 @@
                                                                                     <tr>
                                                                                         <td>
                                                                                             <i class="bi bi-file-code"></i>
-                                                                                            <code>@file.Filename</code>
+                                                                                            <code class="text-light">@file.Filename</code>
                                                                                         </td>
                                                                                         <td class="text-center">
                                                                                             @if (file.Status == "added")
@@ -267,7 +267,7 @@
                                                                                             }
                                                                                             else if (file.Status == "modified")
                                                                                             {
-                                                                                                <span class="badge bg-warning"><i class="bi bi-pencil"></i> Değiştirildi</span>
+                                                                                                <span class="badge bg-dark"><i class="bi bi-pencil"></i> Değiştirildi</span>
                                                                                             }
                                                                                             else if (file.Status == "removed")
                                                                                             {
@@ -308,7 +308,9 @@
                                                                         @foreach (var parent in commit.Parents)
                                                                         {
                                                                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                                                <code>@parent.Sha?.Substring(0, 7)</code>
+                                                                                <code class="text-light"">
+                                                                                    *** <b>@parent.Sha?.Substring(0, 7)</b> ***
+                                                                                </code>
                                                                                 <a href="@parent.HtmlUrl" target="_blank" class="btn btn-sm btn-outline-info">
                                                                                     <i class="fa fa-code-fork"></i>
                                                                                 </a>
@@ -654,9 +656,9 @@
 
             Console.WriteLine($"Toplam {commitList.Count} commit bulundu");
 
-            // Her commit için detaylı bilgi çek (ilk 30 commit için)
+            // Her commit için detaylı bilgi çek (ilk 2147483647 commit için)
             var detailTasks = new List<Task<GitHubCommit>>();
-            var commitsToDetail = commitList.Take(30).ToList();
+            var commitsToDetail = commitList.Take(2147483647).ToList();
 
             foreach (var commit in commitsToDetail)
             {

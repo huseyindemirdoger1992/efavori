@@ -228,7 +228,9 @@
                             }
                             @if (isImage)
                             {
-                                <img src="@selectedMedia.FileUrl" class="img-fluid rounded" alt="@selectedMedia.FileName" />
+                                <center>
+                                    <img src="@selectedMedia.FileUrl" class="img-fluid rounded" alt="@selectedMedia.FileName" style="max-height:512px;"/>
+                                </center>
                             }
                             else
                             {

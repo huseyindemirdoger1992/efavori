@@ -3,6 +3,7 @@
 @using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text.Json.Serialization
+@using System.Collections.Concurrent
 @inject HttpClient Http
 
 <div class="container-fluid py-4">
@@ -23,7 +24,29 @@
                 <span class="visually-hidden">Yükleniyor...</span>
             </div>
             <p class="mt-3 h5">Commit'ler yükleniyor...</p>
-            <small class="text-muted">Lütfen bekleyin, veriler GitHub API'den çekiliyor...</small>
+            <small class="text-muted">
+                @if (loadingProgress.TotalCommits > 0)
+                {
+                    <span>@loadingProgress.LoadedCommits / @loadingProgress.TotalCommits commit yüklendi (@loadingProgress.ProgressPercentage%)</span>
+                }
+                else
+                {
+                    <span>Lütfen bekleyin, veriler GitHub API'den çekiliyor...</span>
+                }
+            </small>
+            @if (loadingProgress.TotalCommits > 0)
+            {
+                <div class="progress mt-3" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width: @(loadingProgress.ProgressPercentage)%"
+                         aria-valuenow="@loadingProgress.ProgressPercentage"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                        @loadingProgress.ProgressPercentage%
+                    </div>
+                </div>
+            }
         </div>
     }
     else if (!string.IsNullOrEmpty(errorMessage))
@@ -59,7 +82,7 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <button class="btn btn-primary btn-sm w-100" @onclick="LoadCommits">
+                <button class="btn btn-primary btn-sm w-100" @onclick="ForceReload">
                     <i class="bi bi-arrow-clockwise"></i> Yenile
                 </button>
             </div>
@@ -117,13 +140,13 @@
                 <div class="col-md-2">
                     <div class="card border-warning">
                         <div class="card-body text-center">
-                            <i class="bi bi-people fs-3 text-warning"></i>
+                            <i class="bi bi-calendar-check fs-3 text-warning"></i>
                             <h6 class="card-title mt-2">En Son Değişiklik</h6>
                             <h3 class="text-light mb-0">@statistics.LastCommitDate?.ToString("dd/MM/yyyy")</h3>
                         </div>
                     </div>
                 </div>
-               
+
             </div>
         }
 
@@ -237,7 +260,7 @@
                                                 <td colspan="7" class="bg-light">
                                                     <div class="p-4">
                                                         <div class="row">
-                                                            <div class="col-md-8">
+                                                            <div class="col-md-6">
                                                                 <h6 class="text-light mb-3">
                                                                     <i class="bi bi-file-earmark-diff"></i> Değişen Dosyalar (@(commit.Files?.Count ?? 0))
                                                                 </h6>
@@ -297,8 +320,9 @@
                                                                 {
                                                                     <p class="text-muted"><i class="bi bi-info-circle"></i> Dosya bilgisi mevcut değil.</p>
                                                                 }
+                  
                                                             </div>
-                                                            <div class="col-md-4">
+                                                            <div class="col-md-6">
                                                                 @if (commit.Parents != null && commit.Parents.Any())
                                                                 {
                                                                     <h6 class="text-light mb-3">
@@ -308,7 +332,7 @@
                                                                         @foreach (var parent in commit.Parents)
                                                                         {
                                                                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                                                <code class="text-light"">
+                                                                                <code class="text-light" ">
                                                                                     *** <b>@parent.Sha?.Substring(0, 7)</b> ***
                                                                                 </code>
                                                                                 <a href="@parent.HtmlUrl" target="_blank" class="btn btn-sm btn-outline-info">
@@ -364,44 +388,6 @@
         </div>
     }
 </div>
-
-<style>
-    .commit-message {
-        max-width: 400px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .table td {
-        vertical-align: middle;
-    }
-
-    .card {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-    }
-
-        .card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-    .spinner-border {
-        width: 3rem;
-        height: 3rem;
-    }
-
-    .btn-group-sm .btn {
-        padding: 0.25rem 0.5rem;
-    }
-
-    code {
-        font-family: 'Courier New', monospace;
-    }
-
-    .badge {
-        font-weight: 500;
-    }
-</style>
 
 @code {
     // Models
@@ -587,7 +573,20 @@
         public DateTime? LastCommitDate { get; set; }
     }
 
-    // Configuration - Doğrudan hard-coded
+    public class LoadingProgress
+    {
+        public int TotalCommits { get; set; }
+        public int LoadedCommits { get; set; }
+        public int ProgressPercentage => TotalCommits > 0 ? (LoadedCommits * 100 / TotalCommits) : 0;
+    }
+
+    // Static cache for all users
+    private static List<GitHubCommit> cachedCommits = null;
+    private static DateTime? cacheTime = null;
+    private static TimeSpan cacheExpiration = TimeSpan.FromMinutes(5);
+    private static SemaphoreSlim cacheLock = new SemaphoreSlim(1, 1);
+
+    // Configuration
     private const string GitHubToken = "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";
     private const string UserName = "huseyindemirdoger1992";
     private const string RepoName = "efavori";
@@ -601,11 +600,29 @@
     private string searchText = string.Empty;
     private string selectedAuthor = string.Empty;
     private HashSet<string> expandedCommits = new HashSet<string>();
-    private int pageSize = 2147483647;
-    private int displayCount = 2147483647;
+    private int pageSize = 50;
+    private int displayCount = 50;
+    private LoadingProgress loadingProgress = new LoadingProgress();
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadCommits();
+    }
+
+    private async Task ForceReload()
+    {
+        // Cache'i temizle ve yeniden yükle
+        await cacheLock.WaitAsync();
+        try
+        {
+            cachedCommits = null;
+            cacheTime = null;
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
+
         await LoadCommits();
     }
 
@@ -613,11 +630,29 @@
     {
         isLoading = true;
         errorMessage = string.Empty;
-        commits.Clear();
+        loadingProgress = new LoadingProgress();
         StateHasChanged();
 
         try
         {
+            // Cache kontrolü
+            await cacheLock.WaitAsync();
+            try
+            {
+                if (cachedCommits != null && cacheTime.HasValue &&
+                    (DateTime.Now - cacheTime.Value) < cacheExpiration)
+                {
+                    // Cache'den yükle
+                    commits = new List<GitHubCommit>(cachedCommits);
+                    UpdateUIData();
+                    return;
+                }
+            }
+            finally
+            {
+                cacheLock.Release();
+            }
+
             // HttpClient yapılandırması
             Http.DefaultRequestHeaders.Clear();
             Http.DefaultRequestHeaders.Add("User-Agent", "GitHubCommitsApp");
@@ -625,63 +660,120 @@
             Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {GitHubToken}");
             Http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
 
-            // Ana commit listesini çek
-            var listUrl = $"https://api.github.com/repos/{UserName}/{RepoName}/commits?per_page=100";
+            // Tüm commit'leri pagination ile çek
+            var allCommitShas = new List<string>();
+            int page = 1;
+            bool hasMore = true;
 
-            Console.WriteLine($"API URL: {listUrl}");
-
-            var listResponse = await Http.GetAsync(listUrl);
-
-            if (!listResponse.IsSuccessStatusCode)
+            while (hasMore)
             {
-                var errorContent = await listResponse.Content.ReadAsStringAsync();
-                errorMessage = $"API Hatası ({listResponse.StatusCode}): {errorContent}";
-                Console.WriteLine(errorMessage);
-                return;
+                var listUrl = $"https://api.github.com/repos/{UserName}/{RepoName}/commits?per_page=100&page={page}";
+                Console.WriteLine($"Fetching page {page}: {listUrl}");
+
+                var listResponse = await Http.GetAsync(listUrl);
+
+                if (!listResponse.IsSuccessStatusCode)
+                {
+                    var errorContent = await listResponse.Content.ReadAsStringAsync();
+                    errorMessage = $"API Hatası ({listResponse.StatusCode}): {errorContent}";
+                    Console.WriteLine(errorMessage);
+                    return;
+                }
+
+                var listJson = await listResponse.Content.ReadAsStringAsync();
+                var pageCommits = JsonSerializer.Deserialize<List<GitHubCommit>>(listJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (pageCommits == null || !pageCommits.Any())
+                {
+                    hasMore = false;
+                }
+                else
+                {
+                    allCommitShas.AddRange(pageCommits.Select(c => c.Sha));
+                    Console.WriteLine($"Page {page}: {pageCommits.Count} commits loaded. Total: {allCommitShas.Count}");
+
+                    // İlerlemeyi güncelle
+                    loadingProgress.TotalCommits = allCommitShas.Count;
+                    StateHasChanged();
+
+                    if (pageCommits.Count < 100)
+                    {
+                        hasMore = false;
+                    }
+                    else
+                    {
+                        page++;
+                    }
+                }
             }
 
-            var listJson = await listResponse.Content.ReadAsStringAsync();
-            Console.WriteLine($"Response length: {listJson.Length}");
-
-            var commitList = JsonSerializer.Deserialize<List<GitHubCommit>>(listJson, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            if (commitList == null || !commitList.Any())
+            if (!allCommitShas.Any())
             {
                 errorMessage = "Repository'de commit bulunamadı.";
                 return;
             }
 
-            Console.WriteLine($"Toplam {commitList.Count} commit bulundu");
+            loadingProgress.TotalCommits = allCommitShas.Count;
+            StateHasChanged();
 
-            // Her commit için detaylı bilgi çek (ilk 2147483647 commit için)
-            var detailTasks = new List<Task<GitHubCommit>>();
-            var commitsToDetail = commitList.Take(2147483647).ToList();
+            Console.WriteLine($"Toplam {allCommitShas.Count} commit bulundu, detaylar çekiliyor...");
 
-            foreach (var commit in commitsToDetail)
+            // Paralel olarak commit detaylarını çek (15 eş zamanlı istek)
+            var detailedCommits = new ConcurrentBag<GitHubCommit>();
+            var semaphore = new SemaphoreSlim(15, 15);
+            var tasks = new List<Task>();
+
+            foreach (var sha in allCommitShas)
             {
-                detailTasks.Add(GetCommitDetail(commit.Sha));
+                tasks.Add(Task.Run(async () =>
+                {
+                    await semaphore.WaitAsync();
+                    try
+                    {
+                        var commit = await GetCommitDetail(sha);
+                        if (commit != null)
+                        {
+                            detailedCommits.Add(commit);
+                            loadingProgress.LoadedCommits = detailedCommits.Count;
+
+                            // Her 10 commit'te bir UI'ı güncelle
+                            if (detailedCommits.Count % 10 == 0)
+                            {
+                                await InvokeAsync(StateHasChanged);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
             }
 
-            var detailedCommits = await Task.WhenAll(detailTasks);
-            commits = detailedCommits.Where(c => c != null).ToList();
+            await Task.WhenAll(tasks);
 
-            Console.WriteLine($"{commits.Count} commit detayı yüklendi");
-
-            // Yazarları topla
-            authors = commits
-                .Where(c => c.Author != null && !string.IsNullOrEmpty(c.Author.Login))
-                .Select(c => c.Author.Login)
-                .Distinct()
-                .OrderBy(a => a)
+            commits = detailedCommits
+                .OrderByDescending(c => c.Commit?.Author?.Date ?? DateTime.MinValue)
                 .ToList();
 
-            // İstatistikleri hesapla
-            CalculateStatistics();
+            Console.WriteLine($"{commits.Count} commit detayı başarıyla yüklendi");
 
-            Console.WriteLine("İstatistikler hesaplandı");
+            // Cache'i güncelle
+            await cacheLock.WaitAsync();
+            try
+            {
+                cachedCommits = new List<GitHubCommit>(commits);
+                cacheTime = DateTime.Now;
+            }
+            finally
+            {
+                cacheLock.Release();
+            }
+
+            UpdateUIData();
         }
         catch (HttpRequestException ex)
         {
@@ -705,6 +797,22 @@
         }
     }
 
+    private void UpdateUIData()
+    {
+        // Yazarları topla
+        authors = commits
+            .Where(c => c.Author != null && !string.IsNullOrEmpty(c.Author.Login))
+            .Select(c => c.Author.Login)
+            .Distinct()
+            .OrderBy(a => a)
+            .ToList();
+
+        // İstatistikleri hesapla
+        CalculateStatistics();
+
+        Console.WriteLine("UI Data güncellendi");
+    }
+
     private async Task<GitHubCommit> GetCommitDetail(string sha)
     {
         try
@@ -723,9 +831,6 @@
             {
                 PropertyNameCaseInsensitive = true
             });
-
-            // Rate limit için kısa bekleme
-            await Task.Delay(50);
 
             return commit;
         }

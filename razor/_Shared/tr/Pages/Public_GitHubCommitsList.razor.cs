@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Text;
-using static api.GitHubCommits;
 
 namespace razor._Shared
 {

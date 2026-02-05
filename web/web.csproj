@@ -23,6 +23,7 @@
 	<ItemGroup>
 		<Folder Include="Areas\Vendor\Controllers\" />
 		<Folder Include="Areas\Vendor\Views\" />
+		<Folder Include="_files\" />
 	</ItemGroup>
 
 	<ItemGroup>

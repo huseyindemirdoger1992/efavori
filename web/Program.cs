@@ -50,7 +50,8 @@ try
     builder.Services.AddScoped<api.tr.UserInfos>();
     builder.Services.AddScoped<Media>();
     builder.Services.AddScoped<FileUploadService>();
-    builder.Services.AddHostedService<AllBackgroundServices>();
+    // BackgroundService
+    // builder.Services.AddHostedService<AllBackgroundServices>();
 
     var app = builder.Build();
 

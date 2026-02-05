@@ -68,7 +68,9 @@
         <div class="row mb-4">
             <div class="col-md-7">
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <span class="input-group-text">
+                        <i class="fa fa-search" aria-hidden="true"></i>
+                    </span>
                     <input type="text" class="form-control" placeholder="Commit mesajında ara..." @bind="searchText" @bind:event="oninput" />
                 </div>
             </div>
@@ -187,19 +189,27 @@
                                                         <i class="bi bi-person text-white fs-4"></i>
                                                     </div>
                                                 }
-                                            </td>
-                                            <td>
-                                                <strong>@(commit.Author?.Login ?? commit.Commit?.Author?.Name ?? "Unknown")</strong>
-                                                <br />
-                                                <small class="text-warning">@commit.Commit?.Author?.Email</small>
-                                            </td>
-                                            <td>
-                                                <div class="commit-message">
-                                                    <strong>@GetCommitTitle(commit.Commit?.Message)</strong>
+                                        </td>
+                                        <td>
+                                            <strong>@(commit.Author?.Login ?? commit.Commit?.Author?.Name ?? "Unknown")</strong>
+                                            <br />
+                                            <small class="text-warning">@commit.Commit?.Author?.Email</small>
+                                        </td>
+                                        <td>
+                                            <div class="commit-message">
+                                                <strong>
+                                                    @(GetCommitTitle(commit.Commit?.Message)?.Length > 32
+                                                                                                    ? GetCommitTitle(commit.Commit?.Message).Substring(0, 32) + "..."
+                                                                                                    : GetCommitTitle(commit.Commit?.Message))
+                                                    </strong>
                                                     @if (!string.IsNullOrEmpty(GetCommitDescription(commit.Commit?.Message)))
                                                     {
                                                         <br />
-                                                        <small class="text-light">@GetCommitDescription(commit.Commit?.Message)</small>
+                                                        <small class="text-light">
+                                                            @(GetCommitDescription(commit.Commit?.Message)?.Length > 64
+                                                                                                            ? GetCommitDescription(commit.Commit?.Message).Substring(0, 64) + "..."
+                                                                                                            : GetCommitDescription(commit.Commit?.Message))
+                                                        </small>
                                                     }
                                                 </div>
                                                 @if (commit.Commit?.Verification?.Verified == true)
@@ -320,7 +330,7 @@
                                                                 {
                                                                     <p class="text-muted"><i class="bi bi-info-circle"></i> Dosya bilgisi mevcut değil.</p>
                                                                 }
-                  
+
                                                             </div>
                                                             <div class="col-md-6">
                                                                 @if (commit.Parents != null && commit.Parents.Any())
@@ -354,6 +364,18 @@
                                                                         <li><strong>Yorumlar:</strong> @commit.Commit.CommentCount</li>
                                                                     }
                                                                 </ul>
+                                                            </div>
+                                                            <div class="col-md-12">
+                                                                <hr style="border: none; border-top: 3px dashed #000; height: 0; width: 100%;">                                                                <div class="commit-message">
+                                                                    <strong>
+                                                                        @GetCommitTitle(commit.Commit?.Message)
+                                                                    </strong>
+                                                                    @if (!string.IsNullOrEmpty(GetCommitDescription(commit.Commit?.Message)))
+                                                                    {
+                                                                        <hr />
+                                                                        <small class="text-light">@GetCommitDescription(commit.Commit?.Message)</small>
+                                                                    }
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -914,10 +936,11 @@
             return string.Empty;
 
         var lines = message.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+        // Eğer birden fazla satır varsa, ilk satırı (başlığı) atla ve geri kalanını birleştir
         if (lines.Length > 1)
         {
-            var description = string.Join(" ", lines.Skip(1)).Trim();
-            return description.Length > 150 ? description.Substring(0, 150) + "..." : description;
+            return string.Join(" ", lines.Skip(1)).Trim();
         }
 
         return string.Empty;

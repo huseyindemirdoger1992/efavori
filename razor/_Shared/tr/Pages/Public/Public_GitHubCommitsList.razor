@@ -1,10 +1,11 @@
-﻿@page "/github-commits"
-@using System.Net.Http
+﻿@using System.Net.Http
 @using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @using System.Collections.Concurrent
+@using Microsoft.Extensions.Caching.Memory
 @inject HttpClient Http
+@inject IMemoryCache MemoryCache
 
 <div class="container-fluid py-4">
     <div class="row mb-4">
@@ -165,29 +166,35 @@
                             <table class="table table-hover mb-0">
                                 <thead>
                                     <tr>
+                                        <th style="width: 140px;" class="text-center">Tarih</th>
                                         <th style="width: 80px;" class="text-center">Avatar</th>
                                         <th style="width: 150px;">Yazar</th>
                                         <th>Commit Mesajı</th>
                                         <th style="width: 120px;" class="text-center">İstatistikler</th>
-                                        <th style="width: 140px;" class="text-center">Tarih</th>
                                         <th style="width: 100px;">SHA</th>
                                         <th style="width: 120px;" class="text-center">İşlemler</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var commit in FilteredCommits.Take(displayCount))
+                                    @foreach (var commit in FilteredCommits)
                                     {
                                         <tr>
                                             <td class="text-center">
+                                                <div>
+                                                    <i class="bi bi-calendar3"></i>
+                                                    <small class="d-block">@commit.Commit?.Author?.Date.ToString("dd/MM/yyyy")</small>
+                                                    <i class="bi bi-clock"></i>
+                                                    <small class="d-block text-warning">@commit.Commit?.Author?.Date.ToString("HH:mm:ss")</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
                                                 @if (commit.Author?.AvatarUrl != null)
                                                 {
-                                                    <img src="@commit.Author.AvatarUrl" alt="@commit.Author.Login" class="rounded-circle" style="width: 50px; height: 50px;" />
+                                                    <img src="@commit.Author.AvatarUrl" alt="@(commit.Author?.Login ?? "User")" class="rounded-circle" style="width: 50px; height: 50px;" />
                                                 }
                                                 else
                                                 {
-                                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" style="width: 50px; height: 50px;">
-                                                        <i class="bi bi-person text-white fs-4"></i>
-                                                    </div>
+                                                    <img src="\assets\images\coder.avif" alt="@(commit.Author?.Login ?? "User")" class="rounded-circle" style="width: 50px; height: 50px;" />
                                                 }
                                         </td>
                                         <td>
@@ -235,14 +242,6 @@
                                                     <span class="text-muted">-</span>
                                                 }
                                             </td>
-                                            <td class="text-center">
-                                                <div>
-                                                    <i class="bi bi-calendar3"></i>
-                                                    <small class="d-block">@commit.Commit?.Author?.Date.ToString("dd/MM/yyyy")</small>
-                                                    <i class="bi bi-clock"></i>
-                                                    <small class="d-block text-warning">@commit.Commit?.Author?.Date.ToString("HH:mm:ss")</small>
-                                                </div>
-                                            </td>
                                             <td>
                                                 <code class="bg-info p-1 rounded" style="font-size: 0.8rem;">@commit.Sha?.Substring(0, 7)</code>
                                             </td>
@@ -271,18 +270,18 @@
                                                     <div class="p-4">
                                                         <div class="row">
                                                             <div class="col-md-6">
-                                                                <h6 class="text-light mb-3">
-                                                                    <i class="bi bi-file-earmark-diff"></i> Değişen Dosyalar (@(commit.Files?.Count ?? 0))
-                                                                </h6>
                                                                 @if (commit.Files != null && commit.Files.Any())
                                                                 {
+                                                                    <h6 class="text-light mb-3">
+                                                                        <i class="bi bi-file-earmark-diff"></i> Değiştirilen Dosyalar (@commit.Files.Count)
+                                                                    </h6>
                                                                     <div class="table-responsive">
-                                                                        <table class="table table-sm table-bordered">
+                                                                        <table class="table table-sm table-striped">
                                                                             <thead>
                                                                                 <tr>
-                                                                                    <th class="text-warning">Dosya Adı</th>
-                                                                                    <th style="width: 100px;" class="text-center text-warning">Durum</th>
-                                                                                    <th style="width: 150px;" class="text-center text-warning">Değişiklikler</th>
+                                                                                    <th>Dosya</th>
+                                                                                    <th>Durum</th>
+                                                                                    <th class="text-center">Değişiklikler</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
@@ -290,17 +289,18 @@
                                                                                 {
                                                                                     <tr>
                                                                                         <td>
-                                                                                            <i class="bi bi-file-code"></i>
-                                                                                            <code class="text-light">@file.Filename</code>
+                                                                                            <small>
+                                                                                                <code class="text-light">@file.Filename</code>
+                                                                                            </small>
                                                                                         </td>
-                                                                                        <td class="text-center">
+                                                                                        <td>
                                                                                             @if (file.Status == "added")
                                                                                             {
-                                                                                                <span class="badge bg-success"><i class="bi bi-plus"></i> Eklendi</span>
+                                                                                                <span class="badge bg-success"><i class="bi bi-plus-circle"></i> Eklendi</span>
                                                                                             }
                                                                                             else if (file.Status == "modified")
                                                                                             {
-                                                                                                <span class="badge bg-dark"><i class="bi bi-pencil"></i> Değiştirildi</span>
+                                                                                                <span class="badge bg-warning text-dark"><i class="bi bi-pencil-square"></i> Değiştirildi</span>
                                                                                             }
                                                                                             else if (file.Status == "removed")
                                                                                             {
@@ -358,8 +358,7 @@
                                                                 </h6>
                                                                 <ul class="list-unstyled">
                                                                     <li><strong>Committer:</strong> @commit.Committer?.Login</li>
-                                                                    <li><strong>Node ID:</strong> <small>@commit.NodeId</small></li>
-                                                                    @if (commit.Commit?.CommentCount > 0)
+                                                                    @* <li><strong>Node ID:</strong> <small>@commit.NodeId</small></li> *@                                                                    @if (commit.Commit?.CommentCount > 0)
                                                                     {
                                                                         <li><strong>Yorumlar:</strong> @commit.Commit.CommentCount</li>
                                                                     }
@@ -389,199 +388,111 @@
                     </div>
                 </div>
 
-                @if (FilteredCommits.Count() > displayCount)
-                {
-                    <div class="text-center mt-4">
-                        <button class="btn btn-primary btn-lg" @onclick="LoadMore">
-                            <i class="bi bi-arrow-down-circle"></i> Daha Fazla Göster
-                            <span class="badge bg-light text-dark ms-2">@(FilteredCommits.Count() - displayCount) commit daha</span>
-                        </button>
-                    </div>
-                }
             </div>
         </div>
     }
     else
     {
-        <div class="alert alert-info text-center py-5" role="alert">
-            <i class="bi bi-info-circle fs-1"></i>
-            <h4 class="mt-3">Henüz commit bulunamadı</h4>
-            <p class="mb-0">Repository'de commit bulunmuyor veya yükleme işlemi başlatılmadı.</p>
+        <div class="alert alert-warning" role="alert">
+            <i class="bi bi-inbox"></i> Henüz commit bulunamadı.
         </div>
     }
 </div>
 
 @code {
-    // Models
-    public class GitHubUser
+    // Data Models
+    public class GitHubCommit
     {
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
-
-        [JsonPropertyName("email")]
-        public string Email { get; set; }
-
-        [JsonPropertyName("date")]
-        public DateTime Date { get; set; }
+        public string Sha { get; set; }
+        public string NodeId { get; set; }
+        public CommitDetail Commit { get; set; }
+        public string Url { get; set; }
+        public string HtmlUrl { get; set; }
+        public string CommentsUrl { get; set; }
+        public GitHubUser Author { get; set; }
+        public GitHubUser Committer { get; set; }
+        public List<ParentCommit> Parents { get; set; }
+        public CommitStats Stats { get; set; }
+        public List<FileChange> Files { get; set; }
     }
 
     public class CommitDetail
     {
-        [JsonPropertyName("author")]
-        public GitHubUser Author { get; set; }
-
-        [JsonPropertyName("committer")]
-        public GitHubUser Committer { get; set; }
-
-        [JsonPropertyName("message")]
+        public GitHubAuthor Author { get; set; }
+        public GitHubAuthor Committer { get; set; }
         public string Message { get; set; }
-
-        [JsonPropertyName("tree")]
-        public TreeInfo Tree { get; set; }
-
-        [JsonPropertyName("comment_count")]
+        public string Url { get; set; }
         public int CommentCount { get; set; }
-
-        [JsonPropertyName("verification")]
-        public VerificationInfo Verification { get; set; }
+        public CommitVerification Verification { get; set; }
     }
 
-    public class TreeInfo
+    public class GitHubAuthor
     {
-        [JsonPropertyName("sha")]
-        public string Sha { get; set; }
-
-        [JsonPropertyName("url")]
-        public string Url { get; set; }
+        public string Name { get; set; }
+        public string Email { get; set; }
+        public DateTime Date { get; set; }
     }
 
-    public class VerificationInfo
+    public class GitHubUser
     {
-        [JsonPropertyName("verified")]
-        public bool Verified { get; set; }
-
-        [JsonPropertyName("reason")]
-        public string Reason { get; set; }
-
-        [JsonPropertyName("signature")]
-        public string Signature { get; set; }
-
-        [JsonPropertyName("payload")]
-        public string Payload { get; set; }
-    }
-
-    public class GitHubProfile
-    {
-        [JsonPropertyName("login")]
         public string Login { get; set; }
-
-        [JsonPropertyName("id")]
-        public long Id { get; set; }
-
-        [JsonPropertyName("avatar_url")]
-        public string AvatarUrl { get; set; }
-
-        [JsonPropertyName("url")]
-        public string Url { get; set; }
-
-        [JsonPropertyName("html_url")]
-        public string HtmlUrl { get; set; }
-
-        [JsonPropertyName("type")]
-        public string Type { get; set; }
-    }
-
-    public class ParentCommit
-    {
-        [JsonPropertyName("sha")]
-        public string Sha { get; set; }
-
-        [JsonPropertyName("url")]
-        public string Url { get; set; }
-
-        [JsonPropertyName("html_url")]
-        public string HtmlUrl { get; set; }
-    }
-
-    public class FileChange
-    {
-        [JsonPropertyName("sha")]
-        public string Sha { get; set; }
-
-        [JsonPropertyName("filename")]
-        public string Filename { get; set; }
-
-        [JsonPropertyName("status")]
-        public string Status { get; set; }
-
-        [JsonPropertyName("additions")]
-        public int Additions { get; set; }
-
-        [JsonPropertyName("deletions")]
-        public int Deletions { get; set; }
-
-        [JsonPropertyName("changes")]
-        public int Changes { get; set; }
-
-        [JsonPropertyName("blob_url")]
-        public string BlobUrl { get; set; }
-
-        [JsonPropertyName("raw_url")]
-        public string RawUrl { get; set; }
-
-        [JsonPropertyName("contents_url")]
-        public string ContentsUrl { get; set; }
-
-        [JsonPropertyName("patch")]
-        public string Patch { get; set; }
-    }
-
-    public class CommitStats
-    {
-        [JsonPropertyName("total")]
-        public int Total { get; set; }
-
-        [JsonPropertyName("additions")]
-        public int Additions { get; set; }
-
-        [JsonPropertyName("deletions")]
-        public int Deletions { get; set; }
-    }
-
-    public class GitHubCommit
-    {
-        [JsonPropertyName("sha")]
-        public string Sha { get; set; }
+        public int Id { get; set; }
 
         [JsonPropertyName("node_id")]
         public string NodeId { get; set; }
 
-        [JsonPropertyName("commit")]
-        public CommitDetail Commit { get; set; }
+        [JsonPropertyName("avatar_url")]
+        public string AvatarUrl { get; set; }
 
-        [JsonPropertyName("url")]
+        [JsonPropertyName("gravatar_id")]
+        public string GravatarId { get; set; }
+
         public string Url { get; set; }
 
         [JsonPropertyName("html_url")]
         public string HtmlUrl { get; set; }
 
-        [JsonPropertyName("comments_url")]
-        public string CommentsUrl { get; set; }
+        public string Type { get; set; }
 
-        [JsonPropertyName("author")]
-        public GitHubProfile Author { get; set; }
+        [JsonPropertyName("site_admin")]
+        public bool SiteAdmin { get; set; }
+    }
 
-        [JsonPropertyName("committer")]
-        public GitHubProfile Committer { get; set; }
 
-        [JsonPropertyName("parents")]
-        public List<ParentCommit> Parents { get; set; }
+    public class ParentCommit
+    {
+        public string Sha { get; set; }
+        public string Url { get; set; }
+        public string HtmlUrl { get; set; }
+    }
 
-        [JsonPropertyName("stats")]
-        public CommitStats Stats { get; set; }
+    public class CommitStats
+    {
+        public int Additions { get; set; }
+        public int Deletions { get; set; }
+        public int Total { get; set; }
+    }
 
-        [JsonPropertyName("files")]
-        public List<FileChange> Files { get; set; }
+    public class FileChange
+    {
+        public string Sha { get; set; }
+        public string Filename { get; set; }
+        public string Status { get; set; }
+        public int Additions { get; set; }
+        public int Deletions { get; set; }
+        public int Changes { get; set; }
+        public string BlobUrl { get; set; }
+        public string RawUrl { get; set; }
+        public string ContentsUrl { get; set; }
+        public string Patch { get; set; }
+    }
+
+    public class CommitVerification
+    {
+        public bool Verified { get; set; }
+        public string Reason { get; set; }
+        public string Signature { get; set; }
+        public string Payload { get; set; }
     }
 
     public class CommitStatistics
@@ -602,11 +513,8 @@
         public int ProgressPercentage => TotalCommits > 0 ? (LoadedCommits * 100 / TotalCommits) : 0;
     }
 
-    // Static cache for all users
-    private static List<GitHubCommit> cachedCommits = null;
-    private static DateTime? cacheTime = null;
-    private static TimeSpan cacheExpiration = TimeSpan.FromMinutes(5);
-    private static SemaphoreSlim cacheLock = new SemaphoreSlim(1, 1);
+    // Cache Key - Benzersiz ve sabit anahtar
+    private const string CACHE_KEY = "GitHubCommits_efavori_huseyindemirdoger1992";
 
     // Configuration
     private const string GitHubToken = "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";
@@ -633,18 +541,8 @@
 
     private async Task ForceReload()
     {
-        // Cache'i temizle ve yeniden yükle
-        await cacheLock.WaitAsync();
-        try
-        {
-            cachedCommits = null;
-            cacheTime = null;
-        }
-        finally
-        {
-            cacheLock.Release();
-        }
-
+        // IMemoryCache'den cache'i temizle
+        MemoryCache.Remove(CACHE_KEY);
         await LoadCommits();
     }
 
@@ -657,160 +555,160 @@
 
         try
         {
-            // Cache kontrolü
-            await cacheLock.WaitAsync();
-            try
+            // IMemoryCache GetOrCreateAsync kullanımı - Thread-Safe ve Cache Stampede koruması
+            commits = await MemoryCache.GetOrCreateAsync(CACHE_KEY, async entry =>
             {
-                if (cachedCommits != null && cacheTime.HasValue &&
-                    (DateTime.Now - cacheTime.Value) < cacheExpiration)
+                // Absolute Expiration Policy - Tam 1 dakika ömür
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+
+                // Bu blok sadece cache boş ise çalışır (Factory method)
+                Console.WriteLine("Cache MISS - API'den veri çekiliyor...");
+
+                // HttpClient yapılandırması
+                Http.DefaultRequestHeaders.Clear();
+                Http.DefaultRequestHeaders.Add("User-Agent", "GitHubCommitsApp");
+                Http.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
+                Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {GitHubToken}");
+                Http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+
+                // Tüm commit'leri pagination ile çek
+                var allCommitShas = new List<string>();
+                int page = 1;
+                bool hasMore = true;
+
+                while (hasMore)
                 {
-                    // Cache'den yükle
-                    commits = new List<GitHubCommit>(cachedCommits);
-                    UpdateUIData();
-                    return;
-                }
-            }
-            finally
-            {
-                cacheLock.Release();
-            }
+                    var listUrl = $"https://api.github.com/repos/{UserName}/{RepoName}/commits?per_page=100&page={page}";
+                    Console.WriteLine($"Fetching page {page}: {listUrl}");
 
-            // HttpClient yapılandırması
-            Http.DefaultRequestHeaders.Clear();
-            Http.DefaultRequestHeaders.Add("User-Agent", "GitHubCommitsApp");
-            Http.DefaultRequestHeaders.Add("Accept", "application/vnd.github+json");
-            Http.DefaultRequestHeaders.Add("Authorization", $"Bearer {GitHubToken}");
-            Http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
+                    var listResponse = await Http.GetAsync(listUrl);
 
-            // Tüm commit'leri pagination ile çek
-            var allCommitShas = new List<string>();
-            int page = 1;
-            bool hasMore = true;
+                    if (!listResponse.IsSuccessStatusCode)
+                    {
+                        var errorContent = await listResponse.Content.ReadAsStringAsync();
+                        throw new HttpRequestException($"API Hatası ({listResponse.StatusCode}): {errorContent}");
+                    }
 
-            while (hasMore)
-            {
-                var listUrl = $"https://api.github.com/repos/{UserName}/{RepoName}/commits?per_page=100&page={page}";
-                Console.WriteLine($"Fetching page {page}: {listUrl}");
+                    var listJson = await listResponse.Content.ReadAsStringAsync();
+                    var pageCommits = JsonSerializer.Deserialize<List<GitHubCommit>>(listJson, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
 
-                var listResponse = await Http.GetAsync(listUrl);
-
-                if (!listResponse.IsSuccessStatusCode)
-                {
-                    var errorContent = await listResponse.Content.ReadAsStringAsync();
-                    errorMessage = $"API Hatası ({listResponse.StatusCode}): {errorContent}";
-                    Console.WriteLine(errorMessage);
-                    return;
-                }
-
-                var listJson = await listResponse.Content.ReadAsStringAsync();
-                var pageCommits = JsonSerializer.Deserialize<List<GitHubCommit>>(listJson, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-
-                if (pageCommits == null || !pageCommits.Any())
-                {
-                    hasMore = false;
-                }
-                else
-                {
-                    allCommitShas.AddRange(pageCommits.Select(c => c.Sha));
-                    Console.WriteLine($"Page {page}: {pageCommits.Count} commits loaded. Total: {allCommitShas.Count}");
-
-                    // İlerlemeyi güncelle
-                    loadingProgress.TotalCommits = allCommitShas.Count;
-                    StateHasChanged();
-
-                    if (pageCommits.Count < 100)
+                    if (pageCommits == null || !pageCommits.Any())
                     {
                         hasMore = false;
                     }
                     else
                     {
-                        page++;
-                    }
-                }
-            }
+                        allCommitShas.AddRange(pageCommits.Select(c => c.Sha));
+                        Console.WriteLine($"Page {page}: {pageCommits.Count} commits loaded. Total: {allCommitShas.Count}");
 
-            if (!allCommitShas.Any())
-            {
-                errorMessage = "Repository'de commit bulunamadı.";
-                return;
-            }
+                        // İlerlemeyi güncelle
+                        loadingProgress.TotalCommits = allCommitShas.Count;
+                        await InvokeAsync(StateHasChanged);
 
-            loadingProgress.TotalCommits = allCommitShas.Count;
-            StateHasChanged();
-
-            Console.WriteLine($"Toplam {allCommitShas.Count} commit bulundu, detaylar çekiliyor...");
-
-            // Paralel olarak commit detaylarını çek (15 eş zamanlı istek)
-            var detailedCommits = new ConcurrentBag<GitHubCommit>();
-            var semaphore = new SemaphoreSlim(15, 15);
-            var tasks = new List<Task>();
-
-            foreach (var sha in allCommitShas)
-            {
-                tasks.Add(Task.Run(async () =>
-                {
-                    await semaphore.WaitAsync();
-                    try
-                    {
-                        var commit = await GetCommitDetail(sha);
-                        if (commit != null)
+                        if (pageCommits.Count < 100)
                         {
-                            detailedCommits.Add(commit);
-                            loadingProgress.LoadedCommits = detailedCommits.Count;
-
-                            // Her 10 commit'te bir UI'ı güncelle
-                            if (detailedCommits.Count % 10 == 0)
-                            {
-                                await InvokeAsync(StateHasChanged);
-                            }
+                            hasMore = false;
+                        }
+                        else
+                        {
+                            page++;
                         }
                     }
-                    finally
+                }
+
+                if (!allCommitShas.Any())
+                {
+                    throw new InvalidOperationException("Repository'de commit bulunamadı.");
+                }
+
+                loadingProgress.TotalCommits = allCommitShas.Count;
+                await InvokeAsync(StateHasChanged);
+
+                Console.WriteLine($"Toplam {allCommitShas.Count} commit bulundu, detaylar çekiliyor...");
+
+                // Paralel olarak commit detaylarını çek (15 eş zamanlı istek)
+                var detailedCommits = new ConcurrentBag<GitHubCommit>();
+                var semaphore = new SemaphoreSlim(15, 15);
+                var tasks = new List<Task>();
+
+                foreach (var sha in allCommitShas)
+                {
+                    tasks.Add(Task.Run(async () =>
                     {
-                        semaphore.Release();
-                    }
-                }));
-            }
+                        await semaphore.WaitAsync();
+                        try
+                        {
+                            var commit = await GetCommitDetail(sha);
+                            if (commit != null)
+                            {
+                                detailedCommits.Add(commit);
+                                loadingProgress.LoadedCommits = detailedCommits.Count;
 
-            await Task.WhenAll(tasks);
+                                // Her 10 commit'te bir UI'ı güncelle
+                                if (detailedCommits.Count % 10 == 0)
+                                {
+                                    await InvokeAsync(StateHasChanged);
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            semaphore.Release();
+                        }
+                    }));
+                }
 
-            commits = detailedCommits
-                .OrderByDescending(c => c.Commit?.Author?.Date ?? DateTime.MinValue)
-                .ToList();
+                await Task.WhenAll(tasks);
 
-            Console.WriteLine($"{commits.Count} commit detayı başarıyla yüklendi");
+                var orderedCommits = detailedCommits
+                    .OrderByDescending(c => c.Commit?.Author?.Date ?? DateTime.MinValue)
+                    .ToList();
 
-            // Cache'i güncelle
-            await cacheLock.WaitAsync();
-            try
+                Console.WriteLine($"{orderedCommits.Count} commit detayı başarıyla yüklendi ve cache'e alındı");
+
+                return orderedCommits;
+            });
+
+            // Cache'den veri geldi
+            if (commits != null && commits.Any())
             {
-                cachedCommits = new List<GitHubCommit>(commits);
-                cacheTime = DateTime.Now;
+                Console.WriteLine($"Cache HIT - {commits.Count} commit cache'den yüklendi");
+                UpdateUIData();
             }
-            finally
-            {
-                cacheLock.Release();
-            }
-
-            UpdateUIData();
         }
         catch (HttpRequestException ex)
         {
             errorMessage = $"Bağlantı Hatası: {ex.Message}";
             Console.WriteLine($"HttpRequestException: {ex}");
+
+            // Hata durumunda mevcut veriyi göstermeye devam et
+            if (commits == null || !commits.Any())
+            {
+                commits = new List<GitHubCommit>();
+            }
         }
         catch (JsonException ex)
         {
             errorMessage = $"JSON Parse Hatası: {ex.Message}";
             Console.WriteLine($"JsonException: {ex}");
+
+            if (commits == null || !commits.Any())
+            {
+                commits = new List<GitHubCommit>();
+            }
         }
         catch (Exception ex)
         {
             errorMessage = $"Beklenmeyen Hata: {ex.Message}";
             Console.WriteLine($"Exception: {ex}");
+
+            if (commits == null || !commits.Any())
+            {
+                commits = new List<GitHubCommit>();
+            }
         }
         finally
         {

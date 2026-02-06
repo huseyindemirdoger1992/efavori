@@ -13,6 +13,6 @@ namespace data
         public string? CommitMessage { get; set; }
         public string? DeployedBy { get; set; }
         public DateTime? DeployDate { get; set; } = DateTime.Now;
-        public string? Status { get; set; } 
+        public string? Status { get; set; }   
     }
 }

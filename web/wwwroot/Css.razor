@@ -19,15 +19,15 @@
 @* Footor yapısını en alta sabitler ve efekt kullanır *@
 <style>
     .page-footer {
-        display: none; 
+        display: none;
     }
 
     @@media (min-width: 992px) {
         .page-footer {
-            display: block; 
+            display: block;
             position: fixed;
             bottom: 0;
-            backdrop-filter: blur(5px); 
+            backdrop-filter: blur(5px);
         }
 
         body {
@@ -40,9 +40,9 @@
 <style>
     .sidebar-wrapper .metismenu .menu-title,
     .sidebar-wrapper .metismenu ul li a {
-        font-size: 12px !important; 
-        white-space: normal !important; 
-        line-height: 1.2 !important; 
+        font-size: 12px !important;
+        white-space: normal !important;
+        line-height: 1.2 !important;
         word-break: break-word !important;
     }
 
@@ -50,28 +50,28 @@
     .sidebar-wrapper .metismenu ul li a {
         display: flex !important;
         align-items: center !important;
-        min-height: 38px !important; 
-        height: auto !important; 
-        padding: 4px 10px !important; 
+        min-height: 38px !important;
+        height: auto !important;
+        padding: 4px 10px !important;
         text-decoration: none !important;
     }
 
     .parent-icon,
     .sidebar-wrapper .metismenu ul li i {
-        min-width: 28px !important; 
+        min-width: 28px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         margin-right: 8px !important;
-        font-size: 16px !important; 
+        font-size: 16px !important;
     }
 
     .sidebar-wrapper .metismenu ul {
         padding-left: 5px !important;
     }
-     
+
     .has-arrow:after {
-        top: 50% !important; 
+        top: 50% !important;
         transform: translateY(-50%) !important;
     }
 </style>
@@ -97,3 +97,51 @@
         }
     }
 </style>
+
+@* Tüm metinlerde 1px beyaz/siyah "black-line"|"white-line" kaplama *@
+<style>
+    /**
+     * TEXT CONTOUR CSS (Class Based - 1px %50 Opacity)
+     * ---------------------------------------------------------
+     */
+
+    /* 1. SİYAH KONTUR: .black-line sınıfına sahip olanlar */
+    .black-line {
+        /* %50 opaklıkta siyah (0,0,0,0.5) */
+        --line-color: rgba(0, 0, 0, 0.5);
+        text-shadow: 1px 1px 0 var(--line-color), -1px 1px 0 var(--line-color), 1px -1px 0 var(--line-color), -1px -1px 0 var(--line-color), 0px 1px 0 var(--line-color), 0px -1px 0 var(--line-color), 1px 0px 0 var(--line-color), -1px 0px 0 var(--line-color) !important;
+    }
+
+    /* 2. BEYAZ KONTUR: .white-line sınıfına sahip olanlar */
+    .white-line {
+        /* %50 opaklıkta beyaz (255,255,255,0.5) */
+        --line-color: rgba(255, 255, 255, 0.5);
+        text-shadow: 1px 1px 0 var(--line-color), -1px 1px 0 var(--line-color), 1px -1px 0 var(--line-color), -1px -1px 0 var(--line-color), 0px 1px 0 var(--line-color), 0px -1px 0 var(--line-color), 1px 0px 0 var(--line-color), -1px 0px 0 var(--line-color) !important;
+    }
+
+        /* 3. İÇ İÇE ELEMENT KORUMASI:
+       Sınıfın içindeki tüm alt elementlerin gölgeyi miras almasını sağlar.
+       Böylece 10 katman olsa bile kontur kalınlaşmaz.
+    */
+        .black-line *, .white-line * {
+            text-shadow: inherit !important;
+        }
+
+        /* 4. FORM ELEMANLARI KORUMASI:
+       Input ve butonlar bu sınıfların içinde olsa dahi gölge almazlar.
+    */
+        .black-line input, .black-line textarea, .black-line button, .black-line select,
+        .white-line input, .white-line textarea, .white-line button, .white-line select {
+            text-shadow: none !important;
+        }
+
+    /* 5. SEÇİM KORUMASI:
+       Sadece ilgili class içindeki metin seçildiğinde kontur devam eder.
+    */
+    .black-line::selection, .black-line *::selection {
+        text-shadow: inherit !important;
+    }
+
+    .white-line::selection, .white-line *::selection {
+        text-shadow: inherit !important;
+    }</style>

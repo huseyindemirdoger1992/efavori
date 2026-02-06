@@ -100,7 +100,7 @@
                         <div class="card-body text-center">
                             <i class="bi bi-git fs-3 text-primary"></i>
                             <h6 class="card-title mt-2">Toplam Commit</h6>
-                            <h3 class="text-primary mb-0">@statistics.TotalCommits</h3>
+                            <h3 class="text-primary mb-0 white-line">@statistics.TotalCommits</h3>
                         </div>
                     </div>
                 </div>
@@ -109,7 +109,7 @@
                         <div class="card-body text-center">
                             <i class="bi bi-plus-circle fs-3 text-success"></i>
                             <h6 class="card-title mt-2">Eklenen Satır</h6>
-                            <h3 class="text-success mb-0">+@statistics.TotalAdditions.ToString("N0")</h3>
+                            <h3 class="text-success mb-0 white-line">+@statistics.TotalAdditions.ToString("N0")</h3>
                         </div>
                     </div>
                 </div>
@@ -118,7 +118,7 @@
                         <div class="card-body text-center">
                             <i class="bi bi-dash-circle fs-3 text-danger"></i>
                             <h6 class="card-title mt-2">Silinen Satır</h6>
-                            <h3 class="text-danger mb-0">-@statistics.TotalDeletions.ToString("N0")</h3>
+                            <h3 class="text-danger mb-0 white-line">-@statistics.TotalDeletions.ToString("N0")</h3>
                         </div>
                     </div>
                 </div>
@@ -127,7 +127,7 @@
                         <div class="card-body text-center">
                             <i class="bi bi-pencil-square fs-3 text-info"></i>
                             <h6 class="card-title mt-2">Toplam Değişiklik</h6>
-                            <h3 class="text-info mb-0">@statistics.TotalChanges.ToString("N0")</h3>
+                            <h3 class="text-info mb-0 white-line">@statistics.TotalChanges.ToString("N0")</h3>
                         </div>
                     </div>
                 </div>
@@ -136,7 +136,7 @@
                         <div class="card-body text-center">
                             <i class="bi bi-people fs-3 text-warning"></i>
                             <h6 class="card-title mt-2">Katkıda Bulunan</h6>
-                            <h3 class="text-warning mb-0">@statistics.UniqueAuthors</h3>
+                            <h3 class="text-warning mb-0 white-line">@statistics.UniqueAuthors</h3>
                         </div>
                     </div>
                 </div>
@@ -145,7 +145,7 @@
                         <div class="card-body text-center">
                             <i class="bi bi-calendar-check fs-3 text-warning"></i>
                             <h6 class="card-title mt-2">En Son Değişiklik</h6>
-                            <h3 class="text-light mb-0">@statistics.LastCommitDate?.ToString("dd/MM/yyyy")</h3>
+                            <h3 class="text-light mb-0 black-line">@statistics.LastCommitDate?.ToString("dd/MM/yyyy")</h3>
                         </div>
                     </div>
                 </div>
@@ -243,7 +243,7 @@
                                                 }
                                             </td>
                                             <td>
-                                                <code class="bg-info p-1 rounded" style="font-size: 0.8rem;">@commit.Sha?.Substring(0, 7)</code>
+                                                <code class="bg-dark p-1 rounded" style="font-size: 0.8rem;">@commit.Sha?.Substring(0, 7)</code>
                                             </td>
                                             <td class="text-center">
                                                 <div class="btn-group btn-group-sm" role="group">
@@ -290,7 +290,7 @@
                                                                                     <tr>
                                                                                         <td>
                                                                                             <small>
-                                                                                                <code class="text-light">@file.Filename</code>
+                                                                                                <code class="text-light black-line">@file.Filename</code>
                                                                                             </small>
                                                                                         </td>
                                                                                         <td>
@@ -338,11 +338,12 @@
                                                                     <h6 class="text-light mb-3">
                                                                         <i class="bi bi-diagram-3"></i> Üst Commit'ler
                                                                     </h6>
-                                                                    <ul class="list-group list-group-flush">
+                                                                    <label class="black-line">Commit/Commits</label>
+                                                                    <ul class="list-group list-group-flush" style="margin-top:4px;">
                                                                         @foreach (var parent in commit.Parents)
                                                                         {
                                                                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                                                <code class="text-light" ">
+                                                                                <code class="text-light">
                                                                                     *** <b>@parent.Sha?.Substring(0, 7)</b> ***
                                                                                 </code>
 @*                                                                                 <a href="@parent.HtmlUrl" target="_blank" class="btn btn-sm btn-outline-info">

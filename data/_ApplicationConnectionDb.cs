@@ -17,6 +17,7 @@ namespace data
         public DbSet<ItemGallery> ItemGallery { get; set; } = default!;
 
         // Logs
+        public DbSet<DeploymentLog> DeploymentLog { get; set; } = default!;
         public DbSet<Logs> Logs { get; set; } = default!;
         public DbSet<EmailHistory> EmailHistory { get; set; } = default!;
 

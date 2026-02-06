@@ -13,7 +13,7 @@
             <h3 class="text-light">
                 <i class="bi bi-github"></i> GitHub Commits Listesi - <b>efavori</b> Repository
             </h3>
-            <p class="text-warning">Repository: <strong>huseyindemirdoger1992/efavori</strong></p>
+            <p class="text-warning">Repository: <strong>huseyindemirdoger1992/efavori</strong> (Toplam @TotalCode.ToString("N0") kod satırı)</p>
             <hr />
         </div>
     </div>
@@ -400,6 +400,13 @@
 </div>
 
 @code {
+
+    // Bunu şununla değiştirin:
+    // int TotalCode = statistics.TotalAdditions - statistics.TotalDeletions;
+
+    // Yeni hali:
+    int TotalCode => statistics != null ? statistics.TotalAdditions - statistics.TotalDeletions : 0;
+    
     // Data Models
     public class GitHubCommit
     {

@@ -10,131 +10,138 @@ jobs:
     name: 🎉 Deploy
     # Sadece commit mesajında 'publish' kelimesi geçiyorsa çalışır
     if: contains(github.event.head_commit.message, 'publish')
-    runs-on: windows-latest
-    
+    runs-on: windows-latest 
+
     steps:
-      - name: 🚚 Get latest code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: ⚙️ Setup .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
+    - name: ⚙️ Setup .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x' 
 
-      - name: 🔨 Publish Project
-        run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
+    - name: 🔨 Publish Project
+      run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
 
-      # --- 1. ADIM: DURDURMA ---
-      - name: 🛑 Stop App
-        shell: pwsh
-        run: |
-          $path = "${{ github.workspace }}/publish/app_offline.htm"
-          "<!DOCTYPE html><html><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath $path -Encoding utf8
-          if (Test-Path $path) {
-            Write-Host "✅ app_offline.htm oluşturuldu."
-          }
+    # --- 1. ADIM: DURDURMA ---
+    - name: 🛑 Stop App
+      shell: pwsh
+      run: |
+        $path = "${{ github.workspace }}/publish/app_offline.htm"
+        "<html><head><meta charset='utf-8'></head><body><h1>Sistem Guncelleniyor...</h1></body></html>" | Out-File -FilePath $path -Encoding utf8
+        if (Test-Path $path) { Write-Host "✅ app_offline.htm oluşturuldu." }
+        
+    - name: 📤 Upload app_offline
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        dangerous-clean-slate: false
+        protocol: ftp
+        port: 21
+        timeout: 30000
+        log-level: verbose
+        only: |
+          app_offline.htm
+          
+    - name: ⏳ Wait for IIS
+      run: Start-Sleep -s 10
+      shell: pwsh
 
-      - name: 📤 Upload app_offline
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_ACCOUNT }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ${{ github.workspace }}/publish/
-          server-dir: httpdocs/
-          dangerous-clean-slate: false
-          protocol: ftp
-          port: 21
-          timeout: 30000
-          log-level: verbose
-          only: |
-            app_offline.htm
+    # --- 2. ADIM: TEK AŞAMALI SENKRONİZASYON ---
+    - name: 📦 Full Sync
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        port: 21
+        parallel: 1
+        timeout: 120000
+        retries: 30
+        retry-delay: 3000
+        exclude: |
+          **/appsettings.Development.json
+          **/.git*
+          **/.github/**
+          _files/**
+          **/_files/**
 
-      - name: ⏳ Wait for IIS
-        run: Start-Sleep -s 10
-        shell: pwsh
+    # --- 3. ADIM: BAŞLATMA VE DOĞRULAMA ---
+    - name: 🚀 Start App (Safe Remove)
+      shell: pwsh
+      run: |
+        Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force -ErrorAction SilentlyContinue
+        Write-Host "✅ Yerel app_offline silindi."
+        
+    - name: 🧹 Clean Remote & Online
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_ACCOUNT }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ${{ github.workspace }}/publish/
+        server-dir: httpdocs/
+        protocol: ftp
+        port: 21
+        timeout: 60000
+        retries: 10
 
-      # --- 2. ADIM: TEK AŞAMALI SENKRONİZASYON ---
-      - name: 📦 Full Sync
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_ACCOUNT }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ${{ github.workspace }}/publish/
-          server-dir: httpdocs/
-          protocol: ftp
-          port: 21
-          parallel: 1
-          timeout: 120000
-          retries: 30
-          retry-delay: 3000
-          exclude: |
-            **/appsettings.Development.json
-            **/.git*
-            **/.github/**
-            _files/**
-            **/_files/**
-
-      # --- 3. ADIM: BAŞLATMA VE DOĞRULAMA ---
-      - name: 🚀 Start App (Safe Remove)
-        shell: pwsh
-        run: |
-          Remove-Item "${{ github.workspace }}/publish/app_offline.htm" -Force -ErrorAction SilentlyContinue
-          Write-Host "✅ Yerel app_offline silindi."
-
-      - name: 🧹 Clean Remote & Online
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_ACCOUNT }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ${{ github.workspace }}/publish/
-          server-dir: httpdocs/
-          protocol: ftp
-          port: 21
-          timeout: 60000
-          retries: 10
-
-      - name: 🌡️ Warm Up Site
-        shell: pwsh
-        run: |
-          Write-Host "Site uyandırılıyor..."
-          Start-Sleep -s 5
-          try {
+    - name: 🌡️ Warm Up Site
+      shell: pwsh
+      run: |
+        Write-Host "Site uyandırılıyor..."
+        Start-Sleep -s 5
+        try {
             $response = Invoke-WebRequest -Uri "https://efavori.com" -UseBasicParsing -TimeoutSec 30
             Write-Host "✅ Site yanıt verdi: $($response.StatusCode)"
-          } catch {
+        } catch {
             Write-Warning "⚠️ Site henüz hazır değil veya hata döndürdü: $_"
-          }
+        }
 
-      # --- 4. ADIM: MSSQL LOG KAYDI ---
-      - name: 📊 Log Deployment to MSSQL
-        shell: pwsh
-        continue-on-error: true
-        env:
-          DB_CONN: ${{ secrets.MSSQL_CONNECTION_STRING }}
-        run: |
-          $projectName = "efavori.com"
-          $commitMsg = "${{ github.event.head_commit.message }}" -replace "'", "''"
-          $actor = "${{ github.actor }}"
-          
-          # SQL Sorgusu (EF Core Tablo Adına Göre - Genelde 'DeploymentLogs')
-          $query = "INSERT INTO DeploymentLogs (ProjectName, CommitMessage, DeployedBy, DeployDate, Status) VALUES ('$projectName', '$commitMsg', '$actor', GETDATE(), 'Success')"
-          
-          try {
+    # --- 4. ADIM: MSSQL DEPLOY LOG ---
+    - name: 📊 Log Deployment to MSSQL
+      shell: pwsh
+      continue-on-error: true
+      env:
+        DB_CONN: ${{ secrets.MSSQL_CONNECTION_STRING }}
+      run: |
+        $projectName = "efavori.com"
+        $commitMsg  = "${{ github.event.head_commit.message }}"
+        $actor      = "${{ github.actor }}"
+        $branch     = "${{ github.ref_name }}"
+        $commitHash = "${{ github.sha }}"
+
+        try {
             $connection = New-Object System.Data.SqlClient.SqlConnection
             $connection.ConnectionString = $env:DB_CONN
             $connection.Open()
-            
+
             $command = $connection.CreateCommand()
-            $command.CommandText = $query
+            $command.CommandText = "
+            INSERT INTO efavori.DeploymentLog
+            (ProjectName, CommitMessage, DeployedBy, DeployDate, Status)
+            VALUES (@p, @c, @a, GETDATE(), @s)
+            "
+
+            $command.Parameters.AddWithValue("@p", $projectName)
+            $command.Parameters.AddWithValue("@c", $commitMsg)
+            $command.Parameters.AddWithValue("@a", $actor)
+            $command.Parameters.AddWithValue("@s", "Success")
+
             $command.ExecuteNonQuery()
-            
             $connection.Close()
-            Write-Host "✅ Dağıtım logu MSSQL'e başarıyla kaydedildi."
-          } catch {
-            Write-Error "❌ SQL Log Hatası: $_"
-          }
+
+            Write-Host "✅ MSSQL deploy log kaydedildi."
+        } catch {
+            Write-Error "❌ MSSQL Log Hatası: $_"
+        }

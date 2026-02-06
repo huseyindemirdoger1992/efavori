@@ -1,31 +1,29 @@
 name: 🚀 Plesk MVC FTP Deploy (X86)
-
 on:
   push:
     branches:
       - master
-
 jobs:
   web-deploy:
     name: 🎉 Deploy
     # Sadece commit mesajında 'publish' kelimesi geçiyorsa çalışır
     if: contains(github.event.head_commit.message, 'publish')
     runs-on: windows-latest 
-
+    
     steps:
     - name: 🚚 Get latest code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
+        
     - name: ⚙️ Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x' 
-
+        
     - name: 🔨 Publish Project
       run: dotnet publish -c Release -r win-x86 --self-contained true -f net10.0 -o ${{ github.workspace }}/publish
-
+      
     # --- 1. ADIM: DURDURMA ---
     - name: 🛑 Stop App
       shell: pwsh
@@ -95,7 +93,7 @@ jobs:
         port: 21
         timeout: 60000
         retries: 10
-
+        
     - name: 🌡️ Warm Up Site
       shell: pwsh
       run: |
@@ -106,42 +104,4 @@ jobs:
             Write-Host "✅ Site yanıt verdi: $($response.StatusCode)"
         } catch {
             Write-Warning "⚠️ Site henüz hazır değil veya hata döndürdü: $_"
-        }
-
-    # --- 4. ADIM: MSSQL DEPLOY LOG ---
-    - name: 📊 Log Deployment to MSSQL
-      shell: pwsh
-      continue-on-error: true
-      env:
-        DB_CONN: ${{ secrets.MSSQL_CONNECTION_STRING }}
-      run: |
-        $projectName = "efavori.com"
-        $commitMsg  = "${{ github.event.head_commit.message }}"
-        $actor      = "${{ github.actor }}"
-        $branch     = "${{ github.ref_name }}"
-        $commitHash = "${{ github.sha }}"
-
-        try {
-            $connection = New-Object System.Data.SqlClient.SqlConnection
-            $connection.ConnectionString = $env:DB_CONN
-            $connection.Open()
-
-            $command = $connection.CreateCommand()
-            $command.CommandText = "
-            INSERT INTO efavori.DeploymentLog
-            (ProjectName, CommitMessage, DeployedBy, DeployDate, Status)
-            VALUES (@p, @c, @a, GETDATE(), @s)
-            "
-
-            $command.Parameters.AddWithValue("@p", $projectName)
-            $command.Parameters.AddWithValue("@c", $commitMsg)
-            $command.Parameters.AddWithValue("@a", $actor)
-            $command.Parameters.AddWithValue("@s", "Success")
-
-            $command.ExecuteNonQuery()
-            $connection.Close()
-
-            Write-Host "✅ MSSQL deploy log kaydedildi."
-        } catch {
-            Write-Error "❌ MSSQL Log Hatası: $_"
         }

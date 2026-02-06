@@ -55,6 +55,7 @@ namespace data
 
         // public DbSet<Product> Product { get; set; } = default!;
 
+
         //---------------- Constructor'lar ----------------//
 
         // Program.cs'den gelen ayarlar için

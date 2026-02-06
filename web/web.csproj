@@ -23,6 +23,7 @@
 		<Folder Include="Areas\Vendor\Views\" />
 		<Folder Include="_files\" />
 		<Folder Include="_files\" />
+		<Folder Include="_files\" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="web.config">

@@ -98,50 +98,62 @@
     }
 </style>
 
-@* Tüm metinlerde 1px beyaz/siyah "black-line"|"white-line" kaplama *@
+@* Tüm metinlerde 1px beyaz/siyah "b-l"|"w-l" kaplama *@
 <style>
-    /**
-     * TEXT CONTOUR CSS (Class Based - 1px %50 Opacity)
-     * ---------------------------------------------------------
-     */
-
-    /* 1. SİYAH KONTUR: .black-line sınıfına sahip olanlar */
-    .black-line {
-        /* %50 opaklıkta siyah (0,0,0,0.5) */
+    .b-l {
         --line-color: rgba(0, 0, 0, 0.5);
         text-shadow: 1px 1px 0 var(--line-color), -1px 1px 0 var(--line-color), 1px -1px 0 var(--line-color), -1px -1px 0 var(--line-color), 0px 1px 0 var(--line-color), 0px -1px 0 var(--line-color), 1px 0px 0 var(--line-color), -1px 0px 0 var(--line-color) !important;
     }
 
-    /* 2. BEYAZ KONTUR: .white-line sınıfına sahip olanlar */
-    .white-line {
-        /* %50 opaklıkta beyaz (255,255,255,0.5) */
+    .w-l {
         --line-color: rgba(255, 255, 255, 0.5);
         text-shadow: 1px 1px 0 var(--line-color), -1px 1px 0 var(--line-color), 1px -1px 0 var(--line-color), -1px -1px 0 var(--line-color), 0px 1px 0 var(--line-color), 0px -1px 0 var(--line-color), 1px 0px 0 var(--line-color), -1px 0px 0 var(--line-color) !important;
     }
 
-        /* 3. İÇ İÇE ELEMENT KORUMASI:
-       Sınıfın içindeki tüm alt elementlerin gölgeyi miras almasını sağlar.
-       Böylece 10 katman olsa bile kontur kalınlaşmaz.
-    */
-        .black-line *, .white-line * {
+        .b-l *, .w-l * {
             text-shadow: inherit !important;
         }
 
-        /* 4. FORM ELEMANLARI KORUMASI:
-       Input ve butonlar bu sınıfların içinde olsa dahi gölge almazlar.
-    */
-        .black-line input, .black-line textarea, .black-line button, .black-line select,
-        .white-line input, .white-line textarea, .white-line button, .white-line select {
+        .b-l input, .b-l textarea, .b-l button, .b-l select,
+        .w-l input, .w-l textarea, .w-l button, .w-l select {
             text-shadow: none !important;
         }
 
-    /* 5. SEÇİM KORUMASI:
-       Sadece ilgili class içindeki metin seçildiğinde kontur devam eder.
-    */
-    .black-line::selection, .black-line *::selection {
+    .b-l::selection, .b-l *::selection {
         text-shadow: inherit !important;
     }
 
-    .white-line::selection, .white-line *::selection {
+    .w-l::selection, .w-l *::selection {
         text-shadow: inherit !important;
-    }</style>
+    }
+</style>
+
+
+<style>
+    .matrix {
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+    }
+
+        .matrix::before {
+            content: "";
+            position: absolute;
+            /* 2. Resmin yayılması için inset yerine manuel yerleşim: */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Arka plan ayarları */
+            background: url('/assets/images/app/matrix.gif');
+            background-size: 100% 100%; /* Resmi yayarak alanı tam doldurmasını sağlar */
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.20;
+            filter: blur(2px);
+            z-index: -1;
+            /* 3. Blur kaynaklı kenar boşluklarını yok etmek için hafif büyütme: */
+            /* overflow: hidden sayesinde dışarı taşmaz. */
+            transform: scale(1.1);
+        }
+</style>

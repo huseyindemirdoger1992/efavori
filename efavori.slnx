@@ -1,4 +1,5 @@
 <Solution>
+  <Folder Name="/Solution Items/" />
   <Project Path="api/api.csproj" />
   <Project Path="data/data.csproj" />
   <Project Path="razor/razor.csproj" />

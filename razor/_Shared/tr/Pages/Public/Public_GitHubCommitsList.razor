@@ -269,7 +269,7 @@
                                                 <td colspan="7" class="bg-light">
                                                     <div class="p-4">
                                                         <div class="row">
-                                                            <div class="col-md-9">
+                                                            <div class="col-md-6">
                                                                 @if (commit.Files != null && commit.Files.Any())
                                                                 {
                                                                     <h6 class="text-light mb-3">
@@ -281,7 +281,7 @@
                                                                                 <tr>
                                                                                     <th>Dosya</th>
                                                                                     <th>Durum</th>
-                                                                                    <th>Değişiklikler</th>
+                                                                                    <th class="text-center">Değişiklikler</th>
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
@@ -316,11 +316,9 @@
                                                                                             }
                                                                                         </td>
                                                                                         <td class="text-center">
-                                                                                            <div class="d-flex align-items-center justify-content-center">
-                                                                                                <span class="badge bg-success rounded-end-0">+@file.Additions</span>
-                                                                                                <span class="badge bg-danger">-@file.Deletions</span>
-                                                                                                <span class="badge bg-primary rounded-start-0">(@file.Changes)</span>
-                                                                                            </div>
+                                                                                            <span class="badge bg-success me-1">+@file.Additions</span>
+                                                                                            <span class="badge bg-danger me-1">-@file.Deletions</span>
+                                                                                            <small class="text-muted">(@file.Changes)</small>
                                                                                         </td>
                                                                                     </tr>
                                                                                 }
@@ -334,7 +332,7 @@
                                                                 }
 
                                                             </div>
-                                                            <div class="col-md-3">
+                                                            <div class="col-md-6">
                                                                 @if (commit.Parents != null && commit.Parents.Any())
                                                                 {
                                                                     <h6 class="text-light mb-3">

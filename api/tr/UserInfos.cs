@@ -34,8 +34,8 @@ namespace api.tr
                 Languages = GetHeader("Accept-Language"),
 
                 // Path ve Method genelde null olmaz ama defansif kalmakta fayda var
-                RequestPath = context.Request?.Path.Value ?? "UnknownPath",
-                RequestMethod = context.Request?.Method ?? "UnknownMethod",
+                RequestPath = context.Request?.Path.Value ?? "*.*Path",
+                RequestMethod = context.Request?.Method ?? "*.*Method",
 
                 // TraceIdentifier her zaman bir değer üretir
                 TraceId = context.TraceIdentifier ?? Guid.NewGuid().ToString()
@@ -48,13 +48,13 @@ namespace api.tr
 
     public record UserDetail
     {
-        // Default değerleri "Unknown" yaparak boş string (empty) riskini de azaltıyoruz
-        public string IpAddress { get; init; } = "Unknown";
-        public string UserAgent { get; init; } = "Unknown";
-        public string RequestPath { get; init; } = "Unknown";
-        public string RequestMethod { get; init; } = "Unknown";
-        public string Referrer { get; init; } = "Unknown";
-        public string Languages { get; init; } = "Unknown";
-        public string TraceId { get; init; } = "Unknown";
+        // Default değerleri "*.*" yaparak boş string (empty) riskini de azaltıyoruz
+        public string IpAddress { get; init; } = "*.*";
+        public string UserAgent { get; init; } = "*.*";
+        public string RequestPath { get; init; } = "*.*";
+        public string RequestMethod { get; init; } = "*.*";
+        public string Referrer { get; init; } = "*.*";
+        public string Languages { get; init; } = "*.*";
+        public string TraceId { get; init; } = "*.*";
     }
 }

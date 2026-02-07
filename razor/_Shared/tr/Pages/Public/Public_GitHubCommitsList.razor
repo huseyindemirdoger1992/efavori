@@ -6,6 +6,50 @@
 @using Microsoft.Extensions.Caching.Memory
 @inject HttpClient Http
 @inject IMemoryCache MemoryCache
+@code {
+    // Gizlemek istenilen dosya adlarını
+    public List<string> blackList = new List<string>
+  {
+  "Deneme",
+  "slnx",
+  "appsettings",
+  "web.config",
+  "launchSettings.json",
+  "secrets.json",
+  ".env",
+  "dotnet-tools.json",
+  "_ApplicationConnectionDb",
+  "Migrations",
+  "Account.cs",
+  "EmailSender",
+  ".db",
+  ".sqlite",
+  ".mdf",
+  ".ldf",
+  "Program.cs",
+  "Startup.cs",
+  "_Imports.razor",
+  "Login.razor",
+  "NewUserRegister.razor",
+  "ResetPassword.razor",
+  "bin",
+  "obj",
+  ".pdb",
+  ".log",
+  ".dll",
+  ".exe",
+  ".git",
+  "main.yml",
+  "main.yaml",
+  "DockerFile",
+  ".dockerignore",
+  ".gitignore",
+  "Public_GitHubCommitsList",
+  "bundleconfig.json",
+  "package.json",
+  "package-lock.json"
+  };  
+}
 
 <div class="container-fluid py-4">
     <div class="row mb-4">
@@ -55,7 +99,7 @@
             </small>
             @if (loadingProgress.TotalCommits > 0)
             {
-                <div class="progress mt-3" style="height: 25px; max-width: 600px; margin: 0 auto;">
+                <div class="progress mt-3" style="height: 25px; margin: 0 auto;width:100%">
                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
                          role="progressbar"
                          style="width: @(loadingProgress.ProgressPercentage)%"
@@ -156,10 +200,12 @@
                 </div>
             </div>
         }
-
         <!-- Commit Listesi -->
         <div class="row">
             <div class="col-12">
+                <div class="alert alert-danger text-warning" role="alert">
+                    <strong>Gizlenen [Dosya/Türler]: </strong> @string.Join(", ", blackList)
+                </div>
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <strong><i class="fa fa-list"></i> İşlem Geçmişi Şimdilik Private (Kaynak Kodlar Gizli)</strong>
@@ -451,58 +497,65 @@
                                                         <div style="max-height: 400px; overflow-y: auto;" class="border rounded text-light">
                                                             @foreach (var file in commit.Files)
                                                             {
-                                                                <div class="p-2 border-bottom">
-                                                                    <div class="d-flex justify-content-between align-items-start">
-                                                                        <div class="flex-grow-1">
-                                                                            <strong class="d-block" style="word-break: break-all;">
-                                                                                @if (file.Status == "added")
+                                                                // Dosya adının içinde bu listedeki kelimelerden HERHANGİ BİRİ geçiyor mu
+                                                                bool isHidden = blackList.Any(x => file.Filename.Contains(x, StringComparison.OrdinalIgnoreCase));
+
+                                                                if (!string.IsNullOrEmpty(file.Filename) && !isHidden)
+                                                                {
+                                                                    <div class="p-2 border-bottom">
+                                                                        <div class="d-flex justify-content-between align-items-start">
+                                                                            <div class="flex-grow-1">
+                                                                                <strong class="d-block" style="word-break: break-all;">
+                                                                                    @if (file.Status == "added")
+                                                                                    {
+                                                                                        <i class="fa fa-plus text-success"></i>
+                                                                                    }
+                                                                                    else if (file.Status == "removed")
+                                                                                    {
+                                                                                        <i class="fa fa-minus text-danger"></i>
+                                                                                    }
+                                                                                    else if (file.Status == "modified")
+                                                                                    {
+                                                                                        <i class="fa fa-pencil text-warning"></i>
+                                                                                    }
+                                                                                    else if (file.Status == "renamed")
+                                                                                    {
+                                                                                        <i class="fa fa-arrows text-info"></i>
+                                                                                    }
+                                                                                    @file.Filename
+                                                                                </strong>
+                                                                                @if (!string.IsNullOrEmpty(file.PreviousFilename) && file.PreviousFilename != file.Filename)
                                                                                 {
-                                                                                    <i class="fa fa-plus text-success"></i>
+                                                                                    <small class="text-muted d-block">
+                                                                                        <i class="fa fa-arrow-left"></i> Önceki: @file.PreviousFilename
+                                                                                    </small>
                                                                                 }
-                                                                                else if (file.Status == "removed")
-                                                                                {
-                                                                                    <i class="fa fa-minus text-danger"></i>
-                                                                                }
-                                                                                else if (file.Status == "modified")
-                                                                                {
-                                                                                    <i class="fa fa-pencil text-warning"></i>
-                                                                                }
-                                                                                else if (file.Status == "renamed")
-                                                                                {
-                                                                                    <i class="fa fa-arrows text-info"></i>
-                                                                                }
-                                                                                @file.Filename
-                                                                            </strong>
-                                                                            @if (!string.IsNullOrEmpty(file.PreviousFilename) && file.PreviousFilename != file.Filename)
-                                                                            {
-                                                                                <small class="text-muted d-block">
-                                                                                    <i class="fa fa-arrow-left"></i> Önceki: @file.PreviousFilename
+                                                                                <small class="text-muted">
+                                                                                    <span class="badge bg-secondary">@file.Status</span>
+                                                                                    <span class="text-success ms-1 b-l">+@file.Additions</span>
+                                                                                    <span class="text-danger ms-1 b-l">-@file.Deletions</span>
+                                                                                    <span class="text-info ms-1 w-l">@file.Changes değişiklik</span>
                                                                                 </small>
+                                                                            </div>
+                                                                            @if (!string.IsNullOrEmpty(file.BlobUrl))
+                                                                            {
+                                                                                <a href="@file.BlobUrl" target="_blank" class="btn btn-sm btn-outline-light ms-2" title="GitHub'da görüntüle">
+                                                                                    <i class="fa fa-external-link"></i>
+                                                                                </a>
                                                                             }
-                                                                            <small class="text-muted">
-                                                                                <span class="badge bg-secondary">@file.Status</span>
-                                                                                <span class="text-success ms-1 b-l">+@file.Additions</span>
-                                                                                <span class="text-danger ms-1 b-l">-@file.Deletions</span>
-                                                                                <span class="text-info ms-1 w-l">@file.Changes değişiklik</span>
-                                                                            </small>
                                                                         </div>
-                                                                        @if (!string.IsNullOrEmpty(file.BlobUrl))
+                                                                        @if (!string.IsNullOrEmpty(file.Patch))
                                                                         {
-                                                                            <a href="@file.BlobUrl" target="_blank" class="btn btn-sm btn-outline-light ms-2" title="GitHub'da görüntüle">
-                                                                                <i class="fa fa-external-link"></i>
-                                                                            </a>
+                                                                            <details class="mt-2">
+                                                                                <summary class="text-warning" style="cursor: pointer;">
+                                                                                    <small><i class="fa fa-code"></i> Patch'i göster</small>
+                                                                                </summary>
+                                                                                <pre class="bg-light p-2 mt-1 rounded" style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">@file.Patch</pre>
+                                                                            </details>
                                                                         }
+
                                                                     </div>
-                                                                    @if (!string.IsNullOrEmpty(file.Patch) && file.Patch.Length < 500)
-                                                                    {
-                                                                        <details class="mt-2">
-                                                                            <summary class="text-warning" style="cursor: pointer;">
-                                                                                <small><i class="fa fa-code"></i> Patch'i göster</small>
-                                                                            </summary>
-                                                                            <pre class="bg-light p-2 mt-1 rounded" style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">@file.Patch</pre>
-                                                                        </details>
-                                                                    }
-                                                                </div>
+                                                                }
                                                             }
                                                         </div>
                                                     </div>
@@ -526,18 +579,21 @@
                                                                 <i class="fa fa-code"></i> API
                                                             </a>
                                                         }
+
                                                         @if (!string.IsNullOrEmpty(commit.HtmlUrl))
                                                         {
                                                             <a href="@commit.HtmlUrl" target="_blank" class="btn btn-sm btn-primary">
                                                                 <i class="fa fa-github"></i> GitHub
                                                             </a>
                                                         }
+
                                                         @if (!string.IsNullOrEmpty(commit.CommentsUrl))
                                                         {
                                                             <a href="@commit.CommentsUrl" target="_blank" class="btn btn-sm btn-info">
                                                                 <i class="fa fa-comments"></i> Yorumlar
                                                             </a>
                                                         }
+
                                                     </div>
                                                 </div>
                                             </div>

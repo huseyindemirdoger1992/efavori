@@ -15,7 +15,11 @@
                 <h3 class="mb-2">
                     <i class="fa fa-tasks"></i> Yazılım Görev Panosu
                 </h3>
-                @if (use?.UsersType == "Admin" || use?.UsersType == "Employee")
+
+
+
+
+                @if (use?.UsersType == "Admin")
                 {
                     <button class="btn btn-primary btn-sm" @onclick="() => ShowAddTaskModal()" disabled="@IsButtonProcessing("add")">
                         <i class="fa fa-plus"></i> Yeni Görev
@@ -492,6 +496,29 @@
                                     Tamamlandı
                                 </small>
                             </div>
+                            @if (taskNotesCount > 0)
+                            {
+                                <hr class="text-info" />
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-dark bg-warning badge" style="width: 100%;">
+                                        Görev içerisindeki notlar
+                                    </small>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-light bg-primary badge" style="width: 100%;">
+                                        <i class="fa fa-th-list me-1"></i>
+                                        @taskNotesCount
+                                    </small>
+                                    <small class="text-light bg-light badge" style="width: 100%;">
+                                        <i class="fa fa-hourglass-half me-1"></i>
+                                        @IsNotOktaskNotesCount
+                                    </small>
+                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                        <i class="fa fa-check-square me-1"></i>
+                                        @IsOktaskNotesCount
+                                    </small>
+                                </div>
+                            }
                             <hr class="text-info" />
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-light" style="width: 100%;">
@@ -503,13 +530,6 @@
                                     <span class="text-light">@userName</span>
                                 </small>
                             </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-info badge" style="width: 100%;">
-                                    <i class="fa fa-comment me-1"></i>
-                                    Notlar: @taskNotesCount
-                                </small>
-                            </div>
                         </div>
                     }
                 </div>
@@ -518,72 +538,6 @@
     </div>
 
 </div>
-
-
-
-
-
-
-
-
-
-@* 
-
-<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title text-white">
-                    <i class="fa fa-sign-in"></i> Oturum Aç
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label"><i class="fa fa-envelope"></i> E-posta</label>
-                    <input type="email" class="form-control" placeholder="E-posta adresiniz" @bind="email" />
-                </div>
-                <div class="mb-3">
-                    <label class="form-label"><i class="fa fa-lock"></i> Şifre</label>
-                    <input type="password" class="form-control" placeholder="Şifreniz" @bind="password" />
-                </div>
-                <div class="d-flex justify-content-between">
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#resetModal">
-                        <i class="fa fa-key"></i> Şifremi Unuttum
-                    </button>
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal">
-                        <i class="fa fa-user-plus"></i> Kayıt Ol
-                    </button>
-                </div>
-            </div>
-            <div class="modal-footer border-top border-secondary">
-                <button type="button"
-                        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
-                        style="width:100%;"
-                        @onclick="LoginUserAsync"
-                        disabled="@Btn_isProcessing_01">
-                    <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
-                    <span>@(Btn_isProcessing_01 ? "Giriş Yapılıyor..." : "Giriş Yap")</span>
-                </button>
-
-            </div>
-        </div>
-    </div>
-</div>
-
-
- *@
-
-
-
-
-
-
-
-
-
-
-
 
 <!-- Add Task Modal -->
 @if (AddTaskshowModal)
@@ -720,7 +674,27 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                 <div class="modal-header border-bottom border-secondary">
-                    <h5 class="modal-title">@selectedTask.TaskTitle</h5>
+                    @if (use?.UsersType == "Admin")
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" @onclick="DeleteTask" disabled="@IsButtonProcessing("delete")">
+                            @if (IsButtonProcessing("delete"))
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            else
+                            {
+                                <i class="fa fa-trash me-2"></i>
+                            }
+                            <span class="fw-bold" style="font-size: 1.1rem;">@selectedTask.TaskTitle</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" disabled>
+                            <i class="fa fa-trash me-2"></i>
+                            <span class="fw-bold" style="font-size: 1.1rem;">@selectedTask.TaskTitle</span>
+                        </button>
+                    }
                     <button type="button" class="btn-close" @onclick="CloseDetailModal"></button>
                 </div>
                 <div class="modal-body">
@@ -768,7 +742,7 @@
                         }
                     </div>
                     <button type="button"
-                            class="btn btn-primary btn-sm"
+                            class="btn btn-outline-info btn-sm"
                             @onclick="AddNote"
                             disabled="@IsButtonProcessing("addNote")"
                             style="width: 100%;">
@@ -815,31 +789,25 @@
                         </div>
                     }
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseDetailModal">Kapat</button>
-                    @if (use?.UsersType == "Admin")
-                    {
-                        <button type="button" class="btn btn-warning" @onclick="() => EditTask(selectedTask)">
-                            <i class="fa fa-edit"></i> Düzenle
+                <div class="modal-footer p-0">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-light rounded-0" @onclick="CloseDetailModal">
+                            Kapat
                         </button>
-                        <button type="button" class="btn btn-danger" @onclick="DeleteTask" disabled="@IsButtonProcessing("delete")">
-                            @if (IsButtonProcessing("delete"))
-                            {
-                                <span class="spinner-border spinner-border-sm me-1"></span>
-                            }
-                            <i class="fa fa-trash"></i> Sil
-                        </button>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn btn-warning" disabled>
-                            <i class="fa fa-edit"></i> Düzenle
-                        </button>
-                        <button type="button" class="btn btn-danger" disabled>
-                            <i class="fa fa-trash"></i> Sil
-                        </button>
-                    }
 
+                        @if (use?.UsersType == "Admin")
+                        {
+                            <button type="button" class="btn btn-outline-warning rounded-0" @onclick="() => EditTask(selectedTask)">
+                                <i class="fa fa-edit"></i> Düzenle
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline-warning rounded-0" disabled>
+                                <i class="fa fa-edit"></i> Düzenle
+                            </button>
+                        }
+                    </div>
                 </div>
             </div>
         </div>

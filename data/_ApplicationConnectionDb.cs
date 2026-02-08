@@ -11,6 +11,9 @@ namespace data
 {
     public class _ApplicationConnectionDb : DbContext
     {
+        // Tasks
+        public DbSet<TaskStatus> TaskStatus { get; set; } = default!;
+        public DbSet<TaskNotes> TaskNotes { get; set; } = default!;
 
         // Media
         public DbSet<Media> Media { get; set; } = default!;

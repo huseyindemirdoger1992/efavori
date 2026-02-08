@@ -3,6 +3,6 @@
   <Project Path="api/api.csproj" />
   <Project Path="data/data.csproj" />
   <Project Path="razor/razor.csproj" />
-  <Project Path="Snippets/Snippets.csproj" Id="796767dd-9ef6-4cd0-97b3-fde95ac8a662" />
+  <Project Path="snippets/snippets.csproj" Id="88aaf1f3-035b-4daf-ab6e-bd698c9134b3" />
   <Project Path="web/web.csproj" />
 </Solution>

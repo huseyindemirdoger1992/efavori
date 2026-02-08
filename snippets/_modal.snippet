@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+	<CodeSnippet Format="1.0.0">
+		<Header>
+			<Title>_modal</Title>
+			<Shortcut>_modal</Shortcut>
+			<Description>_modal</Description>
+			<Author>Hüseyin DEMİRDÖĞER</Author>
+			<SnippetTypes>
+				<SnippetType>Expansion</SnippetType>
+			</SnippetTypes>
+		</Header>
+		<Snippet>
+			<Code Language="csharp">
+				<![CDATA[
+<button class="btn btn-secondary btn-sm" data-bs-toggle="modal"
+        data-bs-target="#loginModal">
+    <i class="fa fa-plus"></i> Yeni Görev
+</button>
+
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa fa-sign-in"></i> Oturum Aç
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            </div>
+            <div class="modal-footer border-top border-secondary">
+
+                <button type="button"
+                        class="@(IsButtonProcessing("LoginButton") ? "btn btn-light colored" : "btn btn-light")"
+                        style="width:100%;"
+                        @onclick='async () => await HandleButtonClick("LoginButton", Action)'
+                        disabled="@IsButtonProcessing("LoginButton")">
+                    <i class="fa @(IsButtonProcessing("LoginButton") ? "fa-refresh fa-spin" : "fa-sign-in")"></i>
+                    <span>@(IsButtonProcessing("LoginButton") ? "Yükleniyor..." : "Giriş Yap")</span>
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+	  ]]>
+			</Code>
+		</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

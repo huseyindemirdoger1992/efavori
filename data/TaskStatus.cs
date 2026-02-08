@@ -11,6 +11,9 @@ namespace data
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
+        // Görevin ait olduğu kategori Guid
+        public Guid? TaskCategoriesId { get; set; }
+
         // Görevi atayan kişi Guid tipinde
         public Guid? AssignedByUserId { get; set; } // Görevin atandığı kişi UsersType Sadece "Admin" olabilir
 

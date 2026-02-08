@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260208223825_23")]
+    partial class _23
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -879,29 +882,6 @@ namespace data.Migrations
                     b.ToTable("Stores");
                 });
 
-            modelBuilder.Entity("data.TaskCategories", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TaskCategories");
-                });
-
             modelBuilder.Entity("data.TaskNotes", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1452,30 +1432,6 @@ namespace data.Migrations
                     b.Navigation("ProfileCoverGallery");
 
                     b.Navigation("WorkingHours");
-                });
-
-            modelBuilder.Entity("data.TaskCategories", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("TaskCategoriesId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("TaskCategoriesId");
-
-                            b1.ToTable("TaskCategories");
-
-                            b1.WithOwner()
-                                .HasForeignKey("TaskCategoriesId");
-                        });
-
-                    b.Navigation("IsDeleted");
                 });
 
             modelBuilder.Entity("data.TaskNotes", b =>

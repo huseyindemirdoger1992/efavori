@@ -12,6 +12,7 @@ namespace data
     public class _ApplicationConnectionDb : DbContext
     {
         // Tasks
+        public DbSet<TaskCategories> TaskCategories { get; set; } = default!;
         public DbSet<TaskStatus> TaskStatus { get; set; } = default!;
         public DbSet<TaskNotes> TaskNotes { get; set; } = default!;
 

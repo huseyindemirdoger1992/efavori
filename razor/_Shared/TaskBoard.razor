@@ -596,7 +596,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
-        _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(3));
+        _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(5));
     }
 
     private async Task StartAutoRefreshLoop(TimeSpan interval)

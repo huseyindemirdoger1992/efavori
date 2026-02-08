@@ -105,26 +105,29 @@
                                     </div>
                                 </small>
                             </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-dark bg-warning badge" style="width: 100%;">
-                                    Görev içerisindeki notlar
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-primary badge" style="width: 100%;">
-                                    <i class="fa fa-th-list me-1"></i>
-                                    @taskNotesCount
-                                </small>
-                                <small class="text-light bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-hourglass-half me-1"></i>
-                                    @IsNotOktaskNotesCount
-                                </small>
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-check-square me-1"></i>
-                                    @IsOktaskNotesCount
-                                </small>
-                            </div>
+                            @if (taskNotesCount > 0)
+                            {
+                                <hr class="text-info" />
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-dark bg-warning badge" style="width: 100%;">
+                                        Görev içerisindeki notlar
+                                    </small>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-light bg-primary badge" style="width: 100%;">
+                                        <i class="fa fa-th-list me-1"></i>
+                                        @taskNotesCount
+                                    </small>
+                                    <small class="text-light bg-light badge" style="width: 100%;">
+                                        <i class="fa fa-hourglass-half me-1"></i>
+                                        @IsNotOktaskNotesCount
+                                    </small>
+                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                        <i class="fa fa-check-square me-1"></i>
+                                        @IsOktaskNotesCount
+                                    </small>
+                                </div>
+                            }
                             <hr class="text-info" />
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-light" style="width: 100%;">
@@ -516,13 +519,79 @@
 
 </div>
 
+
+
+
+
+
+
+
+
+@* 
+
+<div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa fa-sign-in"></i> Oturum Aç
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label"><i class="fa fa-envelope"></i> E-posta</label>
+                    <input type="email" class="form-control" placeholder="E-posta adresiniz" @bind="email" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><i class="fa fa-lock"></i> Şifre</label>
+                    <input type="password" class="form-control" placeholder="Şifreniz" @bind="password" />
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#resetModal">
+                        <i class="fa fa-key"></i> Şifremi Unuttum
+                    </button>
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal">
+                        <i class="fa fa-user-plus"></i> Kayıt Ol
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer border-top border-secondary">
+                <button type="button"
+                        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
+                        style="width:100%;"
+                        @onclick="LoginUserAsync"
+                        disabled="@Btn_isProcessing_01">
+                    <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
+                    <span>@(Btn_isProcessing_01 ? "Giriş Yapılıyor..." : "Giriş Yap")</span>
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+
+ *@
+
+
+
+
+
+
+
+
+
+
+
+
 <!-- Add Task Modal -->
 @if (AddTaskshowModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title">Yeni Görev Oluştur</h5>
                     <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
                 </div>
@@ -579,9 +648,9 @@
 @if (EditTaskshowModal)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title">Görevi Düzenle</h5>
                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
@@ -649,8 +718,8 @@
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
+            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title">@selectedTask.TaskTitle</h5>
                     <button type="button" class="btn-close" @onclick="CloseDetailModal"></button>
                 </div>
@@ -734,9 +803,10 @@
                                                        checked="@(note.IsTheNoteOk == true)"
                                                        @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))"
                                                        id="note-@note.Id">
-                                                <label class="form-check-label" for="note-@note.Id">
-                                                    <small class="text-muted">Tamamlandı</small>
-                                                </label>
+                                                @if (use?.UsersType == "Admin")
+                                                {
+                                                    <i class="fa fa-trash text-danger" @onclick="@(async () => await DeleteNote(note.Id))"></i>
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -747,7 +817,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseDetailModal">Kapat</button>
-                    @if (use?.UsersType == "Admin" || use?.UsersType == "Employee")
+                    @if (use?.UsersType == "Admin")
                     {
                         <button type="button" class="btn btn-warning" @onclick="() => EditTask(selectedTask)">
                             <i class="fa fa-edit"></i> Düzenle
@@ -762,9 +832,6 @@
                     }
                     else
                     {
-                        <button type="button" class="btn btn-primary" disabled>
-                            Not Ekle
-                        </button>
                         <button type="button" class="btn btn-warning" disabled>
                             <i class="fa fa-edit"></i> Düzenle
                         </button>
@@ -964,16 +1031,22 @@
 
     private int GetTaskNotesCount(Guid taskId)
     {
-        return taskNotes.Count(n => n.TaskStatusId == taskId && (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true));
+        return taskNotes.Count(n => n.TaskStatusId == taskId &&
+                                   (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true));
     }
 
     private int IsOkGetTaskNotesCount(Guid taskId)
     {
-        return taskNotes.Count(n => n.TaskStatusId == taskId && (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && (n.IsTheNoteOk != null || n.IsTheNoteOk == true));
+        return taskNotes.Count(n => n.TaskStatusId == taskId &&
+                                   (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
+                                    n.IsTheNoteOk == true);
     }
+
     private int IsNotOkGetTaskNotesCount(Guid taskId)
     {
-        return taskNotes.Count(n => n.TaskStatusId == taskId && (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && (n.IsTheNoteOk == null || n.IsTheNoteOk != true));
+        return taskNotes.Count(n => n.TaskStatusId == taskId &&
+                                   (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
+                                    n.IsTheNoteOk != true);
     }
     #endregion
 
@@ -1344,6 +1417,37 @@
                 await ShowNotification("success", "Başarılı", "Not eklendi.", null);
                 await LoadTaskNotes(selectedTask.Id);
                 newNote = "";
+            }
+        });
+    }
+
+    private async Task DeleteNote(Guid noteId)
+    {
+        await ExecuteWithLock("deleteNote", async () =>
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var note = await db.TaskNotes.FirstOrDefaultAsync(n => n.Id == noteId, _cts.Token);
+            if (note != null)
+            {
+                // Soft delete işlemi
+                if (note.IsDeleted == null)
+                {
+                    note.IsDeleted = new IsDeleted();
+                }
+                note.IsDeleted.IsDeletedStatu = true;
+                note.IsDeleted.DeletedAtDate = DateTime.Now;
+
+                db.TaskNotes.Update(note);
+                await db.SaveChangesAsync(_cts.Token);
+
+                await ShowNotification("success", "Başarılı", "Not silindi.", null);
+
+                // Eğer bir görev detayı açıksa notları yeniden yükle
+                if (selectedTask != null)
+                {
+                    await LoadTaskNotes(selectedTask.Id);
+                }
             }
         });
     }

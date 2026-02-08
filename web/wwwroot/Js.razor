@@ -83,27 +83,55 @@
 <script>
     function updateTimers() {
         const timers = document.querySelectorAll('[id^="timer-"]');
-
         timers.forEach(timer => {
+            const startStr = timer.getAttribute('data-start');
             const targetStr = timer.getAttribute('data-target');
-            if (!targetStr) return;
+            if (!targetStr || !startStr) return;
 
+            const startDate = new Date(startStr).getTime();
             const targetDate = new Date(targetStr).getTime();
             const now = new Date().getTime();
+
+            const totalDuration = targetDate - startDate;
+            const elapsed = now - startDate;
             const distance = targetDate - now;
 
+            // Progress bar güncelleme
+            const taskId = timer.id.replace('timer-', '');
+            const progressBar = document.getElementById('progress-' + taskId);
+
+            if (progressBar) {
+                if (distance < 0) {
+                    // Süre doldu
+                    progressBar.style.width = '100%';
+                    progressBar.classList.remove('bg-warning');
+                    progressBar.classList.add('bg-danger');
+                } else {
+                    // Geçen süreye göre progress hesapla
+                    const progressPercent = (elapsed / totalDuration) * 100;
+                    progressBar.style.width = Math.min(progressPercent, 100) + '%';
+                    progressBar.classList.remove('bg-danger');
+                    progressBar.classList.add('bg-warning');
+                }
+            }
+
+            // Timer text güncelleme
             if (distance < 0) {
                 timer.innerHTML = "Süre Doldu";
-                timer.classList.replace('text-warning', 'text-danger');
+                timer.classList.remove('text-warning');
+                timer.classList.add('text-danger');
                 return;
             }
+
             const days = Math.floor(distance / (1000 * 60 * 60 * 24));
             const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
             timer.innerHTML = `${days}g ${hours}s ${minutes}d ${seconds}sn`;
         });
     }
+
     setInterval(updateTimers, 1000);
     updateTimers();
 </script>

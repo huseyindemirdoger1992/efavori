@@ -15,15 +15,20 @@
                 <h3 class="mb-2">
                     <i class="fa fa-tasks"></i> Yazılım Görev Panosu
                 </h3>
-
-
-
-
                 @if (use?.UsersType == "Admin")
                 {
-                    <button class="btn btn-primary btn-sm" @onclick="() => ShowAddTaskModal()" disabled="@IsButtonProcessing("add")">
-                        <i class="fa fa-plus"></i> Yeni Görev
-                    </button>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Yeni Ekle</button>
+                        <div class="dropdown-menu dropdown-menu-right dropdown-menu-lg-end" style="">
+                            <a class="dropdown-item" href="javascript:;">
+                                <i class="fa fa-address-book"></i> Yeni Kategori
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="javascript:;" @onclick="() => ShowAddTaskModal()" disabled="@IsButtonProcessing("add")">
+                                <i class="fa fa-tasks"></i> Yeni Görev
+                            </a>
+                        </div>
+                    </div>
                 }
                 else
                 {
@@ -34,8 +39,7 @@
             </div>
         </div>
     </div>
-
-    <div class="row">
+    <div class="row" style="margin-bottom:12px;">
         <div class="col-md-12">
             <label for="inputLastName1" class="form-label">Görevlerde Ara...</label>
             <div class="input-group">
@@ -47,9 +51,7 @@
             </div>
         </div>
     </div>
-
     <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
-
         <div class="col">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-danger text-white">

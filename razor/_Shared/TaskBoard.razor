@@ -6,6 +6,7 @@
 @using data._Shared
 @using razor._Shared
 @implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
 
 <div class="container-fluid p-3">
 
@@ -13,14 +14,15 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <h3 class="mb-2">
-                    <i class="fa fa-tasks"></i> Yazılım Görev Panosu
+                    <i class="fa fa-tasks"></i> Görevlendirme Panosu
                 </h3>
                 @if (use?.UsersType == "Admin")
                 {
                     <div class="btn-group">
                         <button type="button" class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Yeni Ekle</button>
                         <div class="dropdown-menu dropdown-menu-right dropdown-menu-lg-end" style="">
-                            <a class="dropdown-item" href="javascript:;">
+                            <a class="dropdown-item" href="javascript:;" data-bs-toggle="modal"
+                               data-bs-target="#AddNewCategoryModal">
                                 <i class="fa fa-address-book"></i> Yeni Kategori
                             </a>
                             <div class="dropdown-divider"></div>
@@ -39,505 +41,546 @@
             </div>
         </div>
     </div>
-    <div class="row" style="margin-bottom:12px;">
-        <div class="col-md-12">
-            <label for="inputLastName1" class="form-label">Görevlerde Ara...</label>
-            <div class="input-group">
-                <span class="input-group-text"><i class="fa fa-search"></i></span>
-                <input type="text" class="form-control border-start-0" id="inputLastName1" placeholder="Görev Ara..."
-                       @bind="_SearchText"
-                       @bind:event="oninput"
-                       @onchange="LoadData">
+
+
+
+    <div class="card">
+        <div class="card-body">
+            <ul class="nav nav-tabs" role="tablist">
+                @foreach (var item in taskCategories)
+                {
+                    <li class="nav-item" role="presentation" title="@item.Description">
+                        <a class="nav-link" data-bs-toggle="tab" href="#@item.Id" role="tab" aria-selected="false" tabindex="-1">
+                            <div class="d-flex align-items-center">
+                                <div class="tab-title">@item.Title</div>
+                            </div>
+                        </a>
+                    </li>
+                }
+            </ul>
+            <div class="tab-content py-3">
+                @foreach (var item in taskCategories)
+                {
+                    <div class="tab-pane fade" id="@item.Id" role="tabpanel">
+                        <div class="row" style="margin-bottom:12px;">
+                            <div class="col-md-12">
+                                <label for="inputLastName1" class="form-label">Görevlerde Ara...</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa fa-search"></i></span>
+                                    <input type="text" class="form-control border-start-0" id="inputLastName1" placeholder="Görev Ara..."
+                                           @bind="_SearchText"
+                                           @bind:event="oninput"
+                                           @onchange="LoadData">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
+                            <div class="col">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-danger text-white">
+                                        <h6 class="mb-0"><i class="fa fa-plus-circle"></i> Yeni (@GetTaskCountByStatus("NewTasks", item.Id))</h6>
+                                    </div>
+                                    <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
+                                         @ondrop="@(() => HandleDrop("NewTasks"))"
+                                         @ondragover:preventDefault="true"
+                                         @ondragenter:preventDefault="true">
+                                        @foreach (var task in GetTasksByStatus("NewTasks", item.Id))
+                                        {
+                                            var taskNotesCount = GetTaskNotesCount(task.Id);
+                                            var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
+                                            var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
+                                            <div class="task-card mb-2 bg-danger bg-opacity-25"
+                                                 draggable="true"
+                                                 @ondragstart="@(() => HandleDragStart(task.Id))"
+                                                 @onclick="@(() => ShowTaskDetail(task))">
+                                                <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
+
+                                                @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
+                                                {
+                                                    <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                        @task.TaskDescription
+                                                    </p>
+                                                }
+                                                <hr class="text-light" />
+                                                <div class="mb-2">
+                                                    <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
+                                                </div>
+                                                <hr class="text-warning" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-danger badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Başlangıç:
+                                                        @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Bitiş:
+                                                        @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-warning bg-light badge" style="width: 100%;">
+                                                        <i class="fa fa-clock-o me-1"></i>
+                                                        Kalan:
+                                                        <span id="timer-@(task.Id)"
+                                                              data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
+                                                              data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                                            -
+                                                        </span>
+                                                        <div class="progress mt-1" style="height: 5px;">
+                                                            <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+                                                        </div>
+                                                    </small>
+                                                </div>
+                                                @if (taskNotesCount > 0)
+                                                {
+                                                    <hr class="text-info" />
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-dark bg-warning badge" style="width: 100%;">
+                                                            Görev içerisindeki notlar
+                                                        </small>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-light bg-primary badge" style="width: 100%;">
+                                                            <i class="fa fa-th-list me-1"></i>
+                                                            @taskNotesCount
+                                                        </small>
+                                                        <small class="text-light bg-light badge" style="width: 100%;">
+                                                            <i class="fa fa-hourglass-half me-1"></i>
+                                                            @IsNotOktaskNotesCount
+                                                        </small>
+                                                        <small class="text-light bg-success badge" style="width: 100%;">
+                                                            <i class="fa fa-check-square me-1"></i>
+                                                            @IsOktaskNotesCount
+                                                        </small>
+                                                    </div>
+                                                }
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light" style="width: 100%;">
+                                                        <i class="fa fa-user me-1"></i>
+                                                        @{
+                                                            var userName = GetUserName(task.PersonInChargeUserId);
+                                                            userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
+                                                        }
+                                                        <span class="text-light">@userName</span>
+                                                    </small>
+                                                </div>
+
+
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-light text-white">
+                                        <h6 class="mb-0"><i class="fa fa-inbox"></i> Yapılacak (@GetTaskCountByStatus("ToBeDone", item.Id))</h6>
+                                    </div>
+                                    <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
+                                         @ondrop="@(() => HandleDrop("ToBeDone"))"
+                                         @ondragover:preventDefault="true"
+                                         @ondragenter:preventDefault="true">
+                                        @foreach (var task in GetTasksByStatus("ToBeDone", item.Id))
+                                        {
+                                            var taskNotesCount = GetTaskNotesCount(task.Id);
+                                            var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
+                                            var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
+                                            <div class="task-card mb-2 bg-light bg-opacity-25"
+                                                 draggable="true"
+                                                 @ondragstart="@(() => HandleDragStart(task.Id))"
+                                                 @onclick="@(() => ShowTaskDetail(task))">
+                                                <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
+
+                                                @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
+                                                {
+                                                    <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                        @task.TaskDescription
+                                                    </p>
+                                                }
+                                                <hr class="text-light" />
+                                                <div class="mb-2">
+                                                    <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
+                                                </div>
+                                                <hr class="text-warning" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-danger badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Başlangıç:
+                                                        @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Bitiş:
+                                                        @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-warning bg-light badge" style="width: 100%;">
+                                                        <i class="fa fa-clock-o me-1"></i>
+                                                        Kalan:
+                                                        <span id="timer-@(task.Id)"
+                                                              data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
+                                                              data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                                            -
+                                                        </span>
+                                                        <div class="progress mt-1" style="height: 5px;">
+                                                            <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+                                                        </div>
+                                                    </small>
+                                                </div>
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-dark bg-warning badge" style="width: 100%;">
+                                                        Görev içerisindeki notlar
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-primary badge" style="width: 100%;">
+                                                        <i class="fa fa-th-list me-1"></i>
+                                                        @taskNotesCount
+                                                    </small>
+                                                    <small class="text-light bg-light badge" style="width: 100%;">
+                                                        <i class="fa fa-hourglass-half me-1"></i>
+                                                        @IsNotOktaskNotesCount
+                                                    </small>
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-check-square me-1"></i>
+                                                        @IsOktaskNotesCount
+                                                    </small>
+                                                </div>
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light" style="width: 100%;">
+                                                        <i class="fa fa-user me-1"></i>
+                                                        @{
+                                                            var userName = GetUserName(task.PersonInChargeUserId);
+                                                            userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
+                                                        }
+                                                        <span class="text-light">@userName</span>
+                                                    </small>
+                                                </div>
+
+
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0"><i class="fa fa-spinner fa-spin"></i> İşlemde (@GetTaskCountByStatus("InProcess", item.Id))</h6>
+                                    </div>
+                                    <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
+                                         @ondrop="@(() => HandleDrop("InProcess"))"
+                                         @ondragover:preventDefault="true"
+                                         @ondragenter:preventDefault="true">
+                                        @foreach (var task in GetTasksByStatus("InProcess", item.Id))
+                                        {
+                                            var taskNotesCount = GetTaskNotesCount(task.Id);
+                                            var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
+                                            var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
+                                            <div class="task-card mb-2 bg-primary bg-opacity-25"
+                                                 draggable="true"
+                                                 @ondragstart="@(() => HandleDragStart(task.Id))"
+                                                 @onclick="@(() => ShowTaskDetail(task))">
+                                                <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
+
+                                                @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
+                                                {
+                                                    <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                        @task.TaskDescription
+                                                    </p>
+                                                }
+                                                <hr class="text-light" />
+                                                <div class="mb-2">
+                                                    <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
+                                                </div>
+                                                <hr class="text-warning" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-danger badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Başlangıç:
+                                                        @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Bitiş:
+                                                        @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-warning bg-light badge" style="width: 100%;">
+                                                        <i class="fa fa-clock-o me-1"></i>
+                                                        Kalan:
+                                                        <span id="timer-@(task.Id)"
+                                                              data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
+                                                              data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                                            -
+                                                        </span>
+                                                        <div class="progress mt-1" style="height: 5px;">
+                                                            <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+                                                        </div>
+                                                    </small>
+                                                </div>
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-dark bg-warning badge" style="width: 100%;">
+                                                        Görev içerisindeki notlar
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-primary badge" style="width: 100%;">
+                                                        <i class="fa fa-th-list me-1"></i>
+                                                        @taskNotesCount
+                                                    </small>
+                                                    <small class="text-light bg-light badge" style="width: 100%;">
+                                                        <i class="fa fa-hourglass-half me-1"></i>
+                                                        @IsNotOktaskNotesCount
+                                                    </small>
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-check-square me-1"></i>
+                                                        @IsOktaskNotesCount
+                                                    </small>
+                                                </div>
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light" style="width: 100%;">
+                                                        <i class="fa fa-user me-1"></i>
+                                                        @{
+                                                            var userName = GetUserName(task.PersonInChargeUserId);
+                                                            userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
+                                                        }
+                                                        <span class="text-light">@userName</span>
+                                                    </small>
+                                                </div>
+
+
+
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0"><i class="fa fa-edit"></i> Düzenlemede (@GetTaskCountByStatus("InEditing", item.Id))</h6>
+                                    </div>
+                                    <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
+                                         @ondrop="@(() => HandleDrop("InEditing"))"
+                                         @ondragover:preventDefault="true"
+                                         @ondragenter:preventDefault="true">
+                                        @foreach (var task in GetTasksByStatus("InEditing", item.Id))
+                                        {
+                                            var taskNotesCount = GetTaskNotesCount(task.Id);
+                                            var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
+                                            var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
+                                            <div class="task-card mb-2 bg-info bg-opacity-25"
+                                                 draggable="true"
+                                                 @ondragstart="@(() => HandleDragStart(task.Id))"
+                                                 @onclick="@(() => ShowTaskDetail(task))">
+                                                <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
+
+                                                @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
+                                                {
+                                                    <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                        @task.TaskDescription
+                                                    </p>
+                                                }
+                                                <hr class="text-light" />
+                                                <div class="mb-2">
+                                                    <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
+                                                </div>
+                                                <hr class="text-warning" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-danger badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Başlangıç:
+                                                        @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Bitiş:
+                                                        @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-warning bg-light badge" style="width: 100%;">
+                                                        <i class="fa fa-clock-o me-1"></i>
+                                                        Kalan:
+                                                        <span id="timer-@(task.Id)"
+                                                              data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
+                                                              data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                                            -
+                                                        </span>
+                                                        <div class="progress mt-1" style="height: 5px;">
+                                                            <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+                                                        </div>
+                                                    </small>
+                                                </div>
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-dark bg-warning badge" style="width: 100%;">
+                                                        Görev içerisindeki notlar
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-primary badge" style="width: 100%;">
+                                                        <i class="fa fa-th-list me-1"></i>
+                                                        @taskNotesCount
+                                                    </small>
+                                                    <small class="text-light bg-light badge" style="width: 100%;">
+                                                        <i class="fa fa-hourglass-half me-1"></i>
+                                                        @IsNotOktaskNotesCount
+                                                    </small>
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-check-square me-1"></i>
+                                                        @IsOktaskNotesCount
+                                                    </small>
+                                                </div>
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light" style="width: 100%;">
+                                                        <i class="fa fa-user me-1"></i>
+                                                        @{
+                                                            var userName = GetUserName(task.PersonInChargeUserId);
+                                                            userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
+                                                        }
+                                                        <span class="text-light">@userName</span>
+                                                    </small>
+                                                </div>
+
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-success text-white">
+                                        <h6 class="mb-0"><i class="fa fa-check-circle"></i> Tamamlandı (@GetTaskCountByStatus("Completed", item.Id))</h6>
+                                    </div>
+                                    <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
+                                         @ondrop="@(() => HandleDrop("Completed"))"
+                                         @ondragover:preventDefault="true"
+                                         @ondragenter:preventDefault="true">
+                                        @foreach (var task in GetTasksByStatus("Completed", item.Id))
+                                        {
+                                            var taskNotesCount = GetTaskNotesCount(task.Id);
+                                            var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
+                                            var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
+                                            <div class="task-card mb-2 bg-success bg-opacity-25"
+                                                 draggable="true"
+                                                 @ondragstart="@(() => HandleDragStart(task.Id))"
+                                                 @onclick="@(() => ShowTaskDetail(task))">
+                                                <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
+
+                                                @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
+                                                {
+                                                    <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                        @task.TaskDescription
+                                                    </p>
+                                                }
+                                                <hr class="text-light" />
+                                                <div class="mb-2">
+                                                    <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
+                                                </div>
+                                                <hr class="text-warning" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-danger badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Başlangıç:
+                                                        @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                        <i class="fa fa-calendar me-1"></i>
+                                                        Bitiş:
+                                                        @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
+                                                    </small>
+                                                </div>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light bg-dark badge" style="width: 100%;">
+                                                        <i class="fa fa-check me-1"></i>
+                                                        Tamamlandı
+                                                    </small>
+                                                </div>
+                                                @if (taskNotesCount > 0)
+                                                {
+                                                    <hr class="text-info" />
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-dark bg-warning badge" style="width: 100%;">
+                                                            Görev içerisindeki notlar
+                                                        </small>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <small class="text-light bg-primary badge" style="width: 100%;">
+                                                            <i class="fa fa-th-list me-1"></i>
+                                                            @taskNotesCount
+                                                        </small>
+                                                        <small class="text-light bg-light badge" style="width: 100%;">
+                                                            <i class="fa fa-hourglass-half me-1"></i>
+                                                            @IsNotOktaskNotesCount
+                                                        </small>
+                                                        <small class="text-light bg-success badge" style="width: 100%;">
+                                                            <i class="fa fa-check-square me-1"></i>
+                                                            @IsOktaskNotesCount
+                                                        </small>
+                                                    </div>
+                                                }
+                                                <hr class="text-info" />
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-light" style="width: 100%;">
+                                                        <i class="fa fa-user me-1"></i>
+                                                        @{
+                                                            var userName = GetUserName(task.PersonInChargeUserId);
+                                                            userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
+                                                        }
+                                                        <span class="text-light">@userName</span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                }
             </div>
         </div>
     </div>
-    <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
-        <div class="col">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-danger text-white">
-                    <h6 class="mb-0"><i class="fa fa-plus-circle"></i> Yeni (@GetTaskCountByStatus("NewTasks"))</h6>
-                </div>
-                <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
-                     @ondrop="@(() => HandleDrop("NewTasks"))"
-                     @ondragover:preventDefault="true"
-                     @ondragenter:preventDefault="true">
-                    @foreach (var task in GetTasksByStatus("NewTasks"))
-                    {
-                        var taskNotesCount = GetTaskNotesCount(task.Id);
-                        var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
-                        var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
-                        <div class="task-card mb-2 bg-danger bg-opacity-25"
-                             draggable="true"
-                             @ondragstart="@(() => HandleDragStart(task.Id))"
-                             @onclick="@(() => ShowTaskDetail(task))">
-                            <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
-                            @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
-                            {
-                                <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                    @task.TaskDescription
-                                </p>
-                            }
-                            <hr class="text-light" />
-                            <div class="mb-2">
-                                <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
-                            </div>
-                            <hr class="text-warning" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-danger badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Başlangıç:
-                                    @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Bitiş:
-                                    @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-warning bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-clock-o me-1"></i>
-                                    Kalan:
-                                    <span id="timer-@(task.Id)"
-                                          data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
-                                          data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
-                                        -
-                                    </span>
-                                    <div class="progress mt-1" style="height: 5px;">
-                                        <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
-                                    </div>
-                                </small>
-                            </div>
-                            @if (taskNotesCount > 0)
-                            {
-                                <hr class="text-info" />
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-dark bg-warning badge" style="width: 100%;">
-                                        Görev içerisindeki notlar
-                                    </small>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-light bg-primary badge" style="width: 100%;">
-                                        <i class="fa fa-th-list me-1"></i>
-                                        @taskNotesCount
-                                    </small>
-                                    <small class="text-light bg-light badge" style="width: 100%;">
-                                        <i class="fa fa-hourglass-half me-1"></i>
-                                        @IsNotOktaskNotesCount
-                                    </small>
-                                    <small class="text-light bg-success badge" style="width: 100%;">
-                                        <i class="fa fa-check-square me-1"></i>
-                                        @IsOktaskNotesCount
-                                    </small>
-                                </div>
-                            }
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light" style="width: 100%;">
-                                    <i class="fa fa-user me-1"></i>
-                                    @{
-                                        var userName = GetUserName(task.PersonInChargeUserId);
-                                        userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
-                                    }
-                                    <span class="text-light">@userName</span>
-                                </small>
-                            </div>
-
-
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-light text-white">
-                    <h6 class="mb-0"><i class="fa fa-inbox"></i> Yapılacak (@GetTaskCountByStatus("ToBeDone"))</h6>
-                </div>
-                <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
-                     @ondrop="@(() => HandleDrop("ToBeDone"))"
-                     @ondragover:preventDefault="true"
-                     @ondragenter:preventDefault="true">
-                    @foreach (var task in GetTasksByStatus("ToBeDone"))
-                    {
-                        var taskNotesCount = GetTaskNotesCount(task.Id);
-                        var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
-                        var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
-                        <div class="task-card mb-2 bg-light bg-opacity-25"
-                             draggable="true"
-                             @ondragstart="@(() => HandleDragStart(task.Id))"
-                             @onclick="@(() => ShowTaskDetail(task))">
-                            <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
-                            @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
-                            {
-                                <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                    @task.TaskDescription
-                                </p>
-                            }
-                            <hr class="text-light" />
-                            <div class="mb-2">
-                                <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
-                            </div>
-                            <hr class="text-warning" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-danger badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Başlangıç:
-                                    @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Bitiş:
-                                    @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-warning bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-clock-o me-1"></i>
-                                    Kalan:
-                                    <span id="timer-@(task.Id)"
-                                          data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
-                                          data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
-                                        -
-                                    </span>
-                                    <div class="progress mt-1" style="height: 5px;">
-                                        <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
-                                    </div>
-                                </small>
-                            </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-dark bg-warning badge" style="width: 100%;">
-                                    Görev içerisindeki notlar
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-primary badge" style="width: 100%;">
-                                    <i class="fa fa-th-list me-1"></i>
-                                    @taskNotesCount
-                                </small>
-                                <small class="text-light bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-hourglass-half me-1"></i>
-                                    @IsNotOktaskNotesCount
-                                </small>
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-check-square me-1"></i>
-                                    @IsOktaskNotesCount
-                                </small>
-                            </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light" style="width: 100%;">
-                                    <i class="fa fa-user me-1"></i>
-                                    @{
-                                        var userName = GetUserName(task.PersonInChargeUserId);
-                                        userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
-                                    }
-                                    <span class="text-light">@userName</span>
-                                </small>
-                            </div>
-
-
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0"><i class="fa fa-spinner fa-spin"></i> İşlemde (@GetTaskCountByStatus("InProcess"))</h6>
-                </div>
-                <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
-                     @ondrop="@(() => HandleDrop("InProcess"))"
-                     @ondragover:preventDefault="true"
-                     @ondragenter:preventDefault="true">
-                    @foreach (var task in GetTasksByStatus("InProcess"))
-                    {
-                        var taskNotesCount = GetTaskNotesCount(task.Id);
-                        var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
-                        var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
-                        <div class="task-card mb-2 bg-primary bg-opacity-25"
-                             draggable="true"
-                             @ondragstart="@(() => HandleDragStart(task.Id))"
-                             @onclick="@(() => ShowTaskDetail(task))">
-                            <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
-                            @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
-                            {
-                                <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                    @task.TaskDescription
-                                </p>
-                            }
-                            <hr class="text-light" />
-                            <div class="mb-2">
-                                <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
-                            </div>
-                            <hr class="text-warning" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-danger badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Başlangıç:
-                                    @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Bitiş:
-                                    @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-warning bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-clock-o me-1"></i>
-                                    Kalan:
-                                    <span id="timer-@(task.Id)"
-                                          data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
-                                          data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
-                                        -
-                                    </span>
-                                    <div class="progress mt-1" style="height: 5px;">
-                                        <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
-                                    </div>
-                                </small>
-                            </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-dark bg-warning badge" style="width: 100%;">
-                                    Görev içerisindeki notlar
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-primary badge" style="width: 100%;">
-                                    <i class="fa fa-th-list me-1"></i>
-                                    @taskNotesCount
-                                </small>
-                                <small class="text-light bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-hourglass-half me-1"></i>
-                                    @IsNotOktaskNotesCount
-                                </small>
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-check-square me-1"></i>
-                                    @IsOktaskNotesCount
-                                </small>
-                            </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light" style="width: 100%;">
-                                    <i class="fa fa-user me-1"></i>
-                                    @{
-                                        var userName = GetUserName(task.PersonInChargeUserId);
-                                        userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
-                                    }
-                                    <span class="text-light">@userName</span>
-                                </small>
-                            </div>
 
 
 
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
 
-        <div class="col">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0"><i class="fa fa-edit"></i> Düzenlemede (@GetTaskCountByStatus("InEditing"))</h6>
-                </div>
-                <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
-                     @ondrop="@(() => HandleDrop("InEditing"))"
-                     @ondragover:preventDefault="true"
-                     @ondragenter:preventDefault="true">
-                    @foreach (var task in GetTasksByStatus("InEditing"))
-                    {
-                        var taskNotesCount = GetTaskNotesCount(task.Id);
-                        var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
-                        var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
-                        <div class="task-card mb-2 bg-info bg-opacity-25"
-                             draggable="true"
-                             @ondragstart="@(() => HandleDragStart(task.Id))"
-                             @onclick="@(() => ShowTaskDetail(task))">
-                            <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
 
-                            @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
-                            {
-                                <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                    @task.TaskDescription
-                                </p>
-                            }
-                            <hr class="text-light" />
-                            <div class="mb-2">
-                                <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
-                            </div>
-                            <hr class="text-warning" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-danger badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Başlangıç:
-                                    @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Bitiş:
-                                    @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-warning bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-clock-o me-1"></i>
-                                    Kalan:
-                                    <span id="timer-@(task.Id)"
-                                          data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
-                                          data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
-                                        -
-                                    </span>
-                                    <div class="progress mt-1" style="height: 5px;">
-                                        <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
-                                    </div>
-                                </small>
-                            </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-dark bg-warning badge" style="width: 100%;">
-                                    Görev içerisindeki notlar
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-primary badge" style="width: 100%;">
-                                    <i class="fa fa-th-list me-1"></i>
-                                    @taskNotesCount
-                                </small>
-                                <small class="text-light bg-light badge" style="width: 100%;">
-                                    <i class="fa fa-hourglass-half me-1"></i>
-                                    @IsNotOktaskNotesCount
-                                </small>
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-check-square me-1"></i>
-                                    @IsOktaskNotesCount
-                                </small>
-                            </div>
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light" style="width: 100%;">
-                                    <i class="fa fa-user me-1"></i>
-                                    @{
-                                        var userName = GetUserName(task.PersonInChargeUserId);
-                                        userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
-                                    }
-                                    <span class="text-light">@userName</span>
-                                </small>
-                            </div>
 
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
 
-        <div class="col">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    <h6 class="mb-0"><i class="fa fa-check-circle"></i> Tamamlandı (@GetTaskCountByStatus("Completed"))</h6>
-                </div>
-                <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
-                     @ondrop="@(() => HandleDrop("Completed"))"
-                     @ondragover:preventDefault="true"
-                     @ondragenter:preventDefault="true">
-                    @foreach (var task in GetTasksByStatus("Completed"))
-                    {
-                        var taskNotesCount = GetTaskNotesCount(task.Id);
-                        var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
-                        var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
-                        <div class="task-card mb-2 bg-success bg-opacity-25"
-                             draggable="true"
-                             @ondragstart="@(() => HandleDragStart(task.Id))"
-                             @onclick="@(() => ShowTaskDetail(task))">
-                            <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
 
-                            @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
-                            {
-                                <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                    @task.TaskDescription
-                                </p>
-                            }
-                            <hr class="text-light" />
-                            <div class="mb-2">
-                                <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
-                            </div>
-                            <hr class="text-warning" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-danger badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Başlangıç:
-                                    @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-success badge" style="width: 100%;">
-                                    <i class="fa fa-calendar me-1"></i>
-                                    Bitiş:
-                                    @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
-                                </small>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light bg-dark badge" style="width: 100%;">
-                                    <i class="fa fa-check me-1"></i>
-                                    Tamamlandı
-                                </small>
-                            </div>
-                            @if (taskNotesCount > 0)
-                            {
-                                <hr class="text-info" />
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-dark bg-warning badge" style="width: 100%;">
-                                        Görev içerisindeki notlar
-                                    </small>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-light bg-primary badge" style="width: 100%;">
-                                        <i class="fa fa-th-list me-1"></i>
-                                        @taskNotesCount
-                                    </small>
-                                    <small class="text-light bg-light badge" style="width: 100%;">
-                                        <i class="fa fa-hourglass-half me-1"></i>
-                                        @IsNotOktaskNotesCount
-                                    </small>
-                                    <small class="text-light bg-success badge" style="width: 100%;">
-                                        <i class="fa fa-check-square me-1"></i>
-                                        @IsOktaskNotesCount
-                                    </small>
-                                </div>
-                            }
-                            <hr class="text-info" />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-light" style="width: 100%;">
-                                    <i class="fa fa-user me-1"></i>
-                                    @{
-                                        var userName = GetUserName(task.PersonInChargeUserId);
-                                        userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
-                                    }
-                                    <span class="text-light">@userName</span>
-                                </small>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
+
+
+
+
+
+
 
 </div>
 
@@ -561,7 +604,16 @@
                         <textarea class="form-control" rows="3" @bind="AddTask.TaskDescription"></textarea>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Kategori</label>
+                            <select class="form-select" @bind="AddTask.TaskCategoriesId">
+                                @foreach (var item in taskCategories)
+                                {
+                                    <option value="@item.Id">@item.Title</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Öncelik</label>
                             <select class="form-select" @bind="AddTask.Priority">
                                 <option value="Düşük">Düşük</option>
@@ -569,13 +621,13 @@
                                 <option value="Yüksek">Yüksek</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Hedef Tarih</label>
                             <input type="date" class="form-control" @bind="targetDate" />
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Sorumlu Kişi</label>
+                        <label class="form-label">Sorumlu Kişi (Boş bırakılırsa adınıza kaydedilir)</label>
                         <select class="form-select" @bind="selectedPersonInCharge">
                             <option value="">Seçiniz...</option>
                             @foreach (var user in adminUsers)
@@ -620,7 +672,20 @@
                         <textarea class="form-control" rows="3" @bind="editingTask.TaskDescription"></textarea>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Kategori</label>
+                            <select class="form-select" @bind="editingTask.TaskCategoriesId">
+                                <option value="@editingTask.TaskCategoriesId">@GetCategoryText(selectedTask.TaskCategoriesId)</option>
+                                @foreach (var item in taskCategories)
+                                {
+                                    if (item.Id != editingTask.TaskCategoriesId)
+                                    {
+                                        <option value="@item.Id">@item.Title</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Öncelik</label>
                             <select class="form-select" @bind="editingTask.Priority">
                                 <option value="Düşük">Düşük</option>
@@ -628,7 +693,7 @@
                                 <option value="Yüksek">Yüksek</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label">Hedef Tarih</label>
                             <input type="date" class="form-control" @bind="editTargetDate" />
                         </div>
@@ -701,13 +766,19 @@
                 </div>
                 <div class="modal-body">
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <strong>Kategori:</strong>
+                            <span class="badge @GetStatusBadgeClass(selectedTask.Status)">
+                                @GetCategoryText(selectedTask.TaskCategoriesId)
+                            </span>
+                        </div>
+                        <div class="col-md-4">
                             <strong>Durum:</strong>
                             <span class="badge @GetStatusBadgeClass(selectedTask.Status)">
                                 @GetStatusText(selectedTask.Status)
                             </span>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <strong>Öncelik:</strong>
                             <span class="badge @GetPriorityBadgeClass(selectedTask.Priority)">
                                 @selectedTask.Priority
@@ -719,18 +790,18 @@
                         <textarea class="form-control bg-light" rows="3" disabled>@(selectedTask.TaskDescription ?? "Açıklama yok")</textarea>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <strong>Oluşturulma:</strong>
                             <p>@selectedTask.DateCreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <strong>Hedef Tarih:</strong>
                             <p>@(selectedTask.TargetDate?.ToString("dd.MM.yyyy") ?? "-")</p>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Sorumlu Kişi:</strong>
-                        <p>@GetUserName(selectedTask.PersonInChargeUserId)</p>
+                        <div class="col-md-4">
+                            <strong>Sorumlu Kişi:</strong>
+                            <p>@GetUserName(selectedTask.PersonInChargeUserId)</p>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label"><strong>Yeni Not Ekle:</strong></label>
@@ -821,6 +892,39 @@
 @* Yeni kategori Modalı*@
 
 
+<div class="modal fade" id="AddNewCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title text-white">
+                    <i class="fa fa-address-book"></i> Yeni Görev Kategorisi
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="col-12">
+                    <label>Kategori Adı</label>
+                    <input class="form-control mb-3" type="text" @bind="TaskCategories?.Title">
+                </div>
+                <div class="col-12">
+                    <label>Kategori Açıklaması</label>
+                    <textarea class="form-control" rows="3" @bind="TaskCategories?.Description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-top border-secondary">
+                <button type="button"
+                        class="@(IsButtonProcessing("addCategory") ? "btn btn-light colored" : "btn btn-light")"
+                        style="width:100%;"
+                        @onclick='AddNewCategori'
+                        disabled="@IsButtonProcessing("addCategory")">
+                    <i class="fa @(IsButtonProcessing("addCategory") ? "fa-refresh fa-spin" : "fa-plus")"></i>
+                    <span>@(IsButtonProcessing("addCategory") ? "Yükleniyor..." : "Kaydet")</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <Notification @ref="notificationRef" />
 
 @code {
@@ -844,13 +948,15 @@
     #endregion
 
     #region Data
-    private List<data.TaskStatus> tasks = new();
     private List<Users> adminUsers = new();
+    private List<TaskCategories> taskCategories = new();
+    private List<data.TaskStatus> tasks = new();
     private List<TaskNotes> taskNotes = new();
     private Guid? draggedTaskId;
     private bool AddTaskshowModal = false;
     private bool EditTaskshowModal = false;
     private bool showDetailModal = false;
+    private data.TaskCategories? TaskCategories = new();
     private data.TaskStatus? AddTask;
     private data.TaskStatus? editingTask;
     private data.TaskStatus? selectedTask;
@@ -979,6 +1085,12 @@
             _ => "Bilinmiyor"
         };
     }
+    private string GetCategoryText(Guid? id)
+    {
+        if (id == null) return "Bilinmiyor";
+        var category = taskCategories.FirstOrDefault(c => c.Id == id);
+        return category?.Title ?? "Bilinmiyor";
+    }
 
     private string GetStatusBadgeClass(string? status)
     {
@@ -1049,16 +1161,21 @@
                 }
             }
 
-            tasks = await query
-                .AsNoTracking()
-                .OrderBy(t => t.DateCreatedAt)
-                .ToListAsync(_cts.Token);
-
             adminUsers = await db.Users
                 .AsNoTracking()
                 .Where(u => u.UsersType == "Employee" || u.UsersType == "Admin")
                 .OrderBy(u => u.FirstName)
                 .ThenBy(u => u.LastName)
+                .ToListAsync(_cts.Token);
+
+            taskCategories = await db.TaskCategories
+                .AsNoTracking()
+                .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true && n.UserId == use.Id)
+                .ToListAsync(_cts.Token);
+
+            tasks = await query
+                .AsNoTracking()
+                .OrderBy(t => t.DateCreatedAt)
                 .ToListAsync(_cts.Token);
 
             taskNotes = await db.TaskNotes
@@ -1073,14 +1190,14 @@
         }
     }
 
-    private List<data.TaskStatus> GetTasksByStatus(string status)
+    private List<data.TaskStatus> GetTasksByStatus(string status, Guid? TaskCategoriesId)
     {
-        return tasks.Where(t => t.Status == status).ToList();
+        return tasks.Where(t => t.Status == status && t.TaskCategoriesId == TaskCategoriesId).ToList();
     }
 
-    private int GetTaskCountByStatus(string status)
+    private int GetTaskCountByStatus(string status, Guid? TaskCategoriesId)
     {
-        return tasks.Count(t => t.Status == status);
+        return tasks.Count(t => t.Status == status && t.TaskCategoriesId == TaskCategoriesId);
     }
     #endregion
 
@@ -1251,11 +1368,18 @@
                 AddTask.TargetDate = targetDate.Value;
             }
 
-            db.TaskStatus.Add(AddTask);
-            await db.SaveChangesAsync(_cts.Token);
-            await ShowNotification("success", "Başarılı", "Görev oluşturuldu.", null);
-            await LoadData();
-            CloseAddModal();
+            if (string.IsNullOrEmpty(AddTask.TaskTitle) || string.IsNullOrEmpty(AddTask.TaskDescription) || AddTask.TaskCategoriesId == null)
+            {
+                await ShowNotification("danger", "Hata", "Boş alan bırakmayınız.", null);
+            }
+            else
+            {
+                db.TaskStatus.Add(AddTask);
+                await db.SaveChangesAsync(_cts.Token);
+                await ShowNotification("success", "Başarılı", "Görev oluşturuldu.", null);
+                await LoadData();
+                CloseAddModal();
+            }
         });
     }
 
@@ -1444,6 +1568,35 @@
                     await LoadTaskNotes(selectedTask.Id);
                 }
             }
+        });
+    }
+
+    // Metod - ExecuteWithLock kullanarak
+    public async Task AddNewCategori()
+    {
+        await ExecuteWithLock("AddNewCategori", async () =>
+        {
+            // Null kontrolü ve validasyon
+            if (TaskCategories == null ||
+                string.IsNullOrWhiteSpace(TaskCategories.Title) ||
+                string.IsNullOrWhiteSpace(TaskCategories.Description))
+            {
+                await ShowNotification("danger", "Hata", "Kategori bilgileri eksik.", null);
+                return;
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            TaskCategories.UserId = use?.Id;
+            TaskCategories.CreatedAt = DateTime.UtcNow;
+
+            db.TaskCategories.Add(TaskCategories);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await ShowNotification("success", "Başarılı", "Yeni kategori eklendi.", null);
+            await JSRuntime.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
+            // Formu temizle
+            TaskCategories = new();
         });
     }
     #endregion

@@ -23,6 +23,8 @@ namespace razor
         [Inject] protected TakeLogs ApiTakeLogs { get; init; } = default!;
         // [Inject] protected TextualFunctions ApiTextualFunctions { get; init; } = default!;
         [Inject] protected UserInfos ApiUserInfos { get; init; } = default!;
+        [Inject] IJSRuntime JSRuntime { get; init; } = default!;
+
         #endregion
 
         #region State Management
@@ -186,6 +188,7 @@ namespace razor
                 // await db.SaveChangesAsync(_cts.Token);
 
                 await ShowNotification("success", "Başarılı", "İşlem tamamlandı.", null);
+                await JSRuntime.InvokeVoidAsync("eval", "$('#Modal_Id').modal('hide')");
                 await Task.Delay(500, _cts.Token);
                 await LoadData();
             });

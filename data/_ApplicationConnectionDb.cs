@@ -11,6 +11,8 @@ namespace data
 {
     public class _ApplicationConnectionDb : DbContext
     {
+        public DbSet<WorkstationEmployeeGroup> WorkstationEmployeeGroup { get; set; } = default!;
+
         // Tasks
         public DbSet<TaskCategories> TaskCategories { get; set; } = default!;
         public DbSet<TaskStatus> TaskStatus { get; set; } = default!;

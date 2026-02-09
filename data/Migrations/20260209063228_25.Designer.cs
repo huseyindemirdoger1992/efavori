@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260209063228_25")]
+    partial class _25
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1100,26 +1103,6 @@ namespace data.Migrations
                     b.ToTable("UsersRoles");
                 });
 
-            modelBuilder.Entity("data.WorkstationEmployeeGroup", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("CreateAtDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GroupName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("WorkstationEmployeeGroup");
-                });
-
             modelBuilder.Entity("data.Addresses", b =>
                 {
                     b.OwnsOne("data._Shared.AddressInfo", "AddressInfo", b1 =>
@@ -1815,267 +1798,9 @@ namespace data.Migrations
                                 .HasForeignKey("UsersId");
                         });
 
-                    b.OwnsOne("data._Shared.UserRolesAccessPermissions", "UserRolesAccessPermissions", b1 =>
-                        {
-                            b1.Property<Guid>("UsersId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<bool?>("IsItStaff")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("UsersId");
-
-                            b1.ToTable("Users");
-
-                            b1.WithOwner()
-                                .HasForeignKey("UsersId");
-                        });
-
                     b.Navigation("ContactInformation");
 
                     b.Navigation("IsPrivateOrPublic");
-
-                    b.Navigation("ProfileCoverGallery");
-
-                    b.Navigation("UserRolesAccessPermissions");
-                });
-
-            modelBuilder.Entity("data.WorkstationEmployeeGroup", b =>
-                {
-                    b.OwnsOne("data._Shared.AddressInfo", "AddressInfo", b1 =>
-                        {
-                            b1.Property<Guid>("WorkstationEmployeeGroupId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("Address")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("City")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Country")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("GoogleMyBusinessAccountLink")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<double?>("Latitude")
-                                .HasColumnType("float");
-
-                            b1.Property<double?>("Longitude")
-                                .HasColumnType("float");
-
-                            b1.Property<string>("MapTitle")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("State")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("ZipCode")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("WorkstationEmployeeGroupId");
-
-                            b1.ToTable("WorkstationEmployeeGroup");
-
-                            b1.WithOwner()
-                                .HasForeignKey("WorkstationEmployeeGroupId");
-                        });
-
-                    b.OwnsOne("data._Shared.ContactInformation", "ContactInformation", b1 =>
-                        {
-                            b1.Property<Guid>("WorkstationEmployeeGroupId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("Behance")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("CountryPhoneCode")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Discord")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Email")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Facebook")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("FullPhoneNumber")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("GitHub")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Instagram")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<bool?>("IsActiveBehance")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveDiscord")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveEmail")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveFacebook")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveGitHub")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveInstagram")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveKakaoTalk")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveLine")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveLinkedin")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActivePhoneNumber")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActivePinterest")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveReddit")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveTelegram")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveTikTok")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveUserWebSite")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveVKontakte")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWeChat")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWeibo")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWhatsApp")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveX")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveYouTube")
-                                .HasColumnType("bit");
-
-                            b1.Property<string>("KakaoTalk")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Line")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Linkedin")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<bool>("PhoneEmailConfirmed")
-                                .HasColumnType("bit");
-
-                            b1.Property<string>("PhoneNumber")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<bool>("PhoneNumberConfirmed")
-                                .HasColumnType("bit");
-
-                            b1.Property<string>("Pinterest")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Reddit")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Telegram")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("TikTok")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("UserWebSite")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("VKontakte")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("WeChat")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("Weibo")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("WhatsApp")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("X")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("YouTube")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("WorkstationEmployeeGroupId");
-
-                            b1.ToTable("WorkstationEmployeeGroup");
-
-                            b1.WithOwner()
-                                .HasForeignKey("WorkstationEmployeeGroupId");
-                        });
-
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("WorkstationEmployeeGroupId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("WorkstationEmployeeGroupId");
-
-                            b1.ToTable("WorkstationEmployeeGroup");
-
-                            b1.WithOwner()
-                                .HasForeignKey("WorkstationEmployeeGroupId");
-                        });
-
-                    b.OwnsOne("data._Shared.ProfileCoverGallery", "ProfileCoverGallery", b1 =>
-                        {
-                            b1.Property<Guid>("WorkstationEmployeeGroupId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CoverImagePath")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("ProfileImagePath")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("WorkstationEmployeeGroupId");
-
-                            b1.ToTable("WorkstationEmployeeGroup");
-
-                            b1.WithOwner()
-                                .HasForeignKey("WorkstationEmployeeGroupId");
-                        });
-
-                    b.Navigation("AddressInfo");
-
-                    b.Navigation("ContactInformation");
-
-                    b.Navigation("IsDeleted");
 
                     b.Navigation("ProfileCoverGallery");
                 });

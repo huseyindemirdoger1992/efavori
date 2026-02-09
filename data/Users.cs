@@ -8,6 +8,8 @@ namespace data
         // === Temel Kimlik Bilgileri ===
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid(); // Birincil anahtar, otomatik artan benzersiz
+        public Guid? WorkstationEmployeeGroupId { get; set; } // Bağlı olduğu İş istasyonu + 
+        public bool? UserIsEmployee { get; set; } // Kullanıcı Çalışan Mı + 
         public string? UserSponsorEmail { get; set; } // Kullanıcının Sponsor Email Adresi + 
         public string? FirstName { get; set; } // Kullanıcının adı (Zorunlu, max 50 karakter) + 
         public string? LastName { get; set; } // Kullanıcının soyadı (Zorunlu, max 50 karakter) + 

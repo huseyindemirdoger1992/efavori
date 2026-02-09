@@ -82,11 +82,12 @@
 @* Görevler sayfasında başlangıç ile bitiş arasındaki zamanlayıcıyı günceller *@
 <script>
     function updateTimers() {
-        const timers = document.querySelectorAll('[id^="timer-"]');
-        timers.forEach(timer => {
+        // Tüm timer elementlerini seç
+        const timerElements = document.querySelectorAll('[data-start][data-target]');
+
+        timerElements.forEach(timer => {
             const startStr = timer.getAttribute('data-start');
             const targetStr = timer.getAttribute('data-target');
-            if (!targetStr || !startStr) return;
 
             const startDate = new Date(startStr).getTime();
             const targetDate = new Date(targetStr).getTime();
@@ -96,39 +97,36 @@
             const elapsed = now - startDate;
             const distance = targetDate - now;
 
-            // Progress bar güncelleme
-            const taskId = timer.id.replace('timer-', '');
-            const progressBar = document.getElementById('progress-' + taskId);
+            // Progress bar'ı ID üzerinden değil, timer'ın yanındaki/içindeki class üzerinden bul
+            // Bu örnekte timer'ın bir üst kapsayıcısında progress bar arıyoruz
+            const container = timer.parentElement;
+            const progressBar = container.querySelector('.progress-bar');
 
             if (progressBar) {
                 if (distance < 0) {
-                    // Süre doldu
                     progressBar.style.width = '100%';
                     progressBar.classList.remove('bg-warning');
                     progressBar.classList.add('bg-danger');
                 } else {
-                    // Geçen süreye göre progress hesapla
-                    const progressPercent = (elapsed / totalDuration) * 100;
-                    progressBar.style.width = Math.min(progressPercent, 100) + '%';
+                    const progressPercent = Math.max(0, Math.min((elapsed / totalDuration) * 100, 100));
+                    progressBar.style.width = progressPercent + '%';
                     progressBar.classList.remove('bg-danger');
                     progressBar.classList.add('bg-warning');
                 }
             }
 
-            // Timer text güncelleme
+            // Yazı güncelleme
             if (distance < 0) {
                 timer.innerHTML = "Süre Doldu";
                 timer.classList.remove('text-warning');
                 timer.classList.add('text-danger');
-                return;
+            } else {
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                timer.innerHTML = `${days}g ${hours}s ${minutes}d ${seconds}sn`;
             }
-
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-            timer.innerHTML = `${days}g ${hours}s ${minutes}d ${seconds}sn`;
         });
     }
 

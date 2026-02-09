@@ -7,9 +7,7 @@
 @using razor._Shared
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
-
 <div class="container-fluid p-3">
-
     <div class="row mb-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -41,13 +39,6 @@
             </div>
         </div>
     </div>
-
-
-
-
-
-
-
     <div class="card">
         <div class="card-body">
             <ul class="nav nav-tabs" role="tablist">
@@ -86,7 +77,7 @@
                     <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-danger text-white">
+                                <div class="card-header bg-danger text-white sticky-top" style="top: 60px; z-index: 1020;">
                                     <h6 class="mb-0"><i class="fa fa-plus-circle"></i> Yeni (@GetTaskCountByStatus("NewTasks", null))</h6>
                                 </div>
                                 <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -187,7 +178,7 @@
 
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-light text-white">
+                                <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
                                     <h6 class="mb-0"><i class="fa fa-inbox"></i> Yapılacak (@GetTaskCountByStatus("ToBeDone", null))</h6>
                                 </div>
                                 <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -285,7 +276,7 @@
 
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-primary text-white">
+                                <div class="card-header bg-primary text-white sticky-top" style="top: 60px; z-index: 1020;">
                                     <h6 class="mb-0"><i class="fa fa-spinner fa-spin"></i> İşlemde (@GetTaskCountByStatus("InProcess", null))</h6>
                                 </div>
                                 <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -384,7 +375,7 @@
 
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-info text-white">
+                                <div class="card-header bg-info text-white sticky-top" style="top: 60px; z-index: 1020;">
                                     <h6 class="mb-0"><i class="fa fa-edit"></i> Düzenlemede (@GetTaskCountByStatus("InEditing", null))</h6>
                                 </div>
                                 <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -481,7 +472,7 @@
 
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-success text-white">
+                                <div class="card-header bg-success text-white sticky-top" style="top: 60px; z-index: 1020;">
                                     <h6 class="mb-0"><i class="fa fa-check-circle"></i> Tamamlandı (@GetTaskCountByStatus("Completed", null))</h6>
                                 </div>
                                 <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -571,10 +562,96 @@
                         </div>
                     </div>
                 </div>
-
                 @foreach (var item in taskCategories)
                 {
                     <div class="tab-pane fade" id="@item.Id" role="tabpanel">
+                        <div class="btn-group w-100" role="group">
+                            <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#edit_@item.Id">
+                                <i class="fa fa-edit"></i> Kategoriyi Düzenle
+                            </button>
+
+                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#delete_@item.Id">
+                                <i class="fa fa-trash"></i> Kategoriyi Sil
+                            </button>
+                        </div>
+                        <div class="modal fade" id="edit_@item.Id" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                                    <div class="modal-header border-bottom border-secondary">
+                                        <h5 class="modal-title text-white">
+                                            <i class="fa fa-edit"></i> Kategori bilgilerini düzenleyebilirsiniz
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="col-12">
+                                            <label>Kategori Adı</label>
+                                            <input class="form-control mb-3" type="text" @bind="item?.Title">
+                                        </div>
+                                        <div class="col-12">
+                                            <label>Kategori Açıklaması</label>
+                                            <textarea class="form-control" rows="3" @bind="item?.Description"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer border-top border-secondary">
+
+                                        <button type="button"
+                                                class="btn btn-light @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
+                                                style="width:100%;"
+                                                @onclick='async () => await EditCategori(item)'
+                                                disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
+
+                                            <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-edit")"></i>
+
+                                            <span>
+                                                @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Düzenlemeyi Kaydet")
+                                            </span>
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal fade" id="delete_@item.Id" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                                    <div class="modal-header border-bottom border-secondary">
+                                        <h5 class="modal-title text-white">
+                                            <i class="fa fa-edit"></i> Kategori bilgilerini düzenleyebilirsiniz
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="col-12">
+                                            <label>Kategori Adı</label>
+                                            <input class="form-control mb-3" type="text" @bind="item?.Title" readonly>
+                                        </div>
+                                        <div class="col-12">
+                                            <label>Kategori Açıklaması</label>
+                                            <textarea class="form-control" rows="3" @bind="item?.Description" readonly></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer border-top border-secondary">
+
+                                        <button type="button"
+                                                class="btn btn-danger @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
+                                                style="width:100%;"
+                                                @onclick='async () => await DeleteCategori(item)'
+                                                disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
+
+                                            <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-trash")"></i>
+
+                                            <span>
+                                                @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Kategoriyi & İçerisindekileri Sil")
+                                            </span>
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row" style="margin-bottom:12px;">
                             <div class="col-md-12">
                                 <label for="inputLastName1" class="form-label">Görevlerde Ara...</label>
@@ -590,7 +667,7 @@
                         <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-danger text-white">
+                                    <div class="card-header bg-danger text-white sticky-top" style="top: 60px; z-index: 1020;">
                                         <h6 class="mb-0"><i class="fa fa-plus-circle"></i> Yeni (@GetTaskCountByStatus("NewTasks", item.Id))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -691,7 +768,7 @@
 
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-light text-white">
+                                    <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
                                         <h6 class="mb-0"><i class="fa fa-inbox"></i> Yapılacak (@GetTaskCountByStatus("ToBeDone", item.Id))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -789,7 +866,7 @@
 
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-primary text-white">
+                                    <div class="card-header bg-primary text-white sticky-top" style="top: 60px; z-index: 1020;">
                                         <h6 class="mb-0"><i class="fa fa-spinner fa-spin"></i> İşlemde (@GetTaskCountByStatus("InProcess", item.Id))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -888,7 +965,7 @@
 
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-info text-white">
+                                    <div class="card-header bg-info text-white sticky-top" style="top: 60px; z-index: 1020;">
                                         <h6 class="mb-0"><i class="fa fa-edit"></i> Düzenlemede (@GetTaskCountByStatus("InEditing", item.Id))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -985,7 +1062,7 @@
 
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-success text-white">
+                                    <div class="card-header bg-success text-white sticky-top" style="top: 60px; z-index: 1020;">
                                         <h6 class="mb-0"><i class="fa fa-check-circle"></i> Tamamlandı (@GetTaskCountByStatus("Completed", item.Id))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -1076,26 +1153,11 @@
                         </div>
                     </div>
                 }
+            
             </div>
         </div>
     </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 </div>
-
 <!-- Add Task Modal -->
 @if (AddTaskshowModal)
 {
@@ -1163,7 +1225,6 @@
         </div>
     </div>
 }
-
 <!-- Edit Task Modal -->
 @if (EditTaskshowModal)
 {
@@ -1245,7 +1306,6 @@
         </div>
     </div>
 }
-
 <!-- Task Detail Modal -->
 @if (showDetailModal && selectedTask != null)
 {
@@ -1398,12 +1458,7 @@
         </div>
     </div>
 }
-
-
-
 @* Yeni kategori Modalı*@
-
-
 <div class="modal fade" id="AddNewCategoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
@@ -1436,9 +1491,7 @@
         </div>
     </div>
 </div>
-
 <Notification @ref="notificationRef" />
-
 @code {
     [Parameter] public Users? use { get; set; }
 
@@ -1479,7 +1532,6 @@
     private string newNote = "";
     string? _SearchText;
     #endregion
-
     #region Lifecycle
     protected override async Task OnInitializedAsync()
     {
@@ -1682,17 +1734,19 @@
 
             taskCategories = await db.TaskCategories
                 .AsNoTracking()
-                .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true && n.UserId == use.Id)
+                .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id)
+                .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
                 .ToListAsync(_cts.Token);
 
             tasks = await query
                 .AsNoTracking()
-                .OrderBy(t => t.DateCreatedAt)
+                .OrderByDescending(t => t.DateCreatedAt)
                 .ToListAsync(_cts.Token);
 
             taskNotes = await db.TaskNotes
                 .AsNoTracking()
                 .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true)
+                .OrderByDescending(t => t.NoteCreatedAt) // Filtrelemeden sonra sırala
                 .ToListAsync(_cts.Token);
         }
         catch (OperationCanceledException) { }
@@ -2090,7 +2144,6 @@
         });
     }
 
-    // Metod - ExecuteWithLock kullanarak
     public async Task AddNewCategori()
     {
         await ExecuteWithLock("AddNewCategori", async () =>
@@ -2116,6 +2169,46 @@
             await JSRuntime.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
             // Formu temizle
             TaskCategories = new();
+        });
+    }
+    public async Task EditCategori(TaskCategories tce)
+    {
+        await ExecuteWithLock("EditCategori", async () =>
+        {
+            if (!string.IsNullOrEmpty(tce.Title) &&
+            !string.IsNullOrWhiteSpace(tce.Title) &&
+            !string.IsNullOrEmpty(tce.Description) &&
+            !string.IsNullOrWhiteSpace(tce.Description))
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                db.TaskCategories.Update(tce);
+                await db.SaveChangesAsync(_cts.Token);
+                await ShowNotification("success", "Başarılı", "Kategori bilgileri güncellendi.", null);
+                await JSRuntime.InvokeVoidAsync("eval", $"$('#edit_{tce.Id}').modal('hide')");
+            }
+            else
+            {
+                await ShowNotification("danger", "Hata", "Lütfen boş alan bırakmayınız", null);
+            }
+        });
+    }
+    public async Task DeleteCategori(TaskCategories tce)
+    {
+        await ExecuteWithLock("EditCategori", async () =>
+        {
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            if (tce.IsDeleted == null)
+            {
+                tce.IsDeleted = new IsDeleted();
+            }
+            tce.IsDeleted.IsDeletedStatu = true;
+            tce.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+            db.TaskCategories.Update(tce);
+            await db.SaveChangesAsync(_cts.Token);
+            await ShowNotification("success", "Başarılı", "Kategori bilgileri silindi.", null);
+            await JSRuntime.InvokeVoidAsync("eval", $"$('#delete_{tce.Id}').modal('hide')");
+
         });
     }
     #endregion

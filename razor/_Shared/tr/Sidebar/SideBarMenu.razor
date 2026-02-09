@@ -1,11 +1,14 @@
-﻿@using data
+﻿@using System.Globalization
+@using data
 @code {
     [Parameter]
     public Users? _use { get; set; }
     _ApplicationConnectionDb db = new _ApplicationConnectionDb();
+    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 }
+
 <div class="sidebar-wrapper" data-simplebar="true">
-    <div class="sidebar-header">        
+    <div class="sidebar-header">
         <a href="/">
             <img src="/assets/images/icons/LogoWhite.avif" class="logo-icon" alt="logo icon">
         </a>
@@ -15,61 +18,93 @@
 
         <div class="toggle-icon ms-auto">
             <i class='bx bx-menu'></i>
-        </div> 
+        </div>
     </div>
     <!--navigation-->
     <ul class="metismenu" id="menu">
 
         <li>
-            <input class="form-control mb-3" type="text" placeholder="XXX" aria-label="default input example">
+            <input class="form-control mb-3" type="text" placeholder="Ara..." aria-label="default input example">
         </li>
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
-                    <i class='bx bx-home-alt'></i>
+                    <i class="fa fa-building" aria-hidden="true"></i>
                 </div>
-                <div class="menu-title">Dashboard</div>
+                <div class="menu-title">İş İstasyonları</div>
             </a>
             <ul>
                 <li>
-                    <a href="index.html"><i class="bx bx-radio-circle"></i>Default</a>
+                    <a href="index.html">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                        Yeni Ekle
+                    </a>
                 </li>
                 <li>
-                    <a href="dashboard-eCommerce.html"><i class="bx bx-radio-circle"></i>eCommerce</a>
+                    <a href="dashboard-eCommerce.html">
+                        <i class="fa fa-list-ul" aria-hidden="true"></i>
+                        Listele
+                    </a>
                 </li>
                 <li>
-                    <a href="dashboard-sales.html"><i class="bx bx-radio-circle"></i>Sales</a>
+                    <a href="dashboard-sales.html">
+                        <i class="fa fa-line-chart" aria-hidden="true"></i>
+                        Grafik Bilgileri
+                    </a>
                 </li>
             </ul>
         </li>
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
-                    <i class="bx bx-category"></i>
+                    <i class="fa fa-users" aria-hidden="true"></i>
                 </div>
-                <div class="menu-title">Application</div>
+                <div class="menu-title">Personel Yönetimi</div>
             </a>
             <ul>
                 <li>
-                    <a href="app-emailbox.html"><i class='bx bx-radio-circle'></i>Email</a>
+                    <a href="app-emailbox.html">
+                        <i class="fa fa-user-plus" aria-hidden="true"></i>
+                        Yeni Ekle
+                    </a>
                 </li>
                 <li>
-                    <a href="app-chat-box.html"><i class='bx bx-radio-circle'></i>Chat Box</a>
+                    <a href="/@culture/Public/Home/TaskBoard/">
+                        <i class="fa fa-tasks" aria-hidden="true"></i>
+                        Görevlendirme Paneli
+                    </a>
                 </li>
+            </ul>
+        </li>
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-folder-open" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Medya Yönetimi</div>
+            </a>
+            <ul>
                 <li>
-                    <a href="app-file-manager.html"><i class='bx bx-radio-circle'></i>File Manager</a>
+                    <a href="/@culture/Public/Home/MediaGallery/">
+                        <i class="fa fa-picture-o" aria-hidden="true"></i>
+                        Galeri
+                    </a>
                 </li>
+            </ul>
+        </li>
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Bilgilendirme</div>
+            </a>
+            <ul>
                 <li>
-                    <a href="app-contact-list.html"><i class='bx bx-radio-circle'></i>Contatcs</a>
-                </li>
-                <li>
-                    <a href="app-to-do.html"><i class='bx bx-radio-circle'></i>Todo List</a>
-                </li>
-                <li>
-                    <a href="app-invoice.html"><i class='bx bx-radio-circle'></i>Invoice</a>
-                </li>
-                <li>
-                    <a href="app-fullcalender.html"><i class='bx bx-radio-circle'></i>Calendar</a>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-history" aria-hidden="true"></i>
+                        Geliştirme Süreçleri
+                    </a>
                 </li>
             </ul>
         </li>

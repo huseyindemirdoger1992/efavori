@@ -74,9 +74,9 @@
 
 
                             <div class="position-relative media-preview"
-                                 style="cursor: pointer;"
-                                 @onclick=" (IsMultiSelect ?? false) ? () =>HandleMediaClick(media) : () =>SelectSingleFile(media)"
-                                 data-bs-dismiss="@(!(IsMultiSelect ?? false) ? "modal" : null)">
+                                 style="cursor: @(IsMultiSelect.HasValue ? "pointer" : "default");"
+                                 @onclick="@(IsMultiSelect.HasValue ? ((IsMultiSelect.Value) ? () => HandleMediaClick(media) : () => SelectSingleFile(media)) : (Action)(() => { }))"
+                                 data-bs-dismiss="@(IsMultiSelect == false ? "modal" : null)">
 
                                 @{
                                     var ext = media.FileExtensionType?.ToLower() ?? "";
@@ -147,7 +147,7 @@
                                     </button>
                                 </div>
                             }
-                            else
+                            else if (IsMultiSelect == false)
                             {
                                 <div class="px-2 pb-2">
                                     <button type="button"
@@ -229,7 +229,7 @@
                             @if (isImage)
                             {
                                 <center>
-                                    <img src="@selectedMedia.FileUrl" class="img-fluid rounded" alt="@selectedMedia.FileName" style="max-height:512px;"/>
+                                    <img src="@selectedMedia.FileUrl" class="img-fluid rounded" alt="@selectedMedia.FileName" style="max-height:512px;" />
                                 </center>
                             }
                             else
@@ -404,14 +404,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // FileService olaylarına abone ol
-        if (IsMultiSelect == true)
+        // FileService olaylarına abone ol - sadece IsMultiSelect null değilse
+        if (IsMultiSelect.HasValue)
         {
-            FileService.OnSelectionChanged += HandleSelectionChanged;
-        }
-        else
-        {
-            FileService.OnFileSelected += HandleSingleFileSelected;
+            if (IsMultiSelect.Value)
+            {
+                FileService.OnSelectionChanged += HandleSelectionChanged;
+            }
+            else
+            {
+                FileService.OnFileSelected += HandleSingleFileSelected;
+            }
         }
 
         FileService.OnFileUploaded += HandleFileUploaded;
@@ -442,21 +445,28 @@
         {
             ToggleSelection(media);
         }
-        else
+        else if (IsMultiSelect == false)
         {
-            ShowDetail(media);
+            SelectSingleFile(media);
         }
+        // IsMultiSelect == null ise hiçbir şey yapma
     }
 
     private void SelectSingleFile(Media media)
     {
-        FileService.SelectFile(media);
-        _ = ShowNotification("Başarılı", $"{media.FileName} seçildi", "success");
+        if (IsMultiSelect == false)
+        {
+            FileService.SelectFile(media);
+            _ = ShowNotification("Başarılı", $"{media.FileName} seçildi", "success");
+        }
     }
 
     private void ToggleSelection(Media media)
     {
-        FileService.ToggleFileSelection(media);
+        if (IsMultiSelect == true)
+        {
+            FileService.ToggleFileSelection(media);
+        }
     }
 
     private async Task LoadMedia()
@@ -701,13 +711,16 @@
     {
         searchDebounceTimer?.Dispose();
 
-        if (IsMultiSelect == true)
+        if (IsMultiSelect.HasValue)
         {
-            FileService.OnSelectionChanged -= HandleSelectionChanged;
-        }
-        else
-        {
-            FileService.OnFileSelected -= HandleSingleFileSelected;
+            if (IsMultiSelect.Value)
+            {
+                FileService.OnSelectionChanged -= HandleSelectionChanged;
+            }
+            else
+            {
+                FileService.OnFileSelected -= HandleSingleFileSelected;
+            }
         }
 
         FileService.OnFileUploaded -= HandleFileUploaded;

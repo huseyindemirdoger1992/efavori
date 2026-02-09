@@ -4,9 +4,17 @@ namespace web.Areas.Public.Controllers
 {
     [Area("Public")]
     [Route("{culture}/Public/[controller]/[action]")]
-    public class GitHubCommits : Controller
+    public class Home : Controller
     {
         public IActionResult GetGitHubCommits()
+        {
+            return View();
+        }
+        public IActionResult TaskBoard()
+        {
+            return View();
+        }
+        public IActionResult MediaGallery()
         {
             return View();
         }

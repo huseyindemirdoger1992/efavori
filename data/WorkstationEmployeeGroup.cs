@@ -17,8 +17,5 @@ namespace data
         public AddressInfo? AddressInfo { get; set; }
         public IsDeleted? IsDeleted { get; set; }
         public DateTime? CreateAtDate { get; set; } 
-
-
-
     }
 }

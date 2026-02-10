@@ -54,7 +54,7 @@
                     <li class="nav-item" role="presentation" title="@item.Description">
                         <a class="nav-link" data-bs-toggle="tab" href="#@item.Id" role="tab" aria-selected="false" tabindex="-1">
                             <div class="d-flex align-items-center">
-                                <div class="tab-title">@item.Title</div>
+                                <div class="tab-title">@item.Title (@GetTaskCount(item))</div>
                             </div>
                         </a>
                     </li>
@@ -94,7 +94,6 @@
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                             @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                             {
                                                 <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -168,14 +167,11 @@
                                                     <span class="text-light">@userName</span>
                                                 </small>
                                             </div>
-
-
                                         </div>
                                     }
                                 </div>
                             </div>
                         </div>
-
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -195,7 +191,6 @@
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                             @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                             {
                                                 <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -266,14 +261,11 @@
                                                     <span class="text-light">@userName</span>
                                                 </small>
                                             </div>
-
-
                                         </div>
                                     }
                                 </div>
                             </div>
                         </div>
-
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-header bg-primary text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -293,7 +285,6 @@
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                             @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                             {
                                                 <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -364,15 +355,11 @@
                                                     <span class="text-light">@userName</span>
                                                 </small>
                                             </div>
-
-
-
                                         </div>
                                     }
                                 </div>
                             </div>
                         </div>
-
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-header bg-info text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -392,7 +379,6 @@
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                             @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                             {
                                                 <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -463,13 +449,11 @@
                                                     <span class="text-light">@userName</span>
                                                 </small>
                                             </div>
-
                                         </div>
                                     }
                                 </div>
                             </div>
                         </div>
-
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
                                 <div class="card-header bg-success text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -489,7 +473,6 @@
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                             @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                             {
                                                 <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -570,7 +553,6 @@
                                     data-bs-target="#edit_@item.Id">
                                 <i class="fa fa-edit"></i> Kategoriyi Düzenle
                             </button>
-
                             <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
                                     data-bs-target="#delete_@item.Id">
                                 <i class="fa fa-trash"></i> Kategoriyi Sil
@@ -596,20 +578,16 @@
                                         </div>
                                     </div>
                                     <div class="modal-footer border-top border-secondary">
-
                                         <button type="button"
                                                 class="btn btn-light @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
                                                 style="width:100%;"
                                                 @onclick='async () => await EditCategori(item)'
                                                 disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
-
                                             <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-edit")"></i>
-
                                             <span>
                                                 @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Düzenlemeyi Kaydet")
                                             </span>
                                         </button>
-
                                     </div>
                                 </div>
                             </div>
@@ -634,20 +612,16 @@
                                         </div>
                                     </div>
                                     <div class="modal-footer border-top border-secondary">
-
                                         <button type="button"
                                                 class="btn btn-danger @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
                                                 style="width:100%;"
                                                 @onclick='async () => await DeleteCategori(item)'
                                                 disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
-
                                             <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-trash")"></i>
-
                                             <span>
                                                 @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Kategoriyi & İçerisindekileri Sil")
                                             </span>
                                         </button>
-
                                     </div>
                                 </div>
                             </div>
@@ -684,7 +658,6 @@
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -758,14 +731,11 @@
                                                         <span class="text-light">@userName</span>
                                                     </small>
                                                 </div>
-
-
                                             </div>
                                         }
                                     </div>
                                 </div>
                             </div>
-
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -785,7 +755,6 @@
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -856,14 +825,11 @@
                                                         <span class="text-light">@userName</span>
                                                     </small>
                                                 </div>
-
-
                                             </div>
                                         }
                                     </div>
                                 </div>
                             </div>
-
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-primary text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -883,7 +849,6 @@
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -954,15 +919,11 @@
                                                         <span class="text-light">@userName</span>
                                                     </small>
                                                 </div>
-
-
-
                                             </div>
                                         }
                                     </div>
                                 </div>
                             </div>
-
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-info text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -982,7 +943,6 @@
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1053,13 +1013,11 @@
                                                         <span class="text-light">@userName</span>
                                                     </small>
                                                 </div>
-
                                             </div>
                                         }
                                     </div>
                                 </div>
                             </div>
-
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-header bg-success text-white sticky-top" style="top: 60px; z-index: 1020;">
@@ -1079,7 +1037,6 @@
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
-
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1153,7 +1110,6 @@
                         </div>
                     </div>
                 }
-
             </div>
         </div>
     </div>
@@ -1391,7 +1347,6 @@
                             @onclick="AddNote"
                             disabled="@IsButtonProcessing("addNote")"
                             style="width: 100%;">
-
                         @if (IsButtonProcessing("addNote"))
                         {
                             <span class="spinner-border spinner-border-sm me-1"></span>
@@ -1412,16 +1367,19 @@
                                 {
                                     <div class="alert alert-light p-2 mb-2">
                                         <div class="d-flex justify-content-between align-items-start">
+
+
+
+
+
+                    <input class="form-check-input" type="checkbox" checked="@(note.IsTheNoteOk == true)" @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))" id="note-@note.Id">
+
+
                                             <div class="flex-grow-1">
-                                                <small class="text-light">@note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")</small>
+                                                <small class="text-light"> @note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")</small>
                                                 <p class="mb-0 mt-1 text-warning" style="@(note.IsTheNoteOk == true ? "text-decoration: line-through; opacity: 0.6;" : "")">@note.Note</p>
                                             </div>
                                             <div class="form-check ms-2">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       checked="@(note.IsTheNoteOk == true)"
-                                                       @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))"
-                                                       id="note-@note.Id">
                                                 @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                                                 {
                                                     <i class="fa fa-trash text-danger" @onclick="@(async () => await DeleteNote(note.Id))"></i>
@@ -1439,7 +1397,6 @@
                         <button type="button" class="btn btn-outline-light rounded-0" @onclick="CloseDetailModal">
                             Kapat
                         </button>
-
                         @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                         {
                             <button type="button" class="btn btn-outline-warning rounded-0" @onclick="() => EditTask(selectedTask)">
@@ -1494,7 +1451,6 @@
 <Notification @ref="notificationRef" />
 @code {
     [Parameter] public Users? use { get; set; }
-
     #region Services
     [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
     [Inject] protected NavigationManager Navigation { get; init; } = default!;
@@ -1504,14 +1460,12 @@
     [Inject] protected TakeLogs ApiTakeLogs { get; init; } = default!;
     [Inject] protected UserInfos ApiUserInfos { get; init; } = default!;
     #endregion
-
     #region State Management
     private Notification? notificationRef;
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _dbLock = new(1, 1);
     private bool _disposed;
     #endregion
-
     #region Data
     private List<Users> adminUsers = new();
     private List<TaskCategories> taskCategories = new();
@@ -1538,7 +1492,6 @@
         await LoadData();
         _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(3));
     }
-
     private async Task StartAutoRefreshLoop(TimeSpan interval)
     {
         using var timer = new PeriodicTimer(interval);
@@ -1555,34 +1508,27 @@
         }
         catch (OperationCanceledException) { }
     }
-
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
-
         await _cts.CancelAsync();
         _cts.Dispose();
         _dbLock.Dispose();
         GC.SuppressFinalize(this);
     }
     #endregion
-
     #region Button Management
     private readonly Dictionary<string, bool> _processingStates = new();
     protected bool IsButtonProcessing(string key) => _processingStates.GetValueOrDefault(key, false);
-
     private async Task<bool> RunWithStateAsync(string key, Func<Task> action, bool useDbLock = false)
     {
         if (IsButtonProcessing(key)) return false;
-
         if (useDbLock) await _dbLock.WaitAsync(_cts.Token);
-
         try
         {
             _processingStates[key] = true;
             StateHasChanged();
-
             await action();
             return true;
         }
@@ -1600,13 +1546,11 @@
             StateHasChanged();
         }
     }
-
     private async Task<bool> ExecuteWithLock(string key, Func<Task> action)
     {
         return await RunWithStateAsync(key, action, useDbLock: true);
     }
     #endregion
-
     #region Helpers
     private async Task LogError(string action, Exception ex)
     {
@@ -1622,21 +1566,18 @@
         }
         catch { }
     }
-
     private async Task ShowNotification(string type, string title, string text, string? image)
     {
         if (notificationRef is null) return;
         var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
         await notificationRef.Launch(type, title, text, imageUrl);
     }
-
     private string GetUserName(Guid? userId)
     {
         if (userId == null) return "Atanmamış";
         var user = adminUsers.FirstOrDefault(u => u.Id == userId);
         return user != null ? $"{user.FirstName} {user.LastName}" : "Bilinmiyor";
     }
-
     private string GetStatusText(string? status)
     {
         return status switch
@@ -1655,7 +1596,6 @@
         var category = taskCategories.FirstOrDefault(c => c.Id == id);
         return category?.Title ?? "Bilinmiyor";
     }
-
     private string GetStatusBadgeClass(string? status)
     {
         return status switch
@@ -1667,7 +1607,6 @@
             _ => "bg-light  text-light"
         };
     }
-
     private string GetPriorityBadgeClass(string? priority)
     {
         return priority switch
@@ -1678,20 +1617,17 @@
             _ => "bg-secondary"
         };
     }
-
     private int GetTaskNotesCount(Guid taskId)
     {
         return taskNotes.Count(n => n.TaskStatusId == taskId &&
                                    (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true));
     }
-
     private int IsOkGetTaskNotesCount(Guid taskId)
     {
         return taskNotes.Count(n => n.TaskStatusId == taskId &&
                                    (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
                                     n.IsTheNoteOk == true);
     }
-
     private int IsNotOkGetTaskNotesCount(Guid taskId)
     {
         return taskNotes.Count(n => n.TaskStatusId == taskId &&
@@ -1699,7 +1635,6 @@
                                     n.IsTheNoteOk != true);
     }
     #endregion
-
     #region Data Operations
     protected async Task LoadData()
     {
@@ -1707,12 +1642,10 @@
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
             var query = db.TaskStatus.Where(t => t.IsDeleted == null || t.IsDeleted.IsDeletedStatu != true);
-
             if (!string.IsNullOrWhiteSpace(_SearchText))
             {
                 query = query.Where(t => t.TaskTitle.Contains(_SearchText) || t.TaskDescription.Contains(_SearchText));
             }
-
             if (use != null && use.Id != Guid.Empty)
             {
                 if (use.UsersType == "Admin" || use.UsersType == "SuperAdmin")
@@ -1724,25 +1657,21 @@
                     query = query.Where(t => t.PersonInChargeUserId == use.Id);
                 }
             }
-
             adminUsers = await db.Users
                 .AsNoTracking()
                 .Where(u => u.UsersType == "Employee" || u.UsersType == "Admin" || u.UsersType == "SuperAdmin")
                 .OrderBy(u => u.FirstName)
                 .ThenBy(u => u.LastName)
                 .ToListAsync(_cts.Token);
-
             taskCategories = await db.TaskCategories
                 .AsNoTracking()
                 .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id)
                 .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
                 .ToListAsync(_cts.Token);
-
             tasks = await query
                 .AsNoTracking()
                 .OrderByDescending(t => t.DateCreatedAt)
                 .ToListAsync(_cts.Token);
-
             taskNotes = await db.TaskNotes
                 .AsNoTracking()
                 .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true)
@@ -1755,7 +1684,6 @@
             await LogError(nameof(LoadData), ex);
         }
     }
-
     private List<data.TaskStatus> GetTasksByStatus(string status, Guid? TaskCategoriesId)
     {
         if (TaskCategoriesId != null)
@@ -1767,7 +1695,6 @@
             return tasks.Where(t => t.Status == status).ToList();
         }
     }
-
     private int GetTaskCountByStatus(string status, Guid? TaskCategoriesId)
     {
         if (TaskCategoriesId == null)
@@ -1780,29 +1707,23 @@
         }
     }
     #endregion
-
     #region Drag and Drop
     private void HandleDragStart(Guid taskId)
     {
         draggedTaskId = taskId;
     }
-
     private async Task HandleDrop(string newStatus)
     {
         if (use != null && (use.UsersType == "Employee" || use.UsersType == "Admin" || use.UsersType == "SuperAdmin"))
         {
             if (draggedTaskId == null) return;
-
             await ExecuteWithLock(nameof(HandleDrop), async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
                 var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == draggedTaskId, _cts.Token);
                 if (task == null) return;
-
                 var oldStatus = task.Status;
                 task.Status = newStatus;
-
                 switch (newStatus)
                 {
                     case "NewTasks":
@@ -1821,10 +1742,8 @@
                         task.DateCompleted = DateTime.Now;
                         break;
                 }
-
                 db.TaskStatus.Update(task);
                 await db.SaveChangesAsync(_cts.Token);
-
                 await ShowNotification("success", "Başarılı", $"Görev '{GetStatusText(newStatus)}' durumuna taşındı.", null);
                 await LoadData();
             });
@@ -1833,11 +1752,9 @@
         {
             await ShowNotification("danger", "Hata", $"Görev yetki dışı olduğundan gerçekleştirilmedi", null);
         }
-
         draggedTaskId = null;
     }
     #endregion
-
     #region Modal Operations
     private void ShowAddTaskModal()
     {
@@ -1855,7 +1772,6 @@
         selectedPersonInCharge = "";
         AddTaskshowModal = true;
     }
-
     private void EditTask(data.TaskStatus task)
     {
         editingTask = new data.TaskStatus
@@ -1879,39 +1795,33 @@
         showDetailModal = false;
         EditTaskshowModal = true;
     }
-
     private void CloseAddModal()
     {
         AddTaskshowModal = false;
         AddTask = null;
     }
-
     private void CloseEditModal()
     {
         EditTaskshowModal = false;
         editingTask = null;
     }
-
     private void CloseModal()
     {
         CloseAddModal();
         CloseEditModal();
     }
-
     private async Task ShowTaskDetail(data.TaskStatus task)
     {
         selectedTask = task;
         await LoadTaskNotes(task.Id);
         showDetailModal = true;
     }
-
     private void CloseDetailModal()
     {
         showDetailModal = false;
         selectedTask = null;
         newNote = "";
     }
-
     private async Task LoadTaskNotes(Guid taskId)
     {
         try
@@ -1928,26 +1838,21 @@
         }
     }
     #endregion
-
     #region CRUD Operations
     private async Task SaveNewTask()
     {
         if (AddTask == null) return;
-
         await ExecuteWithLock("save", async () =>
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
             if (!string.IsNullOrEmpty(selectedPersonInCharge) && Guid.TryParse(selectedPersonInCharge, out var personId))
             {
                 AddTask.PersonInChargeUserId = personId;
             }
-
             if (targetDate.HasValue)
             {
                 AddTask.TargetDate = targetDate.Value;
             }
-
             if (string.IsNullOrEmpty(AddTask.TaskTitle) || string.IsNullOrEmpty(AddTask.TaskDescription) || AddTask.TaskCategoriesId == null)
             {
                 await ShowNotification("danger", "Hata", "Boş alan bırakmayınız.", null);
@@ -1962,34 +1867,27 @@
             }
         });
     }
-
     private async Task SaveEditTask()
     {
         if (editingTask == null) return;
-
         await ExecuteWithLock("edit", async () =>
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
             var existingTask = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == editingTask.Id, _cts.Token);
-
             if (existingTask != null)
             {
                 existingTask.TaskTitle = editingTask.TaskTitle;
                 existingTask.TaskDescription = editingTask.TaskDescription;
                 existingTask.Priority = editingTask.Priority;
                 existingTask.Status = editingTask.Status;
-
                 if (!string.IsNullOrEmpty(editSelectedPersonInCharge) && Guid.TryParse(editSelectedPersonInCharge, out var personId))
                 {
                     existingTask.PersonInChargeUserId = personId;
                 }
-
                 if (editTargetDate.HasValue)
                 {
                     existingTask.TargetDate = editTargetDate.Value;
                 }
-
                 switch (editingTask.Status)
                 {
                     case "NewTasks":
@@ -2013,7 +1911,6 @@
                             existingTask.DateCompleted = DateTime.Now;
                         break;
                 }
-
                 db.TaskStatus.Update(existingTask);
                 await db.SaveChangesAsync(_cts.Token);
                 await ShowNotification("success", "Başarılı", "Görev güncellendi.", null);
@@ -2022,15 +1919,12 @@
             }
         });
     }
-
     private async Task DeleteTask()
     {
         if (selectedTask == null) return;
-
         await ExecuteWithLock("delete", async () =>
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
             var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == selectedTask.Id, _cts.Token);
             if (task != null)
             {
@@ -2041,7 +1935,6 @@
                 }
                 task.IsDeleted.IsDeletedStatu = true;
                 task.IsDeleted.DeletedAtDate = DateTime.Now;
-
                 // Soft delete - ilişkili notlar
                 var notes = await db.TaskNotes.Where(n => n.TaskStatusId == task.Id).ToListAsync(_cts.Token);
                 foreach (var note in notes)
@@ -2053,22 +1946,18 @@
                     note.IsDeleted.IsDeletedStatu = true;
                     note.IsDeleted.DeletedAtDate = DateTime.Now;
                 }
-
                 db.TaskStatus.Update(task);
                 db.TaskNotes.UpdateRange(notes);
                 await db.SaveChangesAsync(_cts.Token);
-
                 await ShowNotification("success", "Başarılı", "Görev silindi.", null);
                 await LoadData();
                 CloseDetailModal();
             }
         });
     }
-
     private async Task AddNote()
     {
         if (selectedTask == null) return;
-
         await ExecuteWithLock("addNote", async () =>
         {
             if (string.IsNullOrEmpty(newNote) || string.IsNullOrWhiteSpace(newNote))
@@ -2078,7 +1967,6 @@
             else
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
                 var note = new TaskNotes
                 {
                     Id = Guid.NewGuid(),
@@ -2088,23 +1976,19 @@
                     NoteCreatedAt = DateTime.Now,
                     IsTheNoteOk = false
                 };
-
                 db.TaskNotes.Add(note);
                 await db.SaveChangesAsync(_cts.Token);
-
                 await ShowNotification("success", "Başarılı", "Not eklendi.", null);
                 await LoadTaskNotes(selectedTask.Id);
                 newNote = "";
             }
         });
     }
-
     private async Task DeleteNote(Guid noteId)
     {
         await ExecuteWithLock("deleteNote", async () =>
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
             var note = await db.TaskNotes.FirstOrDefaultAsync(n => n.Id == noteId, _cts.Token);
             if (note != null)
             {
@@ -2115,12 +1999,9 @@
                 }
                 note.IsDeleted.IsDeletedStatu = true;
                 note.IsDeleted.DeletedAtDate = DateTime.Now;
-
                 db.TaskNotes.Update(note);
                 await db.SaveChangesAsync(_cts.Token);
-
                 await ShowNotification("success", "Başarılı", "Not silindi.", null);
-
                 // Eğer bir görev detayı açıksa notları yeniden yükle
                 if (selectedTask != null)
                 {
@@ -2129,20 +2010,17 @@
             }
         });
     }
-
     private async Task ToggleNoteCompletion(Guid noteId, bool isCompleted)
     {
         await ExecuteWithLock("toggleNote", async () =>
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
             var note = await db.TaskNotes.FirstOrDefaultAsync(n => n.Id == noteId, _cts.Token);
             if (note != null)
             {
                 note.IsTheNoteOk = isCompleted;
                 db.TaskNotes.Update(note);
                 await db.SaveChangesAsync(_cts.Token);
-
                 if (selectedTask != null)
                 {
                     await LoadTaskNotes(selectedTask.Id);
@@ -2150,7 +2028,6 @@
             }
         });
     }
-
     public async Task AddNewCategori()
     {
         await ExecuteWithLock("AddNewCategori", async () =>
@@ -2163,15 +2040,11 @@
                 await ShowNotification("danger", "Hata", "Kategori bilgileri eksik.", null);
                 return;
             }
-
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
             TaskCategories.UserId = use?.Id;
             TaskCategories.CreatedAt = DateTime.UtcNow;
-
             db.TaskCategories.Add(TaskCategories);
             await db.SaveChangesAsync(_cts.Token);
-
             await ShowNotification("success", "Başarılı", "Yeni kategori eklendi.", null);
             await JSRuntime.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
             // Formu temizle
@@ -2203,8 +2076,7 @@
     {
         await ExecuteWithLock("EditCategori", async () =>
         {
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            await using _ApplicationConnectionDb? db = await DbFactory.CreateDbContextAsync(_cts.Token);
             if (tce.IsDeleted == null)
             {
                 tce.IsDeleted = new IsDeleted();
@@ -2215,9 +2087,16 @@
             await db.SaveChangesAsync(_cts.Token);
             await ShowNotification("success", "Başarılı", "Kategori bilgileri silindi.", null);
             await JSRuntime.InvokeVoidAsync("eval", $"$('#delete_{tce.Id}').modal('hide')");
-
         });
     }
+public int GetTaskCount(TaskCategories tc)
+{
+    // 1. null kontrolü
+    if (tc == null) return 0;
+    // 2. DbContext'i senkron olarak oluşturun
+    using var db = DbFactory.CreateDbContext();
+    // 3. Senkron Count() kullanarak sonucu döndürün
+    return db.TaskStatus.Count(x => x.TaskCategoriesId == tc.Id);
+}
     #endregion
-
 }

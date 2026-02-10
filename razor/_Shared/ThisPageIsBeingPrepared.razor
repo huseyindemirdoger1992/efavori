@@ -20,12 +20,14 @@
                 </button>
                 <div class="modal fade" id="SingleSelectFile" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered modal-xl">
-                        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                        <div class="modal-content bg-light border border-secondary"
+                             style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                             <div class="modal-header border-bottom border-secondary">
                                 <h5 class="modal-title text-white">
                                     <i class="fa fa-folder-open-o"></i> Çoklu Seçim Yapabilirsiniz
                                 </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
                                 <razor._Shared.tr.Media.Upload use="@use" />
@@ -46,12 +48,14 @@
                 </button>
                 <div class="modal fade" id="MultiSelectFile" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered modal-xl">
-                        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                        <div class="modal-content bg-light border border-secondary"
+                             style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                             <div class="modal-header border-bottom border-secondary">
                                 <h5 class="modal-title text-white">
                                     <i class="fa fa-folder-open-o"></i> Çoklu Seçim Yapabilirsiniz
                                 </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
                                 <razor._Shared.tr.Media.Upload use="@use" />
@@ -63,7 +67,7 @@
                     </div>
                 </div>
             }
-      
+
         </div>
     </div>
 
@@ -89,15 +93,14 @@
                             @if (isImage)
                             {
                                 <div class="mb-3">
-                                    <img src="@selectedSingleFile.FileUrl"
-                                         class="img-fluid rounded shadow"
-                                         style="max-height: 400px; object-fit: contain;"
-                                         alt="@selectedSingleFile.FileName" />
+                                    <img src="@selectedSingleFile.FileUrl" class="img-fluid rounded shadow"
+                                         style="max-height: 400px; object-fit: contain;" alt="@selectedSingleFile.FileName" />
                                 </div>
                             }
                             else
                             {
-                                <div class="d-flex align-items-center justify-content-center bg-dark rounded mb-3" style="height: 200px;">
+                                <div class="d-flex align-items-center justify-content-center bg-dark rounded mb-3"
+                                     style="height: 200px;">
                                     <i class="fa fa-file fa-5x text-white-50"></i>
                                 </div>
                             }
@@ -108,147 +111,143 @@
                                 </h6>
                                 <div class="small text-white-50">
                                     <div><strong>Tür:</strong> @selectedSingleFile.FileExtensionType</div>
-                                    <div><strong>Boyut:</strong> @FormatFileSize(selectedSingleFile.CompressedSize ?? selectedSingleFile.OriginalSize ?? 0)</div>
-                                    <div><strong>Tarih:</strong> @selectedSingleFile.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
-                                </div>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-outline-light" @onclick="CopySingleFileUrl">
-                                        <i class="fa fa-copy me-1"></i>URL Kopyala
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-light" @onclick="OpenSingleFileInNewTab">
-                                        <i class="fa fa-external-link me-1"></i>Yeni Sekmede Aç
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fa fa-image fa-3x text-white-50 mb-3"></i>
-                            <p class="text-white-50 mb-0">Henüz resim seçilmedi</p>
-                            <small class="text-white-50">Yukarıdaki listeden bir resim seçin</small>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-        <!-- Çoklu Seçim Sonucu -->
-        <div class="col-lg-12 mb-4">
-            <div class="card bg-transparent border border-light-3 shadow-sm">
-                <div class="card-header bg-dark-transparent border-light-3 d-flex justify-content-between align-items-center">
-                    <h5 class="text-white mb-0">
-                        <i class="fa fa-images me-2"></i>Seçilen Resimler (Çoklu)
-                        @if (selectedMultipleFiles.Count > 0)
-                        {
-                            <span class="badge bg-primary ms-2">@selectedMultipleFiles.Count</span>
-                        }
-                    </h5>
-                    @if (selectedMultipleFiles.Count > 0)
-                    {
-                        <button class="btn btn-sm btn-outline-danger" @onclick="ClearMultipleSelection">
-                            <i class="fa fa-times me-1"></i>Temizle
-                        </button>
-                    }
-                </div>
-                <div class="card-body">
-                    @if (selectedMultipleFiles.Count > 0)
-                    {
-                        <div class="row row-cols-2 row-cols-lg-6 g-3" id="sortable-container">
-                            @for (int i = 0; i < selectedMultipleFiles.Count; i++)
-                            {
-                                var file = selectedMultipleFiles[i];
-                                var index = i;
-                                var ext = file.FileExtensionType?.ToLower() ?? "";
-                                var isImage = IsImageFile(ext);
-
-                                <div class="col draggable-item"
-                                     draggable="true"
-                                     data-index="@index"
-                                     @ondragstart="@(() => HandleDragStart(index))"
-                                     @ondragenter="@(() => HandleDragEnter(index))"
-                                     @ondragover:preventDefault
-                                     @ondrop="@(() => HandleDrop(index))">
-                                    <div class="card bg-dark-transparent border-light-3 h-100 @(draggedIndex == index ? "dragging" : "") @(dragOverIndex == index ? "drag-over" : "")">
-                                        <div class="position-relative drag-handle">
-                                            @if (isImage)
-                                            {
-                                                <img src="@file.FileUrl"
-                                                     class="card-img-top"
-                                                     style="height: 150px; object-fit: cover;"
-                                                     alt="@file.FileName" />
-                                            }
-                                            else
-                                            {
-                                                <div class="d-flex align-items-center justify-content-center bg-dark" style="height: 150px;">
-                                                    <i class="fa fa-file fa-3x text-white-50"></i>
-                                                </div>
-                                            }
-                                            <div class="position-absolute top-0 end-0 m-2">
-                                                <span class="badge bg-primary">
-                                                    <i class="fa fa-check"></i>
-                                                </span>
-                                            </div>
-                                            <div class="position-absolute top-0 start-0 m-2">
-                                                <span class="badge bg-warning">
-                                                    <div class="text-dark">#@(index + 1)</div>
-                                                </span>
-                                            </div>
+                                    <div><strong>Boyut:</strong> @FormatFileSize(selectedSingleFile.CompressedSize ??
+                                                                            selectedSingleFile.OriginalSize ?? 0)</div>
+                                        <div><strong>Tarih:</strong>
+                                            @selectedSingleFile.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</div>
                                         </div>
-                                        <div class="card-body p-2">
-                                            <h6 class="card-title text-white small text-truncate mb-1" title="@file.FileName">
-                                                @file.FileName
-                                            </h6>
-                                            <div class="text-white-50" style="font-size: 0.75rem;">
-                                                <div>@FormatFileSize(file.CompressedSize ?? file.OriginalSize ?? 0)</div>
-                                            </div>
-                                        </div>
-                                        <div class="card-footer p-2 bg-dark-transparent border-light-3">
-                                            <div class="btn-group w-100" role="group">
-                                                <button class="btn btn-sm btn-outline-light"
-                                                        @onclick="() => OpenFileInNewTab(file.OrjFileUrl)"
-                                                        title="Yeni Sekmede Aç">
-                                                    <i class="fa fa-external-link"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-light"
-                                                        @onclick="() => CopyFileUrl(file.FileUrl)"
-                                                        title="URL Kopyala">
-                                                    <i class="fa fa-copy"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger"
-                                                        @onclick="() => HandleRemoveFile(file)"
-                                                        title="Kaldır">
-                                                    <i class="fa fa-eraser"></i>
-                                                </button>
-                                            </div>
+                                        <div class="mt-2">
+                                            <button class="btn btn-sm btn-outline-light" @onclick="CopySingleFileUrl">
+                                                <i class="fa fa-copy me-1"></i>URL Kopyala
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-light" @onclick="OpenSingleFileInNewTab">
+                                                <i class="fa fa-external-link me-1"></i>Yeni Sekmede Aç
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             }
-                        </div>
-
-                        <div class="mt-3 d-flex gap-2 flex-wrap">
-                            <button class="btn btn-outline-light" @onclick="CopyAllUrls">
-                                <i class="fa fa-copy me-1"></i>Tüm URL'leri Kopyala
-                            </button>
-                            <button class="btn btn-outline-light" @onclick="DownloadAllInfo">
-                                <i class="fa fa-download me-1"></i>Bilgileri İndir
-                            </button>
-                        </div>
-                    }
                     else
-                    {
-                        <div class="text-center py-5">
-                            <i class="fa fa-images fa-3x text-white-50 mb-3"></i>
-                            <p class="text-white-50 mb-0">Henüz resim seçilmedi</p>
-                            <small class="text-white-50">Yukarıdaki listeden birden fazla resim seçin</small>
+                            {
+                                <div class="text-center py-5">
+                                    <i class="fa fa-image fa-3x text-white-50 mb-3"></i>
+                                    <p class="text-white-50 mb-0">Henüz resim seçilmedi</p>
+                                    <small class="text-white-50">Yukarıdaki listeden bir resim seçin</small>
+                                </div>
+                            }
                         </div>
-                    }
+                    </div>
+                </div>
+                <!-- Çoklu Seçim Sonucu -->
+                <div class="col-lg-12 mb-4">
+                    <div class="card bg-transparent border border-light-3 shadow-sm">
+                        <div
+                            class="card-header bg-dark-transparent border-light-3 d-flex justify-content-between align-items-center">
+                            <h5 class="text-white mb-0">
+                                <i class="fa fa-images me-2"></i>Seçilen Resimler (Çoklu)
+                                @if (selectedMultipleFiles.Count > 0)
+                                {
+                                    <span class="badge bg-primary ms-2">@selectedMultipleFiles.Count</span>
+                                }
+                            </h5>
+                            @if (selectedMultipleFiles.Count > 0)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="ClearMultipleSelection">
+                                    <i class="fa fa-times me-1"></i>Temizle
+                                </button>
+                            }
+                        </div>
+                        <div class="card-body">
+                            @if (selectedMultipleFiles.Count > 0)
+                            {
+                                <div class="row row-cols-2 row-cols-lg-6 g-3" id="sortable-container">
+                                    @for (int i = 0; i < selectedMultipleFiles.Count; i++)
+                                    {
+                                        var file = selectedMultipleFiles[i];
+                                        var index = i;
+                                        var ext = file.FileExtensionType?.ToLower() ?? "";
+                                        var isImage = IsImageFile(ext);
+
+                                        <div class="col draggable-item"                       draggable="true"                data-index="@index"
+                                             @ondragstart="@(() => HandleDragStart(index))"
+                                             @ondragenter="@(() => HandleDragEnter(index))"                            @ondragover:preventDefault
+                                             @ondrop="@(() => HandleDrop(index))">
+                                            <div class="card bg-dark-transparent border-light-3 h-100 @(draggedIndex == index ? "dragging" : "") @(dragOverIndex == index ? "drag-over" : "")">
+                                                <div class="position-relative drag-handle">
+                                                    @if (isImage)
+                                                    {
+                                                        <img src="@file.FileUrl"                           class="card-img-top"
+                                                             style="height: 150px; object-fit: cover;"                                                  alt="@file.FileName" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="d-flex align-items-center justify-content-center bg-dark"
+                                                             style="height: 150px;">
+                                                            <i class="fa fa-file fa-3x text-white-50"></i>
+                                                        </div>
+                                                    }
+                                                    <div class="position-absolute top-0 end-0 m-2">
+                                                        <span class="badge bg-primary">
+                                                            <i class="fa fa-check"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div class="position-absolute top-0 start-0 m-2">
+                                                        <span class="badge bg-warning">
+                                                            <div class="text-dark">#@(index + 1)</div>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body p-2">
+                                                    <h6 class="card-title text-white small text-truncate mb-1" title="@file.FileName">
+                                                        @file.FileName
+                                                    </h6>
+                                                    <div class="text-white-50" style="font-size: 0.75rem;">
+                                                        <div>@FormatFileSize(file.CompressedSize ?? file.OriginalSize ?? 0)</div>
+                                                    </div>
+                                                </div>
+                                                <div class="card-footer p-2 bg-dark-transparent border-light-3">
+                                                    <div class="btn-group w-100" role="group">
+                                                        <button class="btn btn-sm btn-outline-light"
+                                                                @onclick="() => OpenFileInNewTab(file.OrjFileUrl)"                                                  title="Yeni Sekmede Aç">
+                                                            <i class="fa fa-external-link"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-light"
+                                                                @onclick="() => CopyFileUrl(file.FileUrl)"                                                        title="URL Kopyala">
+                                                            <i class="fa fa-copy"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                                @onclick="() => HandleRemoveFile(file)"                                                        title="Kaldır">
+                                                            <i class="fa fa-eraser"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <div class="mt-3 d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-outline-light" @onclick="CopyAllUrls">
+                                        <i class="fa fa-copy me-1"></i>Tüm URL'leri Kopyala
+                                    </button>
+                                    <button class="btn btn-outline-light" @onclick="DownloadAllInfo">
+                                        <i class="fa fa-download me-1"></i>Bilgileri İndir
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="fa fa-images fa-3x text-white-50 mb-3"></i>
+                                    <p class="text-white-50 mb-0">Henüz resim seçilmedi</p>
+                                    <small class="text-white-50">Yukarıdaki listeden birden fazla resim seçin</small>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
 <razor._Shared.Notification @ref="notificationRef" />
 
@@ -259,10 +258,12 @@
 
     private razor._Shared.Notification? notificationRef;
 
-    private readonly string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".raw", ".svg", ".ico", ".tga", ".avif" };
+    private readonly string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif",
+".heic", ".heif", ".raw", ".svg", ".ico", ".tga", ".avif" };
     private readonly string[] videoExtensions = { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg" };
     private readonly string[] audioExtensions = { ".mp3", ".wav", ".ogg", ".m4a", ".flac", ".aac", ".wma", ".opus" };
-    private readonly string[] documentExtensions = { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt" };
+    private readonly string[] documentExtensions = { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt",
+".rtf", ".odt" };
 
     // Sürükle-Bırak için değişkenler
     private int? draggedIndex = null;
@@ -370,7 +371,7 @@
     {
         if (!string.IsNullOrWhiteSpace(url))
         {
-            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+            await JSRuntime.InvokeVoidAsync(identifier: "open", url, "_blank");
         }
     }
 
@@ -427,5 +428,3 @@
 }
 
 @inject IJSRuntime JSRuntime
-
-

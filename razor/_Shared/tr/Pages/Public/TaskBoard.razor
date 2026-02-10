@@ -1153,7 +1153,7 @@
                         </div>
                     </div>
                 }
-            
+
             </div>
         </div>
     </div>
@@ -1770,7 +1770,14 @@
 
     private int GetTaskCountByStatus(string status, Guid? TaskCategoriesId)
     {
-        return tasks.Count(t => t.Status == status && t.TaskCategoriesId == TaskCategoriesId);
+        if (TaskCategoriesId == null)
+        {
+            return tasks.Count(t => t.Status == status);
+        }
+        else
+        {
+            return tasks.Count(t => t.Status == status && t.TaskCategoriesId == TaskCategoriesId);
+        }
     }
     #endregion
 

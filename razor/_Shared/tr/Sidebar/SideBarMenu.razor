@@ -5,7 +5,17 @@
     public Users? _use { get; set; }
     _ApplicationConnectionDb db = new _ApplicationConnectionDb();
     string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+    public int GetTaskCategoryStructureCount(string CategoryStructure)
+    {
+        int info = 0;
+        info = db.TaskCategories
+          .Where(x => x.CategoryStructure == CategoryStructure && x.IsDeleted.IsDeletedStatu != true)
+          .ToList()
+          .Count();
+        return info;
+    }
 }
+
 <div class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
         <a href="/">
@@ -93,7 +103,6 @@
                 </li>
             </ul>
         </li>
-
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
@@ -105,29 +114,23 @@
                 <li>
                     <a href="/@culture/Public/TaskBoard/PlanningTaskBoard/">
                         <i class="fa fa-calendar-o" aria-hidden="true"></i>
-                        Plan Aşamasında
+                        Plan Aşamasında (@GetTaskCategoryStructureCount("PlanningTaskBoard"))
                     </a>
                 </li>
                 <li>
                     <a href="/@culture/Public/TaskBoard/InProcessTaskBoard/">
                         <i class="fa fa-play-circle-o" aria-hidden="true"></i>
-                        Aktif Görevler
+                        Aktif Görevler (@GetTaskCategoryStructureCount("InProcessTaskBoard"))
                     </a>
                 </li>
                 <li>
                     <a href="/@culture/Public/TaskBoard/CompletedTaskBoard/">
                         <i class="fa fa-check-square-o" aria-hidden="true"></i>
-                        Tamamlananlar
+                        Tamamlananlar (@GetTaskCategoryStructureCount("CompletedTaskBoard"))
                     </a>
                 </li>
             </ul>
         </li>
-
-
-
-
-
-
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">

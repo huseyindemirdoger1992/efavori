@@ -58,12 +58,11 @@
         }
     }
 }
-
 @if (!User.Identity.IsAuthenticated)
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.PlanningTaskBoard>(RenderMode.Server, new { use = use }))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.CentralSystemTaskBoard>(RenderMode.Server, new { use = use, TaskCategoriesValue = ViewBag.Value }))
 }
 else
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.PlanningTaskBoard>(RenderMode.Server, new { use = use }))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.CentralSystemTaskBoard>(RenderMode.Server, new { use = use, TaskCategoriesValue = ViewBag.Value }))
 }

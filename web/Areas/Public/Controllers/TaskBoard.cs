@@ -4,18 +4,12 @@ namespace web.Areas.Public.Controllers
 {
     [Area("Public")]
     [Route("{culture}/Public/[controller]/[action]")]
+    [Route("{culture}/Public/[controller]/[action]/{Value?}")]
     public class TaskBoard : Controller
     {
-        public IActionResult PlanningTaskBoard()
+        public IActionResult CentralSystemTaskBoard(string Value)
         {
-            return View();
-        }
-        public IActionResult InProcessTaskBoard()
-        {
-            return View();
-        }
-        public IActionResult CompletedTaskBoard()
-        {
+            ViewBag.Value = Value;
             return View();
         }
     }

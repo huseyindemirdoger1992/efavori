@@ -12,7 +12,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <h3 class="mb-2">
-                    <i class="fa fa-calendar-o"></i> Plan Aşamasında Görev Panosu
+                    <i class="fa fa-check-square-o"></i> Tamamlanan Görev Panosu
                 </h3>
                 @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                 {
@@ -575,7 +575,7 @@
                                                     <option value="">...</option>
                                                     <option value="PlanningTaskBoard">Plan Aşamasında</option>
                                                     <option value="InProcessTaskBoard">Aktif Görevler</option>
-                                                    <option value="CompletedTaskBoard">Tamamlandı</option>
+                                                    <option value=TaskCategoriesValue>Tamamlandı</option>
                                                 </select>
                                             </div>
                                             <div class="col-md-6 mb-3">
@@ -1503,13 +1503,11 @@
         </div>
     </div>
 }
-
-@* Yeni kategori Modalı*@
-
 <_AddNewCategoryModal use="use" />
 <Notification @ref="notificationRef" />
 @code {
     [Parameter] public Users? use { get; set; }
+    [Parameter] public string? TaskCategoriesValue { get; set; }
     #region Services
     [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
     [Inject] protected NavigationManager Navigation { get; init; } = default!;
@@ -1725,14 +1723,14 @@
                 .ToListAsync(_cts.Token);
             taskCategories = await db.TaskCategories
                 .AsNoTracking()
-                .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id && n.CategoryStructure == "PlanningTaskBoard")
+                .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
                 .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
                 .ToListAsync(_cts.Token);
             tasks = await query
                 .AsNoTracking()
                 .Where(t => db.TaskCategories
                     .Any(c => c.Id == t.TaskCategoriesId && // Görevin kategorisini eşle
-                              c.CategoryStructure == "PlanningTaskBoard" && // Yapıyı kontrol et
+                              c.CategoryStructure == TaskCategoriesValue && // Yapıyı kontrol et
                               (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
                               c.UserId == use.Id))
                 .OrderByDescending(t => t.DateCreatedAt)
@@ -2114,7 +2112,6 @@
             // Null kontrolü ve validasyon
             if (TaskCategories == null ||
                 string.IsNullOrWhiteSpace(TaskCategories.Title) ||
-                string.IsNullOrWhiteSpace(TaskCategories.CategoryStructure) ||
                 string.IsNullOrWhiteSpace(TaskCategories.Description))
             {
                 await ShowNotification("danger", "Hata", "Kategori bilgileri eksik.", null);

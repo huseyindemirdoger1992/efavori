@@ -1,6 +1,58 @@
 ﻿@rendermode InteractiveServer
 <razor._Shared.Notification @ref="notificationRef" />
 @inject razor._Shared.tr.Media.FileUploadService FileService
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="text-light">
+    <canvas id="myChart" class="text-light"></canvas>
+</div>
+
+
+<script>
+    const ctx = document.getElementById('myChart');
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+            datasets: [{
+                label: '# of Votes',
+                data: [12, 19, 3, 5, 2, 3],
+                backgroundColor: 'rgba(255, 255, 255, 0.2)', // Çubukların iç rengini biraz açabiliriz
+                borderColor: 'rgba(255, 255, 255, 1)',      // Çubuk kenarlıkları
+                borderWidth: 1
+            }]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'white' // Üstteki "# of Votes" yazısının rengi
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: 'white' // Y ekseni rakamlarının rengi
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)' // Izgara çizgilerini hafifletmek için
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'white' // X ekseni yazılarını (Red, Blue...) rengi
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+</script>
 
 <razor._Shared.tr.Pages.Public.TaskBoard use="@use" />
 

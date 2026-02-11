@@ -1,1 +1,0 @@
-dotnet publish -c Release -r win-x86 --self-contained true /p:PublishProtocol=FTP /p:PublishProvider=FileSystem /p:MSDeployServiceURL=94.199.202.149/httpdocs /p:DeployTarget=/httpdocs /p:UserName=efavoric /p:Password="u1jQ7.2PChO-1rSc!0" /p:AllowUntrustedCertificate=True

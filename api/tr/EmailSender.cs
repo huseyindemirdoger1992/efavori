@@ -686,9 +686,6 @@ namespace api.tr
         public async Task SendLoginInfoEmailAsync(string Culture, string Email)
         {
             var attachments = new List<Attachment>();
-            //attachments.Add(new Attachment("C:\\dosyalar\\rapor.pdf"));
-            //attachments.Add(new Attachment("C:\\dosyalar\\resim.jpg"));
-
             var details = _userInfos.GetCurrentUserDetails();
             string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
             string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);
@@ -4230,6 +4227,512 @@ namespace api.tr
 
                 await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - 您的密码重置代码", emailBody, attachments);
             }
+        }
+
+        public async Task SendTaskStatuNewTasksMailEmail(string Culture, string Email,string Boss, string Categories, string TaskTitle)
+        {
+            var attachments = new List<Attachment>();
+            var details = _userInfos.GetCurrentUserDetails();
+            string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
+
+            if (Culture == "tr")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; text-align: center;'><strong>$'{TaskTitle}'</strong> Görev Bildirimi</h2>
+        
+        <p style='font-size: 15px;'>Sayın Kullanıcımız,</p>
+        <p style='font-size: 14px; color: #555;'>Size <strong>$'{Boss}'</strong> tarafından yeni bir görev atanmıştır. Kategori olarak <strong>$'{Categories}'</strong> belirlenen <strong>$'{TaskTitle}'</strong> başlıklı görev detaylarını kontrol etmek için lütfen sisteme giriş yapınız.</p>
+        
+        <table style='width: 100%; border-collapse: collapse; margin: 25px 0; background-color: #f8f9fa; border-radius: 6px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffffff;'>Bildirim Tarihi</td>
+                <td style='padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #ffffff;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #e8f5e9; border-left: 4px solid #4caf50; border-right: 4px solid #4caf50; padding: 20px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #2e7d32; line-height: 1.5;'>
+                <strong>Görev detaylarını görüntülemek için sisteme giriş yapınız.</strong>
+            </p>
+            <hr style='border: 0; border-top: 1px solid rgba(76, 175, 80, 0.2); margin: 15px 0;' />
+            <a href='https://efavori.com' style='display: inline-block; font-size: 14px; color: #2e7d32; text-decoration: none; font-weight: bold;'>
+                efavori internet sitesi
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            Bu e-posta, görev yönetim sistemi tarafından otomatik olarak gönderilmiştir.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 8px; letter-spacing: 0.5px;'>
+            İşlem Kayıt No (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "Yeni Görev Atandı", emailBody, attachments);
+            }
+
+            if (Culture == "en")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 25px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Task Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>New Task Assignment</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>You have been assigned a new task.</p>
+        
+        <p style='font-size: 15px; font-weight: 600;'>Hello,</p>
+        <p style='font-size: 14px; color: #555;'>A new task has been assigned to you. Please log in to the system to view the task details.</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>Notification Date</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 15px 0; font-size: 14px; color: #2e7d32; font-weight: 500;'>
+                <strong>Access the system to view your new task.</strong>
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 10px 20px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 13px; border-radius: 5px;'>
+                View Task
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f9fafb; padding: 25px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            This is an automated task notification. Please do not reply to this email.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 10px; letter-spacing: 0.5px; text-transform: uppercase;'>
+            Trace ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "New Task Assigned", emailBody, attachments);
+            }
+
+            if (Culture == "az")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Task' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 700; margin-bottom: 15px; border-bottom: 2px solid #f5f5f5; padding-bottom: 15px; text-align: center;'>Yeni Tapşırıq Bildirişi</h2>
+        
+        <p style='font-size: 15px; font-weight: 600;'>Hörmətli İstifadəçi,</p>
+        <p style='font-size: 14px; color: #555;'>Sizə yeni bir tapşırıq təyin edilmişdir. Tapşırıq detallarını görmək üçün sistemə daxil olun.</p>
+        
+        <table style='width: 100%; border-collapse: collapse; margin: 25px 0; background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>Bildiriş Tarixi</td>
+                <td style='padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 12px 0; font-size: 14px; color: #2e7d32; font-weight: bold;'>
+                Yeni tapşırığı görmək üçün sistemə daxil olun.
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; background-color: #4caf50; color: #ffffff; padding: 10px 20px; text-decoration: none; font-size: 13px; font-weight: bold; border-radius: 4px;'>
+                Tapşırığa bax
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f8f9fa; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>
+            Bu e-poçt tapşırıq idarəetmə sistemi tərəfindən avtomatik göndərilib.
+        </p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>
+            Əməliyyat ID (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "Yeni Tapşırıq Təyin Edildi", emailBody, attachments);
+            }
+
+            if (Culture == "de")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Aufgabe' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #0d47a1; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Neue Aufgabenzuweisung</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Ihnen wurde eine neue Aufgabe zugewiesen.</p>
+        
+        <p style='font-size: 15px;'>Guten Tag,</p>
+        <p style='font-size: 14px; color: #555;'>Ihnen wurde eine neue Aufgabe zugewiesen. Bitte melden Sie sich im System an, um die Aufgabendetails anzuzeigen.</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fafafa; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Benachrichtigungsdatum</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 8px; padding: 20px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 14px; color: #2e7d32; font-weight: bold;'>
+                Melden Sie sich an, um Ihre neue Aufgabe anzuzeigen.
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 12px 24px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 13px; border-radius: 6px;'>
+                Aufgabe anzeigen
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f7f9fc; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #a0aec0; margin: 0;'>
+            Dies ist eine automatisch generierte Aufgabenbenachrichtigung. Bitte antworten Sie nicht auf diese E-Mail.
+        </p>
+        <p style='font-size: 10px; color: #cbd5e0; margin-top: 10px; letter-spacing: 0.5px;'>
+            Trace-ID: {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "Neue Aufgabe zugewiesen", emailBody, attachments);
+            }
+
+            if (Culture == "es")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Tarea' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Nueva Asignación de Tarea</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Se le ha asignado una nueva tarea.</p>
+        
+        <p style='font-size: 15px;'>Estimado usuario/a,</p>
+        <p style='font-size: 14px; color: #555;'>Se le ha asignado una nueva tarea. Por favor, inicie sesión en el sistema para ver los detalles de la tarea.</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Fecha de Notificación</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 8px; padding: 25px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #2e7d32; font-weight: bold;'>
+                Acceda al sistema para ver su nueva tarea.
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 12px 25px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 13px; border-radius: 6px;'>
+                Ver tarea
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Esta es una notificación automática de tareas. Por favor, no responda a este correo.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de Seguimiento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "Nueva tarea asignada", emailBody, attachments);
+            }
+
+            if (Culture == "fr")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Tâche' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Nouvelle Attribution de Tâche</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Une nouvelle tâche vous a été assignée.</p>
+        
+        <p style='font-size: 15px;'>Bonjour,</p>
+        <p style='font-size: 14px; color: #555;'>Une nouvelle tâche vous a été assignée. Veuillez vous connecter au système pour consulter les détails de la tâche.</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #f0f0f0;'>Date de notification</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #f0f0f0;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 10px; padding: 25px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #2e7d32; font-weight: bold;'>
+                Connectez-vous pour voir votre nouvelle tâche.
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 12px 25px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 13px; border-radius: 6px;'>
+                Voir la tâche
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f8f9fa; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Ceci est une notification automatique. Merci de ne pas répondre à cet e-mail.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de suivi : {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "Nouvelle tâche assignée", emailBody, attachments);
+            }
+
+            if (Culture == "hi")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Task' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>नया कार्य असाइनमेंट</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>आपको एक नया कार्य सौंपा गया है।</p>
+        
+        <p style='font-size: 15px;'>नमस्ते,</p>
+        <p style='font-size: 14px; color: #555;'>आपको एक नया कार्य सौंपा गया है। कार्य विवरण देखने के लिए कृपया सिस्टम में लॉगिन करें।</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>सूचना दिनांक</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 10px; padding: 25px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 16px; color: #2e7d32; font-weight: bold;'>
+                अपना नया कार्य देखने के लिए लॉगिन करें।
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 12px 25px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 14px; border-radius: 6px;'>
+                कार्य देखें
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            यह एक स्वचालित कार्य सूचना है। कृपया इस ईमेल का उत्तर न दें।
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ट्रेस आईडी (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "नया कार्य असाइन किया गया", emailBody, attachments);
+            }
+
+            if (Culture == "pt")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Tarefa' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Nova Atribuição de Tarefa</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Uma nova tarefa foi atribuída a você.</p>
+        
+        <p style='font-size: 15px;'>Olá,</p>
+        <p style='font-size: 14px; color: #555;'>Uma nova tarefa foi atribuída a você. Por favor, faça login no sistema para visualizar os detalhes da tarefa.</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Data de Notificação</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 10px; padding: 25px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #2e7d32; font-weight: bold;'>
+                Acesse o sistema para ver sua nova tarefa.
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 12px 25px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 13px; border-radius: 6px;'>
+                Ver tarefa
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Esta é uma notificação automática de tarefas. Por favor, não responda a este e-mail.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID de Rastreamento: {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "Nova tarefa atribuída", emailBody, attachments);
+            }
+
+            if (Culture == "ru")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Задача' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 700; margin-bottom: 10px; text-align: center;'>Назначение новой задачи</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>Вам назначена новая задача.</p>
+        
+        <p style='font-size: 15px;'>Здравствуйте,</p>
+        <p style='font-size: 14px; color: #555;'>Вам назначена новая задача. Пожалуйста, войдите в систему, чтобы просмотреть детали задачи.</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>Дата уведомления</td>
+                <td style='padding: 12px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 10px; padding: 25px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #2e7d32; font-weight: bold;'>
+                Войдите в систему, чтобы увидеть вашу новую задачу.
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 12px 25px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 13px; border-radius: 6px;'>
+                Посмотреть задачу
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            Это автоматическое уведомление о задачах. Пожалуйста, не отвечайте на это письмо.
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            ID транзакции (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "Назначена новая задача", emailBody, attachments);
+            }
+
+            if (Culture == "zh")
+            {
+                string emailBody = $@"
+<div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
+    
+    <div style='padding: 35px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='任务通知' style='max-width: 100px; height: auto; display: inline-block;' />
+    </div>
+
+    <div style='padding: 0 40px 35px 40px;'>
+        <h2 style='color: #1a237e; font-size: 22px; font-weight: 700; margin-bottom: 10px; text-align: center;'>新任务分配通知</h2>
+        <p style='font-size: 14px; color: #666; text-align: center; margin-bottom: 25px;'>您收到了一个新的任务分配。</p>
+        
+        <p style='font-size: 15px;'>尊敬的用户，您好：</p>
+        <p style='font-size: 14px; color: #555;'>您收到了一个新的任务分配。请登录系统查看任务详情。</p>
+        
+        <table style='width: 100%; border-collapse: separate; border-spacing: 0; margin: 25px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 8px;'>
+            <tr>
+                <td style='padding: 14px 15px; font-weight: 600; color: #777; font-size: 13px; border-bottom: 1px solid #eeeeee;'>通知日期</td>
+                <td style='padding: 14px 15px; font-size: 13px; color: #333; border-bottom: 1px solid #eeeeee;'>{displayDate}</td>
+            </tr>
+        </table>
+
+        <div style='background-color: #f1f8f4; border: 1px solid #c8e6c9; border-radius: 10px; padding: 25px; margin-top: 30px; text-align: center;'>
+            <p style='margin: 0 0 10px 0; font-size: 15px; color: #2e7d32; font-weight: bold;'>
+                请登录系统查看您的新任务。
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; padding: 12px 25px; background-color: #4caf50; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 14px; border-radius: 6px;'>
+                查看任务
+            </a>
+        </div>
+    </div>
+
+    <div style='background-color: #f4f5f7; padding: 25px 40px; text-align: center; border-top: 1px solid #eeeeee;'>
+        <p style='font-size: 11px; color: #9aa4af; margin: 0;'>
+            这是系统生成的自动任务通知，请勿直接回复。
+        </p>
+        <p style='font-size: 10px; color: #bcccdc; margin-top: 10px; letter-spacing: 0.5px;'>
+            追踪 ID (Trace ID): {details.TraceId}
+        </p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, "新任务已分配", emailBody, attachments);
+            }
+        }
+        public async Task SendTaskStatuToBeDoneMailEmail(string Culture, string Email, string TaskTitle, string Employee)
+        {
+            var attachments = new List<Attachment>();
+            var details = _userInfos.GetCurrentUserDetails();
+            string displayDate = DateTime.Now.ToString("dd MMMM yyyy HH:mm");
+
+            if (Culture == "tr")
+            {
+                string emailBody = $@"
+<div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
+    <div style='padding: 30px 30px 20px 30px; text-align: center;'>
+        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+    </div>
+    <div style='padding: 0 40px 30px 40px;'>
+        <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; text-align: center;'>Görev İşleme Alındı</h2>
+        <p style='font-size: 15px;'>Sayın Kullanıcımız,</p>
+        <p style='font-size: 14px; color: #555;'>Oluşturduğunuz <strong>$'{TaskTitle}'</strong> görevi, ilgili sorumlu tarafından <strong>işleme alınmıştır</strong>. İlgili personelin çalışma süreci başlatılmıştır.</p>
+        <table style='width: 100%; border-collapse: collapse; margin: 25px 0; background-color: #f8f9fa; border-radius: 6px;'>
+            <tr>
+                <td style='padding: 12px 15px; font-weight: 600; color: #666; font-size: 13px; border-bottom: 1px solid #ffffff;'>İşlem Tarihi</td>
+                <td style='padding: 12px 15px; font-size: 13px; border-bottom: 1px solid #ffffff;'>{displayDate}</td>
+            </tr>
+        </table>
+        <div style='background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin-top: 25px; text-align: center;'>
+            <p style='margin: 0 0 15px 0; font-size: 13px; color: #0d47a1; line-height: 1.5;'>
+                <strong>Güncel durumu takip etmek için sisteme giriş yapabilirsiniz.</strong>
+            </p>
+            <a href='https://efavori.com' style='display: inline-block; font-size: 14px; color: #0d47a1; text-decoration: none; font-weight: bold;'>efavori internet sitesi</a>
+        </div>
+    </div>
+    <div style='background-color: #f4f4f4; padding: 20px 40px; text-align: center; border-top: 1px solid #eee;'>
+        <p style='font-size: 11px; color: #999; margin: 0;'>Bu e-posta otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.</p>
+        <p style='font-size: 10px; color: #bbb; margin-top: 8px;'>Trace ID: {details.TraceId}</p>
+    </div>
+</div>";
+                await SendEmailAsync("tasks@efavori.com", Email, $"{TaskTitle} Görevi İşleme Alındı", emailBody, attachments);
+            }
+        }
+        public async Task SendTaskStatuInProcessMailEmail(string Culture, string Email, string TaskTitle, string Employee)
+        {
+
+        }
+        public async Task SendTaskStatuInEditingMailEmail(string Culture, string Email, string TaskTitle, string Employee)
+        {
+
+        }
+        public async Task SendTaskStatuCompletedMailEmail(string Culture, string Email, string TaskTitle, string Employee)
+        {
+
         }
     }
 }

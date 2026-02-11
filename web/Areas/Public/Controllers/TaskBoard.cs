@@ -4,13 +4,17 @@ namespace web.Areas.Public.Controllers
 {
     [Area("Public")]
     [Route("{culture}/Public/[controller]/[action]")]
-    public class Home : Controller
+    public class TaskBoard : Controller
     {
-        public IActionResult GetGitHubCommits()
+        public IActionResult PlanningTaskBoard()
         {
             return View();
         }
-        public IActionResult MediaGallery()
+        public IActionResult InProcessTaskBoard()
+        {
+            return View();
+        }
+        public IActionResult CompletedTaskBoard()
         {
             return View();
         }

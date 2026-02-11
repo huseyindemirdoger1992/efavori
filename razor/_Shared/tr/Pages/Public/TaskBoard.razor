@@ -1166,6 +1166,43 @@
                             }
                         </select>
                     </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="form-label">Görevin hangi aşamalarında email bildirimi almak istiyorsunuz?</label>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="AddTask.IsNew">
+                                <label class="form-check-label" for="flexCheckDefault">Yeni </label>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="AddTask.IsToBeDone">
+                                <label class="form-check-label" for="flexCheckDefault">Yapılacak </label>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="AddTask.IsInProgress">
+                                <label class="form-check-label" for="flexCheckDefault">İşlemde </label>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="AddTask.IsInEditing">
+                                <label class="form-check-label" for="flexCheckDefault">Düzenlemede </label>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" @bind="AddTask.IsCompleted">
+                                <label class="form-check-label" for="flexCheckDefault">Tamamlandı </label>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">İptal</button>
@@ -1181,6 +1218,7 @@
         </div>
     </div>
 }
+
 <!-- Edit Task Modal -->
 @if (EditTaskshowModal)
 {
@@ -1247,6 +1285,44 @@
                             }
                         </select>
                     </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <label class="form-label text-light">Görevin hangi aşamalarında email bildirimi almak istiyorsunuz?</label>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkNew" @bind="editingTask.IsNew">
+                                <label class="form-check-label" for="chkNew">Yeni</label>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkToBeDone" @bind="editingTask.IsToBeDone">
+                                <label class="form-check-label" for="chkToBeDone">Yapılacak</label>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkInProgress" @bind="editingTask.IsInProgress">
+                                <label class="form-check-label" for="chkInProgress">İşlemde</label>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkInEditing" @bind="editingTask.IsInEditing">
+                                <label class="form-check-label" for="chkInEditing">Düzenlemede</label>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-2 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkCompleted" @bind="editingTask.IsCompleted">
+                                <label class="form-check-label" for="chkCompleted">Tamamlandı</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">İptal</button>
@@ -1262,6 +1338,7 @@
         </div>
     </div>
 }
+
 <!-- Task Detail Modal -->
 @if (showDetailModal && selectedTask != null)
 {
@@ -1372,7 +1449,7 @@
 
 
 
-                    <input class="form-check-input" type="checkbox" checked="@(note.IsTheNoteOk == true)" @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))" id="note-@note.Id">
+                                            <input class="form-check-input" type="checkbox" checked="@(note.IsTheNoteOk == true)" @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))" id="note-@note.Id">
 
 
                                             <div class="flex-grow-1">
@@ -1415,39 +1492,7 @@
         </div>
     </div>
 }
-@* Yeni kategori Modalı*@
-<div class="modal fade" id="AddNewCategoryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title text-white">
-                    <i class="fa fa-address-book"></i> Yeni Görev Kategorisi
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="col-12">
-                    <label>Kategori Adı</label>
-                    <input class="form-control mb-3" type="text" @bind="TaskCategories?.Title">
-                </div>
-                <div class="col-12">
-                    <label>Kategori Açıklaması</label>
-                    <textarea class="form-control" rows="3" @bind="TaskCategories?.Description"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer border-top border-secondary">
-                <button type="button"
-                        class="@(IsButtonProcessing("addCategory") ? "btn btn-light colored" : "btn btn-light")"
-                        style="width:100%;"
-                        @onclick='AddNewCategori'
-                        disabled="@IsButtonProcessing("addCategory")">
-                    <i class="fa @(IsButtonProcessing("addCategory") ? "fa-refresh fa-spin" : "fa-plus")"></i>
-                    <span>@(IsButtonProcessing("addCategory") ? "Yükleniyor..." : "Kaydet")</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+
 <Notification @ref="notificationRef" />
 @code {
     [Parameter] public Users? use { get; set; }
@@ -1781,6 +1826,7 @@
             TaskDescription = task.TaskDescription,
             Priority = task.Priority,
             Status = task.Status,
+            TaskCategoriesId = task.TaskCategoriesId, // Bunu da ekleyin
             TargetDate = task.TargetDate,
             PersonInChargeUserId = task.PersonInChargeUserId,
             AssignedByUserId = task.AssignedByUserId,
@@ -1788,8 +1834,16 @@
             DateToBeDone = task.DateToBeDone,
             DateInProcess = task.DateInProcess,
             DateInEditing = task.DateInEditing,
-            DateCompleted = task.DateCompleted
+            DateCompleted = task.DateCompleted,
+
+            // ✅ Email bildirim flag'lerini ekleyin
+            IsNew = task.IsNew,
+            IsToBeDone = task.IsToBeDone,
+            IsInProgress = task.IsInProgress,
+            IsInEditing = task.IsInEditing,
+            IsCompleted = task.IsCompleted
         };
+
         editTargetDate = task.TargetDate ?? DateTime.Now.AddDays(7);
         editSelectedPersonInCharge = task.PersonInChargeUserId?.ToString() ?? "";
         showDetailModal = false;
@@ -1911,6 +1965,11 @@
                             existingTask.DateCompleted = DateTime.Now;
                         break;
                 }
+                existingTask.IsNew = editingTask.IsNew ?? false;
+                existingTask.IsToBeDone = editingTask.IsToBeDone ?? false;
+                existingTask.IsInProgress = editingTask.IsInProgress ?? false;
+                existingTask.IsInEditing = editingTask.IsInEditing ?? false;
+                existingTask.IsCompleted = editingTask.IsCompleted ?? false;
                 db.TaskStatus.Update(existingTask);
                 await db.SaveChangesAsync(_cts.Token);
                 await ShowNotification("success", "Başarılı", "Görev güncellendi.", null);
@@ -2089,14 +2148,19 @@
             await JSRuntime.InvokeVoidAsync("eval", $"$('#delete_{tce.Id}').modal('hide')");
         });
     }
-public int GetTaskCount(TaskCategories tc)
-{
-    // 1. null kontrolü
-    if (tc == null) return 0;
-    // 2. DbContext'i senkron olarak oluşturun
-    using var db = DbFactory.CreateDbContext();
-    // 3. Senkron Count() kullanarak sonucu döndürün
-    return db.TaskStatus.Count(x => x.TaskCategoriesId == tc.Id);
-}
+    public int GetTaskCount(TaskCategories tc)
+    {
+        // 1. null kontrolü
+        if (tc == null) return 0;
+        // 2. DbContext'i senkron olarak oluşturun
+        using var db = DbFactory.CreateDbContext();
+        // 3. Senkron Count() kullanarak sonucu döndürün
+        return db.TaskStatus.Count(x => x.TaskCategoriesId == tc.Id && x.IsDeleted.IsDeletedStatu != true);
+    }
+
+    public string IsEmailNotificationEnabled(bool? Statu)
+    {
+        return (Statu ?? false) ? "checked" : "";
+    }
     #endregion
 }

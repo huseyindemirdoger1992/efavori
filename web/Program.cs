@@ -142,11 +142,15 @@ try
 
     void ConfigureInfrastructure(WebApplicationBuilder b)
     {
+        // Karakter kodlama ve temel servisler
         b.Services.AddSingleton(HtmlEncoder.Create(UnicodeRanges.All));
         b.Services.AddHttpContextAccessor();
+
+        // GlobalStateHub'ın ihtiyaç duyduğu cache yapısı
         b.Services.AddDistributedMemoryCache();
         b.Services.AddScoped<UserInfos>();
 
+        // MVC ve Localization ayarları
         var mvcBuilder = b.Services.AddControllersWithViews()
             .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
             .AddDataAnnotationsLocalization();
@@ -156,8 +160,19 @@ try
             mvcBuilder.AddRazorRuntimeCompilation();
         }
 
-        b.Services.AddServerSideBlazor();
-        b.Services.AddRazorComponents().AddInteractiveServerComponents();
+        // ✅ Doğru Blazor Yapılandırması
+        b.Services.AddRazorComponents()
+            .AddInteractiveServerComponents();
+
+        b.Services.AddServerSideBlazor(options =>
+        {
+            // Sunucu için kritik ayarlar:
+            options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(1);
+
+            // E-ticaret gibi yoğun veri trafiğinde mesaj boyutunu sınırla (opsiyonel)
+            options.DetailedErrors = b.Environment.IsDevelopment();
+            options.DisconnectedCircuitMaxRetained = 128; // Aynı anda kaç kopuk devre RAM'de beklesin?
+        });
     }
 
     void ConfigureLocalization(IServiceCollection services)

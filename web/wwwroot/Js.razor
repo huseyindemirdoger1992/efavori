@@ -114,11 +114,11 @@
                 if (distance < 0) {
                     progressBar.style.width = '100%';
                     progressBar.classList.remove('bg-warning');
-                    progressBar.classList.add('bg-danger');
+                    progressBar.classList.add('bg-dark');
                 } else {
                     const progressPercent = Math.max(0, Math.min((elapsed / totalDuration) * 100, 100));
                     progressBar.style.width = progressPercent + '%';
-                    progressBar.classList.remove('bg-danger');
+                    progressBar.classList.remove('bg-dark');
                     progressBar.classList.add('bg-warning');
                 }
             }
@@ -126,8 +126,8 @@
             // Yazı güncelleme
             if (distance < 0) {
                 timer.innerHTML = "Süre Doldu";
-                timer.classList.remove('text-warning');
-                timer.classList.add('text-danger');
+                timer.classList.remove('text-dark');
+                timer.classList.add('text-dark');
             } else {
                 const days = Math.floor(distance / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));

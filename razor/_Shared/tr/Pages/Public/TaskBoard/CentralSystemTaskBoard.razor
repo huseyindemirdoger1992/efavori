@@ -1630,10 +1630,20 @@
 
                                                 <div class="flex-grow-1 min-w-0">
                                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                                        <small class="text-warning fw-semibold" style="font-size: 0.75rem;">
-                                                            <i class="far fa-clock me-1"></i>@note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")
-                                                        </small>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <small class="text-warning fw-semibold" style="font-size: 0.75rem;">
+                                                                <i class="fa fa-clock-o me-1"></i>@note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")
+                                                            </small>
 
+                                                            @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
+                                                            {
+                                                                <button class="btn btn-link btn-sm text-info p-0 border-0"
+                                                                        title="Notu Düzenle">
+                                                                    <i class="fa fa-pencil"></i>
+                                                                </button>
+
+                                                            }
+                                                        </div>
                                                         @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                                                         {
                                                             <button class="btn btn-link btn-sm text-danger p-0 border-0"
@@ -1643,6 +1653,7 @@
                                                             </button>
                                                         }
                                                     </div>
+
                                                     <p class="mb-0 text-break @(note.IsTheNoteOk == true ? "text-decoration-line-through opacity-50 text-light" : "text-light")"
                                                        style="font-size: 0.9rem; line-height: 1.4;">
                                                         @note.Note

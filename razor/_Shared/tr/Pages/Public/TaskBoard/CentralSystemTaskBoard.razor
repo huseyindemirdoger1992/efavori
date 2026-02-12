@@ -1627,21 +1627,17 @@
                                                            id="note-@note.Id"
                                                            style="cursor: pointer; width: 1.2rem; height: 1.2rem;">
                                                 </div>
-
                                                 <div class="flex-grow-1 min-w-0">
                                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                                         <div class="d-flex align-items-center gap-2">
                                                             <small class="text-warning fw-semibold" style="font-size: 0.75rem;">
                                                                 <i class="fa fa-clock-o me-1"></i>@note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")
                                                             </small>
-
                                                             @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                                                             {
-                                                                <button class="btn btn-link btn-sm text-info p-0 border-0"
-                                                                        title="Notu Düzenle">
+                                                                <button class="btn btn-link btn-sm text-info p-0 border-0" title="Notu Düzenle" @onclick="() => EditNoteModalStatu(note)">
                                                                     <i class="fa fa-pencil"></i>
                                                                 </button>
-
                                                             }
                                                         </div>
                                                         @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
@@ -1653,7 +1649,6 @@
                                                             </button>
                                                         }
                                                     </div>
-
                                                     <p class="mb-0 text-break @(note.IsTheNoteOk == true ? "text-decoration-line-through opacity-50 text-light" : "text-light")"
                                                        style="font-size: 0.9rem; line-height: 1.4;">
                                                         @note.Note
@@ -1690,6 +1685,43 @@
         </div>
     </div>
 }
+
+<!-- Edit Task Note Modal -->
+@if (showNoteEditlModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title">Not Bilgisini Düzenle</h5>
+                    <button type="button" class="btn-close" @onclick="() => EditNoteModalStatu(null)"></button>
+                </div>
+                <div class="modal-body">
+
+                    @if (Task_Notes != null)
+                    {
+                        <div class="col-12">
+                            <label>Not İçeriği</label>
+                            <textarea class="form-control" rows="3" @bind="Task_Notes.Note"></textarea>
+                        </div>
+                    }
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="() => EditNoteModalStatu(null)">İptal</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveEditNoteTask" disabled="@IsButtonProcessing("edit")">
+                        @if (IsButtonProcessing("edit"))
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Güncelle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <_AddNewCategoryModal use="use" />
 <Notification @ref="notificationRef" />
 @code {
@@ -1719,10 +1751,12 @@
     private bool AddTaskshowModal = false;
     private bool EditTaskshowModal = false;
     private bool showDetailModal = false;
+    private bool showNoteEditlModal = false;
     private data.TaskCategories? TaskCategories = new();
     private data.TaskStatus? AddTask;
     private data.TaskStatus? editingTask;
     private data.TaskStatus? selectedTask;
+    private data.TaskNotes? Task_Notes;
     private DateTime? targetDate = DateTime.Now.AddDays(7);
     private DateTime? editTargetDate;
     private string CategoryStructure = "";
@@ -2368,10 +2402,53 @@
         // 3. Senkron Count() kullanarak sonucu döndürün
         return db.TaskStatus.Count(x => x.TaskCategoriesId == tc.Id && x.IsDeleted.IsDeletedStatu != true);
     }
-
     public string IsEmailNotificationEnabled(bool? Statu)
     {
         return (Statu ?? false) ? "checked" : "";
     }
+    public void EditNoteModalStatu(TaskNotes? tn)
+    {
+        showNoteEditlModal = !showNoteEditlModal;
+        if (tn != null)
+        {
+            Task_Notes = new TaskNotes
+            {
+                Id = tn.Id,
+                TaskStatusId = tn.TaskStatusId,
+                UserId = tn.UserId,
+                Note = tn.Note,
+                NoteCreatedAt = tn.NoteCreatedAt,
+                IsTheNoteOk = tn.IsTheNoteOk,
+                IsDeleted = tn.IsDeleted
+            };
+        }
+    }
+    public async Task SaveEditNoteTask()
+    {
+        if (Task_Notes == null) return;
+        if (string.IsNullOrEmpty(Task_Notes.Note))
+        {
+            await ShowNotification("danger", "Hata", "Not alanı boş olamaz.", null);
+            return;
+        }
+        await ExecuteWithLock("editNote", async () =>
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existingNote = await db.TaskNotes.FirstOrDefaultAsync(n => n.Id == Task_Notes.Id, _cts.Token);
+            if (existingNote != null)
+            {
+                existingNote.Note = Task_Notes.Note;
+                db.TaskNotes.Update(existingNote);
+                await db.SaveChangesAsync(_cts.Token);
+                await ShowNotification("success", "Başarılı", "Not güncellendi.", null);
+                if (selectedTask != null)
+                {
+                    await LoadTaskNotes(selectedTask.Id);
+                }
+                showNoteEditlModal = false;
+            }
+        });
+    }
     #endregion
+
 }

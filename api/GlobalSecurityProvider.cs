@@ -18,10 +18,10 @@ namespace api
         static GlobalSecurityProvider()
         {
             string passphrase = Environment.GetEnvironmentVariable("ENCRYPTION_KEY")
-                ?? "X9$mK#7nQ2@pL!8vR&4tY*6wE^3sA%1uZ+5gH-0jF=9bN~8cD|7xM<6>5hT?4kW@3lP#2qV$1rS!0oG&9fJ*8eI^7dH%6cB+5aY-4xW=3vU~2tN|1sM<0rL>9qK?8pJ";
+                ?? "Dv1QrnBA1GY6FPGVFLCelAs8ZVm7rMV+NJ/K/kC05Uft0k68rzy/yzPWmsDl+3uPYqLI57gjraX3npRssAgCmgrb2OtXO735gBZD0hE1S0OZK/6p6VRFd6AIKN5G9LLR";
 
             string salt = Environment.GetEnvironmentVariable("ENCRYPTION_SALT")
-                ?? "V#8nM$7kL!6jH&5gF*4dS%3aP@2oN^1mK+0iJ-9hG=8fE~7cD|6bA<5zY>4xW?3vU@2tS#1rQ$0pO!9nM&8lK*7jI^6hG%5fE+4dC-3bA=2zA~1yX|0wV<9uT>8sR?7qP";
+                ?? "KL7WlB1/hK2HkEyBp0yJfdsLIFfmwEKCTcHzEqVMMKLC6t1E90QbgVfk6ZhfNf/IoR+MvZTQey2ZfRxty9nu1+DHZNqVWSK05TYnT5oMRBEvgWjWo/VeGTjXJwk7aBUD";
 
             MasterKey = DerivedKeyFromPassphrase(passphrase, salt, 100000);
             HmacKey = DerivedKeyFromPassphrase(passphrase, salt + "_HMAC", 100000);

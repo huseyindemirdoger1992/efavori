@@ -740,7 +740,7 @@
                                     </div>
                                     <div class="modal-body">
                                         <div class="row">
-                                            <div class="col-md-6 mb-3">
+                                            <div class="col-md-12 mb-12">
                                                 <label class="form-label">Kategori Durumu</label>
                                                 <select class="form-select" @bind="CategoryStructure">
                                                     <option value="">...</option>
@@ -749,11 +749,11 @@
                                                     <option value=TaskCategoriesValue>Tamamlandı</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-6 mb-3">
+                                            <div class="col-md-12 mb-12" style="margin-top:12px;">
                                                 <label class="form-label">Kategori Adı</label>
                                                 <input class="form-control mb-3" type="text" @bind="item?.Title">
                                             </div>
-                                            <div class="col-12">
+                                            <div class="col-md-12 mb-12">
                                                 <label>Kategori Açıklaması</label>
                                                 <textarea class="form-control" rows="3" @bind="item?.Description"></textarea>
                                             </div>
@@ -1613,28 +1613,41 @@
                     {
                         <div class="mb-3">
                             <strong>Notlar:</strong>
-                            <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
+                            <div class="mt-2 px-1" style="max-height: 250px; overflow-y: auto;">
                                 @foreach (var note in taskNotes.OrderByDescending(n => n.NoteCreatedAt))
                                 {
-                                    <div class="alert alert-light p-2 mb-2">
-                                        <div class="d-flex justify-content-between align-items-start">
+                                    <div class="card shadow-sm border-0 mb-2 bg-light bg-opacity-10">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex gap-2">
+                                                <div class="flex-shrink-0 pt-1">
+                                                    <input class="form-check-input mt-0"
+                                                           type="checkbox"
+                                                           checked="@(note.IsTheNoteOk == true)"
+                                                           @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))"
+                                                           id="note-@note.Id"
+                                                           style="cursor: pointer; width: 1.2rem; height: 1.2rem;">
+                                                </div>
 
+                                                <div class="flex-grow-1 min-w-0">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <small class="text-warning fw-semibold" style="font-size: 0.75rem;">
+                                                            <i class="far fa-clock me-1"></i>@note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")
+                                                        </small>
 
-
-
-
-                                            <input class="form-check-input" type="checkbox" checked="@(note.IsTheNoteOk == true)" @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))" id="note-@note.Id">
-
-
-                                            <div class="flex-grow-1">
-                                                <small class="text-light"> @note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")</small>
-                                                <p class="mb-0 mt-1 text-warning" style="@(note.IsTheNoteOk == true ? "text-decoration: line-through; opacity: 0.6;" : "")">@note.Note</p>
-                                            </div>
-                                            <div class="form-check ms-2">
-                                                @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
-                                                {
-                                                    <i class="fa fa-trash text-danger" @onclick="@(async () => await DeleteNote(note.Id))"></i>
-                                                }
+                                                        @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
+                                                        {
+                                                            <button class="btn btn-link btn-sm text-danger p-0 border-0"
+                                                                    @onclick="@(async () => await DeleteNote(note.Id))"
+                                                                    title="Notu Sil">
+                                                                <i class="fa fa-trash"></i>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                    <p class="mb-0 text-break @(note.IsTheNoteOk == true ? "text-decoration-line-through opacity-50 text-light" : "text-light")"
+                                                       style="font-size: 0.9rem; line-height: 1.4;">
+                                                        @note.Note
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

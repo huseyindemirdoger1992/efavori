@@ -17,7 +17,7 @@
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-12 mb-12">
                         <label class="form-label">Kategori Durumu</label>
                         <select class="form-select" @bind="TaskCategories.CategoryStructure">
                             <option value="PlanningTaskBoard">Plan Aşamasında</option>
@@ -25,11 +25,11 @@
                             <option value="CompletedTaskBoard">Tamamlandı</option>
                         </select>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-12 mb-12" style="margin-top:12px;">
                         <label class="form-label">Kategori Adı</label>
                         <input class="form-control mb-3" type="text" @bind="TaskCategories?.Title">
                     </div>
-                    <div class="col-12">
+                    <div class="col-md-12 mb-12">
                         <label>Kategori Açıklaması</label>
                         <textarea class="form-control" rows="3" @bind="TaskCategories?.Description"></textarea>
                     </div>
@@ -48,6 +48,7 @@
         </div>
     </div>
 </div>
+<Notification @ref="notificationRef" />
 @code {
     [Parameter] public Users? use { get; set; }
     #region Services
@@ -655,7 +656,7 @@
                 string.IsNullOrWhiteSpace(TaskCategories.Title) ||
                 string.IsNullOrWhiteSpace(TaskCategories.Description))
             {
-                await ShowNotification("danger", "Hata", "Kategori bilgileri eksik.", null);
+                await ShowNotification("danger", "Hata", "Kategori bilgileri eksik veya sadece boşluklardan oluşuyor.", null);
                 return;
             }
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);

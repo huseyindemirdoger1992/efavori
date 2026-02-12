@@ -132,10 +132,10 @@ namespace razor.Example
 
             try
             {
-                // 2. Eğer arama terimi varsa 250ms bekle (Debounce)
+                // 2. Eğer arama terimi varsa 1000ms bekle (Debounce)
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    await Task.Delay(250, token);
+                    await Task.Delay(1000, token);
                 }
 
                 if (_isLoading) return;

@@ -38,7 +38,7 @@ namespace api
         private readonly ConcurrentDictionary<string, DateTime> _lastBroadcast = new();
 
         private const int DEBOUNCE_MS = 1000;           // Throttling: 1000ms
-        private const int CACHE_SECONDS = 2;           // RAM buffer: 2 saniye
+        private const int CACHE_SECONDS = 1;           // RAM buffer: 1 saniye
         private bool _disposed;
 
         #endregion

@@ -1,63 +1,266 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Buffers;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace api
 {
-    public class GlobalSecurityProvider
+    public static class GlobalSecurityProvider
     {
-        // Senin belirlediğin gizli anahtar
-        private static readonly int Salt = 16;
+        private static readonly byte[] MasterKey;
+        private static readonly byte[] HmacKey;
 
-        /// <summary>
-        /// Metni önce anahtar ile karıştırır, sonra Base64 formatına sokar.
-        /// Japonca, Arapça ve Türkçe karakterlerle %100 uyumludur.
-        /// </summary>
-        public static string Sifrele(string metin)
+        // Thread-safe için object pool
+        private static readonly ArrayPool<byte> ByteArrayPool = ArrayPool<byte>.Shared;
+
+        static GlobalSecurityProvider()
+        {
+            string passphrase = Environment.GetEnvironmentVariable("ENCRYPTION_KEY")
+                ?? "X9$mK#7nQ2@pL!8vR&4tY*6wE^3sA%1uZ+5gH-0jF=9bN~8cD|7xM<6>5hT?4kW@3lP#2qV$1rS!0oG&9fJ*8eI^7dH%6cB+5aY-4xW=3vU~2tN|1sM<0rL>9qK?8pJ";
+
+            string salt = Environment.GetEnvironmentVariable("ENCRYPTION_SALT")
+                ?? "V#8nM$7kL!6jH&5gF*4dS%3aP@2oN^1mK+0iJ-9hG=8fE~7cD|6bA<5zY>4xW?3vU@2tS#1rQ$0pO!9nM&8lK*7jI^6hG%5fE+4dC-3bA=2zA~1yX|0wV<9uT>8sR?7qP";
+
+            MasterKey = DerivedKeyFromPassphrase(passphrase, salt, 100000);
+            HmacKey = DerivedKeyFromPassphrase(passphrase, salt + "_HMAC", 100000);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static byte[] DerivedKeyFromPassphrase(string passphrase, string salt, int iterations)
+        {
+            using (var rfc2898 = new Rfc2898DeriveBytes(
+                Encoding.UTF8.GetBytes(passphrase),
+                Encoding.UTF8.GetBytes(salt),
+                iterations,
+                HashAlgorithmName.SHA512))
+            {
+                return rfc2898.GetBytes(32);
+            }
+        }
+
+        public static string Encrypt(string metin)
         {
             if (string.IsNullOrEmpty(metin)) return metin;
 
-            // 1. Metni Byte dizisine çevir (UTF8 her dili destekler)
-            byte[] veriler = Encoding.UTF8.GetBytes(metin);
-
-            // 2. Her bir byte'ı senin anahtarınla manipüle et
-            for (int i = 0; i < veriler.Length; i++)
-            {
-                // Byte bazlı kaydırma (256 modunda döner, veri kaybı olmaz)
-                veriler[i] = (byte)((veriler[i] + Salt) % 256);
-            }
-
-            // 3. Güvenli saklama için Base64'e çevir
-            return Convert.ToBase64String(veriler);
-        }
-
-        /// <summary>
-        /// Base64 metni çözer ve anahtar ile orijinal haline getirir.
-        /// </summary>
-        public static string Coz(string base64Metin)
-        {
-            if (string.IsNullOrEmpty(base64Metin)) return base64Metin;
+            byte[] plainBytes = null;
+            byte[] iv = null;
+            byte[] encryptedBuffer = null;
+            byte[] finalBuffer = null;
 
             try
             {
-                // 1. Base64'ten Byte dizisine geri dön
-                byte[] veriler = Convert.FromBase64String(base64Metin);
-
-                // 2. Manipülasyonu geri al
-                for (int i = 0; i < veriler.Length; i++)
+                using (Aes aes = Aes.Create())
                 {
-                    int orijinalByte = veriler[i] - (Salt % 256);
-                    if (orijinalByte < 0) orijinalByte += 256;
-                    veriler[i] = (byte)orijinalByte;
+                    aes.KeySize = 256;
+                    aes.BlockSize = 128;
+                    aes.Mode = CipherMode.CBC;
+                    aes.Padding = PaddingMode.PKCS7;
+                    aes.Key = MasterKey;
+
+                    aes.GenerateIV();
+                    iv = aes.IV;
+
+                    // Unicode encoding (tüm dilleri destekler)
+                    plainBytes = Encoding.Unicode.GetBytes(metin);
+
+                    // Şifreli veri için buffer tahmin et
+                    int estimatedSize = plainBytes.Length + aes.BlockSize;
+                    encryptedBuffer = ByteArrayPool.Rent(estimatedSize);
+
+                    int encryptedLength;
+
+                    using (var encryptor = aes.CreateEncryptor(aes.Key, iv))
+                    {
+                        // ICryptoTransform ile direkt transform
+                        encryptedLength = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length).Length;
+
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            ms.Write(iv, 0, iv.Length);
+
+                            using (CryptoStream cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                            {
+                                cs.Write(plainBytes, 0, plainBytes.Length);
+                                cs.FlushFinalBlock();
+                            }
+
+                            byte[] encryptedData = ms.ToArray();
+
+                            // HMAC hesaplama
+                            using (var hmac = new HMACSHA512(HmacKey))
+                            {
+                                byte[] hash = hmac.ComputeHash(encryptedData);
+
+                                // Final paket: [IV + Encrypted + HMAC]
+                                int finalLength = encryptedData.Length + hash.Length;
+                                finalBuffer = ByteArrayPool.Rent(finalLength);
+
+                                Buffer.BlockCopy(encryptedData, 0, finalBuffer, 0, encryptedData.Length);
+                                Buffer.BlockCopy(hash, 0, finalBuffer, encryptedData.Length, hash.Length);
+
+                                // Base64 encoding
+                                return Convert.ToBase64String(finalBuffer, 0, finalLength);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Şifreleme hatası: {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                // Kritik: Bellekte hassas verileri temizle
+                if (plainBytes != null)
+                {
+                    CryptographicOperations.ZeroMemory(plainBytes);
+                }
+                if (iv != null)
+                {
+                    CryptographicOperations.ZeroMemory(iv);
+                }
+                if (encryptedBuffer != null)
+                {
+                    CryptographicOperations.ZeroMemory(encryptedBuffer.AsSpan(0, encryptedBuffer.Length));
+                    ByteArrayPool.Return(encryptedBuffer, clearArray: true);
+                }
+                if (finalBuffer != null)
+                {
+                    CryptographicOperations.ZeroMemory(finalBuffer.AsSpan(0, finalBuffer.Length));
+                    ByteArrayPool.Return(finalBuffer, clearArray: true);
                 }
 
-                // 3. Tekrar okunabilir metne çevir
-                return Encoding.UTF8.GetString(veriler);
+                // GC'ye yardımcı ol
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false);
             }
-            catch
+        }
+
+        public static string Decrypt(string base64Metin)
+        {
+            if (string.IsNullOrEmpty(base64Metin)) return base64Metin;
+
+            byte[] decryptedBytes = null;
+            byte[] tumVeri = null;
+            byte[] dataBuffer = null;
+
+            try
             {
-                // Eğer veri Base64 değilse veya bozulmuşsa orijinali döner
-                return "Hata: Veri Çözülemedi";
+                tumVeri = Convert.FromBase64String(base64Metin);
+
+                // Minimum boyut kontrolü: IV(16) + En az 16 byte veri + HMAC(64) = 96 byte
+                if (tumVeri.Length < 96)
+                {
+                    return "Hata: Geçersiz Veri Formatı";
+                }
+
+                using (Aes aes = Aes.Create())
+                {
+                    aes.KeySize = 256;
+                    aes.BlockSize = 128;
+                    aes.Mode = CipherMode.CBC;
+                    aes.Padding = PaddingMode.PKCS7;
+                    aes.Key = MasterKey;
+
+                    // HMAC ayırma
+                    int dataLength = tumVeri.Length - 64;
+                    dataBuffer = ByteArrayPool.Rent(dataLength);
+
+                    byte[] receivedHmac = new byte[64];
+                    Buffer.BlockCopy(tumVeri, 0, dataBuffer, 0, dataLength);
+                    Buffer.BlockCopy(tumVeri, dataLength, receivedHmac, 0, 64);
+
+                    // HMAC doğrulama (Encrypt-then-MAC)
+                    using (var hmac = new HMACSHA512(HmacKey))
+                    {
+                        byte[] calculatedHmac = hmac.ComputeHash(dataBuffer, 0, dataLength);
+
+                        // Timing attack'a karşı güvenli karşılaştırma
+                        if (!CryptographicOperations.FixedTimeEquals(calculatedHmac, receivedHmac))
+                        {
+                            return "Hata: Veri Bütünlüğü İhlali - Veri Değiştirilmiş";
+                        }
+
+                        // HMAC'i temizle
+                        CryptographicOperations.ZeroMemory(calculatedHmac);
+                        CryptographicOperations.ZeroMemory(receivedHmac);
+                    }
+
+                    // IV ayırma
+                    byte[] iv = new byte[16];
+                    Buffer.BlockCopy(dataBuffer, 0, iv, 0, 16);
+
+                    // Şifreli veri ayırma
+                    int encryptedDataLength = dataLength - 16;
+                    byte[] encryptedData = new byte[encryptedDataLength];
+                    Buffer.BlockCopy(dataBuffer, 16, encryptedData, 0, encryptedDataLength);
+
+                    aes.IV = iv;
+
+                    using (var decryptor = aes.CreateDecryptor(aes.Key, aes.IV))
+                    {
+                        using (MemoryStream ms = new MemoryStream(encryptedData))
+                        {
+                            using (CryptoStream cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read))
+                            {
+                                using (MemoryStream resultStream = new MemoryStream())
+                                {
+                                    cs.CopyTo(resultStream);
+                                    decryptedBytes = resultStream.ToArray();
+
+                                    string result = Encoding.Unicode.GetString(decryptedBytes);
+                                    return result;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (CryptographicException)
+            {
+                return "Hata: Şifre Çözme Hatası - Geçersiz Anahtar veya Bozuk Veri";
+            }
+            catch (FormatException)
+            {
+                return "Hata: Geçersiz Base64 Formatı";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Şifre çözme hatası: {ex.Message}");
+                return "Hata: Beklenmeyen Bir Hata Oluştu";
+            }
+            finally
+            {
+                // Kritik: Bellekte hassas verileri temizle
+                if (decryptedBytes != null)
+                {
+                    CryptographicOperations.ZeroMemory(decryptedBytes);
+                }
+                if (tumVeri != null)
+                {
+                    CryptographicOperations.ZeroMemory(tumVeri);
+                }
+                if (dataBuffer != null)
+                {
+                    CryptographicOperations.ZeroMemory(dataBuffer.AsSpan(0, tumVeri?.Length - 64 ?? 0));
+                    ByteArrayPool.Return(dataBuffer, clearArray: true);
+                }
+
+                // GC'ye düşük öncelikli collection hint ver
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false);
+            }
+        }
+
+        // Bellek temizleme helper metodu
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SecureClear(byte[] array)
+        {
+            if (array != null)
+            {
+                CryptographicOperations.ZeroMemory(array);
             }
         }
     }

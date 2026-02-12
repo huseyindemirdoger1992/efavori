@@ -1614,6 +1614,7 @@
                         <div class="mb-3">
                             <strong>Notlar:</strong>
                             <div class="mt-2 px-1" style="max-height: 250px; overflow-y: auto;">
+                                <input class="form-control mb-3" type="text" placeholder="Notlarda ara..." oninput="filterNotes()">
                                 @foreach (var note in taskNotes.OrderByDescending(n => n.NoteCreatedAt))
                                 {
                                     <div class="card shadow-sm border-0 mb-2 bg-light bg-opacity-10">
@@ -1658,6 +1659,37 @@
                                         </div>
                                     </div>
                                 }
+
+                                <script>
+                                    function filterNotes() {
+                                        // Arama kutusunu seç
+                                        const input = document.querySelector('input[placeholder="Notlarda ara..."]');
+                                        if (!input) return;
+
+                                        // Arama metnini al, boşlukları temizle ve yerel dile göre küçük harfe çevir
+                                        const filter = input.value.trim().toLocaleLowerCase(window.navigator.language);
+
+                                        // Tüm not kartlarını seç
+                                        const notes = document.querySelectorAll('.card.shadow-sm.border-0.mb-2');
+
+                                        notes.forEach(note => {
+                                            // Kart içindeki p etiketini bul
+                                            const textElement = note.querySelector('p.text-break');
+
+                                            if (textElement) {
+                                                const textValue = (textElement.textContent || textElement.innerText)
+                                                                  .toLocaleLowerCase(window.navigator.language);
+
+                                                // Emojiler ve özel karakterler dahil içerik kontrolü
+                                                if (textValue.includes(filter)) {
+                                                    note.style.display = ""; // Varsayılan stil (görünür)
+                                                } else {
+                                                    note.style.setProperty('display', 'none', 'important'); // Gizle
+                                                }
+                                            }
+                                        });
+                                    }
+                                </script>
                             </div>
                         </div>
                     }

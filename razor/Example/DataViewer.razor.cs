@@ -47,7 +47,7 @@ namespace razor.Example
             StateHub.OnSystemError += HandleSystemError;
 
             // İlk veri yükleme
-            await LoadData();
+            await LoadData(null);
 
             _isInitialized = true;
         }
@@ -68,7 +68,7 @@ namespace razor.Example
                 // ✅ InvokeAsync: UI thread-safe güncelleme
                 await InvokeAsync(async () =>
                 {
-                    await LoadData();
+                    await LoadData(null);
                     StateHasChanged(); // UI'ı yenile
                 });
             }
@@ -119,43 +119,56 @@ namespace razor.Example
         /// - Sonraki 1 saniye: RAM'den döner (~0.05ms)
         /// - 1000 kullanıcı aynı anda yenilerse: 1 DB sorgusu + 999 RAM hit
         /// </summary>
-        protected virtual async Task LoadData()
+        /// 
+
+        private CancellationTokenSource? _searchCts;
+
+        protected virtual async Task LoadData(string? search)
         {
-            if (_isLoading) return;
+            // 1. Önceki bekleyen aramayı iptal et
+            _searchCts?.Cancel();
+            _searchCts = new CancellationTokenSource();
+            var token = _searchCts.Token;
 
             try
             {
+                // 2. Eğer arama terimi varsa 250ms bekle (Debounce)
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    await Task.Delay(250, token);
+                }
+
+                if (_isLoading) return;
+
                 _isLoading = true;
                 StateHasChanged();
 
-                var cacheKey = "DataViewer_Main";
+                var result = await StateHub.GetOrLoadAsync("DataViewer_Main", async () =>
+                {
+                    // DbFactory için ana _cts.Token yerine bu işlemin token'ını kullanmak daha güvenli
+                    await using var db = await DbFactory.CreateDbContextAsync(token);
 
-                // ✅ RAM CACHE: 1 saniye içinde DB'ye tekrar gitmez
-                var result = await StateHub.GetOrLoadAsync(
-                    cacheKey,
-                    async () =>
+                    var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+
+                    if (!string.IsNullOrWhiteSpace(search))
                     {
-                        // Sadece cache miss olduğunda çalışır
-                        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                        query = query.Where(u =>
+                            u.FirstName.Contains(search) ||
+                            u.LastName.Contains(search));
+                    }
 
-                        // ✅ AsNoTracking: %40 performans artışı
-                        var users = await db.Users
-                            .AsNoTracking()
-                            .Where(x => x.IsActive == true) // Örnek filtre
-                            .OrderByDescending(x => x.RegistrationDate)
-                            .ToListAsync(_cts.Token);
+                    var users = await query.OrderByDescending(u => u.RegistrationDate)
+                                           .ToListAsync(token);
 
-                        var countries = await db.Country
-                            .AsNoTracking()
-                            .OrderBy(x => x.name)
-                            .ToListAsync(_cts.Token);
+                    var countries = await db.Country
+                                           .AsNoTracking()
+                                           .OrderBy(x => x.name)
+                                           .ToListAsync(token);
 
-                        return new { Users = users, Countries = countries };
-                    },
-                    _cts.Token
-                );
+                    return new { Users = users, Countries = countries };
+                }, token);
 
-                if (result != null)
+                if (result != null && !token.IsCancellationRequested)
                 {
                     Users = result.Users;
                     Countries = result.Countries;
@@ -163,16 +176,20 @@ namespace razor.Example
             }
             catch (OperationCanceledException)
             {
-                // Kullanıcı sayfayı kapattı, normal
+                // Kullanıcı yazmaya devam ettiği için bu işlem iptal edildi, bir şey yapmaya gerek yok.
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] LoadData: {ex.Message}");
+                Console.WriteLine($"[ERROR]: {ex.Message}");
             }
             finally
             {
-                _isLoading = false;
-                StateHasChanged();
+                // Sadece sonuncu işlem ise loading'i kapat
+                if (token == _searchCts?.Token)
+                {
+                    _isLoading = false;
+                    StateHasChanged();
+                }
             }
         }
         #endregion

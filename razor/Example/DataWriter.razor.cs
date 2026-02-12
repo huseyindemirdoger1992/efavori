@@ -70,8 +70,7 @@ namespace razor.Example
 
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-                newUser.CreatedAt = DateTime.UtcNow;
-                newUser.UpdatedAt = DateTime.UtcNow;
+                newUser.RegistrationDate = DateTime.UtcNow;
 
                 db.Users.Add(newUser);
                 await db.SaveChangesAsync(_cts.Token);
@@ -107,8 +106,6 @@ namespace razor.Example
                 StateHasChanged();
 
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-                updatedUser.UpdatedAt = DateTime.UtcNow;
 
                 db.Users.Update(updatedUser);
                 await db.SaveChangesAsync(_cts.Token);

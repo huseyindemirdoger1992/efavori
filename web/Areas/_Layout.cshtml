@@ -306,7 +306,7 @@
             ;
             break;
     }
-    @(await Html.RenderComponentAsync<Js>(RenderMode.Static))
+    @(await Html.RenderComponentAsync<Js>(RenderMode.Static, new { use = use != null ? use : null }))
     <base href="~/" />
     <script src="~/_framework/blazor.server.js"></script>
 </body>

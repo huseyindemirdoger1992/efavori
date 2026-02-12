@@ -1,58 +1,82 @@
-﻿<div class="modal fade" id="LogOutTimerInfo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title text-white">
-                    <i class="fa fa-shield"></i> Güvenlik Amaçlı Sayaç
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                    <p class="text-light">Hesabınızı korumak amacıyla aktif bir oturum denetimi uygulanmaktadır.</p>
+﻿<div class="modal fade" id="LogOutTimerInfo" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content bg-dark border border-secondary" style="backdrop-filter: blur(12px); box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
 
-                <hr class="my-4">
+            <div class="modal-header border-bottom border-secondary py-3">
+                <h6 class="modal-title text-white fw-bold">
+                    <i class="fa fa-shield text-info me-2"></i> Güvenlik ve Oturum Denetimi
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+
+            <div class="modal-body text-light px-4">
+                <center>
+                    <p class="lead text-light small mb-4">Güvenliğiniz için aktif bir "Hareketsizlik Denetimi" uygulanmaktadır.</p>
+                </center>
 
                 <section class="mb-4">
-                    <h5 class="fw-bold text-light"><i class="fa fa-info-circle me-2"></i>Bu Zamanlayıcı Nedir?</h5>
-                    <p>Sistemimiz, kişisel verilerinizin yetkisiz kişilerce erişilmesini engellemek için <strong>"Hareketsizlik Denetimi"</strong> yapmaktadır. Eğer tarayıcınız açıkken bilgisayar başından ayrılırsanız, sistem bunu fark eder ve belirli bir süre sonra oturumunuzu güvenli bir şekilde kapatır.</p>
+                    <h6 class="fw-bold text-white"><i class="fa fa-question-circle text-info me-2"></i> Bu Zamanlayıcı Nedir?</h6>
+                    <p class="text-warning small">Kişisel verilerinizin yetkisiz erişime karşı korunması amacıyla, sistem belirli bir süre etkileşim almadığında oturumunuzu otomatik ve güvenli bir şekilde sonlandırır.</p>
                 </section>
 
+                <hr class="border-secondary opacity-25">
+
                 <section class="mb-4">
-                    <h5 class="fw-bold text-light"><i class="fa fa-refresh me-2"></i>Süre Nasıl Yenilenir?</h5>
-                    <p>Aşağıdaki eylemlerden herhangi birini gerçekleştirdiğinizde sistem sizin aktif olduğunuzu anlar ve 10 dakikalık süreyi otomatik olarak en başa sarar:</p>
-                    <div class="row g-3 text-center mt-2">
+                    <h6 class="fw-bold text-white"><i class="fa fa-refresh text-info me-2"></i> Süre Nasıl Yenilenir?</h6>
+                    <p class="text-light small">Herhangi bir işlem yaptığınızda 10 dakikalık süre otomatik olarak sıfırlanır:</p>
+
+                    <div class="row g-2 text-center my-3">
                         <div class="col-4">
-                            <div class="p-3 border rounded bg-light">
-                                <i class="fa fa-keyboard d-block mb-2 text-info"></i>
-                                <small>Tuş Basımları</small>
+                            <div class="p-3 border border-secondary rounded bg-dark bg-gradient shadow-sm">
+                                <i class="fa fa-keyboard-o d-block mb-2 text-info fa-lg"></i>
+                                <span style="font-size: 0.75rem;">Tuş Basımı</span>
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="p-3 border rounded bg-light">
-                                <i class="fa fa-mouse-pointer d-block mb-2 text-info"></i>
-                                <small>Fare Hareketleri</small>
+                            <div class="p-3 border border-secondary rounded bg-dark bg-gradient shadow-sm">
+                                <i class="fa fa-mouse-pointer d-block mb-2 text-info fa-lg"></i>
+                                <span style="font-size: 0.75rem;">Fare Hareketi</span>
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="p-3 border rounded bg-light">
-                                <i class="fa fa-hand-pointer d-block mb-2 text-info"></i>
-                                <small>Dokunmatik İşlemler</small>
+                            <div class="p-3 border border-secondary rounded bg-dark bg-gradient shadow-sm">
+                                <i class="fa fa-hand-o-up d-block mb-2 text-info fa-lg"></i>
+                                <span style="font-size: 0.75rem;">Dokunmatik</span>
                             </div>
                         </div>
                     </div>
-                    <p class="mt-3 small text-warning text-center italic">Yani sadece sayfayı kaydırmanız veya bir yere tıklamanız süreyi sıfırlamak için yeterlidir.</p>
+                    <div class="text-center">
+                        <span class="badge rounded-pill bg-info bg-opacity-10 text-info fw-normal p-2 px-3" style="font-size: 0.7rem;">
+                            <i class="fa fa-info-circle me-1"></i> Sayfayı kaydırmanız veya tıklamanız yeterlidir.
+                        </span>
+                    </div>
                 </section>
 
-                <section>
-                    <h5 class="fw-bold text-light"><i class="fa fa-exclamation-triangle me-2"></i>Süre Dolduğunda Ne Olur?</h5>
-                    <p>Eğer 10 dakika boyunca hiçbir etkileşimde bulunmazsanız, aktif oturumunuz sonlandırılır ve güvenliğiniz için otomatik olarak çıkış ekranına yönlendirilirsiniz.</p>
+                <section class="bg-black bg-opacity-25 rounded p-3 border border-secondary">
+                    <h6 class="fw-bold text-danger mb-3"><i class="fa fa-exclamation-triangle me-2"></i> Önemli Hatırlatmalar</h6>
                     <hr />
-                    <h6 class="fw-bold text-light"><i class="fa fa-exclamation-triangle me-2"></i>Verilere ne olur?</h6>
-                    <p>Kaydedilmemiş verileriniz varsa kaybolabilir, bu nedenle kayıtlarınızı tamamlamaya etmenizi öneririz.</p>
+                    <div class="d-flex mb-3">
+                        <i class="fa fa-hdd-o text-warning mt-1 me-3"></i>
+                        <div>
+                            <strong class="d-block text-warning small">Veri Kaybı Riski</strong>
+                            <p class="mb-0 small text-light">Süre dolduğunda kaydedilmemiş işlemleriniz kaybolabilir. Lütfen formlarınızı ve kayıtlarınızı tamamlamaya özen gösterin.</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex">
+                        <i class="fa fa-envelope-o text-warning mt-1 me-3"></i>
+                        <div>
+                            <strong class="d-block text-warning small">E-Posta Bilgilendirmesi</strong>
+                            <p class="mb-0 small text-light">Güvenlik gereği; oturumunuz manuel olarak veya 'Hareketsizlik Denetimi' kapsamında otomatik olarak sonlandırıldığında, tarafınıza bir bilgilendirme e-postası gönderilmektedir.</p>
+                        </div>
+                    </div>
                 </section>
             </div>
-            <div class="modal-footer border-top border-secondary">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="width:100%">Tamam</button>
+
+            <div class="modal-footer border-top border-secondary p-3">
+                <button type="button" class="btn btn-info w-100 shadow-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-smile-o ms-2"></i> Anladım, Teşekkürler! <i class="fa fa-smile-o ms-2"></i>
+                </button>
             </div>
         </div>
     </div>

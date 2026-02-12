@@ -157,7 +157,7 @@ namespace api
 
                 if (fresh != null)
                 {
-                    // 5 saniye cache'le
+                    // 1 saniye cache'le
                     _cache.Set(cacheKey, fresh, new MemoryCacheEntryOptions
                     {
                         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(CACHE_SECONDS),

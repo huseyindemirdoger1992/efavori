@@ -22,14 +22,117 @@
                 <p class="designattion mb-0">@_use.ContactInformation.Email</p>
             </div>
         </a>
-        <ul class="dropdown-menu dropdown-menu-end">
+        <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width: 250px;">
+            <li class="dropdown-header"><strong>Hesabım</strong></li>
             <li>
-                <div class="dropdown-divider mb-0"></div>
+                <a class="dropdown-item d-flex align-items-center" href="/Profile">
+                    <i class="fa fa-user fa-fw me-2 text-primary"></i>
+                    <span>Profil Bilgilerim</span>
+                </a>
             </li>
             <li>
-                <a class="dropdown-item d-flex align-items-center" href="/@culture/Account/Logout/">
-                    <i class="bx bx-log-out-circle"></i>
-                    <span>Logout</span>
+                <a class="dropdown-item d-flex align-items-center" href="/Addresses">
+                    <i class="fa fa-map-marker fa-fw me-2 text-primary"></i>
+                    <span>Adres Bilgilerim</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Wallet">
+                    <i class="fa fa-credit-card fa-fw me-2 text-primary"></i>
+                    <span>Cüzdanım & Kartlarım</span>
+                </a>
+            </li>
+
+            <li><div class="dropdown-divider"></div></li>
+
+            <li class="dropdown-header"><strong>Alışverişlerim</strong></li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Orders">
+                    <i class="fa fa-shopping-basket fa-fw me-2 text-success"></i>
+                    <span>Tüm Siparişlerim</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Returns">
+                    <i class="fa fa-refresh fa-fw me-2 text-success"></i>
+                    <span>İptal ve İadelerim</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Favorites">
+                    <i class="fa fa-heart fa-fw me-2 text-success"></i>
+                    <span>Favori Ürünlerim</span>
+                </a>
+            </li>
+<li>
+    <a class="dropdown-item d-flex align-items-center" href="/Compare">
+        <i class="fa fa-balance-scale fa-fw me-2 text-success"></i>
+        <span>Karşılaştırmalarım</span>
+    </a>
+</li>
+
+            <li><div class="dropdown-divider"></div></li>
+
+            <li class="dropdown-header"><strong>Etkileşim</strong></li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Reviews">
+                    <i class="fa fa-star fa-fw me-2 text-warning"></i>
+                    <span>Değerlendirmelerim</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Messages">
+                    <i class="fa fa-envelope fa-fw me-2 text-warning"></i>
+                    <span>Satıcı Mesajları</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Questions">
+                    <i class="fa fa-question-circle fa-fw me-2 text-warning"></i>
+                    <span>Sorduğum Sorular</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Coupons">
+                    <i class="fa fa-ticket fa-fw me-2 text-warning"></i>
+                    <span>İndirim Kuponlarım</span>
+                </a>
+            </li>
+
+            <li><div class="dropdown-divider"></div></li>
+
+            <li class="dropdown-header"><strong>Diğer</strong></li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/PriceAlerts">
+                    <i class="fa fa-bell fa-fw me-2 text-info"></i>
+                    <span>Fiyatı Düşenler</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/LoanRates">
+                    <i class="fa fa-percent fa-fw me-2 text-info"></i>
+                    <span>Kredi Oranları</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Help">
+                    <i class="fa fa-life-ring fa-fw me-2 text-info"></i>
+                    <span>Yardım Merkezi</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center" href="/Settings">
+                    <i class="fa fa-cog fa-fw me-2 text-info"></i>
+                    <span>Hesap Ayarları</span>
+                </a>
+            </li>
+
+            <li><div class="dropdown-divider"></div></li>
+
+            <li>
+                <a class="dropdown-item d-flex align-items-center text-danger" href="/Account/Logout/">
+                    <i class="fa fa-sign-out fa-fw me-2"></i>
+                    <strong>Güvenli Çıkış</strong>
                 </a>
             </li>
         </ul>

@@ -62,22 +62,158 @@
             </ul>
             <div class="tab-content py-3">
                 <div class="tab-pane fade active show" id="*.*" role="tabpanel">
-                    <div class="row" style="margin-bottom:12px;">
+                    <div class="row g-3 align-items-end mb-3">
                         <div class="col-md-12">
-                            <label for="inputLastName1" class="form-label">Görevlerde Ara...</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fa fa-search"></i></span>
-                                <input type="text" class="form-control border-start-0" id="inputLastName1" placeholder="Görev Ara..."
+                            <label for="inputLastName1" class="form-label text-light">Görevlerde Ara...</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fa fa-search text-light"></i>
+                                </span>
+                                <input type="text"
+                                       class="form-control border-start-0 ps-0"
+                                       id="inputLastName1"
+                                       placeholder="Görev adını yazın..."
                                        @bind="_SearchText"
                                        @bind:event="oninput"
                                        @onchange="LoadData">
                             </div>
                         </div>
+
+                        <div class="col-md-12">
+                            <button class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2 shadow-sm"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapseTwo"
+                                    aria-expanded="false"
+                                    aria-controls="collapseTwo"
+                                    @ondrop="@(() => HandleDrop("UnSuccessful"))"
+                                    @ondragover:preventDefault="true"
+                                    @ondragenter:preventDefault="true">
+                                <i class="fa fa-dot-circle-o me-2"></i>
+                                <span>Başarısız Görevler (@GetTaskCountByStatus("UnSuccessful", null))</span>
+                            </button>
+                        </div>
                     </div>
+
+                    <div class="accordion" id="accordionExample">
+                        <div class="accordion-item">
+                            <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                                <br />
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="card border-0 shadow-sm h-100">
+                                            <div class="card-header bg-danger text-white sticky-top" style="top: 60px; z-index: 1020;">
+                                                <h6 class="mb-0"><i class="fa fa-bug"></i> Başarıya Ulaşamamış Görevler (@GetTaskCountByStatus("UnSuccessful", null))</h6>
+                                            </div>
+                                            <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
+                                                 @ondrop="@(() => HandleDrop("UnSuccessful"))"
+                                                 @ondragover:preventDefault="true"
+                                                 @ondragenter:preventDefault="true">
+                                                <div class="row g-2 row-cols-1 row-cols-md-2 row-cols-lg-5">
+                                                    @foreach (var task in GetTasksByStatus("UnSuccessful", null))
+                                                    {
+                                                        var taskNotesCount = GetTaskNotesCount(task.Id);
+                                                        var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
+                                                        var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
+                                                        <div class="col d-flex">
+                                                            <div class="task-card mb-2 bg-danger bg-opacity-25 w-100"
+                                                                 draggable="true"
+                                                                 @ondragstart="@(() => HandleDragStart(task.Id))"
+                                                                 @onclick="@(() => ShowTaskDetail(task))">
+                                                                <h6 class="text-light">@(task.TaskTitle ?? "Başlıksız Görev")</h6>
+                                                                @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
+                                                                {
+                                                                    <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                                        @task.TaskDescription
+                                                                    </p>
+                                                                }
+                                                                <hr class="text-light" />
+                                                                <div class="mb-2">
+                                                                    <span class="badge @GetPriorityBadgeClass(task.Priority) priority-badge" style="width: 100%;">@(task.Priority ?? "Orta")</span>
+                                                                </div>
+                                                                <hr class="text-warning" />
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-light bg-danger badge" style="width: 100%;">
+                                                                        <i class="fa fa-calendar me-1"></i>
+                                                                        Başlangıç:
+                                                                        @(task.DateCreatedAt.ToString("dd.MM.yyyy") ?? "-")
+                                                                    </small>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-light bg-success badge" style="width: 100%;">
+                                                                        <i class="fa fa-calendar me-1"></i>
+                                                                        Bitiş:
+                                                                        @(task.TargetDate?.ToString("dd.MM.yyyy") ?? "-")
+                                                                    </small>
+                                                                </div>
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-warning bg-light badge" style="width: 100%;">
+                                                                        <i class="fa fa-clock-o me-1"></i>
+                                                                        Kalan:
+                                                                        <span id="timer-@(task.Id)"
+                                                                              data-start="@task.DateCreatedAt.ToString("yyyy-MM-ddTHH:mm:ss")"
+                                                                              data-target="@task.TargetDate?.ToString("yyyy-MM-ddTHH:mm:ss")">
+                                                                            -
+                                                                        </span>
+                                                                        <div class="progress mt-1" style="height: 5px;">
+                                                                            <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
+                                                                        </div>
+                                                                    </small>
+                                                                </div>
+                                                                @if (taskNotesCount > 0)
+                                                                {
+                                                                    <hr class="text-info" />
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <small class="text-dark bg-warning badge" style="width: 100%;">
+                                                                            Görev içerisindeki notlar
+                                                                        </small>
+                                                                    </div>
+                                                                    <div class="d-flex justify-content-between align-items-center">
+                                                                        <small class="text-light bg-primary badge" style="width: 100%;">
+                                                                            <i class="fa fa-th-list me-1"></i>
+                                                                            @taskNotesCount
+                                                                        </small>
+                                                                        <small class="text-light bg-light badge" style="width: 100%;">
+                                                                            <i class="fa fa-hourglass-half me-1"></i>
+                                                                            @IsNotOktaskNotesCount
+                                                                        </small>
+                                                                        <small class="text-light bg-success badge" style="width: 100%;">
+                                                                            <i class="fa fa-check-square me-1"></i>
+                                                                            @IsOktaskNotesCount
+                                                                        </small>
+                                                                    </div>
+                                                                }
+                                                                <hr class="text-info" />
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <small class="text-light" style="width: 100%;">
+                                                                        <i class="fa fa-user me-1"></i>
+                                                                        @{
+                                                                            var userName = GetUserName(task.PersonInChargeUserId);
+                                                                            userName = string.IsNullOrWhiteSpace(userName) ? "Atanmamış" : userName;
+                                                                        }
+                                                                        <span class="text-light">@userName</span>
+                                                                    </small>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <br />
+                                <hr class="text-light" />
+                            </div>
+                        </div>
+                    </div>
+
+
+
                     <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-danger text-white sticky-top" style="top: 60px; z-index: 1020;">
+                                <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
                                     <h6 class="mb-0"><i class="fa fa-plus-circle"></i> Yeni (@GetTaskCountByStatus("NewTasks", null))</h6>
                                 </div>
                                 <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -174,7 +310,7 @@
                         </div>
                         <div class="col">
                             <div class="card border-0 shadow-sm h-100">
-                                <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
+                                <div class="card-header bg-warning text-white sticky-top" style="top: 60px; z-index: 1020;">
                                     <h6 class="mb-0"><i class="fa fa-inbox"></i> Yapılacak (@GetTaskCountByStatus("ToBeDone", null))</h6>
                                 </div>
                                 <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -547,6 +683,7 @@
                 </div>
                 @foreach (var item in taskCategories)
                 {
+
                     <div class="tab-pane fade" id="@item.Id" role="tabpanel">
                         <div class="btn-group w-100" role="group">
                             <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal"
@@ -558,6 +695,40 @@
                                 <i class="fa fa-trash"></i> Kategoriyi Sil
                             </button>
                         </div>
+                        <hr />
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-md-12">
+                                <label for="inputLastName1" class="form-label text-light">Görevlerde Ara...</label>
+                                <div class="input-group shadow-sm">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fa fa-search text-light"></i>
+                                    </span>
+                                    <input type="text"
+                                           class="form-control border-start-0 ps-0"
+                                           id="inputLastName1"
+                                           placeholder="Görev adını yazın..."
+                                           @bind="_SearchText"
+                                           @bind:event="oninput"
+                                           @onchange="LoadData">
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <button class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2 shadow-sm"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#collapseTwo"
+                                        aria-expanded="false"
+                                        aria-controls="collapseTwo"
+                                        @ondrop="@(() => HandleDrop("UnSuccessful"))"
+                                        @ondragover:preventDefault="true"
+                                        @ondragenter:preventDefault="true">
+                                    <i class="fa fa-dot-circle-o me-2"></i>
+                                    <span>Başarısız Görevler (@GetTaskCountByStatus("UnSuccessful", null))</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="modal fade" id="edit_@item.Id" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered modal-lg">
                                 <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
@@ -637,18 +808,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row" style="margin-bottom:12px;">
-                            <div class="col-md-12">
-                                <label for="inputLastName1" class="form-label">Görevlerde Ara...</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fa fa-search"></i></span>
-                                    <input type="text" class="form-control border-start-0" id="inputLastName1" placeholder="Görev Ara..."
-                                           @bind="_SearchText"
-                                           @bind:event="oninput"
-                                           @onchange="LoadData">
-                                </div>
-                            </div>
-                        </div>
+
                         <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
@@ -749,7 +909,7 @@
                             </div>
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
+                                    <div class="card-header bg-light text-dark sticky-top" style="top: 60px; z-index: 1020;">
                                         <h6 class="mb-0"><i class="fa fa-inbox"></i> Yapılacak (@GetTaskCountByStatus("ToBeDone", item.Id))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -1119,8 +1279,10 @@
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 }
+
             </div>
         </div>
     </div>
@@ -1279,6 +1441,7 @@
                     <div class="mb-3">
                         <label class="form-label">Durum</label>
                         <select class="form-select" @bind="editingTask.Status">
+                            <option value="UnSuccessful">Başarısız Görevler</option>
                             <option value="NewTasks">Yeni Görevler</option>
                             <option value="ToBeDone">Yapılacak</option>
                             <option value="InProcess">İşlemde</option>
@@ -1640,6 +1803,7 @@
     {
         return status switch
         {
+            "UnSuccessful" => "Başarısız Görevler",
             "NewTasks" => "Yeni Görevler",
             "ToBeDone" => "Yapılacak",
             "InProcess" => "İşlemde",
@@ -1785,30 +1949,33 @@
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
                 var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == draggedTaskId, _cts.Token);
                 if (task == null) return;
-                var oldStatus = task.Status;
-                task.Status = newStatus;
-                switch (newStatus)
+                if (task.Status != newStatus)
                 {
-                    case "NewTasks":
-                        task.DateToBeDone = DateTime.Now;
-                        break;
-                    case "ToBeDone":
-                        task.DateToBeDone = DateTime.Now;
-                        break;
-                    case "InProcess":
-                        task.DateInProcess = DateTime.Now;
-                        break;
-                    case "InEditing":
-                        task.DateInEditing = DateTime.Now;
-                        break;
-                    case "Completed":
-                        task.DateCompleted = DateTime.Now;
-                        break;
+                    task.Status = newStatus;
+                    switch (newStatus)
+                    {
+                        case "NewTasks":
+                            task.DateToBeDone = DateTime.Now;
+                            break;
+                        case "ToBeDone":
+                            task.DateToBeDone = DateTime.Now;
+                            break;
+                        case "InProcess":
+                            task.DateInProcess = DateTime.Now;
+                            break;
+                        case "InEditing":
+                            task.DateInEditing = DateTime.Now;
+                            break;
+                        case "Completed":
+                            task.DateCompleted = DateTime.Now;
+                            break;
+                    }
+                    db.TaskStatus.Update(task);
+                    await db.SaveChangesAsync(_cts.Token);
+                    await ShowNotification("success", "Başarılı", $"Görev '{GetStatusText(newStatus)}' durumuna taşındı.", null);
+                    await LoadData();
                 }
-                db.TaskStatus.Update(task);
-                await db.SaveChangesAsync(_cts.Token);
-                await ShowNotification("success", "Başarılı", $"Görev '{GetStatusText(newStatus)}' durumuna taşındı.", null);
-                await LoadData();
+
             });
         }
         else

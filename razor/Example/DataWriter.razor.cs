@@ -4,6 +4,7 @@ using Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
+using razor._Shared;
 
 namespace razor.Example
 {
@@ -19,6 +20,8 @@ namespace razor.Example
         [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
         [Inject] protected GlobalStateHub StateHub { get; init; } = default!;
         [Inject] protected IJSRuntime JS { get; init; } = default!;
+
+
         #endregion
 
         #region State
@@ -41,15 +44,15 @@ namespace razor.Example
         #endregion
 
         #region UI Helpers
-        private async Task ShowSuccess(string message)
+
+        private Notification? notificationRef;
+        private async Task ShowNotification(string type, string title, string text, string? image)
         {
-            await JS.InvokeVoidAsync("alert", message);
+            if (notificationRef is null) return;
+            var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+            await notificationRef.Launch(type, title, text, imageUrl);
         }
 
-        private async Task ShowError(string message)
-        {
-            await JS.InvokeVoidAsync("alert", message);
-        }
         #endregion
 
         #region CRUD Operations - Veri Giriş İşlemleri
@@ -78,11 +81,13 @@ namespace razor.Example
                 // ✅ KRITIK: Tüm dinleyicilere "Users tablosu güncellendi" sinyali gönder
                 await StateHub.NotifyDataChanged("Users");
 
-                await ShowSuccess("Kullanıcı başarıyla eklendi");
+                await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
+                await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+
             }
             catch (Exception ex)
             {
-                await ShowError($"Hata: {ex.Message}");
+                await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
             }
             finally
             {
@@ -113,11 +118,12 @@ namespace razor.Example
                 // ✅ BROADCAST: Tüm sayfalar güncellensin
                 await StateHub.NotifyDataChanged("Users");
 
-                await ShowSuccess("Kullanıcı güncellendi");
+                await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
+                await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
             }
             catch (Exception ex)
             {
-                await ShowError($"Hata: {ex.Message}");
+                await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
             }
             finally
             {
@@ -151,12 +157,13 @@ namespace razor.Example
                     // ✅ BROADCAST
                     await StateHub.NotifyDataChanged("Users");
 
-                    await ShowSuccess("Kullanıcı silindi");
+                    await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
+                    await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
                 }
             }
             catch (Exception ex)
             {
-                await ShowError($"Hata: {ex.Message}");
+                await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
             }
             finally
             {
@@ -195,11 +202,12 @@ namespace razor.Example
                 // ✅ Tek bir broadcast - 1000 değil, 1 sinyal
                 await StateHub.NotifyDataChanged("Users");
 
-                await ShowSuccess($"{users.Count} kullanıcı eklendi");
+                await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
+                await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
             }
             catch (Exception ex)
             {
-                await ShowError($"Hata: {ex.Message}");
+                await ShowNotification("success-warning-danger", "XXX", $"XXXXXXXXXXXXXXXXXXXXXX", null);
             }
             finally
             {

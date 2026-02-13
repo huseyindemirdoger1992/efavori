@@ -1,4 +1,5 @@
-﻿using api.tr;
+﻿using api;
+using api.tr;
 using data;
 using data._Shared;
 using Microsoft.AspNetCore.Components;
@@ -53,27 +54,35 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         string? _SearchText;
         #endregion
         #region Lifecycle
+        [Inject] protected GlobalStateHub StateHub { get; init; } = default!;
+        private bool _isInitialized;
+
         protected override async Task OnInitializedAsync()
         {
             await LoadData();
-            _ = StartAutoRefreshLoop(TimeSpan.FromSeconds(3));
+            StateHub.OnDataChanged += HandleGlobalDataChange;
+            // İlk veri yükleme
+
+            _isInitialized = true;
         }
-        private async Task StartAutoRefreshLoop(TimeSpan interval)
+        private async Task HandleGlobalDataChange(string entityName)
         {
-            using var timer = new PeriodicTimer(interval);
-            try
+            if (_disposed || !_isInitialized) return;
+
+            // Sadece ilgili entity'ler için güncelle
+            var shouldRefresh = entityName == "CentralSystemTaskBoard";
+
+            if (shouldRefresh)
             {
-                while (await timer.WaitForNextTickAsync(_cts.Token))
+                // ✅ InvokeAsync: UI thread-safe güncelleme
+                await InvokeAsync(async () =>
                 {
-                    if (!AddTaskshowModal && !EditTaskshowModal && !showDetailModal)
-                    {
-                        await LoadData();
-                        await InvokeAsync(StateHasChanged);
-                    }
-                }
+                    await LoadData();
+                    StateHasChanged(); // UI'ı yenile
+                });
             }
-            catch (OperationCanceledException) { }
         }
+
         public async ValueTask DisposeAsync()
         {
             if (_disposed) return;
@@ -355,6 +364,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                         }
                         db.TaskStatus.Update(task);
                         await db.SaveChangesAsync(_cts.Token);
+                        await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                         await ShowNotification("success", "Başarılı", $"Görev '{GetStatusText(newStatus)}' durumuna taşındı.", null);
                         await LoadData();
                     }
@@ -483,6 +493,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 {
                     db.TaskStatus.Add(AddTask);
                     await db.SaveChangesAsync(_cts.Token);
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", "Görev oluşturuldu.", null);
                     await LoadData();
                     CloseAddModal();
@@ -540,6 +551,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     existingTask.IsCompleted = editingTask.IsCompleted ?? false;
                     db.TaskStatus.Update(existingTask);
                     await db.SaveChangesAsync(_cts.Token);
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", "Görev güncellendi.", null);
                     await LoadData();
                     CloseEditModal();
@@ -576,6 +588,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     db.TaskStatus.Update(task);
                     db.TaskNotes.UpdateRange(notes);
                     await db.SaveChangesAsync(_cts.Token);
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", "Görev silindi.", null);
                     await LoadData();
                     CloseDetailModal();
@@ -605,6 +618,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     };
                     db.TaskNotes.Add(note);
                     await db.SaveChangesAsync(_cts.Token);
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", "Not eklendi.", null);
                     await LoadTaskNotes(selectedTask.Id);
                     newNote = "";
@@ -628,8 +642,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     note.IsDeleted.DeletedAtDate = DateTime.Now;
                     db.TaskNotes.Update(note);
                     await db.SaveChangesAsync(_cts.Token);
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", "Not silindi.", null);
-                    // Eğer bir görev detayı açıksa notları yeniden yükle
                     if (selectedTask != null)
                     {
                         await LoadTaskNotes(selectedTask.Id);
@@ -672,6 +686,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 TaskCategories.CreatedAt = DateTime.UtcNow;
                 db.TaskCategories.Add(TaskCategories);
                 await db.SaveChangesAsync(_cts.Token);
+                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                 await ShowNotification("success", "Başarılı", "Yeni kategori eklendi.", null);
                 await JSRuntime.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
                 // Formu temizle
@@ -692,6 +707,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     tce.CategoryStructure = CategoryStructure;
                     db.TaskCategories.Update(tce);
                     await db.SaveChangesAsync(_cts.Token);
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", "Kategori bilgileri güncellendi.", null);
                     await JSRuntime.InvokeVoidAsync("eval", $"$('#edit_{tce.Id}').modal('hide')");
                 }
@@ -714,6 +730,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 tce.IsDeleted.DeletedAtDate = DateTime.UtcNow;
                 db.TaskCategories.Update(tce);
                 await db.SaveChangesAsync(_cts.Token);
+                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                 await ShowNotification("success", "Başarılı", "Kategori bilgileri silindi.", null);
                 await JSRuntime.InvokeVoidAsync("eval", $"$('#delete_{tce.Id}').modal('hide')");
             });
@@ -765,6 +782,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     existingNote.Note = Task_Notes.Note;
                     db.TaskNotes.Update(existingNote);
                     await db.SaveChangesAsync(_cts.Token);
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", "Not güncellendi.", null);
                     if (selectedTask != null)
                     {

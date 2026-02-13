@@ -31,11 +31,14 @@ namespace razor.Example
         private bool _disposed;
         private bool _isLoading;
         private bool _isInitialized;
+        private CancellationTokenSource? _searchCts;
+
         #endregion
 
         #region Data Properties
         protected List<Users>? Users { get; set; }
         protected List<Country>? Countries { get; set; }
+
         #endregion
 
         #region Lifecycle
@@ -44,8 +47,6 @@ namespace razor.Example
         {
             // ✅ KRITIK: Global state değişikliklerini dinle
             StateHub.OnDataChanged += HandleGlobalDataChange;
-            StateHub.OnSystemError += HandleSystemError;
-
             // İlk veri yükleme
             await LoadData(null);
 
@@ -75,22 +76,6 @@ namespace razor.Example
         }
 
         /// <summary>
-        /// Sistem hatalarını yakala
-        /// </summary>
-        private async Task HandleSystemError(string title, string message)
-        {
-            if (_disposed || !_isInitialized) return;
-
-            await InvokeAsync(() =>
-            {
-                // Burada notification gösterebilirsiniz
-                Console.WriteLine($"[ERROR] {title}: {message}");
-                StateHasChanged();
-                return Task.CompletedTask;
-            });
-        }
-
-        /// <summary>
         /// ✅ MEMORY LEAK ÖNLEMİ: Event subscription'ları temizle
         /// </summary>
         public async ValueTask DisposeAsync()
@@ -100,8 +85,6 @@ namespace razor.Example
 
             // Event'lerden çık (çok önemli!)
             StateHub.OnDataChanged -= HandleGlobalDataChange;
-            StateHub.OnSystemError -= HandleSystemError;
-
             await _cts.CancelAsync();
             _cts.Dispose();
             GC.SuppressFinalize(this);
@@ -120,9 +103,6 @@ namespace razor.Example
         /// - 1000 kullanıcı aynı anda yenilerse: 1 DB sorgusu + 999 RAM hit
         /// </summary>
         /// 
-
-        private CancellationTokenSource? _searchCts;
-
         protected virtual async Task LoadData(string? search)
         {
             // 1. Önceki bekleyen aramayı iptal et

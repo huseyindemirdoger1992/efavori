@@ -634,7 +634,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await db.SaveChangesAsync(_cts.Token);
                 await ShowNotification("success", "Başarılı", "Yeni kategori eklendi.", null);
                 await JSRuntime.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
-                await StateHub.NotifyDataChanged("_AddNewCategoryModal");
+                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
 
                 // Formu temizle
                 TaskCategories = new();

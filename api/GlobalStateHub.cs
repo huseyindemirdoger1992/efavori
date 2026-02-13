@@ -3,30 +3,12 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace api
 {
-    /// <summary>
-    /// GLOBAL STATE HUB - Merkezi Sinyal Sistemi
-    /// 
-    /// ÖZELLİKLER:
-    /// - Event-based observer pattern
-    /// - 1000ms debounce (saniyede 100 update → 4 broadcast)
-    /// - 2 saniye RAM cache (DB yükünü %90 azaltır)
-    /// - Thread-safe, deadlock-free
-    /// - Memory leak korumalı
-    /// - 10,000+ eşzamanlı kullanıcı desteği
-    /// </summary>
     public sealed class GlobalStateHub : IDisposable
     {
         #region Events - Dinleyicilere Sinyal Gönderir
 
-        /// <summary>
-        /// Veri değiştiğinde tüm dinleyicilere sinyal gönderir
-        /// Kullanım: StateHub.OnDataChanged += HandleChange;
-        /// </summary>
         public event Func<string, Task>? OnDataChanged;
 
-        /// <summary>
-        /// Sistem hataları için global bildirim
-        /// </summary>
         public event Func<string, string, Task>? OnSystemError;
 
         #endregion
@@ -37,8 +19,8 @@ namespace api
         private readonly SemaphoreSlim _lock = new(1, 1);
         private readonly ConcurrentDictionary<string, DateTime> _lastBroadcast = new();
 
-        private const int DEBOUNCE_MS = 1000;           // Throttling: 1000ms
-        private const int CACHE_SECONDS = 1;           // RAM buffer: 1 saniye
+        private const int DEBOUNCE_MS = 1000;          
+        private const int CACHE_SECONDS = 1;          
         private bool _disposed;
 
         #endregion
@@ -121,20 +103,6 @@ namespace api
         #endregion
 
         #region CORE: RAM Cache Sistemi (5 Saniye Buffer)
-
-        /// <summary>
-        /// VERİ ÇEK VEYA CACHE'DEN DÖN
-        /// 
-        /// Kullanım:
-        /// var data = await StateHub.GetOrLoadAsync("Users_All", 
-        ///     async () => await LoadFromDatabase(), 
-        ///     cancellationToken);
-        /// 
-        /// PERFORMANS:
-        /// - Cache HIT: ~0.05ms (RAM'den)
-        /// - Cache MISS: ~50ms (DB'den)
-        /// - 1000 eşzamanlı istek → 1 DB sorgusu + 999 RAM okuması
-        /// </summary>
         public async Task<T?> GetOrLoadAsync<T>(
             string cacheKey,
             Func<Task<T>> loadFromDb,

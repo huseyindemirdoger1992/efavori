@@ -13,6 +13,9 @@ namespace data
     {
         public DbSet<WorkstationEmployeeGroup> WorkstationEmployeeGroup { get; set; } = default!;
 
+        // Chat
+        public DbSet<ChatMessage> ChatMessage { get; set; } = default!;
+
         // Tasks
         public DbSet<TaskCategories> TaskCategories { get; set; } = default!;
         public DbSet<TaskStatus> TaskStatus { get; set; } = default!;

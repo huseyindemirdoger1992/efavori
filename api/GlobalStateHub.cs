@@ -19,8 +19,8 @@ namespace api
         private readonly SemaphoreSlim _lock = new(1, 1);
         private readonly ConcurrentDictionary<string, DateTime> _lastBroadcast = new();
 
-        private const int DEBOUNCE_MS = 1000;          
-        private const int CACHE_SECONDS = 1;          
+        private const int DEBOUNCE_MS = 250;          
+        private const int CACHE_SECONDS = 5;          
         private bool _disposed;
 
         #endregion

@@ -150,6 +150,7 @@ try
         b.Services.AddSingleton<GlobalStateHub>();
         b.Services.AddDistributedMemoryCache();
         b.Services.AddScoped<UserInfos>();
+        b.Services.AddSingleton<VisitorService>();
 
         // MVC ve Localization ayarları
         var mvcBuilder = b.Services.AddControllersWithViews()

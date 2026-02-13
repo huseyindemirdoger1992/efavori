@@ -993,12 +993,6 @@
                                                         </div>
                                                     </small>
                                                 </div>
-                                                <hr class="text-info" />
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <small class="text-dark bg-warning badge" style="width: 100%;">
-                                                        Görev içerisindeki notlar
-                                                    </small>
-                                                </div>
                                                 @if (taskNotesCount > 0)
                                                 {
                                                     <hr class="text-info" />
@@ -1094,12 +1088,6 @@
                                                         <div class="progress mt-1" style="height: 5px;">
                                                             <div id="progress-@(task.Id)" class="progress-bar bg-warning" role="progressbar" style="width: 0%;"></div>
                                                         </div>
-                                                    </small>
-                                                </div>
-                                                <hr class="text-info" />
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <small class="text-dark bg-warning badge" style="width: 100%;">
-                                                        Görev içerisindeki notlar
                                                     </small>
                                                 </div>
                                                 @if (taskNotesCount > 0)
@@ -1199,12 +1187,6 @@
                                                         </div>
                                                     </small>
                                                 </div>
-                                                <hr class="text-info" />
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <small class="text-dark bg-warning badge" style="width: 100%;">
-                                                        Görev içerisindeki notlar
-                                                    </small>
-                                                </div>
                                                 @if (taskNotesCount > 0)
                                                 {
                                                     <hr class="text-info" />
@@ -1246,7 +1228,7 @@
                             </div>
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-success text-white sticky-top" style="top: 60px; z-index: 1020;">
+                                    <div class="card-header bg-success text-white sticky-top" style="top: 60px;">
                                         <h6 class="mb-0"><i class="fa fa-check-circle"></i> Tamamlandı (@GetTaskCountByStatus("Completed", item.Id))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"

@@ -775,5 +775,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             });
         }
         #endregion
+
     }
 }

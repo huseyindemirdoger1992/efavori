@@ -147,6 +147,7 @@ try
         b.Services.AddHttpContextAccessor();
 
         // GlobalStateHub'ın ihtiyaç duyduğu cache yapısı
+        b.Services.AddSingleton<GlobalStateHub>();
         b.Services.AddDistributedMemoryCache();
         b.Services.AddScoped<UserInfos>();
 

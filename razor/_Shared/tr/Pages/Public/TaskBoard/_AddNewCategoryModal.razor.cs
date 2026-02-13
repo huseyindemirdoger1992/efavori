@@ -1,4 +1,5 @@
-﻿using api.tr;
+﻿using api;
+using api.tr;
 using data;
 using data._Shared;
 using Microsoft.AspNetCore.Components;
@@ -10,8 +11,10 @@ using System.Text;
 
 namespace razor._Shared.tr.Pages.Public.TaskBoard
 {
-    public partial class _AddNewCategoryModal
+    public partial class _AddNewCategoryModal : ComponentBase, IAsyncDisposable
     {
+        [Inject] protected GlobalStateHub StateHub { get; init; } = default!;
+
         [Parameter] public Users? use { get; set; }
         #region Services
         [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
@@ -631,6 +634,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await db.SaveChangesAsync(_cts.Token);
                 await ShowNotification("success", "Başarılı", "Yeni kategori eklendi.", null);
                 await JSRuntime.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
+                await StateHub.NotifyDataChanged("_AddNewCategoryModal");
+
                 // Formu temizle
                 TaskCategories = new();
             });

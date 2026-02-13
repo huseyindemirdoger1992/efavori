@@ -16,18 +16,18 @@
                 </h3>
                 @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                 {
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Yeni Ekle</button>
-                        <div class="dropdown-menu dropdown-menu-right dropdown-menu-lg-end" style="">
-                            <a class="dropdown-item" href="javascript:;" data-bs-toggle="modal"
-                               data-bs-target="#AddNewCategoryModal">
-                                <i class="fa fa-address-book"></i> Yeni Kategori
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="javascript:;" @onclick="() => ShowAddTaskModal()" disabled="@IsButtonProcessing("add")">
-                                <i class="fa fa-tasks"></i> Yeni Görev
-                            </a>
-                        </div>
+                    <div class="btn-group" role="group" aria-label="İşlem Butonları">
+                        <button type="button" class="btn btn-light btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#AddNewCategoryModal">
+                            <i class="fa fa-address-book"></i> Yeni Kategori
+                        </button>
+
+                        <button type="button" class="btn btn-light btn-sm"
+                                @onclick="() => ShowAddTaskModal()"
+                                disabled="@IsButtonProcessing("add")">
+                            <i class="fa fa-tasks"></i> Yeni Görev
+                        </button>
                     </div>
                 }
                 else
@@ -54,7 +54,7 @@
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="priorityRadio" id="radioAll" value="all" checked>
                     <label class="form-check-label text-light" for="radioAll">
-                        <i class="fa fa-list text-light"></i> Hepsi
+                        <i class="fa fa-list text-light"></i> Tüm Görevler (@ToplamGorevSayisi)
                     </label>
                 </div>
             </div>
@@ -63,7 +63,7 @@
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="priorityRadio" id="radioLow" value="low">
                     <label class="form-check-label text-light" for="radioLow">
-                        <i class="fa fa-arrow-circle-down text-success"></i> Düşük Öncelikliler
+                        <i class="fa fa-arrow-circle-down text-success"></i> Düşük Öncelikliler (@DusukGorevSayisi)
                     </label>
                 </div>
             </div>
@@ -72,7 +72,7 @@
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="priorityRadio" id="radioMedium" value="medium">
                     <label class="form-check-label text-light" for="radioMedium">
-                        <i class="fa fa-minus-circle text-warning"></i> Orta Öncelikliler
+                        <i class="fa fa-minus-circle text-warning"></i> Orta Öncelikliler (@OrtaGorevSayisi)
                     </label>
                 </div>
             </div>
@@ -81,12 +81,39 @@
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="priorityRadio" id="radioHigh" value="high">
                     <label class="form-check-label text-light" for="radioHigh">
-                        <i class="fa fa-arrow-circle-up text-danger"></i> Yüksek Öncelikliler
+                        <i class="fa fa-arrow-circle-up text-danger"></i> Yüksek Öncelikliler (@YuksekGorevSayisi)
                     </label>
                 </div>
             </div>
         </div>
     </div>
+
+
+
+    <div class="row g-3 align-items-end mb-3">
+        <div class="col-md-12">
+            <div class="input-group shadow-sm">
+                <span class="input-group-text bg-light border-end-0">
+                    <i class="fa fa-search text-light"></i>
+                </span>
+                <input type="text"
+                       class="form-control border-start-0 ps-0"
+                       id="inputLastName1"
+                       placeholder="Görev adını yazın..."
+                       @bind="_SearchText"
+                       @bind:event="oninput"
+                       @onchange="LoadData">
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
     <script>
                                     document.querySelectorAll('input[name="priorityRadio"]').forEach(radio => {
             radio.addEventListener('change', function() {
@@ -110,7 +137,6 @@
                     } else if (selectedPriority === "high" && (priorityText === "yüksek" || priorityText === "kritik")) {
                         isVisible = true;
                     }
-
                     // Kartı göster veya gizle
                     if (isVisible) {
                         card.style.display = "block";
@@ -122,22 +148,6 @@
             });
         });
     </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     <div class="card">
         <div class="card-body">
             <ul class="nav nav-tabs" role="tablist">
@@ -163,22 +173,6 @@
                 <div class="tab-pane fade active show" id="*.*" role="tabpanel">
 
                     <div class="row g-3 align-items-end mb-3">
-                        <div class="col-md-12">
-                            <label for="inputLastName1" class="form-label text-light">Görevlerde Ara...</label>
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="fa fa-search text-light"></i>
-                                </span>
-                                <input type="text"
-                                       class="form-control border-start-0 ps-0"
-                                       id="inputLastName1"
-                                       placeholder="Görev adını yazın..."
-                                       @bind="_SearchText"
-                                       @bind:event="oninput"
-                                       @onchange="LoadData">
-                            </div>
-                        </div>
-
                         <div class="col-md-12">
                             <button class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2 shadow-sm"
                                     type="button"
@@ -807,22 +801,6 @@
                         </div>
 
                         <div class="row g-3 align-items-end mb-3" style="margin-top:4px;">
-                            <div class="col-md-12">
-                                <label for="inputLastName1" class="form-label text-light">Görevlerde Ara...</label>
-                                <div class="input-group shadow-sm">
-                                    <span class="input-group-text bg-light border-end-0">
-                                        <i class="fa fa-search text-light"></i>
-                                    </span>
-                                    <input type="text"
-                                           class="form-control border-start-0 ps-0"
-                                           id="inputLastName1"
-                                           placeholder="Görev adını yazın..."
-                                           @bind="_SearchText"
-                                           @bind:event="oninput"
-                                           @onchange="LoadData">
-                                </div>
-                            </div>
-
                             <div class="col-md-12">
                                 <button class="btn btn-light w-100 d-flex align-items-center justify-content-center py-2 shadow-sm"
                                         type="button"
@@ -2180,6 +2158,10 @@
     }
     #endregion
     #region Data Operations
+    private int ToplamGorevSayisi = 0;
+    private int DusukGorevSayisi = 0;
+    private int OrtaGorevSayisi = 0;
+    private int YuksekGorevSayisi = 0;
     protected async Task LoadData()
     {
         try
@@ -2226,6 +2208,11 @@
                 .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true)
                 .OrderByDescending(t => t.NoteCreatedAt) // Filtrelemeden sonra sırala
                 .ToListAsync(_cts.Token);
+
+            ToplamGorevSayisi = db.TaskStatus.Where(t => t.IsDeleted.IsDeletedStatu != true && t.AssignedByUserId == use.Id).Count();
+            DusukGorevSayisi = db.TaskStatus.Where(t => t.IsDeleted.IsDeletedStatu != true && t.AssignedByUserId == use.Id && t.Priority == "Düşük").Count();
+            OrtaGorevSayisi = db.TaskStatus.Where(t => t.IsDeleted.IsDeletedStatu != true && t.AssignedByUserId == use.Id && t.Priority == "Orta").Count();
+            YuksekGorevSayisi = db.TaskStatus.Where(t => t.IsDeleted.IsDeletedStatu != true && t.AssignedByUserId == use.Id && t.Priority == "Yüksek").Count();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)

@@ -9,7 +9,7 @@
     {
         int info = 0;
         info = db.TaskCategories
-          .Where(x => x.CategoryStructure == CategoryStructure && x.IsDeleted.IsDeletedStatu != true)
+          .Where(x => x.CategoryStructure == CategoryStructure && x.IsDeleted.IsDeletedStatu != true && x.IsDeleted == null && x.UserId == _use.Id)
           .ToList()
           .Count();
         return info;

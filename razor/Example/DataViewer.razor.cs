@@ -28,6 +28,7 @@ namespace razor.Example
 
         #region State
         private readonly CancellationTokenSource _cts = new();
+        private bool _busy = false;
         private bool _disposed;
         private bool _isLoading;
         private bool _isInitialized;
@@ -45,7 +46,7 @@ namespace razor.Example
 
         protected override async Task OnInitializedAsync()
         {
-            // ✅ KRITIK: Global state değişikliklerini dinle
+            if (_disposed || !_isInitialized || _busy) return;
             StateHub.OnDataChanged += HandleGlobalDataChange;
             // İlk veri yükleme
             await LoadData(null);
@@ -59,7 +60,7 @@ namespace razor.Example
         /// </summary>
         private async Task HandleGlobalDataChange(string entityName)
         {
-            if (_disposed || !_isInitialized) return;
+            if (_disposed || !_isInitialized || _busy) return;
 
             // Sadece ilgili entity'ler için güncelle
             var shouldRefresh = entityName == "Users";
@@ -80,7 +81,7 @@ namespace razor.Example
         /// </summary>
         public async ValueTask DisposeAsync()
         {
-            if (_disposed) return;
+            if (_disposed || !_isInitialized || _busy) return;
             _disposed = true;
 
             // Event'lerden çık (çok önemli!)

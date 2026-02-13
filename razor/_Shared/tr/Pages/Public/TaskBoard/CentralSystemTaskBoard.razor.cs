@@ -51,7 +51,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         private string selectedPersonInCharge = "";
         private string editSelectedPersonInCharge = "";
         private string newNote = "";
-        string? _SearchText;
         #endregion
         #region Lifecycle
         [Inject] protected GlobalStateHub StateHub { get; init; } = default!;
@@ -60,6 +59,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         protected override async Task OnInitializedAsync()
         {
             await LoadData();
+            // EĞER HERHANGİ BİR MODAL AÇIKSA YENİLEME YAPMA
+            if (AddTaskshowModal || EditTaskshowModal || showNoteEditlModal) return;
             StateHub.OnDataChanged += HandleGlobalDataChange;
             // İlk veri yükleme
 
@@ -68,6 +69,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         private async Task HandleGlobalDataChange(string entityName)
         {
             if (_disposed || !_isInitialized) return;
+            if (AddTaskshowModal || EditTaskshowModal || showNoteEditlModal) return;
+
 
             // Sadece ilgili entity'ler için güncelle
             var shouldRefresh = entityName == "CentralSystemTaskBoard";
@@ -216,6 +219,24 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         private int DusukGorevSayisi = 0;
         private int OrtaGorevSayisi = 0;
         private int YuksekGorevSayisi = 0;
+
+
+        private string? _SearchText; // Field
+
+        public string? SearchText
+        {
+            get => _SearchText;
+            set
+            {
+                if (_SearchText != value)
+                {
+                    _SearchText = value;
+                    // LoadData'yı doğrudan tetikliyoruz. 
+                    // Başına '_' koymak "bu task'ı başlat ama bitmesini bekleme" demektir.
+                    _ = LoadData();
+                }
+            }
+        }
         protected async Task LoadData()
         {
             try
@@ -296,6 +317,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                                   (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
                                   c.UserId == use.Id))
                     .CountAsync(_cts.Token);
+                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -662,10 +684,11 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     note.IsTheNoteOk = isCompleted;
                     db.TaskNotes.Update(note);
                     await db.SaveChangesAsync(_cts.Token);
-                    if (selectedTask != null)
-                    {
-                        await LoadTaskNotes(selectedTask.Id);
-                    }
+                    //if (selectedTask != null)
+                    //{
+                    //    await LoadTaskNotes(selectedTask.Id);
+                    //}
+                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                 }
             });
         }
@@ -733,6 +756,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                 await ShowNotification("success", "Başarılı", "Kategori bilgileri silindi.", null);
                 await JSRuntime.InvokeVoidAsync("eval", $"$('#delete_{tce.Id}').modal('hide')");
+                await JSRuntime.InvokeVoidAsync("eval", $"$('delete_{tce.Id}').modal('hide')");
             });
         }
         public int GetTaskCount(TaskCategories tc)

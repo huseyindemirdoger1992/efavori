@@ -61,9 +61,9 @@
 
 @if (!User.Identity.IsAuthenticated)
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.Public_GitHubCommitsList>(RenderMode.Server))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.GitHubCommitsList.GitHubCommitsList>(RenderMode.Server))
 }
 else
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.Public_GitHubCommitsList>(RenderMode.Server))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.GitHubCommitsList.GitHubCommitsList>(RenderMode.Server))
 }

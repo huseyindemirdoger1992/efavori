@@ -8,10 +8,13 @@
     public int GetTaskCategoryStructureCount(string CategoryStructure)
     {
         int info = 0;
-        info = db.TaskCategories
-          .Where(x => x.CategoryStructure == CategoryStructure && x.IsDeleted.IsDeletedStatu != true && x.IsDeleted == null && x.UserId == _use.Id)
-          .ToList()
-          .Count();
+        if (_use != null)
+        {
+            info = db.TaskCategories
+.Where(x => x.CategoryStructure == CategoryStructure && x.IsDeleted.IsDeletedStatu != true && x.IsDeleted == null && x.UserId == _use.Id)
+.ToList()
+.Count();
+        }
         return info;
     }
 }

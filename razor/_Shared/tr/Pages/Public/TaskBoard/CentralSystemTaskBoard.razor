@@ -1585,6 +1585,15 @@
                                 }
                             </select>
                         </div>
+                        @*<div class="col-md-4 mb-3">
+                            <label class="form-label">Kategori</label>
+                            <select class="form-select" @bind="AddTask.TaskCategoriesId">
+                                @foreach (var item in taskCategories)
+                                {
+                                    <option value="@item.Id">@item.Title</option>
+                                }
+                            </select>
+                        </div> *@
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Öncelik</label>
                             <select class="form-select" @bind="AddTask.Priority">

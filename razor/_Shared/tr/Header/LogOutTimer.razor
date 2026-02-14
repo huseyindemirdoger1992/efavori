@@ -1,18 +1,121 @@
-﻿@using data
-@code{
-        [Parameter]
-    public Users? _use { get; set; }
-}
+﻿@using System.Timers
+@using data
+@implements IDisposable
+@inject NavigationManager NavManager
+@inject IJSRuntime JS
+
 @if (_use != null)
 {
     <li class="nav-item dropdown dropdown-large">
-        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" data-bs-toggle="modal" data-bs-target="#LogOutTimerInfo" style="padding: 10px;">
-
+        <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
+           href="#" data-bs-toggle="modal" data-bs-target="#LogOutTimerInfo" style="padding: 10px;">
             <span id="timer-display"
-            class="position-absolute top-50 start-50 translate-middle badge rounded-pill bg-dark text-danger"
-            style="font-size: 0.65rem; z-index: 2; pointer-events: none;">
-                10:00
+                  class="position-absolute top-50 start-50 translate-middle badge rounded-pill bg-dark text-danger"
+                  style="font-size: 0.65rem; z-index: 2; pointer-events: none;">
+                @TimeDisplay
             </span>
         </a>
     </li>
+}
+
+<script>
+    window.logoutTimerHelper = {
+        dotNetRef: null,
+        events: ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'],
+
+        handleActivity: function() {
+            if (window.logoutTimerHelper.dotNetRef) {
+                window.logoutTimerHelper.dotNetRef.invokeMethodAsync('ResetTimer');
+            }
+        },
+
+        initialize: function(dotNetReference) {
+            window.logoutTimerHelper.dotNetRef = dotNetReference;
+            window.logoutTimerHelper.events.forEach(event => {
+                document.addEventListener(event, window.logoutTimerHelper.handleActivity, true);
+            });
+        },
+
+        dispose: function() {
+            window.logoutTimerHelper.events.forEach(event => {
+                document.removeEventListener(event, window.logoutTimerHelper.handleActivity, true);
+            });
+            window.logoutTimerHelper.dotNetRef = null;
+        }
+    };
+</script>
+
+@code {
+    [Parameter] public Users? _use { get; set; }
+    [Parameter] public string culture { get; set; } = "en";
+
+    private Timer? _timer;
+    private int _timeLeft = 600; // 10 minutes
+    private DotNetObjectReference<LogOutTimer>? _objRef;
+
+    private string TimeDisplay => $"{_timeLeft / 60}:{(_timeLeft % 60):D2}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _use != null)
+        {
+            _objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("logoutTimerHelper.initialize", _objRef);
+            StartTimer();
+        }
+    }
+
+    private void StartTimer()
+    {
+        _timer = new Timer(1000); // Tick every 1 second
+        _timer.Elapsed += OnTimerElapsed;
+        _timer.AutoReset = true;
+        _timer.Enabled = true;
+    }
+
+    private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        _timeLeft--;
+
+        if (_timeLeft <= 0)
+        {
+            _timer?.Stop();
+            await InvokeAsync(() =>
+            {
+                NavManager.NavigateTo($"/{culture}/Account/Logout", forceLoad: true);
+            });
+        }
+        else
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    [JSInvokable]
+    public void ResetTimer()
+    {
+        _timeLeft = 600; // Reset to 10 minutes
+    }
+
+    public async void Dispose()
+    {
+        if (_timer != null)
+        {
+            _timer.Elapsed -= OnTimerElapsed;
+            _timer.Dispose();
+        }
+
+        if (_objRef != null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("logoutTimerHelper.dispose");
+                _objRef.Dispose();
+            }
+            catch
+            {
+                // JS already disposed or not available
+            }
+        }
+    }
 }

@@ -1,4 +1,5 @@
-﻿@using data
+﻿@using System.Globalization
+@using data
 @using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
@@ -7,30 +8,55 @@
 @using razor._Shared
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
+@code {
+    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+}
 <div class="container-fluid p-3">
     <div class="row mb-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
+
                 @if (TaskCategoriesValue == "PlanningTaskBoard")
                 {
-                    <h3 class="mb-2">
-                        <i class="fa fa-list-ul"></i>
-                        Plan Aşamasında
-                    </h3>
+                    <div>
+                        @{
+                            var roads = new List<(string icon, string Name, string Url)>
+                                        {
+                                        ("fa fa-globe","efavori", $"/"),
+                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
+                                        ("fa fa-list-ul","Plan Aşamasında", "javascript:void(0)")
+                                        };
+                        }
+                        <razor._Shared.BreadCrumbLinksUrl roads=roads />
+                    </div>
                 }
                 @if (TaskCategoriesValue == "InProcessTaskBoard")
                 {
-                    <h3 class="mb-2">
-                        <i class="fa fa-refresh"></i>
-                        Aktif Görev Panosu
-                    </h3>
+                    <div>
+                        @{
+                            var roads = new List<(string icon, string Name, string Url)>
+                                        {
+                                        ("fa fa-globe","efavori", $"/"),
+                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
+                                        ("fa fa-refresh","Aktif Görev Panosu", "javascript:void(0)")
+                                        };
+                        }
+                        <razor._Shared.BreadCrumbLinksUrl roads=roads />
+                    </div>
                 }
                 @if (TaskCategoriesValue == "CompletedTaskBoard")
                 {
-                    <h3 class="mb-2">
-                        <i class="fa fa-check-circle-o"></i>
-                        Tamamlanan Görev Panosu
-                    </h3>
+                    <div>
+                        @{
+                            var roads = new List<(string icon, string Name, string Url)>
+                                        {
+                                        ("fa fa-globe","efavori", $"/"),
+                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
+                                        ("fa fa-check-circle-o","Tamamlanan Görev Panosu", "javascript:void(0)")
+                                        };
+                        }
+                        <razor._Shared.BreadCrumbLinksUrl roads=roads />
+                    </div>
                 }
                 @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                 {
@@ -79,7 +105,7 @@
                         <i class="fa fa-list me-1"></i> Tüm Görevler (@ToplamGorevSayisi)
                     </label>
                 </div>
-                <div class="col-3" 
+                <div class="col-3"
                      @ondrop="@(() => HandleDropPri("Düşük"))"
                      @ondragover:preventDefault="true"
                      @ondragenter:preventDefault="true">
@@ -89,7 +115,7 @@
                     </label>
                 </div>
                 <div class="col-3"
-                     @ondrop="@(() => HandleDropPri("Orta"))" 
+                     @ondrop="@(() => HandleDropPri("Orta"))"
                      @ondragover:preventDefault="true"
                      @ondragenter:preventDefault="true">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioMedium" value="medium" autocomplete="off">

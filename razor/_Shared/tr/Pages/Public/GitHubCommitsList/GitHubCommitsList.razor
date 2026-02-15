@@ -51,33 +51,30 @@
   "bundleconfig.json",
   "package.json",
   "package-lock.json"
-  };  
+  };
 }
 
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
+
                 <div>
-                    <h3 class="text-light mb-2">
-                        <i class="fa fa-github"></i> GitHub Commits Dashboard - <b>efavori</b>
-                    </h3>
-                    <p class="text-warning mb-0">
-                        <i class="fa fa-code-fork"></i> Repository: <strong>huseyindemirdoger1992/efavori</strong>
-                        <span class="badge bg-dark ms-2">@TotalCode.ToString("N0") satır kod oluşumu</span>
-                    </p>
+                    @{
+                        var roads = new List<(string icon, string Name, string Url)>
+                                        {
+                                        ("fa fa-globe","efavori", $"/"),
+                                        ("fa fa-info-circle","Bilgilendirme", "javascript:void(0)"),
+                                        ("fa fa-github","GitHub Commits Dashboard", "javascript:void(0)")
+                                        };
+                    }
+                    <razor._Shared.BreadCrumbLinksUrl roads=roads />
                 </div>
-                @if (cacheInfo != null)
-                {
-                    <div class="text-end">
-                        <small class="text-light d-block">
-                            <i class="fa fa-clock-o"></i> Cache zamanı: @cacheInfo.CachedAt.ToString("dd/MM/yyyy HH:mm:ss")
-                        </small>
-                        <small class="text-warning">
-                            <i class="fa fa-refresh"></i> Sonraki güncelleme: @cacheInfo.NextRefresh.ToString("dd/MM/yyyy HH:mm:ss")
-                        </small>
-                    </div>
-                }
+                <div class="btn-group" role="group" aria-label="İşlem Butonları">
+                    <small class="text-warning">
+                        <i class="fa fa-refresh"></i> Sonraki güncelleme: @cacheInfo.NextRefresh.ToString("dd/MM/yyyy HH:mm:ss")
+                    </small>
+                </div>
             </div>
             <hr />
         </div>

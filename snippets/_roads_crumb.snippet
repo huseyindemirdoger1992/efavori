@@ -1,0 +1,18 @@
+<div>
+	@{
+	var roads = new List<(string icon="", string="" Name="", string="" Url="")>
+		{
+		("fa fa-globe","efavori", $"/"),
+		("fa fa-info-circle","Bilgilendirme", "javascript:void(0)"),
+		("fa fa-github","GitHub Commits Dashboard", "javascript:void(0)")
+		};
+		}
+		<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+	</div>
+<div class="btn-group" role="group" aria-label="İşlem Butonları">
+	<button type="button" class="btn btn-light btn-sm"
+			data-bs-toggle="modal"
+			data-bs-target="#AddNewCategoryModal">
+		<i class="fa fa-address-book"></i> Yeni Kategori
+	</button>
+</div>

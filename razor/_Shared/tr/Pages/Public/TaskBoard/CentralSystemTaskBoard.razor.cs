@@ -441,8 +441,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == draggedTaskId, _cts.Token);
                     if (task == null) return;
                     if (task.Priority != NewPri)
-                    {
-                        
+                    {                       
                         task.Priority = NewPri;
                         db.TaskStatus.Update(task);
                         await db.SaveChangesAsync(_cts.Token);

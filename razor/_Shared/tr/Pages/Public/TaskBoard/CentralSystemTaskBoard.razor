@@ -124,7 +124,7 @@
             </div>
         </div>
         <script>
-                                        document.querySelectorAll('input[name="priorityRadio"]').forEach(radio => {
+                document.querySelectorAll('input[name="priorityRadio"]').forEach(radio => {
                 radio.addEventListener('change', function() {
                     const selectedPriority = this.value; // "all", "low", "medium", "high"
                     const taskCards = document.querySelectorAll('.task-card');

@@ -7,8 +7,7 @@ namespace data
         [Key]
         public Guid Id { get; set; }
 
-        [Required]
-        [MaxLength(50)]
+        // Şifrele ***-***-***
         public string Name { get; set; } // Örn: Customer, Seller, Admin
     }
 }

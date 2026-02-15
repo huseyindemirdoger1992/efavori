@@ -1,4 +1,5 @@
-﻿using api.tr;
+﻿using api;
+using api.tr;
 using data;
 using data._Shared;
 using Microsoft.AspNetCore.Components;
@@ -6,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -308,15 +310,15 @@ namespace razor._Shared.tr.Modals.Account
                         Email = _UserEmail.Trim().ToLower()
                     };
 
-                    _user.UserSponsorEmail = _Sponsored?.Trim().ToLower();
                     _user.HeaderMenuType = _user.UsersType;
                     _user.IsActive = true;
                     _user.RegistrationDate = DateTime.UtcNow;
                     _user.AccountActivationMailDeadline = DateTime.UtcNow.AddDays(3);
                     _user.AccountActivationMailStatu = false;
 
-                    var attachments = new List<Attachment>();
+                    _user.Password = GlobalSecurityProvider.Encrypt(_user.Password);
 
+                    var attachments = new List<Attachment>();
                     var details = UserInfos.GetCurrentUserDetails();
                     string safeIp = System.Net.WebUtility.HtmlEncode(details.IpAddress);
                     string safeDevice = System.Net.WebUtility.HtmlEncode(details.UserAgent);

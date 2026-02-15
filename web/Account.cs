@@ -1,5 +1,4 @@
-﻿using System.Net.Mail;
-using System.Security.Claims;
+﻿using api;
 using api.tr;
 using data;
 using Microsoft.AspNetCore.Authentication;
@@ -7,6 +6,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Mail;
+using System.Security.Claims;
 
 namespace web.Account.Controllers
 {
@@ -55,8 +56,8 @@ namespace web.Account.Controllers
                     _logger.LogWarning("Login attempt for non-existent email: {Email}", model.Email);
                     return Unauthorized(new { message = "E-posta veya şifre hatalı." });
                 }
-
-                if (user.Password != model.Password)
+                string trypass = GlobalSecurityProvider.Decrypt(user.Password);
+                if (trypass != model.Password)
                 {
                     _logger.LogWarning("Failed login attempt for email: {Email}", model.Email);
                     return Unauthorized(new { message = "E-posta veya şifre hatalı." });

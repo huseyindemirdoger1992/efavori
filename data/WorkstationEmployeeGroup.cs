@@ -10,12 +10,14 @@ namespace data
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
+        // Şifrele ***-***-***
         public string? GroupName { get; set; } // Çalışan grubunun adı
+        // Şifrele ***-***-***
         public string? Description { get; set; } // Çalışan grubunun açıklaması
         public ContactInformation? ContactInformation { get; set; }
         public ProfileCoverGallery? ProfileCoverGallery { get; set; }
         public AddressInfo? AddressInfo { get; set; }
         public IsDeleted? IsDeleted { get; set; }
-        public DateTime? CreateAtDate { get; set; } 
+        public DateTime? CreateAtDate { get; set; }
     }
 }

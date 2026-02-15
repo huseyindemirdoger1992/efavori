@@ -21,6 +21,7 @@ namespace data
         [Required]
         // Ürünün müşteriye görünen tam adı (Örn: Apple iPhone 15 Pro)
         public string Name { get; set; } = string.Empty;
+        public string UniqueName { get; set; } = string.Empty;
 
         [Required]
         // URL yapısı için kullanılan temizlenmiş isim (Örn: apple-iphone-15-pro)

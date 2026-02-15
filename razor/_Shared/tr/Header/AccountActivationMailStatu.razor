@@ -1,4 +1,5 @@
-﻿<style>
+﻿@using api
+<style>
     /* Dashtreme Transparan Stil Destekçileri */
     .glass-card {
         background: rgba(255, 255, 255, 0.1) !important;
@@ -90,12 +91,12 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-
                 <div class="mb-4">
                     <label class="form-label text-white-50 small uppercase fw-bold">E-posta Adresiniz</label>
                     <div class="input-group">
                         <span class="input-group-text bg-transparent border-light-3 text-white-50"><i class="fa fa-at"></i></span>
-                        <input type="email" class="form-control bg-transparent text-white border-light-3" @bind="@use.ContactInformation.Email" readonly>
+                        <input type="email" class="form-control bg-transparent text-white border-light-3" @bind="@Email" readonly>
+                        
                     </div>
                 </div>
 

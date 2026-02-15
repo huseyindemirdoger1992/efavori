@@ -10,9 +10,13 @@ namespace data
         public Guid Id { get; set; } = Guid.NewGuid(); // Birincil anahtar, otomatik artan benzersiz
         public Guid? WorkstationEmployeeGroupId { get; set; } // Bağlı olduğu İş istasyonu + 
         public bool? UserIsEmployee { get; set; } // Kullanıcı Çalışan Mı + 
+        // Şifrele ***-***-***
         public string? UserSponsorEmail { get; set; } // Kullanıcının Sponsor Email Adresi + 
+        // Şifrele ***-***-***
         public string? FirstName { get; set; } // Kullanıcının adı (Zorunlu, max 50 karakter) + 
+        // Şifrele ***-***-***
         public string? LastName { get; set; } // Kullanıcının soyadı (Zorunlu, max 50 karakter) + 
+        // Şifrele ***-***-***
         public string? Password { get; set; } // Şifrenin hashlenmiş (şifrelenmiş) hali + 
 
         // === Tarih Bilgileri ===
@@ -24,9 +28,13 @@ namespace data
         public DateTime? DateOfBirth { get; set; } // Doğum Tarihi + 
 
         // === Kullanıcı Tercihleri ===
+        // Şifrele ***-***-***
         public string? Language { get; set; } = "en"; // Arayüz dili tercihi (Varsayılan: İngilizce) + 
+        // Şifrele ***-***-***
         public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi + 
+        // Şifrele ***-***-***
         public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi + 
+        // Şifrele ***-***-***
         public string? HeaderMenuType { get; set; } = "Customer"; // Kullanıcı Tipi Header Menüsü + 
 
         // === Durum ve Yetki Bilgileri ===
@@ -36,6 +44,7 @@ namespace data
         public bool? IsDeleted { get; set; } = false; // Veritabanından silmek yerine "silindi" işaretlemek için (Soft Delete)
 
         // === Profil Bilgileri ===
+        // Şifrele ***-***-***
         public string? BackgroundImagePath { get; set; } // Profil arka plan resmi
 
         // === İlişkili Tablolar ===

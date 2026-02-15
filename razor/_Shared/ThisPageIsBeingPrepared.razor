@@ -1,10 +1,16 @@
-﻿@rendermode InteractiveServer
+﻿@using data
+@rendermode InteractiveServer
 <razor._Shared.Notification @ref="notificationRef" />
 @inject razor._Shared.tr.Media.FileUploadService FileService
 
 <div class="text-light">
     <canvas id="GunlukGirisYapılanSayi" class="text-light"></canvas>
 </div>
+
+<h1>deneme</h1>
+
+
+
 <div class="container-fluid py-4">
     <div class="card bg-transparent border border-light-3 shadow-sm mb-4">
         <div class="card-header bg-dark-transparent border-light-3">
@@ -255,6 +261,7 @@
 @code {
 
     private Data.Media? selectedSingleFile;
+    private data.Users? AllUsers;
     private List<Data.Media> selectedMultipleFiles = new();
 
     private razor._Shared.Notification? notificationRef;

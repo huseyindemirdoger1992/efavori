@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Net.Mail;
 using System.Threading.Tasks;
+using api;
 using api.tr;
 using data;
 using Microsoft.AspNetCore.Components;
@@ -40,7 +41,7 @@ namespace razor._Shared.tr.Modals.Account
                 await notificationRef.Launch(type, title, text, imageUrl);
         }
 
-        private string? email = "huseyindemirdoger1992@gmail.com";
+        private string? email = "superadmin@efavori.com";
         private string? password = "Dragonfire0!";
 
         private async Task LoginUserAsync()
@@ -80,8 +81,8 @@ namespace razor._Shared.tr.Modals.Account
                     await ShowNotification("danger", "Hata", "Girilen bilgilere ait kullanıcı bulunamadı.", null);
                     return;
                 }
-
-                if (user.Password != password)
+                string trypass = GlobalSecurityProvider.Decrypt(user.Password);
+                if (trypass != password)
                 {
                     await LogFailedLoginAttempt(user.Id, userDetails, "Şifre hatalı");
                     await ShowNotification("danger", "Hata", "E-posta ile girilen şifre eşleşmiyor.", null);

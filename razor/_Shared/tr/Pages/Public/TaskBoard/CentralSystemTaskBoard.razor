@@ -81,21 +81,30 @@
                     </label>
                 </div>
 
-                <div class="col-3">
+                <div class="col-3"
+                     @ondrop="@(() => HandleDropPri("Düşük"))"
+                     @ondragover:preventDefault="true"
+                     @ondragenter:preventDefault="true">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioLow" value="low" autocomplete="off">
                     <label class="btn btn-outline-success btn-sm w-100 py-1 text-dark shadow-sm custom-btn" for="radioLow">
                         <i class="fa fa-arrow-circle-down text-dark me-1"></i> Düşük Öncelikli (@DusukGorevSayisi)
                     </label>
                 </div>
 
-                <div class="col-3">
+                <div class="col-3"
+                     @ondrop="@(() => HandleDropPri("Orta"))"
+                     @ondragover:preventDefault="true"
+                     @ondragenter:preventDefault="true">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioMedium" value="medium" autocomplete="off">
                     <label class="btn btn-outline-warning btn-sm w-100 py-1 text-dark shadow-sm custom-btn" for="radioMedium">
                         <i class="fa fa-minus-circle text-dark me-1"></i> Orta Öncelikli (@OrtaGorevSayisi)
                     </label>
                 </div>
 
-                <div class="col-3">
+                <div class="col-3"
+                     @ondrop="@(() => HandleDropPri("Yüksek"))"
+                     @ondragover:preventDefault="true"
+                     @ondragenter:preventDefault="true">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioHigh" value="high" autocomplete="off">
                     <label class="btn btn-outline-danger btn-sm w-100 py-1 text-dark shadow-sm custom-btn" for="radioHigh">
                         <i class="fa fa-arrow-circle-up text-dark me-1"></i> Yüksek Öncelikli (@YuksekGorevSayisi)
@@ -165,7 +174,10 @@
                     </li>
                     @foreach (var item in taskCategories)
                     {
-                        <li class="nav-item" role="presentation" title="@item.Description">
+                        <li class="nav-item" role="presentation" title="@item.Description"
+                            @ondrop="@(() => HandleDropCate(item.Id))"
+                            @ondragover:preventDefault="true"
+                            @ondragenter:preventDefault="true">
                             <a class="nav-link" data-bs-toggle="tab" href="#@item.Id" role="tab" aria-selected="false" tabindex="-1">
                                 <div class="d-flex align-items-center">
                                     <div class="tab-title">@item.Title (@GetTaskCount(item))</div>
@@ -224,11 +236,11 @@
                                                                             var categoryText = GetCategoryText(task.TaskCategoriesId);
                                                                         }
 
-                                                                        @(categoryText.Length > 26 ? categoryText.Substring(0, 26) + "..." : categoryText)
+                                                                        @(categoryText.Length > 20 ? categoryText.Substring(0, 20) + "..." : categoryText)
                                                                     </span>
                                                                     <hr />
                                                                     <h6 class="text-light">
-                                                                        @((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))
+                                                                        @((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))
                                                                     </h6>
                                                                     @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                                     {
@@ -343,10 +355,10 @@
                                                         var categoryText = GetCategoryText(task.TaskCategoriesId);
                                                     }
 
-                                                    @(categoryText.Length > 26 ? categoryText.Substring(0, 26) + "..." : categoryText)
+                                                    @(categoryText.Length > 20 ? categoryText.Substring(0, 20) + "..." : categoryText)
                                                 </span>
                                                 <hr />
-                                                <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -448,10 +460,10 @@
                                                         var categoryText = GetCategoryText(task.TaskCategoriesId);
                                                     }
 
-                                                    @(categoryText.Length > 26 ? categoryText.Substring(0, 26) + "..." : categoryText)
+                                                    @(categoryText.Length > 20 ? categoryText.Substring(0, 20) + "..." : categoryText)
                                                 </span>
                                                 <hr />
-                                                <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -553,10 +565,10 @@
                                                         var categoryText = GetCategoryText(task.TaskCategoriesId);
                                                     }
 
-                                                    @(categoryText.Length > 26 ? categoryText.Substring(0, 26) + "..." : categoryText)
+                                                    @(categoryText.Length > 20 ? categoryText.Substring(0, 20) + "..." : categoryText)
                                                 </span>
                                                 <hr />
-                                                <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -658,10 +670,10 @@
                                                         var categoryText = GetCategoryText(task.TaskCategoriesId);
                                                     }
 
-                                                    @(categoryText.Length > 26 ? categoryText.Substring(0, 26) + "..." : categoryText)
+                                                    @(categoryText.Length > 20 ? categoryText.Substring(0, 20) + "..." : categoryText)
                                                 </span>
                                                 <hr />
-                                                <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -763,10 +775,10 @@
                                                         var categoryText = GetCategoryText(task.TaskCategoriesId);
                                                     }
 
-                                                    @(categoryText.Length > 26 ? categoryText.Substring(0, 26) + "..." : categoryText)
+                                                    @(categoryText.Length > 20 ? categoryText.Substring(0, 20) + "..." : categoryText)
                                                 </span>
                                                 <hr />
-                                                <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                 @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                 {
                                                     <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -897,7 +909,7 @@
                                                                          draggable="true"
                                                                          @ondragstart="@(() => HandleDragStart(task.Id))"
                                                                          @onclick="@(() => ShowTaskDetail(task))">
-                                                                        <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                                        <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                                         @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                                         {
                                                                             <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1004,7 +1016,7 @@
                                                      draggable="true"
                                                      @ondragstart="@(() => HandleDragStart(task.Id))"
                                                      @onclick="@(() => ShowTaskDetail(task))">
-                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                     @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                     {
                                                         <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1101,7 +1113,7 @@
                                                      draggable="true"
                                                      @ondragstart="@(() => HandleDragStart(task.Id))"
                                                      @onclick="@(() => ShowTaskDetail(task))">
-                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                     @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                     {
                                                         <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1198,7 +1210,7 @@
                                                      draggable="true"
                                                      @ondragstart="@(() => HandleDragStart(task.Id))"
                                                      @onclick="@(() => ShowTaskDetail(task))">
-                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                     @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                     {
                                                         <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1295,7 +1307,7 @@
                                                      draggable="true"
                                                      @ondragstart="@(() => HandleDragStart(task.Id))"
                                                      @onclick="@(() => ShowTaskDetail(task))">
-                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                     @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                     {
                                                         <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1392,7 +1404,7 @@
                                                      draggable="true"
                                                      @ondragstart="@(() => HandleDragStart(task.Id))"
                                                      @onclick="@(() => ShowTaskDetail(task))">
-                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 32) ? task.TaskTitle.Substring(0, 32) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
+                                                    <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
                                                     @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
                                                     {
                                                         <p class="small text-light mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1682,7 +1694,7 @@
                     </div>
 
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Durum</label>
                             <select class="form-select" @bind="editingTask.Status">
                                 <option value="UnSuccessful"> Başarısız/Ertelenmiş</option>
@@ -1693,16 +1705,16 @@
                                 <option value="Completed">Tamamlandı</option>
                             </select>
                         </div>
-                        @*<div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Kategori</label>
-                            <select class="form-select" @bind="AddTask.TaskCategoriesId">
-                                @foreach (var item in taskCategories)
+                            <select class="form-select" @bind="editingTask.TaskCategoriesId">
+                                @foreach (TaskCategories item in taskCategories)
                                 {
                                     <option value="@item.Id">@item.Title</option>
                                 }
                             </select>
-                        </div> *@
-                        <div class="col-md-4 mb-3">
+                        </div>
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Öncelik</label>
                             <select class="form-select" @bind="editingTask.Priority">
                                 <option value="Düşük">Düşük</option>
@@ -1710,7 +1722,7 @@
                                 <option value="Yüksek">Yüksek</option>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label class="form-label">Hedef Tarih</label>
                             <input type="datetime-local" class="form-control" @bind="editTargetDate" />
                         </div>

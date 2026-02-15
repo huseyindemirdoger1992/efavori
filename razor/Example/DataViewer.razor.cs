@@ -37,8 +37,7 @@ namespace razor.Example
         #endregion
 
         #region Data Properties
-        protected List<Users>? Users { get; set; }
-        protected List<Country>? Countries { get; set; }
+        protected List<Users>? Users { get; set; } = new(); // ✅ Boş liste ile başlat
 
         #endregion
 
@@ -46,12 +45,13 @@ namespace razor.Example
 
         protected override async Task OnInitializedAsync()
         {
-            if (_disposed || !_isInitialized || _busy) return;
+            if (_disposed || _isInitialized) return; // ✅ _busy kontrolünü kaldırdık, _isInitialized mantığını düzelttik
+
+            _isInitialized = true; // ✅ Event kaydetmeden önce işaretle
             StateHub.OnDataChanged += HandleGlobalDataChange;
+
             // İlk veri yükleme
             await LoadData(null);
-
-            _isInitialized = true;
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace razor.Example
         /// </summary>
         public async ValueTask DisposeAsync()
         {
-            if (_disposed || !_isInitialized || _busy) return;
+            if (_disposed) return; // ✅ Sadece _disposed kontrolü yeterli
             _disposed = true;
 
             // Event'lerden çık (çok önemli!)
@@ -95,15 +95,6 @@ namespace razor.Example
 
         #region Data Loading - Optimized
 
-        /// <summary>
-        /// VERİ YÜKLEME - RAM Cache + DB Optimizasyonu
-        /// 
-        /// PERFORMANS:
-        /// - İlk çağrı: DB'den çeker (~50ms)
-        /// - Sonraki 1 saniye: RAM'den döner (~0.05ms)
-        /// - 1000 kullanıcı aynı anda yenilerse: 1 DB sorgusu + 999 RAM hit
-        /// </summary>
-        /// 
         protected virtual async Task LoadData(string? search)
         {
             // 1. Önceki bekleyen aramayı iptal et
@@ -141,18 +132,13 @@ namespace razor.Example
                     var users = await query.OrderByDescending(u => u.RegistrationDate)
                                            .ToListAsync(token);
 
-                    var countries = await db.Country
-                                           .AsNoTracking()
-                                           .OrderBy(x => x.name)
-                                           .ToListAsync(token);
 
-                    return new { Users = users, Countries = countries };
+                    return new { Users = users };
                 }, token);
 
                 if (result != null && !token.IsCancellationRequested)
                 {
                     Users = result.Users;
-                    Countries = result.Countries;
                 }
             }
             catch (OperationCanceledException)

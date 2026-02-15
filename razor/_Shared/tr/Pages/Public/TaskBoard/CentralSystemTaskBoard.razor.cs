@@ -8,6 +8,7 @@ using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace razor._Shared.tr.Pages.Public.TaskBoard
 {
@@ -399,6 +400,65 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             }
             draggedTaskId = null;
         }
+        private async Task HandleDropCate(Guid NewCate)
+        {
+            if (use != null && (use.UsersType == "Employee" || use.UsersType == "Admin" || use.UsersType == "SuperAdmin"))
+            {
+                if (draggedTaskId == null) return;
+                await ExecuteWithLock(nameof(HandleDrop), async () =>
+                {
+                    await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                    var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == draggedTaskId, _cts.Token);
+                    if (task == null) return;
+                    if (task.TaskCategoriesId != NewCate)
+                    {
+                        var CateName = await db.TaskCategories.FirstOrDefaultAsync(t => t.Id == NewCate, _cts.Token);
+
+                        task.TaskCategoriesId = NewCate;
+                        db.TaskStatus.Update(task);
+                        await db.SaveChangesAsync(_cts.Token);
+                        await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+                        await ShowNotification("success", "Başarılı", $"Görev '{CateName.Title}' kategorisine taşındı.", null);
+                        await LoadData();
+                    }
+
+                });
+            }
+            else
+            {
+                await ShowNotification("danger", "Hata", $"Görev yetki dışı olduğundan gerçekleştirilmedi", null);
+            }
+            draggedTaskId = null;
+        }
+        private async Task HandleDropPri(string NewPri)
+        {
+            if (use != null && (use.UsersType == "Employee" || use.UsersType == "Admin" || use.UsersType == "SuperAdmin"))
+            {
+                if (draggedTaskId == null) return;
+                await ExecuteWithLock(nameof(HandleDrop), async () =>
+                {
+                    await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                    var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == draggedTaskId, _cts.Token);
+                    if (task == null) return;
+                    if (task.Priority != NewPri)
+                    {
+                        
+                        task.Priority = NewPri;
+                        db.TaskStatus.Update(task);
+                        await db.SaveChangesAsync(_cts.Token);
+                        await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+                        await ShowNotification("success", "Başarılı", $"Görev önceliği '{NewPri}' olarak değiştirildi.", null);
+                        await LoadData();
+                    }
+
+                });
+            }
+            else
+            {
+                await ShowNotification("danger", "Hata", $"Görev yetki dışı olduğundan gerçekleştirilmedi", null);
+            }
+            draggedTaskId = null;
+        }
         #endregion
         #region Modal Operations
         private void ShowAddTaskModal()
@@ -571,6 +631,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     existingTask.IsInProgress = editingTask.IsInProgress ?? false;
                     existingTask.IsInEditing = editingTask.IsInEditing ?? false;
                     existingTask.IsCompleted = editingTask.IsCompleted ?? false;
+                    existingTask.TaskCategoriesId = editingTask.TaskCategoriesId;
                     db.TaskStatus.Update(existingTask);
                     await db.SaveChangesAsync(_cts.Token);
                     await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
@@ -711,7 +772,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await db.SaveChangesAsync(_cts.Token);
                 await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                 await ShowNotification("success", "Başarılı", "Yeni kategori eklendi.", null);
-                await JSRuntime.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
+                await JS.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
                 // Formu temizle
                 TaskCategories = new();
             });

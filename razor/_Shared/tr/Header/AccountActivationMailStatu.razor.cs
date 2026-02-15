@@ -36,6 +36,7 @@ namespace razor._Shared.tr.Header
         private PeriodicTimer? _refreshTimer; // Timer referansı
 
         private Notification? notificationRef;
+        private string? Email = null;
         #endregion
 
         #region Lifecycle
@@ -159,6 +160,7 @@ namespace razor._Shared.tr.Header
             {
                 // TODO: Veri yükleme işlemleri burada yapılacak
                 StateHasChanged();
+                Email = use.ContactInformation.Email;
             }
             catch (Exception ex)
             {
@@ -193,9 +195,9 @@ namespace razor._Shared.tr.Header
                 RemainingSeconds = 180;
 
                 // E-posta gönder
-                await emailSender.SendAccountActivationCodeInfoEmailAsync(use.Language, use.ContactInformation.Email);
+                await emailSender.SendAccountActivationCodeInfoEmailAsync(use.Language, Email);
 
-                await ShowNotification("success", "Mail Gönderildi", $"{use.ContactInformation.Email}", null);
+                await ShowNotification("success", "Mail Gönderildi", $"{Email}", null);
 
                 // HATA FİKS #5: Timer döngüsü içinde State tracking
                 while (RemainingSeconds > 0)

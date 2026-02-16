@@ -314,6 +314,8 @@
         <div class="card">
             <div class="card-body">
                 <ul class="nav nav-tabs" role="tablist">
+                    @if (!TaskFrameworkId.HasValue && TaskFrameworkId.Value == Guid.Empty)
+                    {
                     <li class="nav-item" role="presentation" title="*.*">
                         <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true" tabindex="-1">
                             <div class="d-flex align-items-center">
@@ -321,6 +323,7 @@
                             </div>
                         </a>
                     </li>
+                    }
                     @foreach (var item in taskCategories)
                     {
                         <li class="nav-item" role="presentation" title="@item.Description"

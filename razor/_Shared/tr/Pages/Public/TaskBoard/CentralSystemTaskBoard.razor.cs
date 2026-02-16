@@ -271,7 +271,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 {
                     taskCategories = await db.TaskCategories
                         .AsNoTracking()
-                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && 
+                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
                         n.UserId == use.Id &&
                         n.TaskFrameworkId == TaskFrameworkId &&
                         n.CategoryStructure == TaskCategoriesValue)
@@ -286,16 +286,32 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                         .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
                         .ToListAsync(_cts.Token);
                 }
-
-                tasks = await query
+                if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
+                {
+                    tasks = await query
                     .AsNoTracking()
                     .Where(t => db.TaskCategories
-                        .Any(c => c.Id == t.TaskCategoriesId && // Görevin kategorisini eşle
-                                  c.CategoryStructure == TaskCategoriesValue && // Yapıyı kontrol et
-                                  (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                  c.UserId == use.Id))
-                    .OrderByDescending(t => t.DateCreatedAt)
-                    .ToListAsync(_cts.Token);
+                    .Any(c => c.Id == t.TaskCategoriesId &&
+                     c.CategoryStructure == TaskCategoriesValue &&
+                     c.TaskFrameworkId == TaskFrameworkId &&
+                    (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
+                    c.UserId == use.Id))
+                   .OrderByDescending(t => t.DateCreatedAt)
+                   .ToListAsync(_cts.Token);
+                }
+                else
+                {
+                    tasks = await query
+.AsNoTracking()
+.Where(t => db.TaskCategories
+    .Any(c => c.Id == t.TaskCategoriesId && // Görevin kategorisini eşle
+              c.CategoryStructure == TaskCategoriesValue && // Yapıyı kontrol et
+              (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
+              c.UserId == use.Id))
+.OrderByDescending(t => t.DateCreatedAt)
+.ToListAsync(_cts.Token);
+                }
+
                 taskNotes = await db.TaskNotes
                     .AsNoTracking()
                     .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true)

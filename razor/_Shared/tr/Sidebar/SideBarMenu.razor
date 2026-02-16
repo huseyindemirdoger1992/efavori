@@ -1,10 +1,184 @@
 ﻿@using System.Globalization
+@using Microsoft.EntityFrameworkCore
+@using api
 @using data
 @code {
     [Parameter]
     public Users? _use { get; set; }
     _ApplicationConnectionDb db = new _ApplicationConnectionDb();
     string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+
+
+
+    [Parameter] public Users? CurrentUser { get; set; }
+
+    #region Services
+    [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
+    [Inject] protected GlobalStateHub StateHub { get; init; } = default!;
+    [Inject] protected IJSRuntime JS { get; init; } = default!;
+    #endregion
+
+    #region State Management
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _isLoading;
+    private bool _isProcessing;
+    private CancellationTokenSource? _searchCts;
+    #endregion
+
+    #region Data Properties
+    // Boş Listeler (Doldurulacak)
+    protected List<Users>? Users { get; set; } = new();
+
+    // Bilgi Dağarcıkları (Değer Atanacak)
+    string? UsersType = null;
+    #endregion
+
+
+    #region UI Helpers
+    private Notification? notificationRef;
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+    #endregion
+
+
+    #region Lifecycle
+
+    protected override async Task OnInitializedAsync()
+    {
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+
+        // İlk veri yükleme
+        await LoadData(null);
+    }
+
+    /// <summary>
+    /// GLOBAL SİNYALİ YAKALA
+    /// Başka bir kullanıcı veri eklerse/güncelleyerse burası tetiklenir
+    /// </summary>
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_isProcessing) return;
+
+        // Sadece ilgili entity'ler için güncelle
+        var shouldRefresh = entityName == "Users";
+
+        if (shouldRefresh)
+        {
+            // ✅ InvokeAsync: UI thread-safe güncelleme
+            await InvokeAsync(async () =>
+            {
+                await LoadData(null);
+                StateHasChanged(); // UI'ı yenile
+            });
+        }
+    }
+
+    /// <summary>
+    /// ✅ MEMORY LEAK ÖNLEMİ: Event subscription'ları ve kaynakları temizle
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        // Event'lerden çık (çok önemli!)
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+
+        // Search CTS'yi iptal et
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+
+        // Ana CTS'yi iptal et
+        await _cts.CancelAsync();
+        _cts.Dispose();
+
+        // SemaphoreSlim'i dispose et
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
+
+
+    #region Data Loading - Optimized Read Operations
+
+    /// <summary>
+    /// VERİ YÜKLEME - Debounced Search ile Optimize Edilmiş
+    /// </summary>
+    protected virtual async Task LoadData(string? search)
+    {
+        // 1. Önceki bekleyen aramayı iptal et
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            // 2. Eğer arama terimi varsa 1000ms bekle (Debounce)
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                await Task.Delay(1000, token);
+            }
+
+            if (_isLoading) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync("DataViewer_Main", async () =>
+            {
+                // DbFactory için ana _cts.Token yerine bu işlemin token'ını kullanmak daha güvenli
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    // ⚠️ Şifreli veride arama yaparken dikkatli olun
+                    // Encrypted data üzerinde Contains çalışmayabilir
+                    query = query.Where(u =>
+                        u.FirstName.Contains(search) ||
+                        u.LastName.Contains(search));
+                }
+
+                var users = await query.OrderByDescending(u => u.RegistrationDate)
+                                       .ToListAsync(token);
+                return new { Users = users };
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+            {
+                Users = result.Users;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Kullanıcı yazmaya devam ettiği için bu işlem iptal edildi, bir şey yapmaya gerek yok.
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] LoadData: {ex.Message}");
+        }
+        finally
+        {
+            // Sadece sonuncu işlem ise loading'i kapat
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    #endregion
+
+
+
+
     public int GetTaskCategoryStructureCount(string CategoryStructure)
     {
         int info = 0;
@@ -17,6 +191,11 @@
         }
         return info;
     }
+
+
+
+
+
 }
 
 <div class="sidebar-wrapper" data-simplebar="true">
@@ -126,23 +305,189 @@
                 <div class="menu-title">Görev Paneli</div>
             </a>
             <ul>
+
+
+
+
+
+
+                        
+
+
+
+
+
+                        @* Kategori Derinliği - Dinamik Hiyerarşi *@
+                        <li>
+                            <a class="has-arrow" href="javascript:;">
+                                <i class="fa fa-folder-open" aria-hidden="true"></i>
+                                <span>Kategori Derinliğiniz</span>
+                            </a>
+                            <ul>
+                                @if (_use != null)
+                                {
+                                    @RenderCategoryTree(null, 0)
+                                }
+                            </ul>
+                        </li>
+
+                        @code {
+                            /// <summary>
+                            /// Kategorileri recursive olarak ağaç yapısında render eder
+                            /// </summary>
+                            private RenderFragment RenderCategoryTree(Guid? parentId, int level)
+                            {
+                                return __builder =>
+                                {
+                                    var categories = GetCategoriesByParent(parentId);
+
+                                    if (categories == null || !categories.Any())
+                                        return;
+
+                                    foreach (var category in categories)
+                                    {
+                                        var hasChildren = HasChildCategories(category.Id);
+                                        var iconClass = GetIconByLevel(level);
+                                        var taskCount = GetTaskCountByCategory(category.Id);
+
+                                        <li>
+                                            @if (hasChildren)
+                                            {
+                                                <a class="has-arrow" href="javascript:;">
+                                                    <i class="fa @iconClass" aria-hidden="true"></i>
+                                                    <span>@category.Title (@taskCount)</span>
+                                                </a>
+                                                <ul>
+                                                    @RenderCategoryTree(category.Id, level + 1)
+                                                </ul>
+                                            }
+                                            else
+                                            {
+                                                <a href="/@culture/Public/TaskBoard/Category/@category.Id">
+                                                    <i class="fa @iconClass" aria-hidden="true"></i>
+                                                    @category.Title (@taskCount)
+                                                </a>
+                                            }
+                                        </li>
+                                    }
+                                };
+                            }
+
+                            /// <summary>
+                            /// Parent ID'ye göre kategorileri getirir
+                            /// </summary>
+                            private List<TaskCategories> GetCategoriesByParent(Guid? parentId)
+                            {
+                                if (_use == null) return new List<TaskCategories>();
+
+                                return db.TaskCategories
+                                .Where(x => x.ParentCategoryId == parentId
+                                && x.UserId == _use.Id
+                                && (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true))
+                                .OrderBy(x => x.Title)
+                                .ToList();
+                            }
+
+                            /// <summary>
+                            /// Kategorinin alt kategorisi var mı kontrol eder
+                            /// </summary>
+                            private bool HasChildCategories(Guid categoryId)
+                            {
+                                if (_use == null) return false;
+
+                                return db.TaskCategories
+                                .Any(x => x.ParentCategoryId == categoryId
+                                && x.UserId == _use.Id
+                                && (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true));
+                            }
+
+                            /// <summary>
+                            /// Kategoriye ait görev sayısını döndürür
+                            /// </summary>
+                            private int GetTaskCountByCategory(Guid categoryId)
+                            {
+                                if (_use == null) return 0;
+
+                                // Tasks tablosunun yapısına göre düzenlenmeli
+                                // Örnek: return db.Tasks.Count(x => x.TaskCategoryId == categoryId && !x.IsDeleted);
+                                return 0; // TODO: Tasks tablosu bağlantısı kurulmalı
+                            }
+
+                            /// <summary>
+                            /// Derinlik seviyesine göre ikon döndürür
+                            /// </summary>
+                            private string GetIconByLevel(int level)
+                            {
+                                return level switch
+                                {
+                                    0 => "fa-folder",
+                                    1 => "fa-folder-open",
+                                    2 => "fa-file-text-o",
+                                    _ => "fa-circle-o"
+                                };
+                            }
+                        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 <li>
-                    <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/PlanningTaskBoard">
-                        <i class="fa fa-list-ul" aria-hidden="true"></i>
-                        Plan Aşamasında (@GetTaskCategoryStructureCount("PlanningTaskBoard"))
+                    <a class="has-arrow" href="javascript:;">
+                        <i class="fa fa-users" aria-hidden="true"></i>
+                        <span>Görev Durumları</span>
                     </a>
-                </li>
-                <li>
-                    <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/InProcessTaskBoard">
-                        <i class="fa fa-refresh" aria-hidden="true"></i>
-                        Aktif Görevler (@GetTaskCategoryStructureCount("InProcessTaskBoard"))
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/CompletedTaskBoard">
-                        <i class="fa fa-check-circle-o" aria-hidden="true"></i>
-                        Tamamlananlar (@GetTaskCategoryStructureCount("CompletedTaskBoard"))
-                    </a>
+                    <ul>
+                        <li>
+                            <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/PlanningTaskBoard">
+                                <i class="fa fa-list-ul" aria-hidden="true"></i>
+                                Plan Aşamasında (@GetTaskCategoryStructureCount("PlanningTaskBoard"))
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/InProcessTaskBoard">
+                                <i class="fa fa-refresh" aria-hidden="true"></i>
+                                Aktif Görevler (@GetTaskCategoryStructureCount("InProcessTaskBoard"))
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/CompletedTaskBoard">
+                                <i class="fa fa-check-circle-o" aria-hidden="true"></i>
+                                Tamamlananlar (@GetTaskCategoryStructureCount("CompletedTaskBoard"))
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li>

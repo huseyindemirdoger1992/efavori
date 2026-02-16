@@ -15,6 +15,8 @@ namespace data
         public string? CategoryStructure { get; set; } // PlanningTaskBoard - InProcessTaskBoard - CompletedTaskBoard
         public string? Title { get; set; }
         public string? Description { get; set; }
+
+        public Guid? ParentCategoryId { get; set; }
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
         public IsDeleted? IsDeleted { get; set; }
     }

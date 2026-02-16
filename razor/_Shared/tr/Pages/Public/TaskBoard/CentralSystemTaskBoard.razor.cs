@@ -269,13 +269,20 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     .ToListAsync(_cts.Token);
                 if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
                 {
+                    //taskCategories = await db.TaskCategories
+                    //    .AsNoTracking()
+                    //    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
+                    //    n.UserId == use.Id &&
+                    //    n.TaskFrameworkId == TaskFrameworkId &&
+                    //    n.CategoryStructure == TaskCategoriesValue)
+                    //    .OrderByDescending(t => t.CreatedAt)
+                    //    .ToListAsync(_cts.Token);
                     taskCategories = await db.TaskCategories
                         .AsNoTracking()
                         .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
                         n.UserId == use.Id &&
-                        n.TaskFrameworkId == TaskFrameworkId &&
-                        n.CategoryStructure == TaskCategoriesValue)
-                        .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
+                        n.TaskFrameworkId == TaskFrameworkId)
+                        .OrderByDescending(t => t.CreatedAt)
                         .ToListAsync(_cts.Token);
                 }
                 else

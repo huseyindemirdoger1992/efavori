@@ -13,6 +13,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
 {
     public partial class _AddNewCategoryModal : ComponentBase, IAsyncDisposable
     {
+        _ApplicationConnectionDb db = new _ApplicationConnectionDb();
+
         [Inject] protected GlobalStateHub StateHub { get; init; } = default!;
 
         [Parameter] public Users? use { get; set; }

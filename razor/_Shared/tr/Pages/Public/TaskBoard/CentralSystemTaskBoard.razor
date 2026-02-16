@@ -15,7 +15,6 @@
     <div class="row mb-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
-
                 @if (TaskCategoriesValue == "PlanningTaskBoard")
                 {
                     <div>
@@ -63,10 +62,57 @@
                     <div class="btn-group" role="group" aria-label="İşlem Butonları">
                         <button type="button" class="btn btn-light btn-sm"
                                 data-bs-toggle="modal"
+                                data-bs-target="#AddNewEpisodeModal">
+                            <i class="fa fa-book"></i> Yeni Bölüm
+                        </button>
+                        <button type="button" class="btn btn-light btn-sm"
+                                data-bs-toggle="modal"
                                 data-bs-target="#AddNewCategoryModal">
                             <i class="fa fa-address-book"></i> Yeni Kategori
                         </button>
 
+                        <div class="modal fade" id="AddNewEpisodeModal" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                                    <div class="modal-header border-bottom border-secondary">
+                                        <h5 class="modal-title text-white">
+                                            <i class="fa fa-book"></i> Yeni Görev Bölümü
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">İkon</label>
+                                            <select class="form-select" @bind="tf.Icon">
+                                                <razor._Shared.FaIcons />
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Bölüm Adı</label>
+                                            <input class="form-control mb-3" type="text" @bind="tf.Title">
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label class="form-label">Bölüm Açıklaması</label>
+                                            <textarea class="form-control" rows="3" @bind="tf.Description"></textarea>
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer border-top border-secondary">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+
+                                        <button type="button"
+                                                class="@(IsButtonProcessing("LoginButton") ? "btn btn-light colored" : "btn btn-light")"
+                                                @onclick='async () => await AddNewTaskFramewok()'
+                                                disabled="@IsButtonProcessing("LoginButton")">
+                                            <i class="fa @(IsButtonProcessing("LoginButton") ? "fa-refresh fa-spin" : "fa-book")"></i>
+                                            <span>@(IsButtonProcessing("LoginButton") ? "Yükleniyor..." : "Bölümü Kaydet")</span>
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <button type="button" class="btn btn-light btn-sm"
                                 @onclick="() => ShowAddTaskModal()"
                                 disabled="@IsButtonProcessing("add")">
@@ -89,51 +135,92 @@
             </div>
         </div>
     </div>
-
-    
-
-
     @if (taskCategories == null || !taskCategories.Any())
     {
-        <div class="container-fluid vh-50 d-flex justify-content-center align-items-center bg-light">
-            <div class="col-12 col-md-8 col-lg-5">
-                <div class=" bg-transparent text-center">
-                    <div class="card-body p-5">
+        if (use != null)
+        {
+            <div class="container-fluid vh-50 d-flex justify-content-center align-items-center bg-light">
+                <div class="col-12 col-md-8 col-lg-5">
+                    <div class=" bg-transparent text-center">
+                        <div class="card-body p-5">
 
-                        <div class="position-relative mb-5">
-                            <div class="position-absolute top-50 start-50 translate-middle">
-                                <i class="fa fa-circle-o-notch fa-spin fa-4x text-primary opacity-50"></i>
+                            <div class="position-relative mb-5">
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <i class="fa fa-circle-o-notch fa-spin fa-4x text-primary opacity-50"></i>
+                                </div>
+                                <i class="fa fa-database fa-3x text-primary position-relative"></i>
                             </div>
-                            <i class="fa fa-database fa-3x text-primary position-relative"></i>
-                        </div>
 
-                        <h2 class="fw-light text-dark mb-1 tracking-tight">Veri Analizi Başlatıldı</h2>
-                        <hr />
-                        <p class="text-light mb-4 small fw-medium text-uppercase tracking-widest" style="letter-spacing: 2px;">
-                            Bulut sunucularına bağlanılıyor
-                        </p>
+                            <h2 class="fw-light text-dark mb-1 tracking-tight">Bu Alanda Veri Yok</h2>
+                            <hr />
+                            <p class="text-light mb-4 small fw-medium text-uppercase badge bg-dark tracking-widest" style="letter-spacing: 2px;">
+                                Bulut sunucularına bağlanılıyor
+                            </p>
 
-                        <div class="progress mb-4 shadow-sm" style="height: 12px; border-radius: 50px; background-color: #e9ecef;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                                 role="progressbar"
-                                 style="width: 100%; border-radius: 50px;">
+                            <div class="progress mb-4 shadow-sm" style="height: 12px; border-radius: 50px; background-color: #e9ecef;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                     role="progressbar"
+                                     style="width: 100%; border-radius: 50px;">
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="d-flex justify-content-between align-items-center p-3 rounded-4 shadow-sm border bg-white"
-                             style="background: linear-gradient(90deg, rgba(85, 42, 155, 0.05) 0%, rgba(83, 193, 237, 0.05) 100%);">
-                            <div class="text-start">
-                                <small class="d-block text-muted fw-bold">Durum:</small>
-                            </div>
-                            <div class="text-end">
-                                <i class="fa fa-refresh text-primary me-2"></i>
-                                <small class="text-dark fw-bold">Senkronize Ediliyor</small>
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-4 shadow-sm border bg-light"
+                                 style="background: linear-gradient(90deg, rgba(85, 42, 155, 0.05) 0%, rgba(83, 193, 237, 0.05) 100%);">
+                                <div class="text-start">
+                                    <small class="d-block text-muted fw-bold">Durum:</small>
+                                </div>
+                                <div class="text-end">
+                                    <i class="fa fa-refresh text-primary me-2"></i>
+                                    <small class="text-dark fw-bold">Veri Girişi Bekleniyor</small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="container-fluid vh-50 d-flex justify-content-center align-items-center bg-light">
+                <div class="col-12 col-md-8 col-lg-5">
+                    <div class=" bg-transparent text-center">
+                        <div class="card-body p-5">
+
+                            <div class="position-relative mb-5">
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <i class="fa fa-circle-o-notch fa-spin fa-4x text-primary opacity-50"></i>
+                                </div>
+                                <i class="fa fa-user fa-3x text-primary position-relative"></i>
+                            </div>
+
+                            <h2 class="fw-light text-dark mb-1 tracking-tight">Kulanıcı Bulunamadı...</h2>
+                            <hr />
+                            <p class="text-light mb-4 small fw-medium text-uppercase tracking-widest" style="letter-spacing: 2px;">
+                                Veri işleyebilmek için ilk olarak oturum açmalısınız.
+                            </p>
+
+                            <div class="progress mb-4 shadow-sm" style="height: 12px; border-radius: 50px; background-color: #e9ecef;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                     role="progressbar"
+                                     style="width: 100%; border-radius: 50px;">
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-4 shadow-sm border bg-light"
+                                 style="background: linear-gradient(90deg, rgba(85, 42, 155, 0.05) 0%, rgba(83, 193, 237, 0.05) 100%);">
+                                <div class="text-start">
+                                    <small class="d-block text-muted fw-bold">Durum:</small>
+                                </div>
+                                <div class="text-end">
+                                    <i class="fa fa-refresh text-primary me-2"></i>
+                                    <small class="text-dark fw-bold">Yetkisiz Erişim</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
 
     }
     else
@@ -267,7 +354,7 @@
                                 </button>
                             </div>
                         </div>
-
+                        @* Genel yapı tüm görevler *@
                         <div class="accordion" id="accordionExample">
                             <div class="accordion-item">
                                 <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
@@ -283,7 +370,7 @@
                                                      @ondragover:preventDefault="true"
                                                      @ondragenter:preventDefault="true">
                                                     <div class="row g-2 row-cols-1 row-cols-md-2 row-cols-lg-5">
-                                                        @foreach (var task in GetTasksByStatus("UnSuccessful", null))
+                                                        @foreach (var task in GetTasksByStatus("UnSuccessful", null, TaskFrameworkId))
                                                         {
                                                             var taskNotesCount = GetTaskNotesCount(task.Id);
                                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -392,7 +479,7 @@
                         </div>
 
 
-
+                        @* Kategori yapısı seçili görevler *@
                         <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
@@ -403,7 +490,7 @@
                                          @ondrop="@(() => HandleDrop("NewTasks"))"
                                          @ondragover:preventDefault="true"
                                          @ondragenter:preventDefault="true">
-                                        @foreach (var task in GetTasksByStatus("NewTasks", null))
+                                        @foreach (var task in GetTasksByStatus("NewTasks", null, TaskFrameworkId))
                                         {
                                             var taskNotesCount = GetTaskNotesCount(task.Id);
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -508,7 +595,7 @@
                                          @ondrop="@(() => HandleDrop("ToBeDone"))"
                                          @ondragover:preventDefault="true"
                                          @ondragenter:preventDefault="true">
-                                        @foreach (var task in GetTasksByStatus("ToBeDone", null))
+                                        @foreach (var task in GetTasksByStatus("ToBeDone", null, TaskFrameworkId))
                                         {
                                             var taskNotesCount = GetTaskNotesCount(task.Id);
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -613,7 +700,7 @@
                                          @ondrop="@(() => HandleDrop("InProcess"))"
                                          @ondragover:preventDefault="true"
                                          @ondragenter:preventDefault="true">
-                                        @foreach (var task in GetTasksByStatus("InProcess", null))
+                                        @foreach (var task in GetTasksByStatus("InProcess", null, TaskFrameworkId))
                                         {
                                             var taskNotesCount = GetTaskNotesCount(task.Id);
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -718,7 +805,7 @@
                                          @ondrop="@(() => HandleDrop("InEditing"))"
                                          @ondragover:preventDefault="true"
                                          @ondragenter:preventDefault="true">
-                                        @foreach (var task in GetTasksByStatus("InEditing", null))
+                                        @foreach (var task in GetTasksByStatus("InEditing", null, TaskFrameworkId))
                                         {
                                             var taskNotesCount = GetTaskNotesCount(task.Id);
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -823,7 +910,7 @@
                                          @ondrop="@(() => HandleDrop("Completed"))"
                                          @ondragover:preventDefault="true"
                                          @ondragenter:preventDefault="true">
-                                        @foreach (var task in GetTasksByStatus("Completed", null))
+                                        @foreach (var task in GetTasksByStatus("Completed", null, TaskFrameworkId))
                                         {
                                             var taskNotesCount = GetTaskNotesCount(task.Id);
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -961,7 +1048,7 @@
                                                          @ondragover:preventDefault="true"
                                                          @ondragenter:preventDefault="true">
                                                         <div class="row g-2 row-cols-1 row-cols-md-2 row-cols-lg-5">
-                                                            @foreach (var task in GetTasksByStatus("UnSuccessful", null))
+                                                            @foreach (var task in GetTasksByStatus("UnSuccessful", null, TaskFrameworkId))
                                                             {
                                                                 var taskNotesCount = GetTaskNotesCount(task.Id);
                                                                 var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -1069,7 +1156,7 @@
                                              @ondrop="@(() => HandleDrop("NewTasks"))"
                                              @ondragover:preventDefault="true"
                                              @ondragenter:preventDefault="true">
-                                            @foreach (var task in GetTasksByStatus("NewTasks", item.Id))
+                                            @foreach (var task in GetTasksByStatus("NewTasks", item.Id, TaskFrameworkId))
                                             {
                                                 var taskNotesCount = GetTaskNotesCount(task.Id);
                                                 var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -1166,7 +1253,7 @@
                                              @ondrop="@(() => HandleDrop("ToBeDone"))"
                                              @ondragover:preventDefault="true"
                                              @ondragenter:preventDefault="true">
-                                            @foreach (var task in GetTasksByStatus("ToBeDone", item.Id))
+                                            @foreach (var task in GetTasksByStatus("ToBeDone", item.Id, TaskFrameworkId))
                                             {
                                                 var taskNotesCount = GetTaskNotesCount(task.Id);
                                                 var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -1263,7 +1350,7 @@
                                              @ondrop="@(() => HandleDrop("InProcess"))"
                                              @ondragover:preventDefault="true"
                                              @ondragenter:preventDefault="true">
-                                            @foreach (var task in GetTasksByStatus("InProcess", item.Id))
+                                            @foreach (var task in GetTasksByStatus("InProcess", item.Id, TaskFrameworkId))
                                             {
                                                 var taskNotesCount = GetTaskNotesCount(task.Id);
                                                 var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -1360,7 +1447,7 @@
                                              @ondrop="@(() => HandleDrop("InEditing"))"
                                              @ondragover:preventDefault="true"
                                              @ondragenter:preventDefault="true">
-                                            @foreach (var task in GetTasksByStatus("InEditing", item.Id))
+                                            @foreach (var task in GetTasksByStatus("InEditing", item.Id, TaskFrameworkId))
                                             {
                                                 var taskNotesCount = GetTaskNotesCount(task.Id);
                                                 var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -1457,7 +1544,7 @@
                                              @ondrop="@(() => HandleDrop("Completed"))"
                                              @ondragover:preventDefault="true"
                                              @ondragenter:preventDefault="true">
-                                            @foreach (var task in GetTasksByStatus("Completed", item.Id))
+                                            @foreach (var task in GetTasksByStatus("Completed", item.Id, TaskFrameworkId))
                                             {
                                                 var taskNotesCount = GetTaskNotesCount(task.Id);
                                                 var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
@@ -1552,8 +1639,18 @@
                                     </div>
                                     <div class="modal-body">
                                         <div class="row">
-                                            <div class="col-md-12 mb-12">
-                                                <label class="form-label">Durum Kontrolü</label>
+                                            <div class="col-md-6 mb-6">
+                                                <label class="form-label">Görev Bölümü</label>
+                                                <select class="form-select" @bind="TaskFrameworkId">
+                                                    <option value="">...</option>
+                                                    @foreach (TaskFramework tf in db.TaskFramework.ToList())
+                                                    {
+                                                        <option value=@tf.Id>@tf.Title</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-6">
+                                                <label class="form-label">Görev Durumu</label>
                                                 <select class="form-select" @bind="CategoryStructure">
                                                     <option value="">...</option>
                                                     <option value="PlanningTaskBoard">Plan Aşamasında</option>

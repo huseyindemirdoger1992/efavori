@@ -17,6 +17,7 @@ namespace data
         public DbSet<ChatMessage> ChatMessage { get; set; } = default!;
 
         // Tasks
+        public DbSet<TaskFramework> TaskFramework { get; set; } = default!;
         public DbSet<TaskCategories> TaskCategories { get; set; } = default!;
         public DbSet<TaskStatus> TaskStatus { get; set; } = default!;
         public DbSet<TaskNotes> TaskNotes { get; set; } = default!;

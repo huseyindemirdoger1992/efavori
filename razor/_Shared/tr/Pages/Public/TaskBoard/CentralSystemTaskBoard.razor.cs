@@ -16,6 +16,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
     {
         [Parameter] public Users? use { get; set; }
         [Parameter] public string? TaskCategoriesValue { get; set; }
+        [Parameter] public Guid? TaskFrameworkId { get; set; }
         #region Services
         [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
         [Inject] protected NavigationManager Navigation { get; init; } = default!;
@@ -32,6 +33,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         private bool _disposed;
         #endregion
         #region Data
+        _ApplicationConnectionDb db = new _ApplicationConnectionDb();
         private List<Users> adminUsers = new();
         private List<TaskCategories> taskCategories = new();
         private List<data.TaskStatus> tasks = new();
@@ -265,11 +267,26 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     .OrderBy(u => u.FirstName)
                     .ThenBy(u => u.LastName)
                     .ToListAsync(_cts.Token);
-                taskCategories = await db.TaskCategories
-                    .AsNoTracking()
-                    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
-                    .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
-                    .ToListAsync(_cts.Token);
+                if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
+                {
+                    taskCategories = await db.TaskCategories
+                        .AsNoTracking()
+                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && 
+                        n.UserId == use.Id &&
+                        n.TaskFrameworkId == TaskFrameworkId &&
+                        n.CategoryStructure == TaskCategoriesValue)
+                        .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
+                        .ToListAsync(_cts.Token);
+                }
+                else
+                {
+                    taskCategories = await db.TaskCategories
+                        .AsNoTracking()
+                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
+                        .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
+                        .ToListAsync(_cts.Token);
+                }
+
                 tasks = await query
                     .AsNoTracking()
                     .Where(t => db.TaskCategories
@@ -326,7 +343,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await LogError(nameof(LoadData), ex);
             }
         }
-        private List<data.TaskStatus> GetTasksByStatus(string status, Guid? TaskCategoriesId)
+        private List<data.TaskStatus> GetTasksByStatus(string status, Guid? TaskCategoriesId, Guid? TaskFramewokId)
         {
             if (TaskCategoriesId != null)
             {
@@ -441,7 +458,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == draggedTaskId, _cts.Token);
                     if (task == null) return;
                     if (task.Priority != NewPri)
-                    {                       
+                    {
                         task.Priority = NewPri;
                         db.TaskStatus.Update(task);
                         await db.SaveChangesAsync(_cts.Token);
@@ -552,6 +569,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         }
         #endregion
         #region CRUD Operations
+
+        private TaskFramework tf = new TaskFramework();
         private async Task SaveNewTask()
         {
             if (AddTask == null) return;
@@ -788,6 +807,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 {
                     await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
                     tce.CategoryStructure = CategoryStructure;
+                    tce.TaskFrameworkId = TaskFrameworkId;
                     db.TaskCategories.Update(tce);
                     await db.SaveChangesAsync(_cts.Token);
                     await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
@@ -876,6 +896,35 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 }
             });
         }
+
+
+        public async Task AddNewTaskFramewok()
+        {
+            await ExecuteWithLock("AddNewTaskFramewok", async () =>
+            {
+                // Null kontrolü ve validasyon
+                if (
+                    string.IsNullOrWhiteSpace(tf.Icon) ||
+                    string.IsNullOrWhiteSpace(tf.Title) ||
+                    string.IsNullOrWhiteSpace(tf.Description))
+                {
+                    await ShowNotification("danger", "Hata", "İlgili bilgiler eksik.", null);
+                    return;
+                }
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                tf.UserId = use.Id;
+                tf.CreatedAt = DateTime.UtcNow;
+                db.TaskFramework.Add(tf);
+                await db.SaveChangesAsync(_cts.Token);
+                await StateHub.NotifyDataChanged("AddNewTaskFramewok");
+                await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
+                await JS.InvokeVoidAsync("eval", "$('#AddNewEpisodeModal').modal('hide')");
+                // Formu temizle
+                tf = new TaskFramework();
+            });
+        }
+
+
         #endregion
 
     }

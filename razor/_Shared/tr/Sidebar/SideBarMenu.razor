@@ -306,166 +306,30 @@
             </a>
             <ul>
 
-
-
-
-
-
-                        
-
-
-
-
-
-                        @* Kategori Derinliği - Dinamik Hiyerarşi *@
-                        <li>
-                            <a class="has-arrow" href="javascript:;">
-                                <i class="fa fa-folder-open" aria-hidden="true"></i>
-                                <span>Kategori Derinliğiniz</span>
-                            </a>
-                            <ul>
-                                @if (_use != null)
-                                {
-                                    @RenderCategoryTree(null, 0)
-                                }
-                            </ul>
-                        </li>
-
-                        @code {
-                            /// <summary>
-                            /// Kategorileri recursive olarak ağaç yapısında render eder
-                            /// </summary>
-                            private RenderFragment RenderCategoryTree(Guid? parentId, int level)
-                            {
-                                return __builder =>
-                                {
-                                    var categories = GetCategoriesByParent(parentId);
-
-                                    if (categories == null || !categories.Any())
-                                        return;
-
-                                    foreach (var category in categories)
-                                    {
-                                        var hasChildren = HasChildCategories(category.Id);
-                                        var iconClass = GetIconByLevel(level);
-                                        var taskCount = GetTaskCountByCategory(category.Id);
-
-                                        <li>
-                                            @if (hasChildren)
-                                            {
-                                                <a class="has-arrow" href="javascript:;">
-                                                    <i class="fa @iconClass" aria-hidden="true"></i>
-                                                    <span>@category.Title (@taskCount)</span>
-                                                </a>
-                                                <ul>
-                                                    @RenderCategoryTree(category.Id, level + 1)
-                                                </ul>
-                                            }
-                                            else
-                                            {
-                                                <a href="/@culture/Public/TaskBoard/Category/@category.Id">
-                                                    <i class="fa @iconClass" aria-hidden="true"></i>
-                                                    @category.Title (@taskCount)
-                                                </a>
-                                            }
-                                        </li>
-                                    }
-                                };
-                            }
-
-                            /// <summary>
-                            /// Parent ID'ye göre kategorileri getirir
-                            /// </summary>
-                            private List<TaskCategories> GetCategoriesByParent(Guid? parentId)
-                            {
-                                if (_use == null) return new List<TaskCategories>();
-
-                                return db.TaskCategories
-                                .Where(x => x.ParentCategoryId == parentId
-                                && x.UserId == _use.Id
-                                && (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true))
-                                .OrderBy(x => x.Title)
-                                .ToList();
-                            }
-
-                            /// <summary>
-                            /// Kategorinin alt kategorisi var mı kontrol eder
-                            /// </summary>
-                            private bool HasChildCategories(Guid categoryId)
-                            {
-                                if (_use == null) return false;
-
-                                return db.TaskCategories
-                                .Any(x => x.ParentCategoryId == categoryId
-                                && x.UserId == _use.Id
-                                && (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true));
-                            }
-
-                            /// <summary>
-                            /// Kategoriye ait görev sayısını döndürür
-                            /// </summary>
-                            private int GetTaskCountByCategory(Guid categoryId)
-                            {
-                                if (_use == null) return 0;
-
-                                // Tasks tablosunun yapısına göre düzenlenmeli
-                                // Örnek: return db.Tasks.Count(x => x.TaskCategoryId == categoryId && !x.IsDeleted);
-                                return 0; // TODO: Tasks tablosu bağlantısı kurulmalı
-                            }
-
-                            /// <summary>
-                            /// Derinlik seviyesine göre ikon döndürür
-                            /// </summary>
-                            private string GetIconByLevel(int level)
-                            {
-                                return level switch
-                                {
-                                    0 => "fa-folder",
-                                    1 => "fa-folder-open",
-                                    2 => "fa-file-text-o",
-                                    _ => "fa-circle-o"
-                                };
-                            }
+                
+                <li>
+                    <a class="has-arrow" href="javascript:;">
+                        <i class="fa fa-folder-open" aria-hidden="true"></i>
+                        <span>Görev Yönetimi</span>
+                    </a>
+                    <ul>
+                        @foreach (var item in db.TaskFramework.ToList())
+                        {
+                            <li>
+                                <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/PlanningTaskBoard/@item.Id" title="@item.Description">
+                                    <i class="@item.Icon" aria-hidden="true"></i>
+                                    @item.Title
+                                </a>
+                            </li>
                         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                    </ul>
+                </li>
 
 
 
                 <li>
                     <a class="has-arrow" href="javascript:;">
-                        <i class="fa fa-users" aria-hidden="true"></i>
+                        <i class="fa fa-list-ul" aria-hidden="true"></i>
                         <span>Görev Durumları</span>
                     </a>
                     <ul>

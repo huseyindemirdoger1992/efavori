@@ -60,9 +60,9 @@
 }
 @if (!User.Identity.IsAuthenticated)
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.CentralSystemTaskBoard>(RenderMode.Server, new { use = use, TaskCategoriesValue = ViewBag.Value }))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.CentralSystemTaskBoard>(RenderMode.Server, new { use = use, TaskCategoriesValue = ViewBag.Value, TaskFrameworkId = ViewBag.TaskFrameworkId }))
 }
 else
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.CentralSystemTaskBoard>(RenderMode.Server, new { use = use, TaskCategoriesValue = ViewBag.Value }))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.TaskBoard.CentralSystemTaskBoard>(RenderMode.Server, new { use = use, TaskCategoriesValue = ViewBag.Value, TaskFrameworkId = ViewBag.TaskFrameworkId }))
 }

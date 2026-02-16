@@ -16,7 +16,7 @@ namespace data
         public string? Title { get; set; }
         public string? Description { get; set; }
 
-        public Guid? ParentCategoryId { get; set; }
+        public Guid? TaskFrameworkId { get; set; }
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
         public IsDeleted? IsDeleted { get; set; }
     }

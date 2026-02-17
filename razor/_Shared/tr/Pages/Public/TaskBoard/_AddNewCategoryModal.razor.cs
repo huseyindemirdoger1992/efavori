@@ -620,6 +620,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             {
                 // Null kontrolü ve validasyon
                 if (TaskCategories == null ||
+                    TaskCategories.TaskFrameworkId == null ||
+                    TaskCategories.CategoryStructure == null ||
                     string.IsNullOrWhiteSpace(TaskCategories.Title) ||
                     string.IsNullOrWhiteSpace(TaskCategories.Description))
                 {

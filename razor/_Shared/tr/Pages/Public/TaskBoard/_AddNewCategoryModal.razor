@@ -16,13 +16,11 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-
-
                 <div class="row">
                     <div class="col-md-6 mb-6">
                         <label class="form-label">Görev Bölümü</label>
                         <select class="form-select" @bind="TaskCategories.TaskFrameworkId">
-                            <option value="">...</option>
+                            <option value=@TaskCategories.TaskFrameworkId>@TaskCategories.TaskFrameworkId</option>
                             @foreach (TaskFramework tf in db.TaskFramework.ToList())
                             {
                                 <option value=@tf.Id>@tf.Title</option>
@@ -32,7 +30,7 @@
                     <div class="col-md-6 mb-6">
                         <label class="form-label">Görev Durumu</label>
                         <select class="form-select" @bind="TaskCategories.CategoryStructure">
-                            <option value="">...</option>
+                            <option value="@TaskCategories.CategoryStructure">@TaskCategories.CategoryStructure</option>
                             <option value="PlanningTaskBoard">Plan Aşamasında</option>
                             <option value="InProcessTaskBoard">Aktif Görev</option>
                             <option value=CompletedTaskBoard>Tamamlandı</option>
@@ -47,8 +45,6 @@
                         <textarea class="form-control" rows="3" @bind="TaskCategories?.Description"></textarea>
                     </div>
                 </div>
-
-
             </div>
             <div class="modal-footer border-top border-secondary">
                 <button type="button"

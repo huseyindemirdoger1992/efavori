@@ -269,54 +269,43 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     .ToListAsync(_cts.Token);
                 if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
                 {
-                    //taskCategories = await db.TaskCategories
-                    //    .AsNoTracking()
-                    //    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
-                    //    n.UserId == use.Id &&
-                    //    n.TaskFrameworkId == TaskFrameworkId &&
-                    //    n.CategoryStructure == TaskCategoriesValue)
-                    //    .OrderByDescending(t => t.CreatedAt)
-                    //    .ToListAsync(_cts.Token);
                     taskCategories = await db.TaskCategories
-                        .AsNoTracking()
-                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
-                        n.UserId == use.Id &&
-                        n.TaskFrameworkId == TaskFrameworkId)
-                        .OrderByDescending(t => t.CreatedAt)
-                        .ToListAsync(_cts.Token);
-                }
-                else
-                {
-                    taskCategories = await db.TaskCategories
-                        .AsNoTracking()
-                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
-                        .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
-                        .ToListAsync(_cts.Token);
-                }
-                if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
-                {
+                    .AsNoTracking()
+                    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
+                    n.UserId == use.Id &&
+                    n.TaskFrameworkId == TaskFrameworkId)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToListAsync(_cts.Token);
+
                     tasks = await query
                     .AsNoTracking()
                     .Where(t => db.TaskCategories
                     .Any(c => c.Id == t.TaskCategoriesId &&
-                     c.CategoryStructure == TaskCategoriesValue &&
+                     //c.CategoryStructure == TaskCategoriesValue &&
                      c.TaskFrameworkId == TaskFrameworkId &&
                     (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
                     c.UserId == use.Id))
-                   .OrderByDescending(t => t.DateCreatedAt)
-                   .ToListAsync(_cts.Token);
+                    .OrderByDescending(t => t.DateCreatedAt)
+                    .ToListAsync(_cts.Token);
                 }
                 else
                 {
+                    taskCategories = await db.TaskCategories
+                    .AsNoTracking()
+                    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && 
+                    n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToListAsync(_cts.Token);
+
                     tasks = await query
-.AsNoTracking()
-.Where(t => db.TaskCategories
-    .Any(c => c.Id == t.TaskCategoriesId && // Görevin kategorisini eşle
-              c.CategoryStructure == TaskCategoriesValue && // Yapıyı kontrol et
-              (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-              c.UserId == use.Id))
-.OrderByDescending(t => t.DateCreatedAt)
-.ToListAsync(_cts.Token);
+                    .AsNoTracking()
+                    .Where(t => db.TaskCategories
+                    .Any(c => c.Id == t.TaskCategoriesId && 
+                    c.CategoryStructure == TaskCategoriesValue && 
+                    (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
+                    c.UserId == use.Id))
+                    .OrderByDescending(t => t.DateCreatedAt)
+                    .ToListAsync(_cts.Token);
                 }
 
                 taskNotes = await db.TaskNotes
@@ -324,9 +313,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true)
                     .OrderByDescending(t => t.NoteCreatedAt) // Filtrelemeden sonra sırala
                     .ToListAsync(_cts.Token);
-
-
-
                 ToplamGorevSayisi = await query
                     .Where(t => db.TaskCategories
                         .Any(c => c.Id == t.TaskCategoriesId &&
@@ -334,7 +320,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                                   (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
                                   c.UserId == use.Id))
                     .CountAsync(_cts.Token);
-
                 DusukGorevSayisi = await query
                     .Where(t => t.Priority == "Düşük" && db.TaskCategories
                         .Any(c => c.Id == t.TaskCategoriesId &&
@@ -342,7 +327,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                                   (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
                                   c.UserId == use.Id))
                     .CountAsync(_cts.Token);
-
                 OrtaGorevSayisi = await query
                     .Where(t => t.Priority == "Orta" && db.TaskCategories
                         .Any(c => c.Id == t.TaskCategoriesId &&
@@ -350,7 +334,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                                   (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
                                   c.UserId == use.Id))
                     .CountAsync(_cts.Token);
-
                 YuksekGorevSayisi = await query
                     .Where(t => t.Priority == "Yüksek" && db.TaskCategories
                         .Any(c => c.Id == t.TaskCategoriesId &&

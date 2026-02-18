@@ -91,12 +91,6 @@
                                 data-bs-target="#AddNewEpisodeModal">
                             <i class="fa fa-folder-open"></i> Yeni Bölüm
                         </button>
-                        <button type="button" class="btn btn-light btn-sm"
-                                data-bs-toggle="modal"
-                                data-bs-target="#AddNewCategoryModal">
-                            <i class="fa fa-address-book"></i> Yeni Kategori
-                        </button>
-
                         <div class="modal fade" id="AddNewEpisodeModal" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered modal-lg">
                                 <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
@@ -139,11 +133,23 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-light btn-sm"
-                                @onclick="() => ShowAddTaskModal()"
-                                disabled="@IsButtonProcessing("add")">
-                            <i class="fa fa-tasks"></i> Yeni Görev
-                        </button>
+
+                        @if (!db.TaskFramework.Any())
+                        {
+                            <button type="button" class="btn btn-light btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#AddNewCategoryModal">
+                                <i class="fa fa-address-book"></i> Yeni Kategori
+                            </button>
+                        }
+                        @if (!db.TaskCategories.Any())
+                        {
+                            <button type="button" class="btn btn-light btn-sm"
+                                    @onclick="() => ShowAddTaskModal()"
+                                    disabled="@IsButtonProcessing("add")">
+                                <i class="fa fa-tasks"></i> Yeni Görev
+                            </button>
+                        }
                     </div>
                 }
                 else
@@ -169,37 +175,53 @@
                 <div class="col-12 col-md-8 col-lg-5">
                     <div class=" bg-transparent text-center">
                         <div class="card-body p-5">
-
-                            <div class="position-relative mb-5">
-                                <div class="position-absolute top-50 start-50 translate-middle">
-                                    <i class="fa fa-circle-o-notch fa-spin fa-4x text-primary opacity-50"></i>
+                            <center>
+                                <div class="position-relative mb-5">
+                                    <div class="position-absolute top-50 start-50 translate-middle">
+                                        <i class="fa fa-circle-o-notch fa-spin fa-4x text-primary opacity-50"></i>
+                                    </div>
+                                    <i class="fa fa-database fa-3x text-primary position-relative"></i>
                                 </div>
-                                <i class="fa fa-database fa-3x text-primary position-relative"></i>
-                            </div>
+                            </center>
 
-                            <h2 class="fw-light text-dark mb-1 tracking-tight">Bu Alanda Veri Yok</h2>
+                            <center>
+                                <h2 class="fw-light text-dark mb-1 tracking-tight">Bu Alanda Veri Yok</h2>
+                            </center>
+
                             <hr />
-                            <p class="text-light mb-4 small fw-medium text-uppercase badge bg-dark tracking-widest" style="letter-spacing: 2px;">
-                                Bulut sunucularına bağlanılıyor
-                            </p>
+                            <center>
+                                <p class="text-light mb-4 small fw-medium text-uppercase badge bg-dark tracking-widest" style="letter-spacing: 2px;">
+                                    "Bölüm > Kategori > Görev" oluşturabilirsiniz.
+                                </p>
+                            </center>
 
-                            <div class="progress mb-4 shadow-sm" style="height: 12px; border-radius: 50px; background-color: #e9ecef;">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
-                                     role="progressbar"
-                                     style="width: 100%; border-radius: 50px;">
-                                </div>
-                            </div>
 
-                            <div class="d-flex justify-content-between align-items-center p-3 rounded-4 shadow-sm border bg-light"
-                                 style="background: linear-gradient(90deg, rgba(85, 42, 155, 0.05) 0%, rgba(83, 193, 237, 0.05) 100%);">
-                                <div class="text-start">
-                                    <small class="d-block text-muted fw-bold">Durum:</small>
+                            <center>
+                                <div class="progress mb-4 shadow-sm" style="height: 12px; border-radius: 50px; background-color: #e9ecef;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                         role="progressbar"
+                                         style="width: 100%; border-radius: 50px;">
+                                    </div>
                                 </div>
-                                <div class="text-end">
-                                    <i class="fa fa-refresh text-primary me-2"></i>
-                                    <small class="text-dark fw-bold">Veri Girişi Bekleniyor</small>
+                            </center>
+
+
+
+
+                            <center>
+                                <div class="d-flex justify-content-between align-items-center p-3 rounded-4 shadow-sm border bg-light"
+                                     style="background: linear-gradient(90deg, rgba(85, 42, 155, 0.05) 0%, rgba(83, 193, 237, 0.05) 100%);">
+                                    <div class="text-start">
+                                        <small class="d-block text-muted fw-bold">Durum:</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <i class="fa fa-refresh text-primary me-2"></i>
+                                        <small class="text-dark fw-bold">Veri Girişi Bekleniyor</small>
+                                    </div>
                                 </div>
-                            </div>
+                            </center>
+
+
                         </div>
                     </div>
                 </div>

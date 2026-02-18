@@ -2,13 +2,17 @@
 @using Microsoft.EntityFrameworkCore
 @using api
 @using data
+@using Data
+@using Microsoft.JSInterop
+@using api.tr
+@using data._Shared
+@using razor._Shared
+@implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
 @code {
     [Parameter]
     public Users? _use { get; set; }
-    _ApplicationConnectionDb db = new _ApplicationConnectionDb();
     string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
-
-
 
     [Parameter] public Users? CurrentUser { get; set; }
 
@@ -23,14 +27,19 @@
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private bool _isLoading;
     private bool _isProcessing;
+    private bool _OpenFramework = false;
     private CancellationTokenSource? _searchCts;
     #endregion
 
     #region Data Properties
-    // Boş Listeler (Doldurulacak)
     protected List<Users>? Users { get; set; } = new();
 
-    // Bilgi Dağarcıkları (Değer Atanacak)
+    // Görev Paneli verileri — GlobalStateHub cache üzerinden beslenir
+    private List<TaskFramework> _taskFrameworks = new();
+    private int _planningCount;
+    private int _inProcessCount;
+    private int _completedCount;
+
     string? UsersType = null;
     #endregion
 
@@ -51,10 +60,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // GlobalStateHub event'lerine abone ol
         StateHub.OnDataChanged += HandleGlobalDataChange;
 
         // İlk veri yükleme
         await LoadData(null);
+        await LoadSidebarSpecificData();
     }
 
     /// <summary>
@@ -65,16 +76,20 @@
     {
         if (_isProcessing) return;
 
-        // Sadece ilgili entity'ler için güncelle
-        var shouldRefresh = entityName == "Users";
+        var shouldRefreshUsers = entityName == "Users";
+        var shouldRefreshSidebar = entityName is "TaskFramework" or "TaskCategories" or "Users";
 
-        if (shouldRefresh)
+        if (shouldRefreshUsers || shouldRefreshSidebar)
         {
-            // ✅ InvokeAsync: UI thread-safe güncelleme
             await InvokeAsync(async () =>
             {
-                await LoadData(null);
-                StateHasChanged(); // UI'ı yenile
+                if (shouldRefreshUsers)
+                    await LoadData(null);
+
+                if (shouldRefreshSidebar)
+                    await LoadSidebarSpecificData();
+
+                StateHasChanged();
             });
         }
     }
@@ -84,18 +99,14 @@
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        // Event'lerden çık (çok önemli!)
         StateHub.OnDataChanged -= HandleGlobalDataChange;
 
-        // Search CTS'yi iptal et
         _searchCts?.Cancel();
         _searchCts?.Dispose();
 
-        // Ana CTS'yi iptal et
         await _cts.CancelAsync();
         _cts.Dispose();
 
-        // SemaphoreSlim'i dispose et
         _writeLock.Dispose();
 
         GC.SuppressFinalize(this);
@@ -104,25 +115,21 @@
     #endregion
 
 
-    #region Data Loading - Optimized Read Operations
+    #region Data Loading
 
     /// <summary>
-    /// VERİ YÜKLEME - Debounced Search ile Optimize Edilmiş
+    /// Kullanıcı listesi yükleme — Debounced
     /// </summary>
     protected virtual async Task LoadData(string? search)
     {
-        // 1. Önceki bekleyen aramayı iptal et
         _searchCts?.Cancel();
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
 
         try
         {
-            // 2. Eğer arama terimi varsa 1000ms bekle (Debounce)
             if (!string.IsNullOrWhiteSpace(search))
-            {
                 await Task.Delay(1000, token);
-            }
 
             if (_isLoading) return;
 
@@ -131,15 +138,12 @@
 
             var result = await StateHub.GetOrLoadAsync("DataViewer_Main", async () =>
             {
-                // DbFactory için ana _cts.Token yerine bu işlemin token'ını kullanmak daha güvenli
                 await using var db = await DbFactory.CreateDbContextAsync(token);
 
                 var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    // ⚠️ Şifreli veride arama yaparken dikkatli olun
-                    // Encrypted data üzerinde Contains çalışmayabilir
                     query = query.Where(u =>
                         u.FirstName.Contains(search) ||
                         u.LastName.Contains(search));
@@ -155,17 +159,13 @@
                 Users = result.Users;
             }
         }
-        catch (OperationCanceledException)
-        {
-            // Kullanıcı yazmaya devam ettiği için bu işlem iptal edildi, bir şey yapmaya gerek yok.
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] LoadData: {ex.Message}");
         }
         finally
         {
-            // Sadece sonuncu işlem ise loading'i kapat
             if (token == _searchCts?.Token)
             {
                 _isLoading = false;
@@ -174,28 +174,65 @@
         }
     }
 
-    #endregion
-
-
-
-
-    public int GetTaskCategoryStructureCount(string CategoryStructure)
+    /// <summary>
+    /// Sidebar'a özel verileri GlobalStateHub cache üzerinden yükle:
+    /// - TaskFramework listesi
+    /// - Görev durumu sayaçları (Planning / InProcess / Completed)
+    /// </summary>
+    private async Task LoadSidebarSpecificData()
     {
-        int info = 0;
-        if (_use != null)
+        if (_use == null) return;
+
+        var userId = _use.Id;
+
+        try
         {
-            info = db.TaskCategories
-.Where(x => x.CategoryStructure == CategoryStructure && x.IsDeleted.IsDeletedStatu != true && x.IsDeleted == null && x.UserId == _use.Id)
-.ToList()
-.Count();
+            // TaskFramework listesini cache'den veya DB'den çek
+            var frameworkResult = await StateHub.GetOrLoadAsync("Sidebar_TaskFramework", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                return await db.TaskFramework.AsNoTracking().ToListAsync(_cts.Token);
+            }, _cts.Token);
+
+            _taskFrameworks = frameworkResult ?? new List<TaskFramework>();
+
+            // Görev kategorisi sayaçlarını cache'den veya DB'den çek
+            var countsResult = await StateHub.GetOrLoadAsync($"Sidebar_TaskCounts_{userId}", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+                var baseQuery = db.TaskCategories
+                    .AsNoTracking()
+                    .Where(x => x.UserId == userId && (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true));
+
+                var planning = await baseQuery.CountAsync(x => x.CategoryStructure == "PlanningTaskBoard", _cts.Token);
+                var inProcess = await baseQuery.CountAsync(x => x.CategoryStructure == "InProcessTaskBoard", _cts.Token);
+                var completed = await baseQuery.CountAsync(x => x.CategoryStructure == "CompletedTaskBoard", _cts.Token);
+
+                return new { Planning = planning, InProcess = inProcess, Completed = completed };
+            }, _cts.Token);
+
+            if (countsResult != null)
+            {
+                _planningCount = countsResult.Planning;
+                _inProcessCount = countsResult.InProcess;
+                _completedCount = countsResult.Completed;
+            }
         }
-        return info;
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] LoadSidebarSpecificData: {ex.Message}");
+        }
     }
 
+    public void OpenFramework()
+    {
+        _OpenFramework = !_OpenFramework;
+        StateHasChanged();
+    }
 
-
-
-
+    #endregion
 }
 
 <div class="sidebar-wrapper" data-simplebar="true">
@@ -306,14 +343,13 @@
             </a>
             <ul>
 
-                
                 <li>
-                    <a class="has-arrow" href="javascript:;">
-                        <i class="fa fa-folder-open" aria-hidden="true"></i>
+                    <a class="has-arrow" @onclick="OpenFramework">
+                        <i class="@(_OpenFramework ? "fa fa-folder-open" : "fa fa-folder-o")" aria-hidden="true"></i>
                         <span>Görev Yönetimi</span>
                     </a>
                     <ul>
-                        @foreach (var item in db.TaskFramework.ToList())
+                        @foreach (var item in _taskFrameworks)
                         {
                             <li>
                                 <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/PlanningTaskBoard/@item.Id" title="@item.Description">
@@ -325,8 +361,6 @@
                     </ul>
                 </li>
 
-
-
                 <li>
                     <a class="has-arrow" href="javascript:;">
                         <i class="fa fa-list-ul" aria-hidden="true"></i>
@@ -336,19 +370,19 @@
                         <li>
                             <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/PlanningTaskBoard">
                                 <i class="fa fa-list-ul" aria-hidden="true"></i>
-                                Plan Aşamasında (@GetTaskCategoryStructureCount("PlanningTaskBoard"))
+                                Plan Aşamasında (@_planningCount)
                             </a>
                         </li>
                         <li>
                             <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/InProcessTaskBoard">
                                 <i class="fa fa-refresh" aria-hidden="true"></i>
-                                Aktif Görevler (@GetTaskCategoryStructureCount("InProcessTaskBoard"))
+                                Aktif Görevler (@_inProcessCount)
                             </a>
                         </li>
                         <li>
                             <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/CompletedTaskBoard">
                                 <i class="fa fa-check-circle-o" aria-hidden="true"></i>
-                                Tamamlananlar (@GetTaskCategoryStructureCount("CompletedTaskBoard"))
+                                Tamamlananlar (@_completedCount)
                             </a>
                         </li>
                     </ul>

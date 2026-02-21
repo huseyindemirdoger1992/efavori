@@ -470,7 +470,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                         await db.SaveChangesAsync(_cts.Token);
                         await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                         await ShowNotification("success", "Başarılı", $"Görev önceliği '{NewPri}' olarak değiştirildi.", null);
-                        await LoadData();
+                        // await LoadData();
                     }
 
                 });

@@ -134,7 +134,7 @@
                             </div>
                         </div>
 
-                        @if (!db.TaskFramework.Any())
+                        @if (db.TaskFramework.Any())
                         {
                             <button type="button" class="btn btn-light btn-sm"
                                     data-bs-toggle="modal"
@@ -142,7 +142,7 @@
                                 <i class="fa fa-address-book"></i> Yeni Kategori
                             </button>
                         }
-                        @if (!db.TaskCategories.Any())
+                        @if (db.TaskCategories.Any())
                         {
                             <button type="button" class="btn btn-light btn-sm"
                                     @onclick="() => ShowAddTaskModal()"

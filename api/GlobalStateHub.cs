@@ -20,7 +20,7 @@ namespace api
         private readonly ConcurrentDictionary<string, DateTime> _lastBroadcast = new();
 
         private const int DEBOUNCE_MS = 250;          
-        private const int CACHE_SECONDS = 5;          
+        private const int CACHE_SECONDS = 1;          
         private bool _disposed;
 
         #endregion

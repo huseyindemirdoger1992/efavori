@@ -350,10 +350,17 @@
                             <span>Görev Yönetimi</span>
                         </a>
                         <ul>
+                            <li>
+                                <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/" title="All Task">
+                                    <i class="fa fa-list-alt" aria-hidden="true"></i>
+                                    Tüm Görevler
+                                </a>
+                            </li>
                             @foreach (var item in _taskFrameworks)
                             {
                                 <li>
-                                    <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/PlanningTaskBoard/@item.Id" title="@item.Description">
+                                    @* Value alanını boş tutup doğrudan ID gönderiyoruz *@
+                                    <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/@item.Id" title="@item.Description">
                                         <i class="@item.Icon" aria-hidden="true"></i>
                                         @item.Title
                                     </a>

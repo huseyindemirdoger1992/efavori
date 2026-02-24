@@ -362,7 +362,7 @@
         <div class="card">
             <div class="card-body">
                 <ul class="nav nav-tabs" role="tablist">
-                    @if (!TaskFrameworkId.HasValue && TaskFrameworkId.Value == Guid.Empty)
+                    @if (!TaskFrameworkId.HasValue || TaskFrameworkId.Value == Guid.Empty)
                     {
                         <li class="nav-item" role="presentation" title="*.*">
                             <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true" tabindex="-1">
@@ -387,7 +387,7 @@
                     }
                 </ul>
                 <div class="tab-content py-3">
-                    @if (!TaskFrameworkId.HasValue && TaskFrameworkId.Value == Guid.Empty)
+                    @if (!TaskFrameworkId.HasValue || TaskFrameworkId.Value == Guid.Empty)
                     {
                         <div class="tab-pane fade active show" id="*.*" role="tabpanel">
 
@@ -1714,11 +1714,11 @@
                                             </div>
                                             <div class="col-md-12 mb-12" style="margin-top:12px;">
                                                 <label class="form-label">Kategori Adı</label>
-                                                <input class="form-control mb-3" type="text" @bind="item?.Title">
+                                                <input class="form-control mb-3" type="text" @bind="item.Title">
                                             </div>
                                             <div class="col-md-12 mb-12">
                                                 <label>Kategori Açıklaması</label>
-                                                <textarea class="form-control" rows="3" @bind="item?.Description"></textarea>
+                                                <textarea class="form-control" rows="3" @bind="item.Description"></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -1749,11 +1749,11 @@
                                     <div class="modal-body">
                                         <div class="col-12">
                                             <label>Kategori Adı</label>
-                                            <input class="form-control mb-3" type="text" @bind="item?.Title" readonly>
+                                            <input class="form-control mb-3" type="text" @bind="item.Title" readonly>
                                         </div>
                                         <div class="col-12">
                                             <label>Kategori Açıklaması</label>
-                                            <textarea class="form-control" rows="3" @bind="item?.Description" readonly></textarea>
+                                            <textarea class="form-control" rows="3" @bind="item.Description" readonly></textarea>
                                         </div>
                                     </div>
                                     <div class="modal-footer border-top border-secondary">

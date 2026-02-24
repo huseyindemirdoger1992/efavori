@@ -290,22 +290,44 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 }
                 else
                 {
-                    taskCategories = await db.TaskCategories
-                    .AsNoTracking()
-                    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && 
-                    n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
-                    .OrderByDescending(t => t.CreatedAt)
-                    .ToListAsync(_cts.Token);
+                    if (TaskCategoriesValue == "All")
+                    {
+                        taskCategories = await db.TaskCategories
+                        .AsNoTracking()
+                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
+                        n.UserId == use.Id)
+                        .OrderByDescending(t => t.CreatedAt)
+                        .ToListAsync(_cts.Token);
 
-                    tasks = await query
-                    .AsNoTracking()
-                    .Where(t => db.TaskCategories
-                    .Any(c => c.Id == t.TaskCategoriesId && 
-                    c.CategoryStructure == TaskCategoriesValue && 
-                    (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                    c.UserId == use.Id))
-                    .OrderByDescending(t => t.DateCreatedAt)
-                    .ToListAsync(_cts.Token);
+                        tasks = await query
+                        .AsNoTracking()
+                        .Where(t => db.TaskCategories
+                        .Any(c => c.Id == t.TaskCategoriesId &&
+                        (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
+                        c.UserId == use.Id))
+                        .OrderByDescending(t => t.DateCreatedAt)
+                        .ToListAsync(_cts.Token);
+                    }
+                    else
+                    {
+                        taskCategories = await db.TaskCategories
+                        .AsNoTracking()
+                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
+                        n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
+                        .OrderByDescending(t => t.CreatedAt)
+                        .ToListAsync(_cts.Token);
+
+                        tasks = await query
+                        .AsNoTracking()
+                        .Where(t => db.TaskCategories
+                        .Any(c => c.Id == t.TaskCategoriesId &&
+                        c.CategoryStructure == TaskCategoriesValue &&
+                        (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
+                        c.UserId == use.Id))
+                        .OrderByDescending(t => t.DateCreatedAt)
+                        .ToListAsync(_cts.Token);
+                    }
+
                 }
 
                 taskNotes = await db.TaskNotes

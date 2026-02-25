@@ -15,73 +15,59 @@
     <div class="row mb-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
-                @if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
-                {
-                    <div>
-                        @{
-                            var roads = new List<(string icon, string Name, string Url)>
-                                        {
-                                        ("fa fa-globe","efavori", $"/"),
-                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
-                                        ("fa fa-th-large","Görev Yönetimi", "javascript:void(0)"),
-                                        ("fa fa-list-ul",$"{db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title}", "javascript:void(0)")
-                                        };
-                        }
-                        <razor._Shared.BreadCrumbLinksUrl roads=roads />
-                    </div>
+
+
+                @{
+                    // Sabit olan ilk 3 elemanı tanımlayalım
+                    var roads = new List<(string icon, string Name, string Url)>
+                                {
+                                ("fa fa-globe", "efavori", "/"),
+                                ("fa fa-th-large", "Görev Paneli", "javascript:void(0)")
+                                };
+
+                    // Dinamik kısımları belirleyelim
+                    string lastIcon = "fa fa-list-ul";
+                    string lastName = "";
+                    string midName = "Görev Yönetimi"; // Varsayılan orta isim
+
+                    // Durum kontrolü (Pattern Matching kullanarak)
+                    switch (TaskCategoriesValue)
+                    {
+                        case "PlanningTaskBoard":
+                            midName = "Görev Durumları";
+                            lastName = "Plan Aşamasında";
+                            break;
+                        case "InProcessTaskBoard":
+                            midName = "Görev Durumları";
+                            lastIcon = "fa fa-refresh";
+                            lastName = "Aktif Görevler";
+                            break;
+                        case "CompletedTaskBoard":
+                            midName = "Görev Durumları";
+                            lastIcon = "fa fa-check-circle-o";
+                            lastName = "Tamamlananlar";
+                            break;
+                        default:
+                            // Board değerleri dışında kalan durumlar (Senin ilk if-else mantığın)
+                            if (TaskCategoriesValue == "All" && (TaskFrameworkId == null || TaskFrameworkId == Guid.Empty))
+                            {
+                                lastName = "Tüm Görev Bölümleriniz";
+                            }
+                            else
+                            {
+                                lastName = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId)?.Title ?? "Yükleniyor...";
+                            }
+                            break;
+                    }
+
+                    // Listeyi tamamla
+                    roads.Add(("fa fa-th-large", midName, "javascript:void(0)"));
+                    roads.Add((lastIcon, lastName, "javascript:void(0)"));
                 }
-                else
-                {
-                    @if (TaskCategoriesValue == "PlanningTaskBoard")
-                    {
-                        <div>
-                            @{
-                                var roads = new List<(string icon, string Name, string Url)>
-                                        {
-                                        ("fa fa-globe","efavori", $"/"),
-                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
-                                        ("fa fa-th-large","Görev Durumları", "javascript:void(0)"),
-                                        ("fa fa-list-ul","Plan Aşamasında", "javascript:void(0)")
-                                        };
-                            }
-                            <razor._Shared.BreadCrumbLinksUrl roads=roads />
-                        </div>
-                    }
 
-                    @if (TaskCategoriesValue == "InProcessTaskBoard")
-                    {
-                        <div>
-                            @{
-                                var roads = new List<(string icon, string Name, string Url)>
-                                        {
-                                        ("fa fa-globe","efavori", $"/"),
-                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
-                                        ("fa fa-th-large","Görev Durumları", "javascript:void(0)"),
-                                        ("fa fa-refresh","Aktif Görev Panosu", "javascript:void(0)")
-                                        };
-                            }
-                            <razor._Shared.BreadCrumbLinksUrl roads=roads />
-                        </div>
-                    }
-
-                    @if (TaskCategoriesValue == "CompletedTaskBoard")
-                    {
-                        <div>
-                            @{
-                                var roads = new List<(string icon, string Name, string Url)>
-                                        {
-                                        ("fa fa-globe","efavori", $"/"),
-                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
-                                        ("fa fa-th-large","Görev Durumları", "javascript:void(0)"),
-                                        ("fa fa-check-circle-o","Tamamlanan Görev Panosu", "javascript:void(0)")
-                                        };
-                            }
-                            <razor._Shared.BreadCrumbLinksUrl roads=roads />
-                        </div>
-                    }
-
-
-                }
+                <div>
+                    <razor._Shared.BreadCrumbLinksUrl roads="roads" />
+                </div>
 
                 @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                 {
@@ -278,7 +264,7 @@
                 <div class="col-3">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioAll" value="all" checked autocomplete="off">
                     <label class="btn btn-outline-light btn-sm w-100 py-1 shadow-sm custom-btn" for="radioAll">
-                        <i class="fa fa-list me-1"></i> Tüm Görevler (@ToplamGorevSayisi)
+                        <i class="fa fa-list me-1"></i> Tüm Görevler
                     </label>
                 </div>
                 <div class="col-3"
@@ -287,7 +273,7 @@
                      @ondragenter:preventDefault="true">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioLow" value="low" autocomplete="off">
                     <label class="btn btn-outline-success btn-sm w-100 py-1 text-dark shadow-sm custom-btn" for="radioLow">
-                        <i class="fa fa-arrow-circle-down text-dark me-1"></i> Düşük Öncelikli (@DusukGorevSayisi)
+                        <i class="fa fa-arrow-circle-down text-dark me-1"></i> Düşük Öncelikli
                     </label>
                 </div>
                 <div class="col-3"
@@ -296,7 +282,7 @@
                      @ondragenter:preventDefault="true">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioMedium" value="medium" autocomplete="off">
                     <label class="btn btn-outline-warning btn-sm w-100 py-1 text-dark shadow-sm custom-btn" for="radioMedium">
-                        <i class="fa fa-minus-circle text-dark me-1"></i> Orta Öncelikli (@OrtaGorevSayisi)
+                        <i class="fa fa-minus-circle text-dark me-1"></i> Orta Öncelikli
                     </label>
                 </div>
                 <div class="col-3"
@@ -305,7 +291,7 @@
                      @ondragenter:preventDefault="true">
                     <input type="radio" class="btn-check" name="priorityRadio" id="radioHigh" value="high" autocomplete="off">
                     <label class="btn btn-outline-danger btn-sm w-100 py-1 text-dark shadow-sm custom-btn" for="radioHigh">
-                        <i class="fa fa-arrow-circle-up text-dark me-1"></i> Yüksek Öncelikli (@YuksekGorevSayisi)
+                        <i class="fa fa-arrow-circle-up text-dark me-1"></i> Yüksek Öncelikli
                     </label>
                 </div>
             </div>

@@ -218,11 +218,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         }
         #endregion
         #region Data Operations
-        private int ToplamGorevSayisi = 0;
-        private int DusukGorevSayisi = 0;
-        private int OrtaGorevSayisi = 0;
-        private int YuksekGorevSayisi = 0;
-
 
         private string? _SearchText; // Field
 
@@ -335,34 +330,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true)
                     .OrderByDescending(t => t.NoteCreatedAt) // Filtrelemeden sonra sırala
                     .ToListAsync(_cts.Token);
-                ToplamGorevSayisi = await query
-                    .Where(t => db.TaskCategories
-                        .Any(c => c.Id == t.TaskCategoriesId &&
-                                  c.CategoryStructure == TaskCategoriesValue &&
-                                  (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                  c.UserId == use.Id))
-                    .CountAsync(_cts.Token);
-                DusukGorevSayisi = await query
-                    .Where(t => t.Priority == "Düşük" && db.TaskCategories
-                        .Any(c => c.Id == t.TaskCategoriesId &&
-                                  c.CategoryStructure == TaskCategoriesValue &&
-                                  (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                  c.UserId == use.Id))
-                    .CountAsync(_cts.Token);
-                OrtaGorevSayisi = await query
-                    .Where(t => t.Priority == "Orta" && db.TaskCategories
-                        .Any(c => c.Id == t.TaskCategoriesId &&
-                                  c.CategoryStructure == TaskCategoriesValue &&
-                                  (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                  c.UserId == use.Id))
-                    .CountAsync(_cts.Token);
-                YuksekGorevSayisi = await query
-                    .Where(t => t.Priority == "Yüksek" && db.TaskCategories
-                        .Any(c => c.Id == t.TaskCategoriesId &&
-                                  c.CategoryStructure == TaskCategoriesValue &&
-                                  (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                  c.UserId == use.Id))
-                    .CountAsync(_cts.Token);
                 await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
             }
             catch (OperationCanceledException) { }

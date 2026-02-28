@@ -48,11 +48,11 @@ namespace api.tr
                     message.From = new MailAddress(EmailAddress, EmailAddress);
                     break;
 
-                case "guvenlik@efavori.com":
+                case "tasks@efavori.com":
                     SmtpServer = "srvm16.trwww.com";
                     SmtpPort = 587;
-                    EmailAddress = "guvenlik@efavori.com";
-                    EmailPassword = "DestekSifresi123";
+                    EmailAddress = "tasks@efavori.com";
+                    EmailPassword = "BrrXG9xF9DZGdWFAzpn6";
                     message.From = new MailAddress(EmailAddress, EmailAddress);
                     break;
 

@@ -277,3 +277,83 @@
         });
     });
 </script>
+
+
+@* Tüm seçenekler için (Select Option) aram çubuğu *@
+<script>
+    function initializeSearchableSelect() {
+        document.querySelectorAll('select.form-select').forEach(select => {
+            if (select.nextElementSibling?.classList.contains('custom-select-container')) return;
+
+            const container = document.createElement('div');
+            container.className = 'dropdown custom-select-container';
+
+            const button = document.createElement('div');
+            button.className = 'form-select bg-light cursor-pointer fa-select';
+            button.innerHTML = select.options[select.selectedIndex]?.text || 'Seçiniz';
+
+            const menu = document.createElement('div');
+            menu.className = 'dropdown-menu w-100 shadow p-0';
+            menu.style.maxHeight = '250px';
+            menu.style.overflowY = 'auto';
+
+            // Revize 1: Sticky Search (Arka plan beyaz, ikonlar arkada kalır)
+            const searchDiv = document.createElement('div');
+            searchDiv.style = "position:sticky; top:0; z-index:10; background:light; padding:5px; border-bottom:1px solid #ddd;";
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Ara...';
+            searchInput.className = 'form-control form-control-sm';
+            searchDiv.appendChild(searchInput);
+            menu.appendChild(searchDiv);
+
+            const listContainer = document.createElement('div');
+            menu.appendChild(listContainer);
+
+            const updateOptions = (filter = '') => {
+                listContainer.innerHTML = '';
+                Array.from(select.options).forEach(opt => {
+                    if (opt.text.toLowerCase().includes(filter.toLowerCase())) {
+                        const item = document.createElement('div');
+                        item.className = 'dropdown-item py-2 cursor-pointer fa-select';
+                        item.innerHTML = opt.text;
+
+                        item.onclick = () => {
+                            select.value = opt.value;
+                            button.innerHTML = opt.text;
+                            // Revize 2: Seçim yapıldığında aramayı temizle
+                            searchInput.value = '';
+                            menu.classList.remove('show');
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                        };
+                        listContainer.appendChild(item);
+                    }
+                });
+            };
+
+            button.onclick = (e) => {
+                e.stopPropagation();
+                const isOpen = menu.classList.toggle('show');
+                if(isOpen) {
+                    updateOptions();
+                    setTimeout(() => searchInput.focus(), 50);
+                }
+            };
+
+            searchInput.onclick = (e) => e.stopPropagation();
+            searchInput.oninput = (e) => updateOptions(e.target.value);
+            document.addEventListener('click', () => menu.classList.remove('show'));
+
+            container.appendChild(button);
+            container.appendChild(menu);
+
+            // Revize 3: Gereksiz tüm görsel kodlar atıldı, sadece temel işlev kaldı.
+            select.style.display = 'none';
+            select.parentNode.insertBefore(container, select);
+        });
+    }
+
+    // Blazor render süreci için ideal bekleme
+    setTimeout(initializeSearchableSelect, 500);
+</script>

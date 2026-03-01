@@ -15,7 +15,6 @@ namespace api.tr
 {
     public class EmailSender
     {
-
         [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
         protected readonly CancellationTokenSource _cts = new();
 

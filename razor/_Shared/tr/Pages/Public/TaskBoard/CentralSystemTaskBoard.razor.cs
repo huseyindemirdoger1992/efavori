@@ -919,6 +919,34 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             });
         }
 
+        public async Task EditFramework()
+        {
+            await ExecuteWithLock("EditFramework", async () =>
+            {
+
+                await db.SaveChangesAsync(_cts.Token);
+                await StateHub.NotifyDataChanged("EditFramework");
+                await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
+                await JS.InvokeVoidAsync("eval", "$('#EditFramework').modal('hide')");
+                // Formu temizle
+                tf = new TaskFramework();
+            });
+        }
+
+        public async Task TrashFramework()
+        {
+            await ExecuteWithLock("TrashFramework", async () =>
+            {
+
+                await db.SaveChangesAsync(_cts.Token);
+                await StateHub.NotifyDataChanged("TrashFramework");
+                await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
+                await JS.InvokeVoidAsync("eval", "$('#TrashFramework').modal('hide')");
+                // Formu temizle
+                tf = new TaskFramework();
+            });
+        }
+
 
         #endregion
 

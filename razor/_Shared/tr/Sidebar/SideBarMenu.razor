@@ -342,32 +342,32 @@
                 <div class="menu-title">Görev Paneli</div>
             </a>
             <ul>
-                    <li>
-                        <a class="has-arrow" @onclick="OpenFramework">
-                            <i class="@(_OpenFramework ? "fa fa-folder-open" : "fa fa-folder-o")" aria-hidden="true"></i>
-                            <span>Görev Yönetimi</span>
-                        </a>
-                        <ul>
+                <li>
+                    <a class="has-arrow" @onclick="OpenFramework">
+                        <i class="@(_OpenFramework ? "fa fa-folder-open" : "fa fa-folder-o")" aria-hidden="true"></i>
+                        <span>Görev Yönetimi</span>
+                    </a>
+                    <ul>
+                        <li>
+                            <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/" title="All Task">
+                                <i class="fa fa-list-alt" aria-hidden="true"></i>
+                                Tüm Görev Bölümleri
+                            </a>
+                        </li>
+                        <li class="border-top my-2 mx-3"></li>
+                        @foreach (var item in _taskFrameworks)
+                        {
                             <li>
-                                <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/" title="All Task">
-                                    <i class="fa fa-list-alt" aria-hidden="true"></i>
-                                    Tüm Görevler
+                                @* Value alanını boş tutup doğrudan ID gönderiyoruz *@
+                                <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/@item.Id" title="@item.Description">
+                                    <i class="@item.Icon" aria-hidden="true"></i>
+                                    @item.Title
                                 </a>
                             </li>
-                        <li class="border-top my-2 mx-3"></li>
-                            @foreach (var item in _taskFrameworks)
-                            {
-                                <li>
-                                    @* Value alanını boş tutup doğrudan ID gönderiyoruz *@
-                                    <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/@item.Id" title="@item.Description">
-                                        <i class="@item.Icon" aria-hidden="true"></i>
-                                        @item.Title
-                                    </a>
-                                </li>
-                            }
-                        </ul>
-                    </li>
-                
+                        }
+                    </ul>
+                </li>
+
                 <li>
                     <a class="has-arrow" href="javascript:;">
                         <i class="fa fa-list-ul" aria-hidden="true"></i>

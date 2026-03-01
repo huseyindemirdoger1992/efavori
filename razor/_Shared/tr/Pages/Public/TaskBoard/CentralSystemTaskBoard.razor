@@ -28,7 +28,7 @@
                     // Dinamik kısımları belirleyelim
                     string lastIcon = "fa fa-list-ul";
                     string lastName = "";
-                    string midName = "Görev Yönetimi"; // Varsayılan orta isim
+                    string midName = "Görev Bölümleri"; // Varsayılan orta isim
 
                     // Durum kontrolü (Pattern Matching kullanarak)
                     switch (TaskCategoriesValue)
@@ -261,6 +261,106 @@
     }
     else
     {
+        @if (TaskFrameworkId != null && TaskFrameworkId != Guid.Empty)
+        {
+            <div class="alert border-0 border-start border-2 border-white alert-dismissible fade show d-flex align-items-center justify-content-between">
+                <div class="text-white">
+                    <b>@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId)?.Title</b> Bölümü için işlemler:
+                </div>
+
+                <div class="d-flex align-items-center ms-auto">
+                    <button type="button" class="btn btn-link text-warning p-0 me-3" title="Düzenle" data-bs-toggle="modal" data-bs-target="#EditFramework">
+                        <i class="fa fa-pencil"></i>
+                    </button>
+                    <button type="button" class="btn btn-link text-danger p-0 me-3" title="Sil" data-bs-toggle="modal" data-bs-target="#TrashFramework">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="position: static; padding: 0.5rem;"></button>
+                </div>
+            </div>
+            <div class="modal fade" id="EditFramework" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                        <div class="modal-header border-bottom border-secondary">
+                            <h5 class="modal-title text-white">
+                                <i class="fa fa-edit"></i> Bölüm düzenleme işlemi
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+
+                            <div class="col-12">
+                                <label>Bölüm Adı</label>
+                                <input class="form-control mb-3" type="text" value="@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                            </div>
+
+                            <div class="col-12">
+                                <label>Bölüm Açıklaması</label>
+                                <textarea class="form-control" rows="3">@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description</textarea>
+                            </div>
+
+                        </div>
+                        <div class="modal-footer border-top border-secondary">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+
+                            <button type="button"
+                                    class="@(IsButtonProcessing("EditFramework") ? "btn btn-light colored" : "btn btn-light")"
+                                    @onclick='EditFramework'
+                                    disabled="@IsButtonProcessing("EditFramework")">
+
+                                <i class="fa @(IsButtonProcessing("EditFramework") ? "fa-refresh fa-spin" : "fa-save")"></i>
+
+                                <span>
+                                    @(IsButtonProcessing("EditFramework") ? "Kaydediliyor..." : "Kaydet ve Kapat")
+                                </span>
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal fade" id="TrashFramework" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                        <div class="modal-header border-bottom border-secondary">
+                            <h5 class="modal-title text-white">
+                                <i class="fa fa-trash"></i> Bölüm silme işlemi
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="col-12">
+                                <label>Bölüm Adı</label>
+                                <input class="form-control mb-3" type="text" value="@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                            </div>
+
+                            <div class="col-12">
+                                <label>Bölüm Açıklaması</label>
+                                <textarea class="form-control" rows="3">@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top border-secondary">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+
+                            <button type="button"
+                                    class="@(IsButtonProcessing("TrashFramework") ? "btn btn-danger colored" : "btn btn-danger")"
+                                    @onclick='TrashFramework'
+                                    disabled="@IsButtonProcessing("TrashFramework")">
+
+                                <i class="fa @(IsButtonProcessing("TrashFramework") ? "fa-refresh fa-spin" : "fa-trash")"></i>
+
+                                <span>
+                                    @(IsButtonProcessing("TrashFramework") ? "Siliniyor..." : "Çöp Kutusuna Taşı")
+                                </span>
+                            </button>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        }
+
         <div class="w-100 mt-3">
             <div class="row g-2">
                 <div class="col-3">

@@ -1,4 +1,5 @@
-﻿using api.tr;
+﻿using api;
+using api.tr;
 using data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
@@ -286,10 +287,9 @@ namespace razor._Shared.tr.Modals.Account
                     await ShowNotification("warning", "Dikkat", $"Şifreniz zayıf gözüküyor.", null);
                 }
                 else
-                {
-                    // Şifreyi güncelle
-                    use.Password = NewPassword;
-                    use.AccountPasswordResetMailCode = 0; // Sıfırlama kodunu temizle
+                {                   
+                    use.Password = GlobalSecurityProvider.Encrypt(NewPassword);
+                    use.AccountPasswordResetMailCode = 0; 
                     _db.Users.Update(use);
                     await _db.SaveChangesAsync(_cts.Token);
                     await ShowNotification("success", "Başarılı", "Şifreniz başarıyla güncellendi.", null);

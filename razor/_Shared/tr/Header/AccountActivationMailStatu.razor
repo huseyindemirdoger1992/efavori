@@ -88,7 +88,17 @@
                 <h5 class="modal-title text-white fw-bold">
                     <i class="fa fa-envelope-o me-2"></i>Güvenlik Doğrulaması
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
             </div>
             <div class="modal-body p-4">
                 <div class="mb-4">

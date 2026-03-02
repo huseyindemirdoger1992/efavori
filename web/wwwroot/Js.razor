@@ -357,3 +357,39 @@
     // Blazor render süreci için ideal bekleme
     setTimeout(initializeSearchableSelect, 500);
 </script>
+
+@* Modal tam ekran yapma veya küçültme *@
+<script>
+    function toggleModalFullscreen(button) {
+        const modalDialog = button.closest('.modal-dialog');
+        const icon = button.querySelector('i');
+
+        // Modern geçiş efekti için stil enjekte et
+        modalDialog.style.transition = "all 0.35s cubic-bezier(0.25, 1, 0.5, 1)";
+
+        if (modalDialog.classList.contains('modal-lg')) {
+            // Tam ekrana geçiş
+            modalDialog.classList.remove('modal-lg');
+            modalDialog.classList.add('modal-fullscreen');
+
+            // Yumuşak ikon değişimi efekti
+            icon.style.transform = "scale(0.8)";
+            setTimeout(() => {
+                icon.classList.replace('fa-expand', 'fa-compress');
+                icon.style.transform = "scale(1)";
+            }, 150);
+
+        } else {
+            // Eski haline dönüş
+            modalDialog.classList.remove('modal-fullscreen');
+            modalDialog.classList.add('modal-lg');
+
+            // Yumuşak ikon değişimi efekti
+            icon.style.transform = "scale(0.8)";
+            setTimeout(() => {
+                icon.classList.replace('fa-compress', 'fa-expand');
+                icon.style.transform = "scale(1)";
+            }, 150);
+        }
+    }
+</script>

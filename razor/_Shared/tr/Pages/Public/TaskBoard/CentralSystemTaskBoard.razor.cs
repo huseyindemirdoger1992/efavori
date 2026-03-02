@@ -3,6 +3,7 @@ using api.tr;
 using data;
 using data._Shared;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
 using System;
@@ -919,34 +920,92 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             });
         }
 
-        public async Task EditFramework()
+        public async Task EditFramework(Guid? _TaskFrameworkId)
         {
+            // 1. Önce veritabanı işlemini kilitle yapın
+            bool success = false;
             await ExecuteWithLock("EditFramework", async () =>
             {
-
-                await db.SaveChangesAsync(_cts.Token);
-                await StateHub.NotifyDataChanged("EditFramework");
-                await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
-                await JS.InvokeVoidAsync("eval", "$('#EditFramework').modal('hide')");
-                // Formu temizle
-                tf = new TaskFramework();
+                try
+                {
+                    await using var dbCtx = await DbFactory.CreateDbContextAsync(_cts.Token);
+                    var existing = await dbCtx.TaskFramework.FirstOrDefaultAsync(x => x.Id == _TaskFrameworkId, _cts.Token);
+                    if (existing != null)
+                    {
+                        existing.Icon = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon;
+                        existing.Title = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title;
+                        existing.Description = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description;
+                        dbCtx.TaskFramework.Update(existing);
+                        await dbCtx.SaveChangesAsync(_cts.Token);
+                        success = true;
+                    }
+                    else
+                    {
+                        await ShowNotification("error", "Hata", "Güncellenecek kayıt bulunamadı.", null);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await ShowNotification("error", "Hata", "Kaydedilirken bir sorun oluştu: " + ex.Message, null);
+                }
             });
-        }
 
-        public async Task TrashFramework()
+            // 2. Kilit (Lock) dışına çıktıktan sonra UI ve Hub işlemlerini yapın
+            if (success)
+            {
+                await JS.InvokeVoidAsync("eval", "$('#EditFramework').modal('hide')");
+                await ShowNotification("success", "Başarılı", "Bölüm başarıyla güncellendi.", null);
+
+                // Diğer kullanıcılara bildir
+                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+
+                // Bu bileşeni manuel yenile (Gerekirse)
+                StateHasChanged();
+            }
+        }
+        public async Task TrashFramework(Guid? _TaskFrameworkId)
         {
+            bool isSuccess = false;
+
             await ExecuteWithLock("TrashFramework", async () =>
             {
+                try
+                {
+                    await using var dbCtx = await DbFactory.CreateDbContextAsync(_cts.Token);
+                    var trash = await dbCtx.TaskFramework.FirstOrDefaultAsync(x => x.Id == _TaskFrameworkId, _cts.Token);
+                    if (trash != null)
+                    {
+                        if (trash.IsDeleted == null)
+                        {
+                            trash.IsDeleted = new IsDeleted();
+                        }
+                        trash.IsDeleted.IsDeletedStatu = true;
+                        trash.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+                        dbCtx.TaskFramework.Update(trash);
+                        await dbCtx.SaveChangesAsync(_cts.Token);
+                        isSuccess = true; // Veritabanı işi bitti, kilit dışına çıkabiliriz
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await ShowNotification("error", "Hata", "Silinirken bir sorun oluştu: " + ex.Message, null);
+                }
+            });
 
-                await db.SaveChangesAsync(_cts.Token);
-                await StateHub.NotifyDataChanged("TrashFramework");
-                await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
-                await JS.InvokeVoidAsync("eval", "$('#TrashFramework').modal('hide')");
+            // Kilit (Lock) mekanizmasının DIŞINDA UI ve State işlemlerini yapıyoruz
+            if (isSuccess)
+            {
                 // Formu temizle
                 tf = new TaskFramework();
-            });
-        }
 
+                // Modal kapat ve bildirim ver
+                await JS.InvokeVoidAsync("eval", "$('#TrashFramework').modal('hide')");
+                await ShowNotification("success", "Başarılı", "Bölüm başarıyla silindi.", null);
+
+                // DİKKAT: En son tetiklemeyi yap ki render başladığında DB meşgul olmasın
+                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+            }
+        }
 
         #endregion
 

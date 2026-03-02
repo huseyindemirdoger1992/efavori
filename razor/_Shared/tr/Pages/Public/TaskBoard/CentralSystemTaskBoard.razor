@@ -84,7 +84,19 @@
                                         <h5 class="modal-title text-white">
                                             <i class="fa fa-folder-open"></i> Yeni Görev Bölümü
                                         </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                                        <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                                            <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                                                <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                                            </button>
+
+                                            <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                                            <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                                                <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                                            </button>
+                                        </div>
+
                                     </div>
                                     <div class="modal-body row">
 
@@ -285,37 +297,56 @@
                             <h5 class="modal-title text-white">
                                 <i class="fa fa-edit"></i> Bölüm düzenleme işlemi
                             </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                                <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                                    <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                                </button>
+
+                                <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                                <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                                    <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">İkon</label>
+                                    <select class="form-select" @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon">
+                                        <razor._Shared.FaIcons />
+                                    </select>
+                                </div>
 
-                            <div class="col-12">
-                                <label>Bölüm Adı</label>
-                                <input class="form-control mb-3" type="text" value="@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                                <div class="col-6">
+                                    <label class="form-label">Bölüm Adı</label>
+                                    <input class="form-control mb-3 bg-light" type="text"
+                                           @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">Bölüm Açıklaması</label>
+                                    <textarea class="form-control bg-light" rows="3"
+                                              @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description"></textarea>
+                                </div>
                             </div>
-
-                            <div class="col-12">
-                                <label>Bölüm Açıklaması</label>
-                                <textarea class="form-control" rows="3">@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description</textarea>
-                            </div>
-
                         </div>
+
                         <div class="modal-footer border-top border-secondary">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-
                             <button type="button"
-                                    class="@(IsButtonProcessing("EditFramework") ? "btn btn-light colored" : "btn btn-light")"
-                                    @onclick='EditFramework'
+                                    class="btn btn-light @(IsButtonProcessing("EditFramework") ? "colored" : "")"
+                                    @onclick='() => EditFramework(TaskFrameworkId)'
                                     disabled="@IsButtonProcessing("EditFramework")">
 
                                 <i class="fa @(IsButtonProcessing("EditFramework") ? "fa-refresh fa-spin" : "fa-save")"></i>
-
                                 <span>
-                                    @(IsButtonProcessing("EditFramework") ? "Kaydediliyor..." : "Kaydet ve Kapat")
+                                    @(IsButtonProcessing("EditFramework") ? " Kaydediliyor..." : " Kaydet ve Kapat")
                                 </span>
                             </button>
-
                         </div>
+
+
                     </div>
                 </div>
             </div>
@@ -326,25 +357,39 @@
                             <h5 class="modal-title text-white">
                                 <i class="fa fa-trash"></i> Bölüm silme işlemi
                             </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                                <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                                    <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                                </button>
+
+                                <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                                <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                                    <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                                </button>
+                            </div>
                         </div>
+
                         <div class="modal-body">
                             <div class="col-12">
-                                <label>Bölüm Adı</label>
-                                <input class="form-control mb-3" type="text" value="@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                                <label class="form-label">Bölüm Adı</label>
+                                <input class="form-control mb-3 bg-light" type="text"
+                                       @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
                             </div>
 
                             <div class="col-12">
-                                <label>Bölüm Açıklaması</label>
-                                <textarea class="form-control" rows="3">@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description</textarea>
+                                <label class="form-label">Bölüm Açıklaması</label>
+                                <textarea class="form-control bg-light" rows="3"
+                                          @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description"></textarea>
                             </div>
                         </div>
+
                         <div class="modal-footer border-top border-secondary">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
 
                             <button type="button"
                                     class="@(IsButtonProcessing("TrashFramework") ? "btn btn-danger colored" : "btn btn-danger")"
-                                    @onclick='TrashFramework'
+                                    @onclick='() => TrashFramework(TaskFrameworkId)'
                                     disabled="@IsButtonProcessing("TrashFramework")">
 
                                 <i class="fa @(IsButtonProcessing("TrashFramework") ? "fa-refresh fa-spin" : "fa-trash")"></i>
@@ -1777,7 +1822,17 @@
                                         <h5 class="modal-title text-white">
                                             <i class="fa fa-edit"></i> Kategori bilgilerini düzenleyebilirsiniz
                                         </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                                            <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                                                <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                                            </button>
+
+                                            <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                                            <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                                                <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="modal-body">
                                         <div class="row">
@@ -1832,7 +1887,17 @@
                                         <h5 class="modal-title text-white">
                                             <i class="fa fa-edit"></i> Kategori bilgilerini silebilirsiniz
                                         </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                                            <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                                                <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                                            </button>
+
+                                            <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                                            <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                                                <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="modal-body">
                                         <div class="col-12">
@@ -1877,8 +1942,19 @@
             <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                 <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title"><i class="fa fa-tasks"></i> Yeni Görev Oluştur</h5>
-                    <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
-                </div>
+                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+
+                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat" @onclick="CloseAddModal">
+                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                        </button>
+                    </div>
+                    @*                     <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
+ *@                </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Görev Başlığı</label>
@@ -1982,8 +2058,19 @@
             <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                 <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title">Görevi Düzenle</h5>
-                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
-                </div>
+                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+
+                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat" @onclick="CloseEditModal">
+                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                        </button>
+                    </div>
+                    @*                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+ *@                </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Görev Başlığı</label>
@@ -2092,6 +2179,10 @@
     </div>
 }
 
+
+
+
+
 <!-- Task Detail Modal -->
 @if (showDetailModal && selectedTask != null)
 {
@@ -2099,9 +2190,10 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                 <div class="modal-header border-bottom border-secondary">
-                    @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
-                    {
-                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" @onclick="DeleteTask" disabled="@IsButtonProcessing("delete")">
+
+
+                    <h5 class="modal-title text-white">
+                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="DeleteTask" disabled="@IsButtonProcessing("delete")">
                             @if (IsButtonProcessing("delete"))
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
@@ -2110,18 +2202,23 @@
                             {
                                 <i class="fa fa-trash me-2"></i>
                             }
-                            <span class="fw-bold" style="font-size: 1.1rem;">@selectedTask.TaskTitle</span>
                         </button>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" disabled>
-                            <i class="fa fa-trash me-2"></i>
-                            <span class="fw-bold" style="font-size: 1.1rem;">@selectedTask.TaskTitle</span>
+                        <span class="fw-bold" style="font-size: 1.1rem;">@selectedTask.TaskTitle</span>
+                    </h5>
+
+                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
                         </button>
-                    }
-                    <button type="button" class="btn-close" @onclick="CloseDetailModal"></button>
-                </div>
+
+                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat" @onclick="CloseDetailModal">
+                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                        </button>
+                    </div>
+                    @*                     <button type="button" class="btn-close" @onclick="CloseDetailModal"></button>
+ *@                </div>
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-4">
@@ -2305,8 +2402,19 @@
             <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                 <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title">Not Bilgisini Düzenle</h5>
-                    <button type="button" class="btn-close" @onclick="() => EditNoteModalStatu(null)"></button>
-                </div>
+                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+
+                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat" @onclick="() => EditNoteModalStatu(null)">
+                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                        </button>
+                    </div>
+                    @*                     <button type="button" class="btn-close" @onclick="() => EditNoteModalStatu(null)"></button>
+ *@                </div>
                 <div class="modal-body">
 
                     @if (Task_Notes != null)

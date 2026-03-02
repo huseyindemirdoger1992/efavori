@@ -191,7 +191,7 @@
             var frameworkResult = await StateHub.GetOrLoadAsync("Sidebar_TaskFramework", async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-                return await db.TaskFramework.AsNoTracking().ToListAsync(_cts.Token);
+                return await db.TaskFramework.Where(x=> x.IsDeleted.IsDeletedStatu != true).AsNoTracking().ToListAsync(_cts.Token);
             }, _cts.Token);
 
             _taskFrameworks = frameworkResult ?? new List<TaskFramework>();

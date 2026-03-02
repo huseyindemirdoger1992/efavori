@@ -41,8 +41,8 @@ namespace razor._Shared.tr.Modals.Account
                 await notificationRef.Launch(type, title, text, imageUrl);
         }
 
-        private string? email = "superadmin@efavori.com";
-        private string? password = "Dragonfire0!";
+        private string? email = null;
+        private string? password = null;
 
         private async Task LoginUserAsync()
         {

@@ -8,7 +8,6 @@ namespace api
         #region Events - Dinleyicilere Sinyal Gönderir
 
         public event Func<string, Task>? OnDataChanged;
-
         public event Func<string, string, Task>? OnSystemError;
 
         #endregion
@@ -19,8 +18,8 @@ namespace api
         private readonly SemaphoreSlim _lock = new(1, 1);
         private readonly ConcurrentDictionary<string, DateTime> _lastBroadcast = new();
 
-        private const int DEBOUNCE_MS = 500;          
-        private const int CACHE_SECONDS = 5;          
+        private const int DEBOUNCE_MS = 250;
+        private const int CACHE_SECONDS = 5;
         private bool _disposed;
 
         #endregion
@@ -43,46 +42,49 @@ namespace api
         /// → Tüm açık sayfalar otomatik güncellenir
         /// 
         /// PERFORMANS:
-        /// - Saniyede 100 çağrı → 250ms'de 1 broadcast (4 broadcast/sn)
-        /// - 10,000 kullanıcı × 4 broadcast/sn = 40,000 render/sn (yönetilebilir)
+        /// - Saniyede 100 çağrı → DEBOUNCE_MS'de 1 broadcast
+        /// - Race condition yok: debounce kontrolü + güncelleme atomik (lock içinde)
+        /// - Broadcast lock dışında: deadlock riski yok
         /// </summary>
         public async Task NotifyDataChanged(string entityName)
         {
             if (_disposed) return;
 
-            var now = DateTime.UtcNow;
             var key = $"debounce_{entityName}";
+            List<Func<string, Task>>? handlers = null;
 
-            // ✅ THROTTLING: 250ms içinde tekrar çağrıldıysa atla
-            if (_lastBroadcast.TryGetValue(key, out var last))
-            {
-                if ((now - last).TotalMilliseconds < DEBOUNCE_MS)
-                    return; // Çok erken, bekle
-            }
-
+            // ✅ LOCK İÇİNDE: Debounce kontrolü + güncelleme atomik
+            // Race condition önlemi: okuma ve yazma aynı kritik bölgede
             await _lock.WaitAsync();
             try
             {
+                var now = DateTime.UtcNow;
+
+                if (_lastBroadcast.TryGetValue(key, out var last) &&
+                    (now - last).TotalMilliseconds < DEBOUNCE_MS)
+                {
+                    return; // Çok erken, atla
+                }
+
                 _lastBroadcast[key] = now;
 
                 // Cache'i invalidate et (sonraki sorgu fresh data çekecek)
                 _cache.Remove($"data_{entityName}");
 
-                // ✅ TÜM DİNLEYİCİLERE BROADCAST
-                if (OnDataChanged != null)
-                {
-                    var handlers = OnDataChanged.GetInvocationList()
-                        .Cast<Func<string, Task>>()
-                        .ToList();
-
-                    // Paralel broadcast - non-blocking
-                    await Task.WhenAll(handlers.Select(h => SafeInvoke(h, entityName)));
-                }
+                // Handler listesini lock içinde kopyala, broadcast dışarıda yap
+                handlers = OnDataChanged?.GetInvocationList()
+                    .Cast<Func<string, Task>>()
+                    .ToList();
             }
             finally
             {
                 _lock.Release();
             }
+
+            // ✅ LOCK DIŞINDA: Broadcast
+            // Kritik: handler içinden NotifyDataChanged çağrılsa bile deadlock yok
+            if (handlers != null)
+                await Task.WhenAll(handlers.Select(h => SafeInvoke(h, entityName)));
         }
 
         /// <summary>
@@ -103,6 +105,7 @@ namespace api
         #endregion
 
         #region CORE: RAM Cache Sistemi (5 Saniye Buffer)
+
         public async Task<T?> GetOrLoadAsync<T>(
             string cacheKey,
             Func<Task<T>> loadFromDb,
@@ -125,7 +128,6 @@ namespace api
 
                 if (fresh != null)
                 {
-                    // 1 saniye cache'le
                     _cache.Set(cacheKey, fresh, new MemoryCacheEntryOptions
                     {
                         AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(CACHE_SECONDS),
@@ -210,7 +212,7 @@ namespace api
 
         #endregion
 
-        #region Monitoring (Opsiyonel)
+        #region Monitoring
 
         /// <summary>
         /// Sistem durumu - Debug amaçlı

@@ -453,8 +453,8 @@
                            class="form-control border-start-0 ps-0"
                            id="inputLastName1"
                            placeholder="Görev adını yazın..."
-                           @bind="SearchText"
-                           @bind:event="oninput">
+                           value="@_SearchText"
+                           @oninput="OnSearchInput">
                 </div>
             </div>
         </div>

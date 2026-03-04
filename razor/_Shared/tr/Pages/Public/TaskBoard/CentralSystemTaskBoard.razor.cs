@@ -796,6 +796,14 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
         }
         private async Task ToggleNoteCompletion(Guid noteId, bool isCompleted)
         {
+            // Önce yerel listeyi güncelle (UI sırası bozulmasın)
+            var localNote = taskNotes.FirstOrDefault(n => n.Id == noteId);
+            if (localNote != null)
+            {
+                localNote.IsTheNoteOk = isCompleted;
+            }
+
+            // Sonra DB'ye yaz (listeyi yeniden yükleme, StateHub tetikleme yok)
             await ExecuteWithLock("toggleNote", async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
@@ -805,14 +813,10 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     note.IsTheNoteOk = isCompleted;
                     db.TaskNotes.Update(note);
                     await db.SaveChangesAsync(_cts.Token);
-                    //if (selectedTask != null)
-                    //{
-                    //    await LoadTaskNotes(selectedTask.Id);
-                    //}
-                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                 }
             });
         }
+
         public async Task AddNewCategori()
         {
             await ExecuteWithLock("AddNewCategori", async () =>

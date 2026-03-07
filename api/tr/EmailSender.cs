@@ -145,7 +145,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -198,7 +198,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -253,7 +253,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -307,7 +307,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -361,7 +361,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -415,7 +415,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -469,7 +469,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -523,7 +523,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -577,7 +577,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -631,7 +631,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
         
         <div style='padding: 40px 30px 20px 30px; text-align: center; background: linear-gradient(to bottom, #f8f9ff, #ffffff);'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 130px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -696,7 +696,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
         
         <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -752,7 +752,7 @@ namespace api.tr
 <div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 25px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -811,7 +811,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -871,7 +871,7 @@ namespace api.tr
 <div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -932,7 +932,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -993,7 +993,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1053,7 +1053,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1113,7 +1113,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1174,7 +1174,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1235,7 +1235,7 @@ namespace api.tr
 <div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1309,7 +1309,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
         
         <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -1371,7 +1371,7 @@ namespace api.tr
 <div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 25px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -1436,7 +1436,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1502,7 +1502,7 @@ namespace api.tr
 <div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1569,7 +1569,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1636,7 +1636,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1702,7 +1702,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1768,7 +1768,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1835,7 +1835,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1902,7 +1902,7 @@ namespace api.tr
 <div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -1990,7 +1990,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
         
         <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -2042,7 +2042,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2094,7 +2094,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2146,7 +2146,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2198,7 +2198,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2250,7 +2250,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2302,7 +2302,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2354,7 +2354,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2406,7 +2406,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2458,7 +2458,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2523,7 +2523,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2577,7 +2577,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2631,7 +2631,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2685,7 +2685,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2739,7 +2739,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2793,7 +2793,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2847,7 +2847,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2901,7 +2901,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -2955,7 +2955,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3009,7 +3009,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3075,7 +3075,7 @@ namespace api.tr
     <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
         
         <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-            <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+            <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
         </div>
 
         <div style='padding: 0 40px 30px 40px;'>
@@ -3127,7 +3127,7 @@ namespace api.tr
 <div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 25px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security Logo' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3183,7 +3183,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3240,7 +3240,7 @@ namespace api.tr
 <div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Sicherheit' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3298,7 +3298,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Seguridad' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3356,7 +3356,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Sécurité' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3413,7 +3413,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Security' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3470,7 +3470,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Segurança' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3528,7 +3528,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Безопасность' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3586,7 +3586,7 @@ namespace api.tr
 <div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='安全通知' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -3663,7 +3663,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3720,7 +3720,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3777,7 +3777,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3834,7 +3834,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3891,7 +3891,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -3948,7 +3948,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -4005,7 +4005,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -4062,7 +4062,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -4119,7 +4119,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -4176,7 +4176,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -4240,7 +4240,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -4285,7 +4285,7 @@ namespace api.tr
 <div style='font-family: ""Inter"", -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e8e8e8; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 25px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Task Logo' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Task Logo' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 30px 40px;'>
@@ -4330,7 +4330,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 10px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Task' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Task' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4374,7 +4374,7 @@ namespace api.tr
 <div style='font-family: ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #dddddd; padding: 0; border-radius: 10px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 5px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Aufgabe' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Aufgabe' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4419,7 +4419,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Tarea' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Tarea' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4464,7 +4464,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Tâche' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Tâche' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4509,7 +4509,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Tahoma, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Task' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Task' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4554,7 +4554,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Tarefa' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Tarefa' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4599,7 +4599,7 @@ namespace api.tr
 <div style='font-family: ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Задача' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Задача' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4644,7 +4644,7 @@ namespace api.tr
 <div style='font-family: ""PingFang SC"", ""Microsoft YaHei"", ""Helvetica Neue"", Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 12px; max-width: 600px; margin: 20px auto; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.03);'>
     
     <div style='padding: 35px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='任务通知' style='max-width: 100px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='任务通知' style='max-width: 100px; height: auto; display: inline-block;' />
     </div>
 
     <div style='padding: 0 40px 35px 40px;'>
@@ -4694,7 +4694,7 @@ namespace api.tr
                 string emailBody = $@"
 <div style='font-family: ""Segoe UI"", Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; border: 1px solid #e0e0e0; padding: 0; border-radius: 8px; max-width: 600px; margin: 0 auto; overflow: hidden; background-color: #ffffff;'>
     <div style='padding: 30px 30px 20px 30px; text-align: center;'>
-        <img src='https://1drv.ms/i/c/ce20faaddbdfba2e/IQRDszi9BOX5R5T7a1eLE650ASZlWwgS5x-PiZHVWp1UzD4?width=180&height=180' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
+        <img src='https://efavori.com/_files/main/logo/logo.png' alt='Logo' style='max-width: 120px; height: auto; display: inline-block;' />
     </div>
     <div style='padding: 0 40px 30px 40px;'>
         <h2 style='color: #1a237e; font-size: 20px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; text-align: center;'>Görev İşleme Alındı</h2>

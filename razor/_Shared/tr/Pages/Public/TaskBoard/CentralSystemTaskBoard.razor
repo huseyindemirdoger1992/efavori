@@ -311,18 +311,31 @@
                         </div>
                         <div class="modal-body">
                             <div class="row">
-                                <div class="col-md-6">
-                                    <label class="form-label">İkon</label>
-                                    <select class="form-select" @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon">
-                                        <razor._Shared.FaIcons />
-                                    </select>
+                                <div class="row g-3">
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">İkon</label>
+                                        <select class="form-select bg-light" @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon">
+                                            <razor._Shared.FaIcons />
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">Bölüm Adı</label>
+                                        <input class="form-control bg-light" type="text"
+                                               @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">Bölüm Durumu</label> <select class="form-select bg-light" @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Statu">
+                                            <option value="plan">Plan Aşamasında</option>
+                                            <option value="aktif">Aktif Aşamasında</option>
+                                            <option value="tamam">Tamamlandı</option>
+                                        </select>
+                                    </div>
                                 </div>
 
-                                <div class="col-6">
-                                    <label class="form-label">Bölüm Adı</label>
-                                    <input class="form-control mb-3 bg-light" type="text"
-                                           @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
-                                </div>
+                                <br />
 
                                 <div class="col-12">
                                     <label class="form-label">Bölüm Açıklaması</label>
@@ -625,11 +638,11 @@
             <div class="card-body">
                 @if (!TaskFrameworkId.HasValue || TaskFrameworkId.Value == Guid.Empty)
                 {
-                    <div class="card">
+                    @*                     <div class="card">
                         <div class="card-body">
                             <ul class="nav nav-tabs" role="tablist">
                                 <li class="nav-item" role="presentation">
-                                    <a class="nav-link active" data-bs-toggle="tab" href="#primaryhome" role="tab" aria-selected="true">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true">
                                         <div class="d-flex align-items-center">
                                             <div class="tab-icon">
                                                 *.*
@@ -657,8 +670,7 @@
 
                             <div class="tab-content py-3">
 
-                                @* Tüm Bölümler tab-pane'i *@
-                                <div class="tab-pane fade active show" id="primaryhome" role="tabpanel">
+                                <div class="tab-pane fade active show" id="*.*" role="tabpanel">
                                     <ul class="nav nav-tabs" role="tablist">
                                         <li class="nav-item" role="presentation" title="*.*">
                                             <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true">
@@ -683,7 +695,6 @@
                                     </ul>
                                 </div>
 
-                                @* Her Framework için tab-pane — o framework'e ait kategorileri listeler *@
                                 @foreach (TaskFramework fw in db.TaskFramework
                                                         .Where(x => (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true)
                                                         && x.UserId == use.Id))
@@ -716,7 +727,7 @@
 
                             </div>
                         </div>
-                    </div>
+                    </div>*@
                 }
                 else
                 {

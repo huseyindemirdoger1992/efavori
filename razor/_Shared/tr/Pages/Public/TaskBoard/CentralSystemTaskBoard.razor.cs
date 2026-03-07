@@ -558,6 +558,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             selectedTask = null;
             newNote = "";
         }
+
         private async Task LoadTaskNotes(Guid taskId)
         {
             try
@@ -949,6 +950,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                         existing.Icon = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon;
                         existing.Title = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title;
                         existing.Description = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description;
+                        existing.Statu = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Statu;
                         dbCtx.TaskFramework.Update(existing);
                         await dbCtx.SaveChangesAsync(_cts.Token);
                         success = true;

@@ -15,6 +15,7 @@ namespace data
         public string? Title { get; set; }
         public string? Description { get; set; }
         public string? Icon { get; set; }
+        public string? Statu { get; set; } // Plan,Aktif,Tamam
         public DateTime CreatedAt { get; set; }
         public IsDeleted? IsDeleted { get; set; }
     }

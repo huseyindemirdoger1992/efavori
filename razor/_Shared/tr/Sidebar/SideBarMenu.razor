@@ -201,13 +201,13 @@
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-                var baseQuery = db.TaskCategories
+                var baseQuery = db.TaskFramework
                     .AsNoTracking()
                     .Where(x => x.UserId == userId && (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true));
 
-                var planning = await baseQuery.CountAsync(x => x.CategoryStructure == "PlanningTaskBoard", _cts.Token);
-                var inProcess = await baseQuery.CountAsync(x => x.CategoryStructure == "InProcessTaskBoard", _cts.Token);
-                var completed = await baseQuery.CountAsync(x => x.CategoryStructure == "CompletedTaskBoard", _cts.Token);
+                var planning = await baseQuery.CountAsync(x => x.Statu == "plan", _cts.Token);
+                var inProcess = await baseQuery.CountAsync(x => x.Statu == "aktif", _cts.Token);
+                var completed = await baseQuery.CountAsync(x => x.Statu == "tamam", _cts.Token);
 
                 return new { Planning = planning, InProcess = inProcess, Completed = completed };
             }, _cts.Token);
@@ -238,7 +238,7 @@
 <div class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
         <a href="/">
-            <img src="/assets/images/icons/LogoWhite.avif" class="logo-icon" alt="logo icon">
+            <img src="https://efavori.com/_files/main/logo/logo.png" class="logo-icon" alt="logo icon">
         </a>
         <a href="/">
             <h4 class="logo-text">efavori.com</h4>
@@ -349,49 +349,70 @@
                     </a>
                     <ul>
                         <li>
+                            <a class="has-arrow" href="javascript:;">
+                                <i class="fa fa-calendar-o" aria-hidden="true"></i>
+                                <span>Planlananlar</span>
+                            </a>
+                            <ul>
+                                @foreach (var item in _taskFrameworks.Where(x => x.Statu == "plan" || x.Statu == null).ToList())
+                                {
+                                    <li>
+                                        <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/@item.Id" title="@item.Description">
+                                            <i class="@item.Icon" aria-hidden="true"></i>
+                                            @item.Title
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+
+
+                        <li>
+                            <a class="has-arrow" href="javascript:;">
+                                <i class="fa fa-play-circle" aria-hidden="true"></i>
+                                <span>Aktifler</span>
+                            </a>
+                            <ul>
+                                @foreach (var item in _taskFrameworks.Where(x => x.Statu == "aktif").ToList())
+                                {
+                                    <li>
+                                        <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/@item.Id" title="@item.Description">
+                                            <i class="@item.Icon" aria-hidden="true"></i>
+                                            @item.Title
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+
+
+                        <li>
+                            <a class="has-arrow" href="javascript:;">
+                                <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                                <span>Tamamlananlar</span>
+                            </a>
+                            <ul>
+                                @foreach (var item in _taskFrameworks.Where(x => x.Statu == "tamam").ToList())
+                                {
+                                    <li>
+                                        <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/@item.Id" title="@item.Description">
+                                            <i class="@item.Icon" aria-hidden="true"></i>
+                                            @item.Title
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+
+                        <li class="border-top my-2 mx-3"></li>
+
+                        <li>
                             <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/" title="All Task">
                                 <i class="fa fa-list-alt" aria-hidden="true"></i>
                                 Tüm Görev Bölümleri
                             </a>
                         </li>
-                        <li class="border-top my-2 mx-3"></li>
-                        @foreach (var item in _taskFrameworks)
-                        {
-                            <li>
-                                @* Value alanını boş tutup doğrudan ID gönderiyoruz *@
-                                <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/All/@item.Id" title="@item.Description">
-                                    <i class="@item.Icon" aria-hidden="true"></i>
-                                    @item.Title
-                                </a>
-                            </li>
-                        }
-                    </ul>
-                </li>
 
-                <li>
-                    <a class="has-arrow" href="javascript:;">
-                        <i class="fa fa-list-ul" aria-hidden="true"></i>
-                        <span>Görev Durumları</span>
-                    </a>
-                    <ul>
-                        <li>
-                            <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/PlanningTaskBoard">
-                                <i class="fa fa-list-ul" aria-hidden="true"></i>
-                                Plan (@_planningCount)
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/InProcessTaskBoard">
-                                <i class="fa fa-refresh" aria-hidden="true"></i>
-                                Aktif (@_inProcessCount)
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/@culture/Public/TaskBoard/CentralSystemTaskBoard/CompletedTaskBoard">
-                                <i class="fa fa-check-circle-o" aria-hidden="true"></i>
-                                Tamamlandı (@_completedCount)
-                            </a>
-                        </li>
                     </ul>
                 </li>
 

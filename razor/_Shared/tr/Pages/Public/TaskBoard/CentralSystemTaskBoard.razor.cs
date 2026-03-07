@@ -1057,6 +1057,48 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             }
         }
 
+        public async Task CopyText(string DescText)
+        {
+            bool isSuccess = false;
+            bool isEmpty = false;
+
+            // 1. İşlem devam ediyorsa veya kilit mekanizması aktifse çalıştır
+            await ExecuteWithLock("CopyText", async () =>
+            {
+                try
+                {
+                    // Metin kontrolü
+                    if (string.IsNullOrEmpty(DescText))
+                    {
+                        isEmpty = true;
+                        return;
+                    }
+
+                    // Tarayıcı Clipboard API Entegrasyonu (JS Interop kilit içinde güvenli)
+                    await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", DescText);
+                    isSuccess = true;
+                }
+                catch (Exception ex)
+                {
+                    // Hata durumunda bildirimi burada (kilit içinde veya dışında) verebiliriz
+                    await ShowNotification("danger", "Hata", $"Kopyalama işlemi başarısız: {ex.Message}", null);
+                }
+            });
+
+            // 2. Kilit (Lock) mekanizmasının DIŞINDA UI ve Bildirim işlemleri
+            if (isEmpty)
+            {
+                await ShowNotification("warning", "Uyarı", "Kopyalanacak içerik bulunamadı.", null);
+            }
+            else if (isSuccess)
+            {
+                // Başarı bildirimi
+                await ShowNotification("success", "Başarılı", "İçerik başarıyla kopyalandı.", null);
+
+                // Eğer UI üzerinde bir değişiklik gerekiyorsa (örneğin kopyalandı ikonu göstermek gibi)
+                StateHasChanged();
+            }
+        }
         #endregion
 
     }

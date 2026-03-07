@@ -466,40 +466,41 @@
                 <div class="col-auto flex-fill">
                     <input type="radio" class="btn-check" name="priorityRadio" id="dateHour" value="1hour" autocomplete="off">
                     <label class="btn btn-outline-danger btn-sm w-100 py-1 text-dark shadow-sm custom-btn text-nowrap" for="dateHour">
-                        <i class="fa fa-bolt me-1"></i> Son 1 Saat.
+                        <i class="fa fa-bolt me-1"></i> Son 1 Saat
+                    </label>
+                </div>
+
+                <!-- YENİ: Süre Doldu filtresi -->
+                <div class="col-auto flex-fill">
+                    <input type="radio" class="btn-check" name="priorityRadio" id="dateExpired" value="expired" autocomplete="off">
+                    <label class="btn btn-outline-secondary btn-sm w-100 py-1 text-dark shadow-sm custom-btn text-nowrap" for="dateExpired">
+                        <i class="fa fa-ban me-1"></i> Süre Doldu
                     </label>
                 </div>
 
             </div>
         </div>
-        <div class="row g-3 align-items-end mb-3">
-            <div class="col-md-12">
-                <div class="input-group shadow-sm">
-                    <span class="input-group-text bg-light border-end-0">
-                        <i class="fa fa-search text-light"></i>
-                    </span>
-                    <input type="text"
-                           class="form-control border-start-0 ps-0"
-                           id="inputLastName1"
-                           placeholder="Görev adını yazın..."
-                           value="@_SearchText"
-                           @oninput="OnSearchInput">
-                </div>
-            </div>
-        </div>
-
-
-
 
         <script>
             (function () {
+                function isExpired(card) {
+                    const timerSpan = card.querySelector('span[data-target]');
+                    if (!timerSpan) return false;
+                    const text = timerSpan.textContent.trim();
+                    if (text === 'Süre Doldu') return true;
+                    const targetDateStr = timerSpan.getAttribute('data-target');
+                    if (!targetDateStr || targetDateStr === '') return false;
+                    const targetDate = new Date(targetDateStr);
+                    return (targetDate - new Date()) <= 0;
+                }
+
                 function updateCounts() {
                     const taskCards = document.querySelectorAll('.task-card:not([data-deleted="true"])');
                     const now = new Date();
 
                     const counts = {
                         all: 0, low: 0, medium: 0, high: 0,
-                        '1month': 0, '1week': 0, '1day': 0, '1hour': 0
+                        '1month': 0, '1week': 0, '1day': 0, '1hour': 0, expired: 0
                     };
 
                     taskCards.forEach(card => {
@@ -518,6 +519,8 @@
                         if (priorityText === "orta") counts.medium++;
                         if (priorityText === "yüksek" || priorityText === "kritik") counts.high++;
 
+                        if (isExpired(card)) counts.expired++;
+
                         if (targetDate) {
                             const diff = targetDate - now;
                             if (diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000) counts['1month']++;
@@ -535,7 +538,8 @@
                         dateMonth:   { prefix: ' Son 1 Ay',    count: counts['1month'] },
                         dateWeek:    { prefix: ' Son 1 Hafta', count: counts['1week'] },
                         dateDay:     { prefix: ' Son 1 Gün',   count: counts['1day'] },
-                        dateHour:    { prefix: ' Son 1 Saat',  count: counts['1hour'] }
+                        dateHour:    { prefix: ' Son 1 Saat',  count: counts['1hour'] },
+                        dateExpired: { prefix: ' Süre Doldu',  count: counts.expired }
                     };
 
                     Object.entries(labelMap).forEach(([inputId, data]) => {
@@ -569,6 +573,8 @@
                             isVisible = true;
                         } else if (selectedPriority === "high" && (priorityText === "yüksek" || priorityText === "kritik")) {
                             isVisible = true;
+                        } else if (selectedPriority === "expired") {
+                            isVisible = isExpired(card);
                         } else if (targetDate && selectedPriority === "1month") {
                             const diff = targetDate - now;
                             isVisible = diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000;
@@ -593,14 +599,27 @@
                     }
                 });
 
-                setTimeout(updateCounts, 300);
-                setInterval(updateCounts, 5000);
+                setTimeout(updateCounts, 500);
+                setInterval(updateCounts, 1000);
                 document.addEventListener('blazor:navigated', () => setTimeout(updateCounts, 300));
 
             })();
         </script>
-
-
+        <div class="row g-3 align-items-end mb-3">
+            <div class="col-md-12">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="fa fa-search text-light"></i>
+                    </span>
+                    <input type="text"
+                           class="form-control border-start-0 ps-0"
+                           id="inputLastName1"
+                           placeholder="Görev adını yazın..."
+                           value="@_SearchText"
+                           @oninput="OnSearchInput">
+                </div>
+            </div>
+        </div>
 
         <div class="card">
             <div class="card-body">
@@ -777,7 +796,7 @@
                         <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
                             <div class="col">
                                 <div class="card border-0 shadow-sm h-100">
-                                    <div class="card-header bg-light text-white sticky-top" style="top: 60px; z-index: 1020;">
+                                    <div class="card-header bg-light text-white sticky-top bg-blur" style="top: 60px; z-index: 1020;">
                                         <h6 class="mb-0"><i class="fa fa-plus-circle"></i> Yeni (@GetTaskCountByStatus("NewTasks", null))</h6>
                                     </div>
                                     <div class="card-body p-2 kanban-column bg-primary bg-opacity-10 text-dark"
@@ -2349,8 +2368,20 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <strong>Açıklama:</strong>
-                        <textarea class="form-control bg-light" rows="3" disabled>@(selectedTask.TaskDescription ?? "Açıklama yok")</textarea>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-light">
+                                <i class="fa fa-file-text-o me-1"></i> Açıklama:
+                            </strong>
+                            <span class="badge bg-light text-info border"
+                                  style="cursor: pointer;"
+                                  @onclick="() => CopyText(selectedTask.TaskDescription)"
+                                  title="Panoya Kopyala">
+                                <i class="fa fa-clipboard text-info"></i> Kopyala
+                            </span>
+                        </div>
+                        <textarea class="form-control bg-light border-0 shadow-sm"
+                              rows="3"
+                              readonly>@(selectedTask.TaskDescription ?? "Açıklama yok")</textarea>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-4">
@@ -2359,7 +2390,7 @@
                         </div>
                         <div class="col-md-4">
                             <strong>Hedef Tarih:</strong>
-                            <p>@(selectedTask.TargetDate?.ToString("dd.MM.yyyy") ?? "-")</p>
+                            <p>@(selectedTask.TargetDate?.ToString("dd.MM.yyyy HH:mm") ?? "-")</p>
                         </div>
                         <div class="col-md-4">
                             <strong>Sorumlu Kişi:</strong>
@@ -2397,45 +2428,52 @@
                     {
                         <div class="mb-3">
                             <strong>Notlar:</strong>
-                            <div class="mt-2 px-1" style="max-height: 250px; overflow-y: auto;">
+                            <div class="mt-2 px-1" style="max-height: 256px; overflow-y: auto;">
                                 <input class="form-control mb-3" type="text" placeholder="Notlarda ara..." oninput="filterNotes()">
                                 @foreach (var note in taskNotes.Where(n => n.TaskStatusId == selectedTask?.Id))
                                 {
-                                    <div class="card shadow-sm border-0 mb-2 bg-light bg-opacity-10">
-                                        <div class="card-body p-2">
-                                            <div class="d-flex gap-2">
-                                                <div class="flex-shrink-0 pt-1">
-                                                    <input class="form-check-input mt-0"
+                                    <div class="card shadow-sm border-0 mb-2 bg-light bg-opacity-10" style="border-left: 3px solid #ffc107 !important;">
+                                        <div class="card-body py-2 px-3">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <div class="pt-1">
+                                                    <input class="form-check-input shadow-none NoteCheck"
                                                            type="checkbox"
                                                            checked="@(note.IsTheNoteOk == true)"
                                                            @onchange="@(async (e) => await ToggleNoteCompletion(note.Id, (bool)e.Value))"
                                                            id="note-@note.Id"
-                                                           style="cursor: pointer; width: 1.2rem; height: 1.2rem;">
+                                                           style="cursor: pointer; width: 1rem; height: 1rem; border-color: rgba(255,255,255,0.2);">
                                                 </div>
-                                                <div class="flex-grow-1 min-w-0">
+
+                                                <div class="flex-grow-1">
                                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                                         <div class="d-flex align-items-center gap-2">
-                                                            <small class="text-warning fw-semibold" style="font-size: 0.75rem;">
-                                                                <i class="fa fa-clock-o me-1"></i>@note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")
-                                                            </small>
+                                                            <span class="text-warning fw-normal" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                                                <i class="fa fa-clock-o opacity-75"></i> @note.NoteCreatedAt?.ToString("dd.MM.yyyy HH:mm")
+                                                            </span>
+                                                        </div>
+
+                                                        <div class="d-flex gap-2">
+                                                            <button class="btn btn-link btn-sm p-0 text-light opacity-50 hover-opacity-100 shadow-none"
+                                                                    title="Kopyala" @onclick="() => CopyText(note.Note)">
+                                                                <i class="fa fa-clone" style="font-size: 0.85rem;"></i>
+                                                            </button>
+
                                                             @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                                                             {
-                                                                <button class="btn btn-link btn-sm text-info p-0 border-0" title="Notu Düzenle" @onclick="() => EditNoteModalStatu(note)">
-                                                                    <i class="fa fa-pencil"></i>
+                                                                <button class="btn btn-link btn-sm p-0 text-info opacity-75 shadow-none"
+                                                                        title="Düzenle" @onclick="() => EditNoteModalStatu(note)">
+                                                                    <i class="fa fa-pencil" style="font-size: 0.85rem;"></i>
+                                                                </button>
+                                                                <button class="btn btn-link btn-sm p-0 text-danger opacity-75 shadow-none"
+                                                                        @onclick="@(async () => await DeleteNote(note.Id))"
+                                                                        title="Sil">
+                                                                    <i class="fa fa-trash-o" style="font-size: 0.85rem;"></i>
                                                                 </button>
                                                             }
                                                         </div>
-                                                        @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
-                                                        {
-                                                            <button class="btn btn-link btn-sm text-danger p-0 border-0"
-                                                                    @onclick="@(async () => await DeleteNote(note.Id))"
-                                                                    title="Notu Sil">
-                                                                <i class="fa fa-trash"></i>
-                                                            </button>
-                                                        }
                                                     </div>
-                                                    <p class="mb-0 text-break @(note.IsTheNoteOk == true ? "text-decoration-line-through opacity-50 text-light" : "text-light")"
-                                                       style="font-size: 0.9rem; line-height: 1.4;">
+                                                    <p class="mb-0 text-break @(note.IsTheNoteOk == true ? "text-decoration-line-through opacity-50" : "text-light")"
+                                                       style="font-size: 0.85rem; line-height: 1.5; font-weight: 300;">
                                                         @note.Note
                                                     </p>
                                                 </div>
@@ -2444,6 +2482,21 @@
                                     </div>
                                 }
 
+                                <style>
+                                    .hover-opacity-100:hover {
+                                        opacity: 1 !important;
+                                        transition: 0.2s;
+                                    }
+
+                                    .form-check-input:checked {
+                                        background-color: #ffc107;
+                                        border-color: #ffc107;
+                                    }
+
+                                    .NoteCheck{
+                                        margin-top: -2px;
+                                    }
+                                </style>                               
                                 <script>
                                     document.querySelectorAll('input[name="priorityRadio"]').forEach(radio => {
                                         radio.addEventListener('change', function() {

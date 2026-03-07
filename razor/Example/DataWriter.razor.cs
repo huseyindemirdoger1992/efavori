@@ -217,6 +217,47 @@ namespace razor.Example
             }
         }
 
+        public async Task CopyText(string TextInfo)
+        {
+            // 1. İşlem devam ediyorsa yeni talebi reddet
+            if (_isProcessing) return;
+
+            // 2. Kilit mekanizmasını bekle (AddUser kültürü)
+            await _writeLock.WaitAsync(_cts.Token);
+
+            try
+            {
+                _isProcessing = true;
+                StateHasChanged();
+
+                // Metin boşsa kullanıcıyı bilgilendir ve çık
+                if (string.IsNullOrEmpty(TextInfo))
+                {
+                    await ShowNotification("warning", "Uyarı", "Kopyalanacak içerik bulunamadı.", null);
+                }
+                else
+                {
+                    // Tarayıcı Clipboard API Entegrasyonu
+                    await JS.InvokeVoidAsync("navigator.clipboard.writeText", TextInfo);
+
+                    // Başarı bildirimi
+                    await ShowNotification("success", "Başarılı", "İçerik başarıyla kopyalandı.", null);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Kültürdeki standart hata bildirimi
+                await ShowNotification("danger", "Hata", $"Kopyalama işlemi başarısız: {ex.Message}", null);
+            }
+            finally
+            {
+                // 3. Kilidi serbest bırak ve UI'ı güncelle
+                _isProcessing = false;
+                _writeLock.Release();
+                StateHasChanged();
+            }
+        }
+
         #endregion
     }
 }

@@ -250,60 +250,58 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 catch (TaskCanceledException) { }
             });
         }
-
         protected async Task LoadData()
         {
             try
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-                // Temel sorgu - SearchText OLMADAN
-                var query = db.TaskStatus.Where(t => t.IsDeleted == null || t.IsDeleted.IsDeletedStatu != true);
+                // Kullanıcı tipi kontrolü
+                bool isAdminOrSuperAdmin = use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin";
+                bool isEmployee = use?.UsersType == "Employee";
 
-                if (use != null && use.Id != Guid.Empty)
-                {
-                    if (use.UsersType == "Admin" || use.UsersType == "SuperAdmin")
-                    {
-                        query = query.Where(t => t.AssignedByUserId == use.Id);
-                    }
-                    else if (use.UsersType == "Employee")
-                    {
-                        query = query.Where(t => t.PersonInChargeUserId == use.Id);
-                    }
-                }
+                if (use == null || use.Id == Guid.Empty)
+                    return;
 
-                adminUsers = await db.Users
-                    .AsNoTracking()
-                    .Where(u => u.UsersType == "Employee" || u.UsersType == "Admin" || u.UsersType == "SuperAdmin")
-                    .OrderBy(u => u.FirstName)
-                    .ThenBy(u => u.LastName)
-                    .ToListAsync(_cts.Token);
+                // Temel TaskStatus sorgusu - IsDeleted filtresi
+                var query = db.TaskStatus
+                    .Where(t => t.IsDeleted == null || t.IsDeleted.IsDeletedStatu != true);
+
+                // Kullanıcı tipine göre TaskStatus bazlı filtreleme
+                if (isAdminOrSuperAdmin)
+                    query = query.Where(t => t.AssignedByUserId == use.Id);
+                else if (isEmployee)
+                    query = query.Where(t => t.PersonInChargeUserId == use.Id);
+
+                // TaskCategories için temel filtre (her zaman use.Id ile kısıtlanır)
+                var baseCategoryFilter = db.TaskCategories
+                    .Where(c =>
+                        (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
+                        c.UserId == use.Id &&
+                        // Bağlı TaskFramework silinmemişse listele
+                        (c.TaskFrameworkId == null ||
+                         db.TaskFramework
+                             .Any(f => f.Id == c.TaskFrameworkId &&
+                                       (f.IsDeleted == null || f.IsDeleted.IsDeletedStatu != true))));
 
                 if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
                 {
-                    taskCategories = await db.TaskCategories
-                        .AsNoTracking()
-                        .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
-                            n.UserId == use.Id &&
-                            n.TaskFrameworkId == TaskFrameworkId)
+                    taskCategories = await baseCategoryFilter
+                        .Where(c => c.TaskFrameworkId == TaskFrameworkId)
                         .OrderByDescending(t => t.CreatedAt)
+                        .AsNoTracking()
                         .ToListAsync(_cts.Token);
 
                     var tasksQuery = query
                         .AsNoTracking()
-                        .Where(t => db.TaskCategories
+                        .Where(t => baseCategoryFilter
                             .Any(c => c.Id == t.TaskCategoriesId &&
-                                c.TaskFrameworkId == TaskFrameworkId &&
-                                (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                c.UserId == use.Id));
+                                      c.TaskFrameworkId == TaskFrameworkId));
 
-                    // SearchText filtresi burada uygula
                     if (!string.IsNullOrWhiteSpace(_SearchText))
-                    {
                         tasksQuery = tasksQuery.Where(t =>
                             t.TaskTitle.Contains(_SearchText) ||
                             t.TaskDescription.Contains(_SearchText));
-                    }
 
                     tasks = await tasksQuery
                         .OrderByDescending(t => t.DateCreatedAt)
@@ -311,63 +309,29 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 }
                 else
                 {
-                    if (TaskCategoriesValue == "All")
-                    {
-                        taskCategories = await db.TaskCategories
-                            .AsNoTracking()
-                            .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
-                                n.UserId == use.Id)
-                            .OrderByDescending(t => t.CreatedAt)
-                            .ToListAsync(_cts.Token);
+                    // CategoryStructure filtresini belirle (null → "All" gibi davranır)
+                    bool filterByStructure = TaskCategoriesValue != "All" && !string.IsNullOrEmpty(TaskCategoriesValue);
 
-                        var tasksQuery = query
-                            .AsNoTracking()
-                            .Where(t => db.TaskCategories
-                                .Any(c => c.Id == t.TaskCategoriesId &&
-                                    (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                    c.UserId == use.Id));
+                    taskCategories = await baseCategoryFilter
+                        .Where(c => !filterByStructure || c.CategoryStructure == TaskCategoriesValue)
+                        .OrderByDescending(t => t.CreatedAt)
+                        .AsNoTracking()
+                        .ToListAsync(_cts.Token);
 
-                        // SearchText filtresi burada uygula
-                        if (!string.IsNullOrWhiteSpace(_SearchText))
-                        {
-                            tasksQuery = tasksQuery.Where(t =>
-                                t.TaskTitle.Contains(_SearchText) ||
-                                t.TaskDescription.Contains(_SearchText));
-                        }
+                    var tasksQuery = query
+                        .AsNoTracking()
+                        .Where(t => baseCategoryFilter
+                            .Any(c => c.Id == t.TaskCategoriesId &&
+                                      (!filterByStructure || c.CategoryStructure == TaskCategoriesValue)));
 
-                        tasks = await tasksQuery
-                            .OrderByDescending(t => t.DateCreatedAt)
-                            .ToListAsync(_cts.Token);
-                    }
-                    else
-                    {
-                        taskCategories = await db.TaskCategories
-                            .AsNoTracking()
-                            .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) &&
-                                n.UserId == use.Id && n.CategoryStructure == TaskCategoriesValue)
-                            .OrderByDescending(t => t.CreatedAt)
-                            .ToListAsync(_cts.Token);
+                    if (!string.IsNullOrWhiteSpace(_SearchText))
+                        tasksQuery = tasksQuery.Where(t =>
+                            t.TaskTitle.Contains(_SearchText) ||
+                            t.TaskDescription.Contains(_SearchText));
 
-                        var tasksQuery = query
-                            .AsNoTracking()
-                            .Where(t => db.TaskCategories
-                                .Any(c => c.Id == t.TaskCategoriesId &&
-                                    c.CategoryStructure == TaskCategoriesValue &&
-                                    (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
-                                    c.UserId == use.Id));
-
-                        // SearchText filtresi burada uygula
-                        if (!string.IsNullOrWhiteSpace(_SearchText))
-                        {
-                            tasksQuery = tasksQuery.Where(t =>
-                                t.TaskTitle.Contains(_SearchText) ||
-                                t.TaskDescription.Contains(_SearchText));
-                        }
-
-                        tasks = await tasksQuery
-                            .OrderByDescending(t => t.DateCreatedAt)
-                            .ToListAsync(_cts.Token);
-                    }
+                    tasks = await tasksQuery
+                        .OrderByDescending(t => t.DateCreatedAt)
+                        .ToListAsync(_cts.Token);
                 }
 
                 taskNotes = await db.TaskNotes

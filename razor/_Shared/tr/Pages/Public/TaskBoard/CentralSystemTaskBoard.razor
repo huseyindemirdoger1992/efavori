@@ -623,32 +623,130 @@
 
         <div class="card">
             <div class="card-body">
-                <ul class="nav nav-tabs" role="tablist">
+                @if (!TaskFrameworkId.HasValue || TaskFrameworkId.Value == Guid.Empty)
+                {
+                    <div class="card">
+                        <div class="card-body">
+                            <ul class="nav nav-tabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#primaryhome" role="tab" aria-selected="true">
+                                        <div class="d-flex align-items-center">
+                                            <div class="tab-icon">
+                                                *.*
+                                            </div>
+                                            <div class="tab-title">Tüm Bölümler</div>
+                                        </div>
+                                    </a>
+                                </li>
+                                @foreach (TaskFramework fw in db.TaskFramework
+                                                        .Where(x => (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true)
+                                                        && x.UserId == use.Id))
+                                {
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#Frameworks_@fw.Id" role="tab" aria-selected="false" tabindex="-1">
+                                            <div class="d-flex align-items-center">
+                                                <div class="tab-icon">
+                                                    <i class="@fw.Icon"></i>
+                                                </div>
+                                                <div class="tab-title" title="@fw.Description" style="margin-left:2px;">@fw.Title</div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
 
-                    <li class="nav-item" role="presentation" title="*.*">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true" tabindex="-1">
-                            <div class="d-flex align-items-center">
-                                <div class="tab-title">*.*</div>
+                            <div class="tab-content py-3">
+
+                                @* Tüm Bölümler tab-pane'i *@
+                                <div class="tab-pane fade active show" id="primaryhome" role="tabpanel">
+                                    <ul class="nav nav-tabs" role="tablist">
+                                        <li class="nav-item" role="presentation" title="*.*">
+                                            <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="tab-title">*.*</div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                        @foreach (var cat in taskCategories)
+                                        {
+                                            <li class="nav-item" role="presentation" title="@cat.Description"
+                                                @ondrop="@(() => HandleDropCate(cat.Id))"
+                                                @ondragover:preventDefault="true"
+                                                @ondragenter:preventDefault="true">
+                                                <a class="nav-link" data-bs-toggle="tab" href="#@cat.Id" role="tab" aria-selected="false" tabindex="-1">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="tab-title">@cat.Title (@GetTaskCount(cat))</div>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+
+                                @* Her Framework için tab-pane — o framework'e ait kategorileri listeler *@
+                                @foreach (TaskFramework fw in db.TaskFramework
+                                                        .Where(x => (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true)
+                                                        && x.UserId == use.Id))
+                                {
+                                    <div class="tab-pane fade" id="Frameworks_@fw.Id" role="tabpanel">
+                                        <ul class="nav nav-tabs" role="tablist">
+                                            <li class="nav-item" role="presentation" title="*.*">
+                                                <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="tab-title">*.*</div>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            @foreach (var cat in taskCategories.Where(c => c.TaskFrameworkId == fw.Id))
+                                            {
+                                                <li class="nav-item" role="presentation" title="@cat.Description"
+                                                    @ondrop="@(() => HandleDropCate(cat.Id))"
+                                                    @ondragover:preventDefault="true"
+                                                    @ondragenter:preventDefault="true">
+                                                    <a class="nav-link" data-bs-toggle="tab" href="#@cat.Id" role="tab" aria-selected="false" tabindex="-1">
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="tab-title">@cat.Title (@GetTaskCount(cat))</div>
+                                                        </div>
+                                                    </a>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+
                             </div>
-                        </a>
-                    </li>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <ul class="nav nav-tabs" role="tablist">
 
-                    @foreach (var item in taskCategories)
-                    {
-                        <li class="nav-item" role="presentation" title="@item.Description"
-                            @ondrop="@(() => HandleDropCate(item.Id))"
-                            @ondragover:preventDefault="true"
-                            @ondragenter:preventDefault="true">
-                            <a class="nav-link" data-bs-toggle="tab" href="#@item.Id" role="tab" aria-selected="false" tabindex="-1">
+                        <li class="nav-item" role="presentation" title="*.*">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#*.*" role="tab" aria-selected="true" tabindex="-1">
                                 <div class="d-flex align-items-center">
-                                    <div class="tab-title">@item.Title (@GetTaskCount(item))</div>
+                                    <div class="tab-title">*.*</div>
                                 </div>
                             </a>
                         </li>
-                    }
-                </ul>
-                <div class="tab-content py-3">
 
+                        @foreach (var item in taskCategories)
+                        {
+                            <li class="nav-item" role="presentation" title="@item.Description"
+                                @ondrop="@(() => HandleDropCate(item.Id))"
+                                @ondragover:preventDefault="true"
+                                @ondragenter:preventDefault="true">
+                                <a class="nav-link" data-bs-toggle="tab" href="#@item.Id" role="tab" aria-selected="false" tabindex="-1">
+                                    <div class="d-flex align-items-center">
+                                        <div class="tab-title">@item.Title (@GetTaskCount(item))</div>
+                                    </div>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <div class="tab-content py-3">
                     <div class="tab-pane fade active show" id="*.*" role="tabpanel">
 
                         <div class="row g-3 align-items-end mb-3">
@@ -790,7 +888,6 @@
                                 </div>
                             </div>
                         </div>
-
 
                         @* Kategori yapısı seçili görevler *@
                         <div class="row g-3 row-cols-1 row-cols-md-3 row-cols-lg-5">
@@ -1313,8 +1410,8 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
 
+                    </div>
                     @foreach (var item in taskCategories)
                     {
 
@@ -2007,6 +2104,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="modal fade" id="delete_@item.Id" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered modal-lg">
                                 <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
@@ -2055,6 +2153,7 @@
                     }
 
                 </div>
+
             </div>
         </div>
     }
@@ -2493,10 +2592,10 @@
                                         border-color: #ffc107;
                                     }
 
-                                    .NoteCheck{
+                                    .NoteCheck {
                                         margin-top: -2px;
                                     }
-                                </style>                               
+                                </style>
                                 <script>
                                     document.querySelectorAll('input[name="priorityRadio"]').forEach(radio => {
                                         radio.addEventListener('change', function() {

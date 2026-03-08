@@ -1,558 +1,1056 @@
-﻿@{
-    // Örnek Kullanım
+﻿@using api
+@using api.tr
+@using data
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+<Notification @ref="notificationRef" />
+
+@{
     var roads = new List<(string icon, string Name, string Url)>
-                                        {
-                                        ("fa fa-globe","efavori", $"/"),
-                                        ("fa fa-building","Mağza/İşletme Yönetimi", "javascript:void(0)"),
-                                        ("fa fa-plus","Yeni Ekle", "javascript:void(0)")
-                                        };
+                                    {
+                                    ("fa fa-globe","efavori", $"/"),
+                                    ("fa fa-building","Mağza/İşletme Yönetimi", "javascript:void(0)"),
+                                    ("fa fa-plus","Yeni Ekle", "javascript:void(0)")
+                                    };
 }
 <razor._Shared.BreadCrumbLinksUrl roads=roads />
 
+@if (_isLoading)
+{
+    <p>Yükleniyor...</p>
+}
+
+@if (Users is not null)
+{
+
+}
 
 <div class="container">
-  <div class="row justify-content-center">
-    <div class="col-lg-12 col-xl-12">
-      <div class="card shadow-sm border-0 overflow-hidden">
+    <div class="row justify-content-center">
+        <div class="col-lg-12 col-xl-12">
+            <div class="card shadow-sm border-0 overflow-hidden">
 
-        <!-- Kapak Fotoğrafı -->
-        <div class="position-relative">
-          <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80"
-               class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
-          <div class="position-absolute bottom-0 end-0 m-3">
-            <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm border-0">
-              <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
-            </button>
-          </div>
+                <!-- Kapak Fotoğrafı -->
+                <div class="position-relative">
+                    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80"
+                         class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+                    <div class="position-absolute bottom-0 end-0 m-3">
+                        <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm border-0">
+                            <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-body px-4 pt-0">
+
+                    <!-- Profil Fotoğrafı -->
+                    <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
+                        <div class="position-relative">
+                            <img src="assets/images/avatars/avatar-2.png"
+                                 class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                 width="168" height="168" style="object-fit: cover;" alt="Profil">
+                            <button type="button"
+                                    class="btn btn-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
+                                <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr class="my-3 opacity-10">
+
+
+                    <!-- Temel Bilgiler -->
+                    <h6 class="text-uppercase text-light fw-bold mb-3">
+                        <i class="fa fa-user me-2"></i> İşlem Yapan Kullanıcı
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Adınız</label>
+                            <input class="form-control" type="text" value="@use.FirstName" readonly>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Soyadınız</label>
+                            <input class="form-control" type="text" value="@use.LastName" readonly>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Kayıt Tarihiniz</label>
+                            <input class="form-control" type="text" value="@use.RegistrationDate" readonly>
+                        </div>
+                    </div>
+
+                    <hr class="my-3 opacity-10">
+
+                    <!-- İletişim Bilgileri -->
+                    <h6 class="text-uppercase text-light fw-bold mb-3">
+                        <i class="fa fa-envelope me-2"></i>İletişim Bilgileri
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">E-Posta</label>
+                            <div class="input-group">
+                                <input class="form-control" type="email" placeholder="ornek@email.com">
+                                <div class="input-group-text">
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="isActiveEmail">
+                                        <label class="form-check-label small" for="isActiveEmail">Göster</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telefon Numarası</label>
+                            <div class="input-group">
+                                <select class="form-select" style="max-width: 100px;">
+                                    <option value="+90" selected>+90</option>
+                                    <option value="1">1</option>
+                                    <option value="44">44</option>
+                                    <option value="49">49</option>
+                                </select>
+
+                                <input class="form-control" type="tel" placeholder="5XX XXX XX XX">
+
+                                <div class="input-group-text">
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="isActivePhone">
+                                        <label class="form-check-label small" for="isActivePhone">Göster</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3 opacity-10">
+                    <!-- Adres Bilgileri -->
+                    <h6 class="text-uppercase text-light fw-bold mb-3">
+                        <i class="fa fa-map-marker me-2"></i>Adres Bilgileri
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label text-white"> Ülkeniz</label>
+                            <select class="form-select bg-transparent text-white border-light-3" @onchange="OnCountrySelected">
+                                <option value="0">Ülke Seçiniz</option>
+                                @foreach (var country in _Countries)
+                                {
+                                    <option value="@country.id">@country.name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label text-white"> Eyalet/İl</label>
+                            <select class="form-select bg-transparent text-white border-light-3" @onchange="OnStateSelected" disabled="@(!_States.Any())">
+                                <option value="0">@(_States.Any() ? "İl Seçiniz" : "---")</option>
+                                @foreach (var state in _States)
+                                {
+                                    <option value="@state.id">@state.name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label text-white"> Şehir</label>
+                            <select class="form-select bg-transparent text-white border-light-3" disabled="@(!_Cities.Any())">
+                                <option value="0">@(_Cities.Any() ? "Şehir Seçiniz" : "---")</option>
+                                @foreach (var city in _Cities)
+                                {
+                                    <option value="@city.id">@city.name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Posta Kodu</label>
+                            <input class="form-control" type="text" placeholder="Posta Kodu">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Google My Business Linki</label>
+                            <input class="form-control" type="url" placeholder="https://business.google.com/...">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Açık Adres</label>
+                            <textarea class="form-control" rows="2" placeholder=""></textarea>
+                        </div>
+
+                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+                        <div class="container">
+                            <div class="row gx-3 align-items-end">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold">Enlem (Latitude)</label>
+                                    <input id="lat" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor...">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold">Boylam (Longitude)</label>
+                                    <input id="lng" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor...">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <button id="btnGetLocation" class="btn btn-primary w-100 shadow-sm d-flex align-items-center justify-content-center">
+                                        <i class="fa fa-crosshairs me-2"></i> Konumumu Otomatik Bul
+                                    </button>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <div id="map" class="rounded-3 shadow-sm border" style="height: 400px; width: 100%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                            // Global değişkenleri en üstte tanımlıyoruz
+                            let map = null;
+                            let marker = null;
+
+                            // Haritayı başlatan fonksiyon
+                            function initMap() {
+                                // Eğer div hazır değilse veya harita zaten varsa çık
+                                const mapDiv = document.getElementById('map');
+                                if (!mapDiv || map) return;
+
+                                // Haritayı oluştur (Türkiye merkezli başlangıç)
+                                map = L.map('map').setView([38.9637, 35.2433], 6);
+
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    attribution: '© OpenStreetMap'
+                                }).addTo(map);
+                            }
+
+                            // Sayfa yüklendiğinde haritayı hazırla
+                            document.addEventListener('DOMContentLoaded', initMap);
+
+                            document.getElementById('btnGetLocation').addEventListener('click', function() {
+                                const btn = this;
+                                const latInput = document.getElementById('lat');
+                                const lngInput = document.getElementById('lng');
+
+                                // Harita nesnesi yoksa tekrar oluşturmayı dene
+                                if (!map) initMap();
+
+                                btn.disabled = true;
+                                const originalText = btn.innerHTML;
+                                btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Konum Alınıyor...';
+
+                                if ("geolocation" in navigator) {
+                                    navigator.geolocation.getCurrentPosition(
+                                        (position) => {
+                                            const lat = position.coords.latitude;
+                                            const lng = position.coords.longitude;
+
+                                            latInput.value = lat.toFixed(6);
+                                            lngInput.value = lng.toFixed(6);
+
+                                            updateMap(lat, lng);
+
+                                            btn.disabled = false;
+                                            btn.innerHTML = originalText;
+                                        },
+                                        (error) => {
+                                            alert("Hata: " + error.message);
+                                            btn.disabled = false;
+                                            btn.innerHTML = originalText;
+                                        },
+                                        { enableHighAccuracy: true, timeout: 5000 }
+                                    );
+                                } else {
+                                    alert("Tarayıcınız konumu desteklemiyor.");
+                                    btn.disabled = false;
+                                    btn.innerHTML = originalText;
+                                }
+                            });
+
+                            function updateMap(lat, lng) {
+                                // map nesnesinin varlığını kontrol et (Hata aldığın yer burasıydı)
+                                if (map) {
+                                    const coords = [lat, lng];
+                                    map.setView(coords, 15);
+
+                                    if (marker) {
+                                        marker.setLatLng(coords);
+                                    } else {
+                                        marker = L.marker(coords).addTo(map);
+                                    }
+                                    marker.bindPopup("Bulunduğunuz Yer").openPopup();
+                                } else {
+                                    console.error("Harita nesnesi başlatılamadı!");
+                                }
+                            }
+                        </script>
+
+
+                    </div>
+
+                    <hr class="my-3 opacity-10">
+
+                    <!-- Çalışma Saatleri -->
+                    <h6 class="text-uppercase text-light fw-bold mb-3">
+                        <i class="fa fa-clock-o me-2"></i>Çalışma Saatleri
+                    </h6>
+                    <div class="row">
+
+                        <!-- Pazartesi -->
+                        <div class="col-md-12 mb-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="monday">
+                                        <label class="form-check-label fw-semibold" for="monday">Pazartesi</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                        <input type="time" class="form-control" placeholder="Açılış">
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                        <input type="time" class="form-control" placeholder="Kapanış">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Salı -->
+                        <div class="col-md-12 mb-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="tuesday">
+                                        <label class="form-check-label fw-semibold" for="tuesday">Salı</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Çarşamba -->
+                        <div class="col-md-12 mb-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="wednesday">
+                                        <label class="form-check-label fw-semibold" for="wednesday">Çarşamba</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Perşembe -->
+                        <div class="col-md-12 mb-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="thursday">
+                                        <label class="form-check-label fw-semibold" for="thursday">Perşembe</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cuma -->
+                        <div class="col-md-12 mb-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="friday">
+                                        <label class="form-check-label fw-semibold" for="friday">Cuma</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cumartesi -->
+                        <div class="col-md-12 mb-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="saturday">
+                                        <label class="form-check-label fw-semibold" for="saturday">Cumartesi</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pazar -->
+                        <div class="col-md-12 mb-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sunday">
+                                        <label class="form-check-label fw-semibold" for="sunday">Pazar</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                        <input type="time" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <hr class="my-3 opacity-10">
+
+                    <!-- Sosyal Medya -->
+                    <h6 class="text-uppercase text-light fw-bold mb-3">
+                        <i class="fa fa-share-alt me-2"></i>Sosyal Medya & İletişim Kanalları
+                    </h6>
+
+                    <!-- Global Platformlar -->
+                    <p class="text-light small fw-semibold mb-2">Global Platformlar</p>
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-facebook-square text-primary me-1"></i>Facebook</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://facebook.com/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-instagram text-danger me-1"></i>Instagram</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://instagram.com/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-twitter text-info me-1"></i>X (Twitter)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://x.com/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-music text-dark me-1"></i>TikTok</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://tiktok.com/">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-youtube-play text-danger me-1"></i>YouTube</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://youtube.com/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-linkedin-square text-primary me-1"></i>LinkedIn</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://linkedin.com/in/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-whatsapp text-success me-1"></i>WhatsApp</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://wa.me/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-paper-plane text-info me-1"></i>Telegram</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://t.me/...">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Bölgesel Platformlar -->
+                    <p class="text-light small fw-semibold mb-2 mt-1">Bölgesel Popüler Platformlar</p>
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-commenting text-success me-1"></i>WeChat</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="text" placeholder="WeChat ID">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-cloud text-danger me-1"></i>Weibo</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://weibo.com/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-comments text-success me-1"></i>Line</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="text" placeholder="Line ID">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-comment text-warning me-1"></i>KakaoTalk</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="text" placeholder="KakaoTalk ID">
+                            </div>
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label"><i class="fa fa-vk text-primary me-1"></i>VKontakte</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://vk.com/...">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Profesyonel / Niş Platformlar -->
+                    <p class="text-light small fw-semibold mb-2 mt-1">Profesyonel / Niş Platformlar</p>
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-pinterest text-danger me-1"></i>Pinterest</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://pinterest.com/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-github text-dark me-1"></i>GitHub</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://github.com/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-behance text-primary me-1"></i>Behance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://behance.net/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-gamepad text-primary me-1"></i>Discord</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="text" placeholder="Kullanıcı Adı#0000">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-reddit text-danger me-1"></i>Reddit</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://reddit.com/user/...">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fa fa-globe text-secondary me-1"></i>Web Sitesi</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
+                                </span>
+                                <input class="form-control" type="url" placeholder="https://...">
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <hr class="my-3 opacity-10">
+
+                    <!-- Kaydet Butonu -->
+                    <div class="d-flex justify-content-end gap-2 mb-2">
+                        <button type="reset" class="btn btn-outline-secondary px-4">
+                            <i class="fa fa-undo me-2"></i>Sıfırla
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fa fa-check me-2"></i>Kaydı Tamamla
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <div class="card-body px-4 pt-0">
-
-          <!-- Profil Fotoğrafı -->
-          <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
-            <div class="position-relative">
-              <img src="assets/images/avatars/avatar-2.png"
-                   class="rounded-circle border border-5 border-white bg-light shadow-sm"
-                   width="168" height="168" style="object-fit: cover;" alt="Profil">
-              <button type="button"
-                      class="btn btn-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
-                      style="width: 36px; height: 36px; z-index: 10;">
-                <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
-              </button>
-            </div>
-          </div>
-
-          <hr class="my-3 opacity-10">
-
-          <form>
-
-            <!-- Temel Bilgiler -->
-            <h6 class="text-uppercase text-muted fw-bold mb-3">
-              <i class="fa fa-user me-2"></i>Temel Bilgiler
-            </h6>
-            <div class="row">
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Adınız</label>
-                <input class="form-control" type="text" placeholder="Adınızı giriniz">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Soyadınız</label>
-                <input class="form-control" type="text" placeholder="Soyadınızı giriniz">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Kayıt Tarihiniz</label>
-                <input class="form-control" type="date">
-              </div>
-            </div>
-
-            <hr class="my-3 opacity-10">
-
-            <!-- İletişim Bilgileri -->
-            <h6 class="text-uppercase text-muted fw-bold mb-3">
-              <i class="fa fa-envelope me-2"></i>İletişim Bilgileri
-            </h6>
-            <div class="row">
-              <div class="col-md-1 mb-3 d-flex align-items-end">
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="checkbox" id="isActiveEmail">
-                  <label class="form-check-label" for="isActiveEmail">Aktif</label>
-                </div>
-              </div>
-              <div class="col-md-5 mb-3">
-                <label class="form-label">E-Posta</label>
-                <input class="form-control" type="email" placeholder="ornek@email.com">
-              </div>
-              <div class="col-md-2 mb-3">
-                <label class="form-label">Ülke Kodu</label>
-                <input class="form-control" type="text" placeholder="+90">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Telefon Numarası</label>
-                <div class="input-group">
-                  <input class="form-control" type="tel" placeholder="5XX XXX XX XX">
-                  <span class="input-group-text">
-                    <div class="form-check mb-0">
-                      <input class="form-check-input" type="checkbox" id="isActivePhone">
-                      <label class="form-check-label small" for="isActivePhone">Aktif</label>
-                    </div>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <hr class="my-3 opacity-10">
-
-            <!-- Adres Bilgileri -->
-            <h6 class="text-uppercase text-muted fw-bold mb-3">
-              <i class="fa fa-map-marker me-2"></i>Adres Bilgileri
-            </h6>
-            <div class="row">
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Harita Başlığı</label>
-                <input class="form-control" type="text" placeholder="Örn: Merkez Ofis">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Ülke</label>
-                <input class="form-control" type="text" placeholder="Ülke">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Şehir</label>
-                <input class="form-control" type="text" placeholder="Şehir">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">İlçe / Eyalet</label>
-                <input class="form-control" type="text" placeholder="İlçe / Eyalet">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Posta Kodu</label>
-                <input class="form-control" type="text" placeholder="Posta Kodu">
-              </div>
-              <div class="col-md-4 mb-3">
-                <label class="form-label">Google My Business Linki</label>
-                <input class="form-control" type="url" placeholder="https://business.google.com/...">
-              </div>
-              <div class="col-md-12 mb-3">
-                <label class="form-label">Açık Adres</label>
-                <textarea class="form-control" rows="2" placeholder="Sokak, Mahalle, Bina No..."></textarea>
-              </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Enlem (Latitude)</label>
-                <input class="form-control" type="number" step="any" placeholder="Örn: 41.0082">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Boylam (Longitude)</label>
-                <input class="form-control" type="number" step="any" placeholder="Örn: 28.9784">
-              </div>
-            </div>
-
-            <hr class="my-3 opacity-10">
-
-            <!-- Çalışma Saatleri -->
-            <h6 class="text-uppercase text-muted fw-bold mb-3">
-              <i class="fa fa-clock-o me-2"></i>Çalışma Saatleri
-            </h6>
-            <div class="row">
-
-              <!-- Pazartesi -->
-              <div class="col-md-12 mb-2">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="monday">
-                      <label class="form-check-label fw-semibold" for="monday">Pazartesi</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-play"></i></span>
-                      <input type="time" class="form-control" placeholder="Açılış">
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                      <input type="time" class="form-control" placeholder="Kapanış">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Salı -->
-              <div class="col-md-12 mb-2">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="tuesday">
-                      <label class="form-check-label fw-semibold" for="tuesday">Salı</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-play"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Çarşamba -->
-              <div class="col-md-12 mb-2">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="wednesday">
-                      <label class="form-check-label fw-semibold" for="wednesday">Çarşamba</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-play"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Perşembe -->
-              <div class="col-md-12 mb-2">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="thursday">
-                      <label class="form-check-label fw-semibold" for="thursday">Perşembe</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-play"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Cuma -->
-              <div class="col-md-12 mb-2">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="friday">
-                      <label class="form-check-label fw-semibold" for="friday">Cuma</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-play"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Cumartesi -->
-              <div class="col-md-12 mb-2">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="saturday">
-                      <label class="form-check-label fw-semibold" for="saturday">Cumartesi</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-play"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Pazar -->
-              <div class="col-md-12 mb-2">
-                <div class="row align-items-center">
-                  <div class="col-md-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="sunday">
-                      <label class="form-check-label fw-semibold" for="sunday">Pazar</label>
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-play"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                  <div class="col-md-5">
-                    <div class="input-group">
-                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                      <input type="time" class="form-control">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <hr class="my-3 opacity-10">
-
-            <!-- Sosyal Medya -->
-            <h6 class="text-uppercase text-muted fw-bold mb-3">
-              <i class="fa fa-share-alt me-2"></i>Sosyal Medya & İletişim Kanalları
-            </h6>
-
-            <!-- Global Platformlar -->
-            <p class="text-muted small fw-semibold mb-2">Global Platformlar</p>
-            <div class="row">
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-facebook-square text-primary me-1"></i>Facebook</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://facebook.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-instagram text-danger me-1"></i>Instagram</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://instagram.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-twitter text-info me-1"></i>X (Twitter)</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://x.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-music text-dark me-1"></i>TikTok</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://tiktok.com/">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-youtube-play text-danger me-1"></i>YouTube</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://youtube.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-linkedin-square text-primary me-1"></i>LinkedIn</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://linkedin.com/in/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-whatsapp text-success me-1"></i>WhatsApp</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://wa.me/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-paper-plane text-info me-1"></i>Telegram</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://t.me/...">
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Bölgesel Platformlar -->
-            <p class="text-muted small fw-semibold mb-2 mt-1">Bölgesel Popüler Platformlar</p>
-            <div class="row">
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-commenting text-success me-1"></i>WeChat</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="text" placeholder="WeChat ID">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-cloud text-danger me-1"></i>Weibo</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://weibo.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-vk text-primary me-1"></i>VKontakte</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://vk.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-comments text-success me-1"></i>Line</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="text" placeholder="Line ID">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-comment text-warning me-1"></i>KakaoTalk</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="text" placeholder="KakaoTalk ID">
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Profesyonel / Niş Platformlar -->
-            <p class="text-muted small fw-semibold mb-2 mt-1">Profesyonel / Niş Platformlar</p>
-            <div class="row">
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-pinterest text-danger me-1"></i>Pinterest</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://pinterest.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-github text-dark me-1"></i>GitHub</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://github.com/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-behance text-primary me-1"></i>Behance</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://behance.net/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-gamepad text-primary me-1"></i>Discord</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="text" placeholder="Kullanıcı Adı#0000">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-reddit text-danger me-1"></i>Reddit</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://reddit.com/user/...">
-                </div>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label class="form-label"><i class="fa fa-globe text-secondary me-1"></i>Web Sitesi</label>
-                <div class="input-group">
-                  <span class="input-group-text">
-                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
-                  </span>
-                  <input class="form-control" type="url" placeholder="https://...">
-                </div>
-              </div>
-
-            </div>
-
-            <hr class="my-3 opacity-10">
-
-            <!-- Kaydet Butonu -->
-            <div class="d-flex justify-content-end gap-2 mb-2">
-              <button type="reset" class="btn btn-outline-secondary px-4">
-                <i class="fa fa-undo me-2"></i>Sıfırla
-              </button>
-              <button type="submit" class="btn btn-primary px-4">
-                <i class="fa fa-check me-2"></i>Kaydı Tamamla
-              </button>
-            </div>
-
-          </form>
-        </div>
-      </div>
     </div>
-  </div>
 </div>
+
+@code {
+
+    private const string PAGE = "DataManager";
+
+    [Parameter] public Users? use { get; set; }
+
+    private readonly CancellationTokenSource _cts = new();
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
+
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _isProcessing;
+
+    private List<Users>? Users { get; set; } = new();
+
+    private List<Country> _Countries = new();
+    private List<States> _States = new();
+    private List<Cities> _Cities = new();
+
+    private Notification? notificationRef;
+
+    protected async Task OnCountrySelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int countryId);
+        _States.Clear();
+        _Cities.Clear();
+
+        if (countryId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _States = await db.States.AsNoTracking()
+                .Where(s => s.country_id == countryId)
+                .OrderBy(s => s.name).ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    protected async Task OnStateSelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int stateId);
+        _Cities.Clear();
+
+        if (stateId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Cities = await db.Cities.AsNoTracking()
+                .Where(c => c.state_id == stateId)
+                .OrderBy(c => c.name).ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+
+        var shouldRefresh = entityName == "Users";
+
+        if (shouldRefresh)
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadData(null);
+                StateHasChanged();
+            });
+        }
+    }
+
+    protected virtual async Task LoadData(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(1000, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync("DataManager_Main", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(u =>
+                        u.FirstName.Contains(search) ||
+                        u.LastName.Contains(search));
+                }
+
+                var users = await query
+                    .OrderByDescending(u => u.RegistrationDate)
+                    .ToListAsync(token);
+
+                return new { Users = users };
+
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+                Users = result.Users;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected async Task AddUser(Users newUser)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            newUser.RegistrationDate = DateTime.UtcNow;
+            db.Users.Add(newUser);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await StateHub.NotifyDataChanged("Users");
+
+            await Logger.TakeIt(newUser.Id, PAGE, "AddUser");
+
+            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla eklendi.", null);
+            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "AddUser",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Kullanıcı eklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task UpdateUser(Users updatedUser)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            db.Users.Update(updatedUser);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await StateHub.NotifyDataChanged("Users");
+
+            await Logger.TakeIt(updatedUser.Id, PAGE, "UpdateUser");
+
+            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla güncellendi.", null);
+            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "UpdateUser",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Kullanıcı güncellenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task DeleteUser(int userId)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var user = await db.Users.FindAsync(new object[] { userId }, _cts.Token);
+            if (user != null)
+            {
+                db.Users.Remove(user);
+                await db.SaveChangesAsync(_cts.Token);
+
+                await StateHub.NotifyDataChanged("Users");
+
+                await Logger.TakeIt(use?.Id, PAGE, "DeleteUser");
+
+                await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla silindi.", null);
+                await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "DeleteUser",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Kullanıcı silinirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task BulkImport(List<Users> users)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var now = DateTime.UtcNow;
+            foreach (var user in users)
+                user.RegistrationDate = now;
+
+            db.Users.AddRange(users);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await StateHub.NotifyDataChanged("Users");
+
+            await Logger.TakeIt(use?.Id, PAGE, $"BulkImport ({users.Count} kayıt)");
+
+            await ShowNotification("success", "Başarılı", $"{users.Count} kayıt başarıyla içe aktarıldı.", null);
+            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "BulkImport",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Toplu içe aktarma sırasında bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    public async Task CopyText(string textInfo)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            if (string.IsNullOrEmpty(textInfo))
+            {
+                await ShowNotification("warning", "Uyarı", "Kopyalanacak içerik bulunamadı.", null);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("navigator.clipboard.writeText", textInfo);
+                await ShowNotification("success", "Başarılı", "İçerik başarıyla kopyalandı.", null);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "CopyText",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", $"Kopyalama işlemi başarısız: {ex.Message}", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

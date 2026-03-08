@@ -1,0 +1,976 @@
+﻿@using data
+@using Microsoft.EntityFrameworkCore
+@inject IJSRuntime JS
+
+<PageTitle>Görev Raporu — Yazdır</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+    :root {
+        --navy: #0d1b2a;
+        --navy-mid: #1e3a5f;
+        --slate: #5a6a7a;
+        --silver: #c8d0da;
+        --gold: #b8933a;
+        --gold-light: #f5edd8;
+        --paper: #fafaf8;
+        --white: #ffffff;
+        --danger: #b03030;
+        --warn: #c07020;
+        --ok: #2a7a4a;
+        --serif: 'EB Garamond', Georgia, serif;
+        --sans: 'DM Sans', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    html {
+        font-size: 14px;
+    }
+
+    body {
+        background: #e8eaed;
+        font-family: var(--sans);
+        color: var(--navy);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        height: 52px;
+        background: var(--navy);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 32px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.3);
+    }
+
+    .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: #fff;
+    }
+
+        .toolbar-left img {
+            height: 28px;
+            opacity: .9;
+        }
+
+    .toolbar-divider {
+        width: 1px;
+        height: 22px;
+        background: rgba(255,255,255,.2);
+    }
+
+    .toolbar-title {
+        font-family: var(--serif);
+        font-size: 16px;
+        color: rgba(255,255,255,.85);
+        letter-spacing: .02em;
+    }
+
+    .toolbar-right {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 18px;
+        border-radius: 3px;
+        border: none;
+        cursor: pointer;
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        transition: opacity .18s;
+    }
+
+        .btn:hover {
+            opacity: .82;
+        }
+
+    .btn-primary {
+        background: var(--gold);
+        color: var(--navy);
+    }
+
+    .btn-secondary {
+        background: rgba(255,255,255,.12);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,.2);
+    }
+
+    /* ── PAGES WRAPPER ── */
+    .pages-wrapper {
+        margin: 70px auto 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+        padding: 20px 0;
+    }
+
+    /* ── A4 PAGE ── */
+    .a4-page {
+        width: 794px;
+        min-height: 1123px;
+        background: var(--white);
+        box-shadow: 0 6px 40px rgba(0,0,0,.15), 0 2px 8px rgba(0,0,0,.08);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* ── PAGE HEAD ── */
+    .page-head {
+        padding: 26px 44px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px solid var(--navy);
+    }
+
+    .ph-logo img {
+        height: 36px;
+        width: auto;
+    }
+
+    .ph-meta {
+        text-align: right;
+        font-family: var(--sans);
+        font-size: 10px;
+        color: var(--slate);
+        line-height: 1.6;
+    }
+
+        .ph-meta strong {
+            font-family: var(--serif);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--navy);
+            display: block;
+            letter-spacing: .01em;
+        }
+
+    .accent-bar {
+        height: 3px;
+        background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
+        margin: 0 44px;
+    }
+
+    .page-content {
+        padding: 24px 44px;
+        flex: 1;
+    }
+
+    .page-foot {
+        padding: 10px 44px;
+        border-top: 1px solid var(--silver);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 9px;
+        color: var(--slate);
+        letter-spacing: .04em;
+    }
+
+        .page-foot .pf-left {
+            display: flex;
+            gap: 20px;
+        }
+
+    /* ── CHIPS ── */
+    .status-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 12px 0 16px;
+        border-bottom: 1px solid var(--silver);
+        margin-bottom: 20px;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 11px;
+        border-radius: 2px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
+
+    .chip-navy {
+        background: var(--navy);
+        color: #fff;
+    }
+
+    .chip-gold {
+        background: var(--gold-light);
+        color: var(--gold);
+        border: 1px solid var(--gold);
+    }
+
+    .chip-slate {
+        background: #eef1f4;
+        color: var(--slate);
+        border: 1px solid var(--silver);
+    }
+
+    .chip-danger {
+        background: #fceaea;
+        color: var(--danger);
+        border: 1px solid #e8c0c0;
+    }
+
+    .chip-warn {
+        background: #fdf3e7;
+        color: var(--warn);
+        border: 1px solid #e8d0a0;
+    }
+
+    .chip-ok {
+        background: #eaf5ee;
+        color: var(--ok);
+        border: 1px solid #a8d8b8;
+    }
+
+    /* ── SECTION HEADING ── */
+    .sec-head {
+        font-family: var(--serif);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .15em;
+        text-transform: uppercase;
+        color: var(--gold);
+        margin-bottom: 10px;
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .sec-head::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--silver);
+        }
+
+        .sec-head:first-child {
+            margin-top: 0;
+        }
+
+    /* ── INFO TABLE ── */
+    .info-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 24px;
+    }
+
+    .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+        .info-table tr {
+            border-bottom: 1px solid #f0f0f4;
+        }
+
+            .info-table tr:last-child {
+                border-bottom: none;
+            }
+
+        .info-table td {
+            padding: 5px 8px;
+            vertical-align: top;
+        }
+
+            .info-table td:first-child {
+                font-weight: 600;
+                color: var(--slate);
+                white-space: nowrap;
+                width: 145px;
+                font-size: 11px;
+                letter-spacing: .02em;
+                padding-right: 12px;
+            }
+
+            .info-table td:last-child {
+                color: var(--navy);
+            }
+
+    /* ── DESCRIPTION ── */
+    .desc-block {
+        background: var(--paper);
+        border: 1px solid var(--silver);
+        border-left: 3px solid var(--gold);
+        padding: 12px 16px;
+        font-size: 12px;
+        line-height: 1.75;
+        color: var(--navy);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    /* ── TIMELINE ── */
+    .timeline {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border: 1px solid var(--silver);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 4px;
+    }
+
+    .tl-cell {
+        padding: 10px 8px;
+        text-align: center;
+        border-right: 1px solid var(--silver);
+        position: relative;
+    }
+
+        .tl-cell:last-child {
+            border-right: none;
+        }
+
+        .tl-cell.done {
+            background: var(--navy);
+        }
+
+        .tl-cell.current {
+            background: var(--navy-mid);
+        }
+
+    .tl-num {
+        font-family: var(--serif);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--silver);
+        line-height: 1;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .tl-cell.done .tl-num, .tl-cell.current .tl-num {
+        color: var(--gold);
+    }
+
+    .tl-label-txt {
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--slate);
+        display: block;
+    }
+
+    .tl-cell.done .tl-label-txt, .tl-cell.current .tl-label-txt {
+        color: rgba(255,255,255,.6);
+    }
+
+    .tl-date-txt {
+        font-size: 10px;
+        color: var(--slate);
+        display: block;
+        margin-top: 3px;
+    }
+
+    .tl-cell.done .tl-date-txt, .tl-cell.current .tl-date-txt {
+        color: rgba(255,255,255,.85);
+    }
+
+    /* ── NOTES PAGE ── */
+    .task-summary-band {
+        background: var(--navy);
+        margin: 0 -44px;
+        padding: 14px 44px;
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .tsb-title {
+        font-family: var(--serif);
+        font-size: 15px;
+        font-weight: 600;
+        color: #fff;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .tsb-chips {
+        display: flex;
+        gap: 6px;
+    }
+
+        .tsb-chips .chip {
+            font-size: 9px;
+            padding: 2px 8px;
+        }
+
+    .tsb-meta {
+        text-align: right;
+        font-size: 10px;
+        color: rgba(255,255,255,.55);
+        line-height: 1.5;
+    }
+
+        .tsb-meta strong {
+            color: rgba(255,255,255,.9);
+            display: block;
+            font-size: 11px;
+        }
+
+    .notes-page-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .notes-page-title {
+        font-family: var(--serif);
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--navy);
+    }
+
+        .notes-page-title span {
+            color: var(--gold);
+        }
+
+    .notes-page-range {
+        font-size: 10px;
+        color: var(--slate);
+        letter-spacing: .04em;
+    }
+
+    .note-row {
+        display: flex;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f4;
+        break-inside: avoid;
+    }
+
+        .note-row:last-child {
+            border-bottom: none;
+        }
+
+    .note-number {
+        flex-shrink: 0;
+        width: 22px;
+        text-align: right;
+        font-family: var(--serif);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--silver);
+        padding-top: 1px;
+    }
+
+    .note-check-box {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid var(--slate);
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 2px;
+    }
+
+        .note-check-box.checked {
+            background: var(--ok);
+            border-color: var(--ok);
+        }
+
+        .note-check-box svg {
+            display: block;
+        }
+
+    .note-main {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .note-text {
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--navy);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .note-meta-line {
+        display: flex;
+        gap: 16px;
+        margin-top: 4px;
+        font-size: 10px;
+        color: var(--slate);
+        align-items: center;
+    }
+
+    .note-ok-tag {
+        color: var(--ok);
+        font-weight: 600;
+        font-size: 10px;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+
+    .note-pend-tag {
+        color: var(--slate);
+        font-size: 10px;
+    }
+
+    /* ── PRINT ── */
+    @@media print {
+        @@page {
+            size: A4 portrait;
+            margin: 0;
+        }
+
+        body {
+            background: #fff !important;
+        }
+
+        .toolbar {
+            display: none !important;
+        }
+
+        .pages-wrapper {
+            margin: 0;
+            padding: 0;
+            gap: 0;
+        }
+
+        .a4-page {
+            width: 100%;
+            min-height: 0;
+            box-shadow: none;
+            page-break-after: always;
+            break-after: page;
+        }
+
+            .a4-page:last-child {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+
+        .page-content {
+            padding: 20px 36px;
+        }
+
+        .page-head {
+            padding: 18px 36px 14px;
+        }
+
+        .accent-bar {
+            margin: 0 36px;
+        }
+
+        .page-foot {
+            padding: 8px 36px;
+        }
+
+        .task-summary-band {
+            margin: 0 -36px;
+            padding: 12px 36px;
+        }
+
+        .note-row {
+            break-inside: avoid;
+        }
+    }
+
+    .state-msg {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        font-family: var(--sans);
+        font-size: 15px;
+        color: var(--slate);
+        letter-spacing: .04em;
+    }
+</style>
+
+@if (isLoading)
+{
+    <div class="state-msg">Yükleniyor…</div>
+}
+else if (task == null)
+{
+    <div class="state-msg">Görev bulunamadı.</div>
+}
+else
+{
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+        <div class="toolbar-left">
+            <img src="https://efavori.com/_files/main/logo/logo.png" alt="eFavori" />
+            <div class="toolbar-divider"></div>
+            <span class="toolbar-title">Görev Raporu — Yazdır Önizleme</span>
+        </div>
+        <div class="toolbar-right">
+            <span style="color:rgba(255,255,255,.45);font-size:11px;">@totalPages sayfa</span>
+            <button class="btn btn-secondary" onclick="history.back()">← Geri</button>
+            <button class="btn btn-primary" onclick="window.print()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9" />
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                    <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                Yazdır (Ctrl+P)
+            </button>
+        </div>
+    </div>
+
+    <div class="pages-wrapper">
+
+        <!-- ═══════════════════════════
+             SAYFA 1 — GÖREV ANA BİLGİ
+        ═══════════════════════════ -->
+        <div class="a4-page">
+            <div class="page-head">
+                <div class="ph-logo"><img src="https://efavori.com/_files/main/logo/logo.png" alt="eFavori Logo" /></div>
+                <div class="ph-meta">
+                    <strong>Görev Raporu</strong>
+                    Rapor No: @task.Id.ToString().Substring(0, 8).ToUpper()
+                    &nbsp;·&nbsp;
+                    Oluşturulma: @task.DateCreatedAt.ToString("dd MMMM yyyy, HH:mm")
+                </div>
+            </div>
+            <div class="accent-bar"></div>
+
+            <div class="page-content">
+
+                <div class="status-strip">
+                    <span class="chip chip-navy">@statusLabel</span>
+                    @if (!string.IsNullOrEmpty(task.Priority))
+                    {
+                        <span class="chip @priorityClass">● Öncelik: @task.Priority</span>
+                    }
+                    @if (category != null)
+                    {
+                        <span class="chip chip-gold">@category.Title</span>
+                    }
+                    @if (framework != null)
+                    {
+                        <span class="chip chip-slate">@framework.Icon @framework.Title</span>
+                    }
+                    @if (notes != null && notes.Count > 0)
+                    {
+                        <span class="chip chip-slate">@notes.Count Not · @notes.Count(n => n.IsTheNoteOk == true) Onaylı</span>
+                    }
+                </div>
+
+                <div class="sec-head">Görev Bilgileri</div>
+                <div class="info-cols">
+                    <table class="info-table">
+                        <tr><td>Görev Adı</td>       <td><strong>@(task.TaskTitle ?? "—")</strong></td></tr>
+                        <tr><td>Öncelik</td>          <td>@(task.Priority ?? "—")</td></tr>
+                        <tr><td>Durum</td>            <td>@statusLabel</td></tr>
+                        <tr><td>Hedef Tarih</td>      <td>@(task.TargetDate?.ToString("dd.MM.yyyy") ?? "—")</td></tr>
+                        <tr><td>Oluşturulma</td>      <td>@task.DateCreatedAt.ToString("dd.MM.yyyy HH:mm")</td></tr>
+                    </table>
+                    <table class="info-table">
+                        <tr>
+                            <td>Atayan Kişi</td>
+                            <td>@(assignedByUser != null ? $"{assignedByUser.FirstName} {assignedByUser.LastName}" : "—")</td>
+                        </tr>
+                        <tr>
+                            <td>Sorumlu Kişi</td>
+                            <td>@(personInChargeUser != null ? $"{personInChargeUser.FirstName} {personInChargeUser.LastName}" : "—")</td>
+                        </tr>
+                        <tr><td>Kategori</td>         <td>@(category?.Title ?? "—")</td></tr>
+                        <tr><td>Çerçeve</td>          <td>@(framework?.Title ?? "—")</td></tr>
+                        <tr><td>Çerçeve Durumu</td>   <td>@(framework?.Statu ?? "—")</td></tr>
+                    </table>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(task.TaskDescription))
+                {
+                    <div class="sec-head">Görev Açıklaması</div>
+                    <div class="desc-block">@task.TaskDescription</div>
+                }
+
+                @if (framework != null && !string.IsNullOrWhiteSpace(framework.Description))
+                {
+                    <div class="sec-head">Çerçeve Açıklaması</div>
+                    <div class="desc-block">@framework.Description</div>
+                }
+
+                @if (category != null && !string.IsNullOrWhiteSpace(category.Description))
+                {
+                    <div class="sec-head">Kategori Açıklaması</div>
+                    <div class="desc-block">@category.Description</div>
+                }
+
+                <div class="sec-head" style="margin-top:22px;">Durum Zaman Çizelgesi</div>
+                @{
+                    int stepIdx = task.IsCompleted == true ? 4
+                    : task.IsInEditing == true ? 3
+                    : task.IsInProgress == true ? 2
+                    : task.IsToBeDone == true ? 1 : 0;
+                }
+                <div class="timeline">
+                    <div class="tl-cell @(stepIdx > 1 ? "done" : stepIdx == 1 ? "current" : "")">
+                        <span class="tl-num">01</span>
+                        <span class="tl-label-txt">Yapılacak</span>
+                        <span class="tl-date-txt">@(task.DateToBeDone?.ToString("dd.MM.yy") ?? "—")</span>
+                    </div>
+                    <div class="tl-cell @(stepIdx > 2 ? "done" : stepIdx == 2 ? "current" : "")">
+                        <span class="tl-num">02</span>
+                        <span class="tl-label-txt">İşlemde</span>
+                        <span class="tl-date-txt">@(task.DateInProcess?.ToString("dd.MM.yy") ?? "—")</span>
+                    </div>
+                    <div class="tl-cell @(stepIdx > 3 ? "done" : stepIdx == 3 ? "current" : "")">
+                        <span class="tl-num">03</span>
+                        <span class="tl-label-txt">Düzenleniyor</span>
+                        <span class="tl-date-txt">@(task.DateInEditing?.ToString("dd.MM.yy") ?? "—")</span>
+                    </div>
+                    <div class="tl-cell @(stepIdx == 4 ? "done" : "")">
+                        <span class="tl-num">04</span>
+                        <span class="tl-label-txt">Tamamlandı</span>
+                        <span class="tl-date-txt">@(task.DateCompleted?.ToString("dd.MM.yy") ?? "—")</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="page-foot">
+                <div class="pf-left">
+                    <span>efavori.com</span>
+                    <span>Görev ID: @task.Id</span>
+                    @if (assignedByUser != null)
+                    {
+                        <span>Atayan: @assignedByUser.FirstName @assignedByUser.LastName</span>
+                    }
+                </div>
+                <div class="pf-right">Sayfa 1 / @totalPages</div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════
+             NOT SAYFALARI
+        ═══════════════════════════ -->
+        @if (notes != null && notes.Count > 0)
+        {
+            @for (int p = 0; p < notesPages.Count; p++)
+            {
+                var pageNotes = notesPages[p];
+                var pageNum = p + 2;
+                var startIdx = notesPageStartIdx[p];
+                var endIdx = startIdx + pageNotes.Count - 1;
+
+                <div class="a4-page">
+                    <div class="page-head">
+                        <div class="ph-logo"><img src="https://efavori.com/_files/main/logo/logo.png" alt="eFavori Logo" /></div>
+                        <div class="ph-meta">
+                            <strong>Görev Notları</strong>
+                            @task.TaskTitle — @task.DateCreatedAt.ToString("dd.MM.yyyy")
+                        </div>
+                    </div>
+                    <div class="accent-bar"></div>
+
+                    <div class="page-content">
+
+                        <!-- Görev özet bandı -->
+                        <div class="task-summary-band">
+                            <div class="tsb-title">@task.TaskTitle</div>
+                            <div class="tsb-chips">
+                                <span class="chip chip-navy">@statusLabel</span>
+                                @if (!string.IsNullOrEmpty(task.Priority))
+                                {
+                                    <span class="chip @priorityClass">@task.Priority</span>
+                                }
+                                @if (task.TargetDate.HasValue)
+                                {
+                                    <span class="chip chip-slate">Hedef: @task.TargetDate.Value.ToString("dd.MM.yyyy")</span>
+                                }
+                            </div>
+                            <div class="tsb-meta">
+                                <strong>@(personInChargeUser != null ? $"{personInChargeUser.FirstName} {personInChargeUser.LastName}" : "Sorumlu: —")</strong>
+                                @(assignedByUser != null ? $"Atayan: {assignedByUser.FirstName} {assignedByUser.LastName}" : "")
+                            </div>
+                        </div>
+
+                        <div class="notes-page-head">
+                            <span class="notes-page-title">
+                                Notlar &nbsp;<span>(@notes.Count toplam · @notes.Count(n => n.IsTheNoteOk == true) onaylı)</span>
+                            </span>
+                            <span class="notes-page-range">Bu sayfada: @(startIdx + 1)–@(endIdx + 1). notlar</span>
+                        </div>
+
+                        @foreach (var (note, ni) in pageNotes.Select((n, i) => (n, i)))
+                        {
+                            <div class="note-row">
+                                <div class="note-number">@(startIdx + ni + 1)</div>
+                                <div class="note-check-box @(note.IsTheNoteOk == true ? "checked" : "")">
+                                    @if (note.IsTheNoteOk == true)
+                                    {
+                                        <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                                            <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    }
+                                </div>
+                                <div class="note-main">
+                                    <div class="note-text">@note.Note</div>
+                                    <div class="note-meta-line">
+                                        @if (note.NoteCreatedAt.HasValue)
+                                        {
+                                            <span>@note.NoteCreatedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                                        }
+                                        @{
+                                            var noteUser = noteUsers.TryGetValue(note.UserId, out var nu) ? nu : null;
+                                        }
+                                        <span>@(noteUser != null ? $"{noteUser.FirstName} {noteUser.LastName}" : note.UserId.ToString().Substring(0, 8) + "…")</span>
+                                        @if (note.IsTheNoteOk == true)
+                                        {
+                                            <span class="note-ok-tag">
+                                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                                Onaylandı
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="note-pend-tag">Beklemede</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                    </div>
+
+                    <div class="page-foot">
+                        <div class="pf-left">
+                            <span>efavori.com</span>
+                            <span>Görev ID: @task.Id.ToString().Substring(0, 8).ToUpper()…</span>
+                            <span>@notes.Count(n => n.IsTheNoteOk == true) / @notes.Count not onaylandı</span>
+                        </div>
+                        <div class="pf-right">Sayfa @pageNum / @totalPages</div>
+                    </div>
+                </div>
+            }
+        }
+
+    </div>
+}
+
+@code {
+    [Parameter] public Guid TaskId { get; set; }
+
+    private data.TaskStatus? task;
+    private TaskCategories? category;
+    private TaskFramework? framework;
+    private List<TaskNotes> notes = new();
+    private Users? assignedByUser;
+    private Users? personInChargeUser;
+    private Dictionary<Guid, Users> noteUsers = new();
+
+    private const int NotesPerPage = 12;
+    private List<List<TaskNotes>> notesPages = new();
+    private List<int> notesPageStartIdx = new();
+    private int totalPages = 1;
+    private bool isLoading = true;
+
+    private string statusLabel = "";
+    private string priorityClass = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = new _ApplicationConnectionDb();
+
+        task = await db.TaskStatus
+            .FirstOrDefaultAsync(x => x.Id == TaskId && x.IsDeleted.IsDeletedStatu != true);
+
+        if (task != null)
+        {
+            if (task.TaskCategoriesId.HasValue)
+                category = await db.TaskCategories
+                    .FirstOrDefaultAsync(x => x.Id == task.TaskCategoriesId && x.IsDeleted.IsDeletedStatu != true);
+
+            if (category?.TaskFrameworkId.HasValue == true)
+                framework = await db.TaskFramework
+                    .FirstOrDefaultAsync(x => x.Id == category.TaskFrameworkId && x.IsDeleted.IsDeletedStatu != true);
+
+            notes = await db.TaskNotes
+                .Where(x => x.TaskStatusId == task.Id && x.IsDeleted.IsDeletedStatu != true)
+                .OrderBy(x => x.NoteCreatedAt)
+                .ToListAsync();
+
+            // Collect all user IDs
+            var userIds = new HashSet<Guid>();
+            if (task.AssignedByUserId.HasValue) userIds.Add(task.AssignedByUserId.Value);
+            if (task.PersonInChargeUserId.HasValue) userIds.Add(task.PersonInChargeUserId.Value);
+            foreach (var n in notes) userIds.Add(n.UserId);
+
+            var users = await db.Users
+                .Where(u => userIds.Contains(u.Id) && u.IsDeleted != true)
+                .ToListAsync();
+
+            assignedByUser = users.FirstOrDefault(u => u.Id == task.AssignedByUserId);
+            personInChargeUser = users.FirstOrDefault(u => u.Id == task.PersonInChargeUserId);
+            noteUsers = users.ToDictionary(u => u.Id);
+
+            // Paginate notes
+            for (int i = 0; i < notes.Count; i += NotesPerPage)
+            {
+                notesPageStartIdx.Add(i);
+                notesPages.Add(notes.Skip(i).Take(NotesPerPage).ToList());
+            }
+
+            totalPages = 1 + notesPages.Count;
+
+            statusLabel = task.Status switch
+            {
+                "ToBeDone" => "Yapılacak",
+                "InProcess" => "İşlemde",
+                "InEditing" => "Düzenleniyor",
+                "Completed" => "Tamamlandı",
+                _ => task.Status ?? "—"
+            };
+
+            priorityClass = (task.Priority ?? "").ToLower() switch
+            {
+                var p when p.Contains("yüksek") || p.Contains("yuksek") || p.Contains("high") => "chip-danger",
+                var p when p.Contains("orta") || p.Contains("medium") => "chip-warn",
+                var p when p.Contains("düşük") || p.Contains("dusuk") || p.Contains("low") => "chip-ok",
+                _ => "chip-slate"
+            };
+        }
+
+        isLoading = false;
+    }
+}

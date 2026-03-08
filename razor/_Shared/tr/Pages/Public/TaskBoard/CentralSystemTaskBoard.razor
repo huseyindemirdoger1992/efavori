@@ -2226,7 +2226,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Sorumlu Kişi (Boş bırakılırsa adınıza kaydedilir)</label>
-                        <select class="form-select" @bind="selectedPersonInCharge">
+                        <select class="form-select" @bind="selectedPersonInCharge" disable>
                             <option value="">Seçiniz...</option>
                             @foreach (var user in adminUsers)
                             {
@@ -2354,7 +2354,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Sorumlu Kişi</label>
-                        <select class="form-select" @bind="editSelectedPersonInCharge">
+                        <select class="form-select" @bind="editSelectedPersonInCharge" disable>
                             <option value="">Seçiniz...</option>
                             @foreach (var user in adminUsers)
                             {
@@ -2429,17 +2429,11 @@
                 <div class="modal-header border-bottom border-secondary">
 
 
-                    <h5 class="modal-title text-white">
-                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="DeleteTask" disabled="@IsButtonProcessing("delete")">
-                            @if (IsButtonProcessing("delete"))
-                            {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                            }
-                            else
-                            {
-                                <i class="fa fa-trash me-2"></i>
-                            }
-                        </button>
+                    <h5 class="modal-title text-white d-flex align-items-center">
+                        <a type="button" class="btn btn-sm btn-outline-light me-2" title="Yazdır" href="/@culture/Public/TaskBoard/PrintTask/@selectedTask.Id" target="_blank">
+                            <i class="fa fa-print" aria-hidden="true"></i>
+                        </a>
+
                         <span class="fw-bold" style="font-size: 1.1rem;">@selectedTask.TaskTitle</span>
                     </h5>
 
@@ -2454,8 +2448,8 @@
                             <i class="fa fa-times" style="font-size: 0.95rem;"></i>
                         </button>
                     </div>
-                    @*                     <button type="button" class="btn-close" @onclick="CloseDetailModal"></button>
- *@                </div>
+                    @*<button type="button" class="btn-close" @onclick="CloseDetailModal"></button>*@               
+    </div>
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-4">
@@ -2658,9 +2652,72 @@
                 </div>
                 <div class="modal-footer p-0">
                     <div class="btn-group w-100" role="group">
-                        <button type="button" class="btn btn-outline-light rounded-0" @onclick="CloseDetailModal">
-                            Kapat
-                        </button>
+
+
+                        <div class="d-inline-flex align-items-center bg-light p-2 rounded border">
+                            <span id="math-question" class="me-2 fw-bold text-dark" style="min-width: 45px;"></span>
+
+                            <input type="number" id="math-answer"
+                                   class="form-control form-control-sm me-2 text-center"
+                                   style="width: 60px;" placeholder="?">
+
+                            <button type="button" id="delete-btn"
+                                    class="btn btn-sm btn-outline-danger"
+                                    @onclick="DeleteTask"
+                                    disabled>
+                                @if (IsButtonProcessing("delete"))
+                                {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-trash"></i>
+                                }
+                            </button>
+                        </div>
+                        <script>
+                            (function () {
+                                let result;
+                                // Blazor elementleri render ettikten sonra ID'lere ulaşmak için kısa bir gecikme gerekebilir
+                                setTimeout(() => {
+                                    const questionEl = document.getElementById('math-question');
+                                    const answerInput = document.getElementById('math-answer');
+                                    const deleteBtn = document.getElementById('delete-btn');
+
+                                    if (!questionEl || !answerInput || !deleteBtn) return;
+
+                                    function generateNewQuestion() {
+                                        const ops = ['+', '-', '*'];
+                                        const n1 = Math.floor(Math.random() * 9) + 1;
+                                        const n2 = Math.floor(Math.random() * 9) + 1;
+                                        const op = ops[Math.floor(Math.random() * ops.length)];
+
+                                        questionEl.innerText = `${n1}${op}${n2}=`;
+
+                                        if (op === '+') result = n1 + n2;
+                                        if (op === '-') result = n1 - n2;
+                                        if (op === '*') result = n1 * n2;
+                                    }
+
+                                    answerInput.addEventListener('input', function () {
+                                        if (parseInt(this.value) === result) {
+                                            // Doğru cevap: Butonu aktifleştir ve yeşil yap
+                                            deleteBtn.disabled = false;
+                                            this.style.borderColor = "#198754";
+                                            this.style.backgroundColor = "#d4edda";
+                                        } else {
+                                            // Yanlış cevap: Butonu kilitli tut
+                                            deleteBtn.disabled = true;
+                                            this.style.borderColor = "";
+                                            this.style.backgroundColor = "";
+                                        }
+                                    });
+
+                                    generateNewQuestion();
+                                }, 500); // 500ms render bekletme
+                            })();
+                        </script>
+
                         @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
                         {
                             <button type="button" class="btn btn-outline-warning rounded-0" @onclick="() => EditTask(selectedTask)">
@@ -2673,6 +2730,9 @@
                                 <i class="fa fa-edit"></i> Düzenle
                             </button>
                         }
+                        <button type="button" class="btn btn-outline-light rounded-0" @onclick="CloseDetailModal">
+                            Kapat
+                        </button>
                     </div>
                 </div>
             </div>

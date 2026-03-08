@@ -1,0 +1,558 @@
+﻿@{
+    // Örnek Kullanım
+    var roads = new List<(string icon, string Name, string Url)>
+                                        {
+                                        ("fa fa-globe","efavori", $"/"),
+                                        ("fa fa-building","Mağza/İşletme Yönetimi", "javascript:void(0)"),
+                                        ("fa fa-plus","Yeni Ekle", "javascript:void(0)")
+                                        };
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-lg-12 col-xl-12">
+      <div class="card shadow-sm border-0 overflow-hidden">
+
+        <!-- Kapak Fotoğrafı -->
+        <div class="position-relative">
+          <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80"
+               class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+          <div class="position-absolute bottom-0 end-0 m-3">
+            <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm border-0">
+              <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body px-4 pt-0">
+
+          <!-- Profil Fotoğrafı -->
+          <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
+            <div class="position-relative">
+              <img src="assets/images/avatars/avatar-2.png"
+                   class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                   width="168" height="168" style="object-fit: cover;" alt="Profil">
+              <button type="button"
+                      class="btn btn-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                      style="width: 36px; height: 36px; z-index: 10;">
+                <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
+              </button>
+            </div>
+          </div>
+
+          <hr class="my-3 opacity-10">
+
+          <form>
+
+            <!-- Temel Bilgiler -->
+            <h6 class="text-uppercase text-muted fw-bold mb-3">
+              <i class="fa fa-user me-2"></i>Temel Bilgiler
+            </h6>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Adınız</label>
+                <input class="form-control" type="text" placeholder="Adınızı giriniz">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Soyadınız</label>
+                <input class="form-control" type="text" placeholder="Soyadınızı giriniz">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Kayıt Tarihiniz</label>
+                <input class="form-control" type="date">
+              </div>
+            </div>
+
+            <hr class="my-3 opacity-10">
+
+            <!-- İletişim Bilgileri -->
+            <h6 class="text-uppercase text-muted fw-bold mb-3">
+              <i class="fa fa-envelope me-2"></i>İletişim Bilgileri
+            </h6>
+            <div class="row">
+              <div class="col-md-1 mb-3 d-flex align-items-end">
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="checkbox" id="isActiveEmail">
+                  <label class="form-check-label" for="isActiveEmail">Aktif</label>
+                </div>
+              </div>
+              <div class="col-md-5 mb-3">
+                <label class="form-label">E-Posta</label>
+                <input class="form-control" type="email" placeholder="ornek@email.com">
+              </div>
+              <div class="col-md-2 mb-3">
+                <label class="form-label">Ülke Kodu</label>
+                <input class="form-control" type="text" placeholder="+90">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Telefon Numarası</label>
+                <div class="input-group">
+                  <input class="form-control" type="tel" placeholder="5XX XXX XX XX">
+                  <span class="input-group-text">
+                    <div class="form-check mb-0">
+                      <input class="form-check-input" type="checkbox" id="isActivePhone">
+                      <label class="form-check-label small" for="isActivePhone">Aktif</label>
+                    </div>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-3 opacity-10">
+
+            <!-- Adres Bilgileri -->
+            <h6 class="text-uppercase text-muted fw-bold mb-3">
+              <i class="fa fa-map-marker me-2"></i>Adres Bilgileri
+            </h6>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Harita Başlığı</label>
+                <input class="form-control" type="text" placeholder="Örn: Merkez Ofis">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Ülke</label>
+                <input class="form-control" type="text" placeholder="Ülke">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Şehir</label>
+                <input class="form-control" type="text" placeholder="Şehir">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">İlçe / Eyalet</label>
+                <input class="form-control" type="text" placeholder="İlçe / Eyalet">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Posta Kodu</label>
+                <input class="form-control" type="text" placeholder="Posta Kodu">
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Google My Business Linki</label>
+                <input class="form-control" type="url" placeholder="https://business.google.com/...">
+              </div>
+              <div class="col-md-12 mb-3">
+                <label class="form-label">Açık Adres</label>
+                <textarea class="form-control" rows="2" placeholder="Sokak, Mahalle, Bina No..."></textarea>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Enlem (Latitude)</label>
+                <input class="form-control" type="number" step="any" placeholder="Örn: 41.0082">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Boylam (Longitude)</label>
+                <input class="form-control" type="number" step="any" placeholder="Örn: 28.9784">
+              </div>
+            </div>
+
+            <hr class="my-3 opacity-10">
+
+            <!-- Çalışma Saatleri -->
+            <h6 class="text-uppercase text-muted fw-bold mb-3">
+              <i class="fa fa-clock-o me-2"></i>Çalışma Saatleri
+            </h6>
+            <div class="row">
+
+              <!-- Pazartesi -->
+              <div class="col-md-12 mb-2">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="monday">
+                      <label class="form-check-label fw-semibold" for="monday">Pazartesi</label>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-play"></i></span>
+                      <input type="time" class="form-control" placeholder="Açılış">
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                      <input type="time" class="form-control" placeholder="Kapanış">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Salı -->
+              <div class="col-md-12 mb-2">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="tuesday">
+                      <label class="form-check-label fw-semibold" for="tuesday">Salı</label>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-play"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Çarşamba -->
+              <div class="col-md-12 mb-2">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="wednesday">
+                      <label class="form-check-label fw-semibold" for="wednesday">Çarşamba</label>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-play"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Perşembe -->
+              <div class="col-md-12 mb-2">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="thursday">
+                      <label class="form-check-label fw-semibold" for="thursday">Perşembe</label>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-play"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cuma -->
+              <div class="col-md-12 mb-2">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="friday">
+                      <label class="form-check-label fw-semibold" for="friday">Cuma</label>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-play"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cumartesi -->
+              <div class="col-md-12 mb-2">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="saturday">
+                      <label class="form-check-label fw-semibold" for="saturday">Cumartesi</label>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-play"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pazar -->
+              <div class="col-md-12 mb-2">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="sunday">
+                      <label class="form-check-label fw-semibold" for="sunday">Pazar</label>
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-play"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                  <div class="col-md-5">
+                    <div class="input-group">
+                      <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                      <input type="time" class="form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <hr class="my-3 opacity-10">
+
+            <!-- Sosyal Medya -->
+            <h6 class="text-uppercase text-muted fw-bold mb-3">
+              <i class="fa fa-share-alt me-2"></i>Sosyal Medya & İletişim Kanalları
+            </h6>
+
+            <!-- Global Platformlar -->
+            <p class="text-muted small fw-semibold mb-2">Global Platformlar</p>
+            <div class="row">
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-facebook-square text-primary me-1"></i>Facebook</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://facebook.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-instagram text-danger me-1"></i>Instagram</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://instagram.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-twitter text-info me-1"></i>X (Twitter)</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://x.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-music text-dark me-1"></i>TikTok</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://tiktok.com/">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-youtube-play text-danger me-1"></i>YouTube</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://youtube.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-linkedin-square text-primary me-1"></i>LinkedIn</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://linkedin.com/in/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-whatsapp text-success me-1"></i>WhatsApp</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://wa.me/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-paper-plane text-info me-1"></i>Telegram</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://t.me/...">
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Bölgesel Platformlar -->
+            <p class="text-muted small fw-semibold mb-2 mt-1">Bölgesel Popüler Platformlar</p>
+            <div class="row">
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-commenting text-success me-1"></i>WeChat</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="text" placeholder="WeChat ID">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-cloud text-danger me-1"></i>Weibo</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://weibo.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-vk text-primary me-1"></i>VKontakte</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://vk.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-comments text-success me-1"></i>Line</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="text" placeholder="Line ID">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-comment text-warning me-1"></i>KakaoTalk</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="text" placeholder="KakaoTalk ID">
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Profesyonel / Niş Platformlar -->
+            <p class="text-muted small fw-semibold mb-2 mt-1">Profesyonel / Niş Platformlar</p>
+            <div class="row">
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-pinterest text-danger me-1"></i>Pinterest</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://pinterest.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-github text-dark me-1"></i>GitHub</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://github.com/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-behance text-primary me-1"></i>Behance</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://behance.net/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-gamepad text-primary me-1"></i>Discord</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="text" placeholder="Kullanıcı Adı#0000">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-reddit text-danger me-1"></i>Reddit</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://reddit.com/user/...">
+                </div>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label"><i class="fa fa-globe text-secondary me-1"></i>Web Sitesi</label>
+                <div class="input-group">
+                  <span class="input-group-text">
+                    <input class="form-check-input mt-0" type="checkbox" title="Aktif">
+                  </span>
+                  <input class="form-control" type="url" placeholder="https://...">
+                </div>
+              </div>
+
+            </div>
+
+            <hr class="my-3 opacity-10">
+
+            <!-- Kaydet Butonu -->
+            <div class="d-flex justify-content-end gap-2 mb-2">
+              <button type="reset" class="btn btn-outline-secondary px-4">
+                <i class="fa fa-undo me-2"></i>Sıfırla
+              </button>
+              <button type="submit" class="btn btn-primary px-4">
+                <i class="fa fa-check me-2"></i>Kaydı Tamamla
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

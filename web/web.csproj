@@ -21,7 +21,6 @@
 	<ItemGroup>
 		<Folder Include="Areas\Vendor\Controllers\" />
 		<Folder Include="Areas\Vendor\Views\" />
-		<Folder Include="_files\main\" />
 		<Folder Include="_files\users\" />
 	</ItemGroup>
 	<ItemGroup>

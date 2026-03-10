@@ -5,11 +5,13 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
+@using razor._Shared.tr.Media
 
 @inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
+@inject FileUploadService FileService
 
 <Notification @ref="notificationRef" />
 
@@ -40,33 +42,725 @@
 
                 <!-- Kapak Fotoğrafı -->
                 <div class="position-relative">
-                    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80"
-                         class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+
+                    @if (_coverMedia is not null)
+                    {
+                        <img src="@_coverMedia.FileUrl"
+                             class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="@_coverMedia.FileName">
+                    }
+                    else
+                    {
+                        <img src="https://efavori.com/_files/main/NoImage.png"
+                             class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+                    }
                     <div class="position-absolute bottom-0 end-0 m-3">
-                        <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm border-0">
+                        <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm border-0" data-bs-toggle="modal" data-bs-target="#modalCoverList"
+                                @onclick='() => _activeMediaSlot = "cover"'>
                             <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
                         </button>
                     </div>
                 </div>
 
                 <div class="card-body px-4 pt-0">
-
                     <!-- Profil Fotoğrafı -->
                     <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
                         <div class="position-relative">
-                            <img src="assets/images/avatars/avatar-2.png"
-                                 class="rounded-circle border border-5 border-white bg-light shadow-sm"
-                                 width="168" height="168" style="object-fit: cover;" alt="Profil">
+                            @if (_profileMedia is not null)
+                            {
+                                <img src="@_profileMedia.FileUrl"
+                                     class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                     width="168" height="168" style="object-fit: cover;" alt="@_profileMedia.FileName">
+                            }
+                            else
+                            {
+                                <img src="https://efavori.com/_files/main/NoImage.png"
+                                     class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                     width="168" height="168" style="object-fit: cover;" alt="No Image">
+                            }
                             <button type="button"
                                     class="btn btn-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
-                                    style="width: 36px; height: 36px;">
+                                    style="width: 36px; height: 36px;" data-bs-toggle="modal" data-bs-target="#modalProfileList"
+                                    @onclick='() => _activeMediaSlot = "profile"'>
                                 <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
                             </button>
                         </div>
                     </div>
 
-                    <hr class="my-3 opacity-10">
+                    <div class="col-12" style="margin-top:5px;">
+                        <label class="form-label">İşletme/Mağza Adını Belirtiniz</label>
+                        <input class="form-control mb-3" type="text">
+                    </div>
 
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <ul class="nav nav-tabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link active" data-bs-toggle="tab" href="#primaryhome" role="tab" aria-selected="true">
+                                        <div class="d-flex align-items-center">
+                                            <div class="tab-icon">
+                                                <i class="fa fa-camera font-18 me-1"></i>
+                                            </div>
+                                            <div class="tab-title">İşletme Dış Çekimleri</div>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#primaryprofile" role="tab" aria-selected="false">
+                                        <div class="d-flex align-items-center">
+                                            <div class="tab-icon">
+                                                <i class="fa fa-building-o font-18 me-1"></i>
+                                            </div>
+                                            <div class="tab-title">İşletme İç Çekimleri</div>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link" data-bs-toggle="tab" href="#primarycontact" role="tab" aria-selected="false">
+                                        <div class="d-flex align-items-center">
+                                            <div class="tab-icon">
+                                                <i class="fa fa-file-pdf-o font-18 me-1"></i>
+                                            </div>
+                                            <div class="tab-title">İşletme Resmi Evrakları</div>
+                                        </div>
+                                    </a>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content py-3">
+                                <div class="tab-pane fade show active" id="primaryhome" role="tabpanel">
+                                    <div class="mb-4">
+                                        <label class="form-label text-light fw-semibold">
+                                            <i class="fa fa-tree me-1 text-success"></i>İşletme Dış Çekim Görselleri
+                                            <span class="badge bg-secondary ms-2 fw-normal" style="font-size:0.7rem;">En Az 3 Görsel</span>
+                                        </label>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-12">
+                                                <button type="button" class="btn btn-outline-light btn-sm w-100"
+                                                        data-bs-toggle="modal" data-bs-target="#modalGalleryOutSide"
+                                                        @onclick="OpenGalleryOutModal">
+                                                    <i class="fa fa-picture-o me-1"></i>Medyadan Seç
+                                                    @if (_galleryOutSideFiles.Any())
+                                                    {
+                                                        <span class="badge bg-primary ms-1">@_galleryOutSideFiles.Count</span>
+                                                    }
+                                                </button>
+                                            </div>
+                                        </div>
+                                        @if (_galleryOutSideFiles.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach (var m in _galleryOutSideFiles.ToList())
+                                                {
+                                                    <div class="position-relative">
+                                                        <img src="@m.FileUrl" class="rounded border border-secondary" style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
+                                                        <button type="button"
+                                                                class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                                style="width:20px;height:20px;font-size:0.7rem; margin-top:-5px; margin-right:-5px;"
+                                                                @onclick="() => { _galleryOutSideFiles.Remove(m); }">
+                                                            <i class="fa fa-times text-white" style="margin-left:5px"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="primaryprofile" role="tabpanel">
+                                    <div class="mb-4">
+                                        <label class="form-label text-light fw-semibold">
+                                            <i class="fa fa-search-plus me-1 text-success"></i>İşletme İç Çekim Görselleri
+                                            <span class="badge bg-secondary ms-2 fw-normal" style="font-size:0.7rem;">En Az 3 Görsel</span>
+                                        </label>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-12">
+                                                <button type="button" class="btn btn-outline-light btn-sm w-100"
+                                                        data-bs-toggle="modal" data-bs-target="#modalGalleryInSide"
+                                                        @onclick="OpenGalleryInModal">
+                                                    <i class="fa fa-image me-1"></i>Medyadan Seç
+                                                    @if (_galleryInSideFiles.Any())
+                                                    {
+                                                        <span class="badge bg-primary ms-1">@_galleryInSideFiles.Count</span>
+                                                    }
+                                                </button>
+                                            </div>
+                                        </div>
+                                        @if (_galleryInSideFiles.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach (var m in _galleryInSideFiles.ToList())
+                                                {
+                                                    <div class="position-relative">
+                                                        <img src="@m.FileUrl" class="rounded border border-secondary" style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
+                                                        <button type="button"
+                                                                class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                                style="width:20px;height:20px;font-size:0.7rem; margin-top:-5px; margin-right:-5px;"
+                                                                @onclick="() => { _galleryInSideFiles.Remove(m); }">
+                                                            <i class="fa fa-trash-o text-white"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="primarycontact" role="tabpanel">
+                                    @*                                   
+                                      <div class="mb-4">
+                                        <label class="form-label text-light fw-semibold">
+                                            <i class="fa fa-briefcase me-1 text-success"></i>Resmi Evraklar
+                                            <span class="badge bg-secondary ms-2 fw-normal" style="font-size:0.7rem;">En Az 3 Görsel</span>
+                                        </label>
+                                        <div class="row g-2 mb-3">
+                                            <div class="col-md-12">
+                                                <button type="button" class="btn btn-outline-light btn-sm w-100"
+                                                        data-bs-toggle="modal" data-bs-target="#modalGalleryDocuments"
+                                                        @onclick="OpenDocumentModal">
+                                                    <i class="fa fa-folder-open-o me-1"></i>Medyadan Seç
+                                                    @if (_galleryDocuments.Any())
+                                                    {
+                                                        <span class="badge bg-primary ms-1">@_galleryDocuments.Count</span>
+                                                    }
+                                                </button>
+                                            </div>
+                                        </div>
+                                        @if (_galleryDocuments.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach (var m in _galleryDocuments.ToList())
+                                                {
+                                                    <div class="position-relative">
+                                                        <img src="@m.FileUrl" class="rounded border border-secondary" style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
+                                                        <button type="button"
+                                                                class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                                style="width:20px;height:20px;font-size:0.7rem; margin-top:-5px; margin-right:-5px;"
+                                                                @onclick="() => { _galleryDocuments.Remove(m); }">
+                                                            <i class="fa fa-times text-white" style="margin-left:5px"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    *@        
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-hover align-middle mb-0 bg-light">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width:40px;" class="text-center">#</th>
+                                                    <th>Belge Adı</th>
+                                                    <th>Açıklama</th>
+                                                    <th style="width:180px;">Yüklenen Dosya</th>
+                                                    <th style="width:110px;" class="text-center">Durum</th>
+                                                    <th style="width:90px;" class="text-center">İşlem</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-file-pdf-o"></i></td>
+                                                    <td class="fw-semibold">Kuruluş Belgesi <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">Şirket Kuruluş Belgesi (Certificate of Incorporation)</td>
+                                                    <td class="small">
+                                                        @if (_certificateOfIncorporation is not null)
+                                                        {
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_certificateOfIncorporation.FileName">@_certificateOfIncorporation.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_certificateOfIncorporation is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "certificateOfIncorporation"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-file-text-o"></i></td>
+                                                    <td class="fw-semibold">Faaliyet Belgesi <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">Güncel Faaliyet Belgesi (Son 3 Aylık - Activity Certificate)</td>
+                                                    <td class="small">
+                                                        @if (_activityCertificate is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_activityCertificate.FileName">@_activityCertificate.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_activityCertificate is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "activityCertificate"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-university"></i></td>
+                                                    <td class="fw-semibold">Vergi Levhası / VAT <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration)</td>
+                                                    <td class="small">
+                                                        @if (_taxRegistration is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_taxRegistration.FileName">@_taxRegistration.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_taxRegistration is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "taxRegistration"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-newspaper-o"></i></td>
+                                                    <td class="fw-semibold">Sicil Gazetesi</td>
+                                                    <td class="text-muted small">Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)</td>
+                                                    <td class="small">
+                                                        @if (_tradeRegistryGazette is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_tradeRegistryGazette.FileName">@_tradeRegistryGazette.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_tradeRegistryGazette is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "tradeRegistryGazette"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-pencil-square-o"></i></td>
+                                                    <td class="fw-semibold">İmza Sirküleri <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">İmza Sirküleri veya Yetki Belgesi (Signature Circular / POA)</td>
+                                                    <td class="small">
+                                                        @if (_signatureCircular is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_signatureCircular.FileName">@_signatureCircular.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_signatureCircular is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "signatureCircular"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-id-card-o"></i></td>
+                                                    <td class="fw-semibold">Yetkili Kimlik Belgesi <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">Şirket Yetkilisi Pasaport veya Kimlik Görseli (Authorized Person ID)</td>
+                                                    <td class="small">
+                                                        @if (_authorizedPersonId is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_authorizedPersonId.FileName">@_authorizedPersonId.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_authorizedPersonId is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "authorizedPersonId"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-map-marker"></i></td>
+                                                    <td class="fw-semibold">İşyeri Adres Kanıtı <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">Şirket Adres Kanıtı - Fatura / Resmi Belge (Proof of Business Address)</td>
+                                                    <td class="small">
+                                                        @if (_proofOfBusinessAddress is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_proofOfBusinessAddress.FileName">@_proofOfBusinessAddress.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_proofOfBusinessAddress is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "proofOfBusinessAddress"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-bank"></i></td>
+                                                    <td class="fw-semibold">Banka Hesap Dökümü</td>
+                                                    <td class="text-muted small">Son 3 Aya Ait Banka Hesap Dökümü (Bank Statement)</td>
+                                                    <td class="small">
+                                                        @if (_bankStatement is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_bankStatement.FileName">@_bankStatement.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_bankStatement is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "bankStatement"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-credit-card"></i></td>
+                                                    <td class="fw-semibold">Banka Hesap Onayı <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation)</td>
+                                                    <td class="small">
+                                                        @if (_bankAccountConfirmation is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_bankAccountConfirmation.FileName">@_bankAccountConfirmation.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_bankAccountConfirmation is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "bankAccountConfirmation"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-certificate"></i></td>
+                                                    <td class="fw-semibold">Marka Tescil Belgesi</td>
+                                                    <td class="text-muted small">Marka Tescil Belgesi (Trademark Certificate)</td>
+                                                    <td class="small">
+                                                        @if (_trademarkCertificate is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_trademarkCertificate.FileName">@_trademarkCertificate.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_trademarkCertificate is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "trademarkCertificate"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-file-o"></i></td>
+                                                    <td class="fw-semibold">Yetkili Satıcı Onay Belgesi</td>
+                                                    <td class="text-muted small">Yetkili Satıcı Onay Belgesi (Letter of Authorization - LOA)</td>
+                                                    <td class="small">
+                                                        @if (_letterOfAuthorization is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_letterOfAuthorization.FileName">@_letterOfAuthorization.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_letterOfAuthorization is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "letterOfAuthorization"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-star-o"></i></td>
+                                                    <td class="fw-semibold">Kalite Sertifikaları</td>
+                                                    <td class="text-muted small">Ürün Kalite ve Sağlık Sertifikaları (CE, ISO, FDA vb.)</td>
+                                                    <td class="small">
+                                                        @if (_qualityCertificates is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_qualityCertificates.FileName">@_qualityCertificates.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_qualityCertificates is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "qualityCertificates"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-ship"></i></td>
+                                                    <td class="fw-semibold">Gümrük Kayıt Belgesi</td>
+                                                    <td class="text-muted small">Gümrük Kayıt Belgesi (EORI veya Gümrük No - Customs Registration)</td>
+                                                    <td class="small">
+                                                        @if (_customsRegistration is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_customsRegistration.FileName">@_customsRegistration.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_customsRegistration is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "customsRegistration"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-shield"></i></td>
+                                                    <td class="fw-semibold">SGK / İşveren Kayıt Belgesi</td>
+                                                    <td class="text-muted small">Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security / Employer ID)</td>
+                                                    <td class="small">
+                                                        @if (_socialSecurityRegistration is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_socialSecurityRegistration.FileName">@_socialSecurityRegistration.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_socialSecurityRegistration is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "socialSecurityRegistration"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                <tr>
+                                                    <td class="text-center text-muted"><i class="fa fa-sitemap"></i></td>
+                                                    <td class="fw-semibold">Ortaklık Yapısı / UBO <span class="text-danger">*</span></td>
+                                                    <td class="text-muted small">Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership / UBO)</td>
+                                                    <td class="small">
+                                                        @if (_proofOfOwnership is not null)
+                                                        {
+
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_proofOfOwnership.FileName">@_proofOfOwnership.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_proofOfOwnership is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "proofOfOwnership"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-3 opacity-10">
 
                     <!-- Temel Bilgiler -->
                     <h6 class="text-uppercase text-light fw-bold mb-3">
@@ -110,15 +804,13 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Telefon Numarası</label>
                             <div class="input-group">
-                                <select class="form-select" style="max-width: 100px;">
-                                    <option value="+90" selected>+90</option>
-                                    <option value="1">1</option>
-                                    <option value="44">44</option>
-                                    <option value="49">49</option>
+                                <select class="form-select" style="max-width: 160px;">
+                                    @foreach (Country item in _Countries)
+                                    {
+                                        <option value="@item.phonecode">@item.phonecode @item.name</option>
+                                    }
                                 </select>
-
                                 <input class="form-control" type="tel" placeholder="5XX XXX XX XX">
-
                                 <div class="input-group-text">
                                     <div class="form-check mb-0">
                                         <input class="form-check-input" type="checkbox" id="isActivePhone">
@@ -128,7 +820,9 @@
                             </div>
                         </div>
                     </div>
+
                     <hr class="my-3 opacity-10">
+
                     <!-- Adres Bilgileri -->
                     <h6 class="text-uppercase text-light fw-bold mb-3">
                         <i class="fa fa-map-marker me-2"></i>Adres Bilgileri
@@ -168,13 +862,14 @@
                             <label class="form-label">Posta Kodu</label>
                             <input class="form-control" type="text" placeholder="Posta Kodu">
                         </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Google My Business Linki</label>
-                            <input class="form-control" type="url" placeholder="https://business.google.com/...">
-                        </div>
+
                         <div class="col-md-12 mb-3">
                             <label class="form-label">Açık Adres</label>
                             <textarea class="form-control" rows="2" placeholder=""></textarea>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Google My Business Linki</label>
+                            <input class="form-control" type="url" placeholder="https://business.google.com/...">
                         </div>
 
                         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -202,50 +897,36 @@
                         </div>
 
                         <script>
-                            // Global değişkenleri en üstte tanımlıyoruz
                             let map = null;
                             let marker = null;
 
-                            // Haritayı başlatan fonksiyon
                             function initMap() {
-                                // Eğer div hazır değilse veya harita zaten varsa çık
                                 const mapDiv = document.getElementById('map');
                                 if (!mapDiv || map) return;
-
-                                // Haritayı oluştur (Türkiye merkezli başlangıç)
                                 map = L.map('map').setView([38.9637, 35.2433], 6);
-
                                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                                     attribution: '© OpenStreetMap'
                                 }).addTo(map);
                             }
 
-                            // Sayfa yüklendiğinde haritayı hazırla
                             document.addEventListener('DOMContentLoaded', initMap);
 
                             document.getElementById('btnGetLocation').addEventListener('click', function() {
                                 const btn = this;
                                 const latInput = document.getElementById('lat');
                                 const lngInput = document.getElementById('lng');
-
-                                // Harita nesnesi yoksa tekrar oluşturmayı dene
                                 if (!map) initMap();
-
                                 btn.disabled = true;
                                 const originalText = btn.innerHTML;
                                 btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Konum Alınıyor...';
-
                                 if ("geolocation" in navigator) {
                                     navigator.geolocation.getCurrentPosition(
                                         (position) => {
                                             const lat = position.coords.latitude;
                                             const lng = position.coords.longitude;
-
                                             latInput.value = lat.toFixed(6);
                                             lngInput.value = lng.toFixed(6);
-
                                             updateMap(lat, lng);
-
                                             btn.disabled = false;
                                             btn.innerHTML = originalText;
                                         },
@@ -264,11 +945,9 @@
                             });
 
                             function updateMap(lat, lng) {
-                                // map nesnesinin varlığını kontrol et (Hata aldığın yer burasıydı)
                                 if (map) {
                                     const coords = [lat, lng];
                                     map.setView(coords, 15);
-
                                     if (marker) {
                                         marker.setLatLng(coords);
                                     } else {
@@ -280,7 +959,6 @@
                                 }
                             }
                         </script>
-
 
                     </div>
 
@@ -476,9 +1154,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-facebook-square text-primary me-1"></i>Facebook</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://facebook.com/...">
                             </div>
                         </div>
@@ -486,9 +1162,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-instagram text-danger me-1"></i>Instagram</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://instagram.com/...">
                             </div>
                         </div>
@@ -496,9 +1170,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-twitter text-info me-1"></i>X (Twitter)</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://x.com/...">
                             </div>
                         </div>
@@ -506,9 +1178,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-music text-dark me-1"></i>TikTok</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://tiktok.com/">
                             </div>
                         </div>
@@ -516,9 +1186,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-youtube-play text-danger me-1"></i>YouTube</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://youtube.com/...">
                             </div>
                         </div>
@@ -526,9 +1194,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-linkedin-square text-primary me-1"></i>LinkedIn</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://linkedin.com/in/...">
                             </div>
                         </div>
@@ -536,9 +1202,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-whatsapp text-success me-1"></i>WhatsApp</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://wa.me/...">
                             </div>
                         </div>
@@ -546,9 +1210,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-paper-plane text-info me-1"></i>Telegram</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://t.me/...">
                             </div>
                         </div>
@@ -562,9 +1224,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-commenting text-success me-1"></i>WeChat</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="text" placeholder="WeChat ID">
                             </div>
                         </div>
@@ -572,9 +1232,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-cloud text-danger me-1"></i>Weibo</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://weibo.com/...">
                             </div>
                         </div>
@@ -582,9 +1240,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-comments text-success me-1"></i>Line</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="text" placeholder="Line ID">
                             </div>
                         </div>
@@ -592,9 +1248,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-comment text-warning me-1"></i>KakaoTalk</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="text" placeholder="KakaoTalk ID">
                             </div>
                         </div>
@@ -602,9 +1256,7 @@
                         <div class="col-md-12 mb-3">
                             <label class="form-label"><i class="fa fa-vk text-primary me-1"></i>VKontakte</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://vk.com/...">
                             </div>
                         </div>
@@ -618,9 +1270,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-pinterest text-danger me-1"></i>Pinterest</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://pinterest.com/...">
                             </div>
                         </div>
@@ -628,9 +1278,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-github text-dark me-1"></i>GitHub</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://github.com/...">
                             </div>
                         </div>
@@ -638,9 +1286,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-behance text-primary me-1"></i>Behance</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://behance.net/...">
                             </div>
                         </div>
@@ -648,9 +1294,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-gamepad text-primary me-1"></i>Discord</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="text" placeholder="Kullanıcı Adı#0000">
                             </div>
                         </div>
@@ -658,9 +1302,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-reddit text-danger me-1"></i>Reddit</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://reddit.com/user/...">
                             </div>
                         </div>
@@ -668,9 +1310,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-globe text-secondary me-1"></i>Web Sitesi</label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <input class="form-check-input mt-0" type="checkbox" title="Göster">
-                                </span>
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
                                 <input class="form-control" type="url" placeholder="https://...">
                             </div>
                         </div>
@@ -693,6 +1333,269 @@
         </div>
     </div>
 </div>
+
+<!-- ===================== MEDYA MODALLARİ ===================== -->
+<!--
+    İZOLASYON MANTIĞI:
+    ─────────────────────────────────────────────────────────────
+    1. Her modalın HTML id'si BENZERSİZDİR:
+       #modalProfileList  → sadece "profile" slotu
+       #modalCoverList    → sadece "cover" slotu
+       #modalGalleryOutSide   → sadece "galleryOutSide" slotu   ✅ DÜZELTİLDİ
+       #modalGalleryInSide    → sadece "galleryInSide" slotu    ✅ DÜZELTİLDİ
+       #modalGalleryDocuments → sadece "galleryDocuments" slotu ✅ DÜZELTİLDİ
+
+    2. Her butonun data-bs-target'ı kendi modalının ID'sine işaret eder.
+
+    3. <List> component'i sadece _activeMediaSlot eşleştiğinde
+       if koşuluyla DOM'a eklenir; modal kapanınca DOM'dan çıkar.
+       Bu sayede FileService event'leri hiçbir zaman yanlış slota ulaşamaz.
+
+    4. HandleMultiSelectionChanged ve HandleSingleFileSelected içinde
+       _activeMediaSlot switch'i son savunma hattı olarak korunur.
+    ─────────────────────────────────────────────────────────────
+-->
+<div class="modal fade" id="modalBusinessDocumentList" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-user-circle me-2 text-info"></i>Profil Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "certificateOfIncorporation" ||
+                                _activeMediaSlot == "activityCertificate" ||
+                                _activeMediaSlot == "taxRegistration" ||
+                                _activeMediaSlot == "tradeRegistryGazette" ||
+                                _activeMediaSlot == "signatureCircular" ||
+                                _activeMediaSlot == "authorizedPersonId" ||
+                                _activeMediaSlot == "proofOfBusinessAddress" ||
+                                _activeMediaSlot == "bankStatement" ||
+                                _activeMediaSlot == "bankAccountConfirmation" ||
+                                _activeMediaSlot == "trademarkCertificate" ||
+                                _activeMediaSlot == "letterOfAuthorization" ||
+                                _activeMediaSlot == "qualityCertificates" ||
+                                _activeMediaSlot == "customsRegistration" ||
+                                _activeMediaSlot == "socialSecurityRegistration" ||
+                                _activeMediaSlot == "proofOfOwnership")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- [1] Profil Görseli Modal -->
+<div class="modal fade" id="modalProfileList" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-user-circle me-2 text-info"></i>Profil Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "profile")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [2] Kapak Görseli Modal -->
+<div class="modal fade" id="modalCoverList" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-image me-2 text-warning"></i>Kapak Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "cover")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [3] Galeri Modal → Dış Çekim (galleryOutSide) -->
+<!--  ✅ DÜZELTİLDİ: id="modalGalleryOutSide" (benzersiz) -->
+<div class="modal fade" id="modalGalleryOutSide" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-external-link me-2 text-success"></i>Dış Çekim Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "galleryOutSide")
+                {
+                    <List use="use" IsMultiSelect="true" />
+                }
+            </div>
+            <div class="modal-footer border-light-3">
+                <span class="text-white-50 small me-auto">@_galleryOutSideFiles.Count dosya seçildi</span>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal"
+                        @onclick="CloseMediaModal">
+                    <i class="fa fa-check me-1"></i>Seçimi Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [4] Galeri Modal → İç Çekim (galleryInSide) -->
+<!--  ✅ DÜZELTİLDİ: id="modalGalleryInSide" (benzersiz) -->
+<div class="modal fade" id="modalGalleryInSide" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-home me-2 text-success"></i>İç Çekim Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "galleryInSide")
+                {
+                    <List use="use" IsMultiSelect="true" />
+                }
+            </div>
+            <div class="modal-footer border-light-3">
+                <span class="text-white-50 small me-auto">@_galleryInSideFiles.Count dosya seçildi</span>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal"
+                        @onclick="CloseMediaModal">
+                    <i class="fa fa-check me-1"></i>Seçimi Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [5] Galeri Modal → Resmi Evraklar (galleryDocuments) -->
+<!--  ✅ DÜZELTİLDİ: id="modalGalleryDocuments" (benzersiz) -->
+<div class="modal fade" id="modalGalleryDocuments" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-file-text me-2 text-success"></i>Resmi Evrak Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "galleryDocuments")
+                {
+                    <List use="use" IsMultiSelect="true" />
+                }
+            </div>
+            <div class="modal-footer border-light-3">
+                <span class="text-white-50 small me-auto">@_galleryDocuments.Count dosya seçildi</span>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal"
+                        @onclick="CloseMediaModal">
+                    <i class="fa fa-check me-1"></i>Seçimi Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @code {
 
@@ -717,6 +1620,117 @@
     private List<Cities> _Cities = new();
 
     private Notification? notificationRef;
+
+    // --- Medya Seçim State ---
+    private string _activeMediaSlot = string.Empty;
+
+    // Tekli seçimler
+    private Data.Media? _profileMedia;
+    private Data.Media? _coverMedia;
+
+    private Data.Media? _certificateOfIncorporation; // Şirket Kuruluş Belgesi (Certificate of Incorporation) *
+    private Data.Media? _activityCertificate;        // Güncel Faaliyet Belgesi (Son 3 Aylık - Activity Certificate) *
+    private Data.Media? _taxRegistration;            // Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration) *
+    private Data.Media? _tradeRegistryGazette;       // Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)
+    private Data.Media? _signatureCircular;          // İmza Sirküleri veya Yetki Belgesi (Signature Circular / POA) *
+    private Data.Media? _authorizedPersonId;         // Şirket Yetkilisi Pasaport veya Kimlik Görseli (Authorized Person ID) *
+    private Data.Media? _proofOfBusinessAddress;     // Şirket Adres Kanıtı - Fatura/Resmi Belge (Proof of Business Address) *
+    private Data.Media? _bankStatement;              // Son 3 Aya Ait Banka Hesap Dökümü (Bank Statement)
+    private Data.Media? _bankAccountConfirmation;    // IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation) *
+    private Data.Media? _trademarkCertificate;       // Marka Tescil Belgesi (Trademark Certificate)
+    private Data.Media? _letterOfAuthorization;      // Yetkili Satıcı Onay Belgesi (Letter of Authorization - LOA)
+    private Data.Media? _qualityCertificates;        // Ürün Kalite ve Sağlık Sertifikaları (CE, ISO, FDA vb.)
+    private Data.Media? _customsRegistration;        // Gümrük Kayıt Belgesi (EORI veya Gümrük No - Customs Registration)
+    private Data.Media? _socialSecurityRegistration; // Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security/Employer ID)
+    private Data.Media? _proofOfOwnership;           // Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership/UBO) *
+
+
+
+
+
+    // Çoklu seçimler (Slot bazlı izole listeler)
+    private List<Data.Media> _galleryOutSideFiles = new();
+    private List<Data.Media> _galleryInSideFiles = new();
+    private List<Data.Media> _galleryDocuments = new();
+
+    // ─── Modal Açma Metotları ────────────────────────────────────────────────
+    // Her metot yalnızca kendi slotunu aktif eder.
+    // data-bs-target ile eşleşen benzersiz modal ID'si Bootstrap'in
+    // doğru modalı açmasını garantiler.
+    private void OpenGalleryOutModal() => _activeMediaSlot = "galleryOutSide";
+    private void OpenGalleryInModal() => _activeMediaSlot = "galleryInSide";
+    private void OpenDocumentModal() => _activeMediaSlot = "galleryDocuments";
+
+    private void CloseMediaModal()
+    {
+        // Modal kapanınca slot sıfırlanır → List component DOM'dan kaldırılır
+        // → FileService event'leri artık hiçbir List'e ulaşamaz.
+        _activeMediaSlot = string.Empty;
+    }
+
+    // ─── Tekli Seçim Handler ────────────────────────────────────────────────
+    private void HandleSingleFileSelected(Data.Media media)
+    {
+        switch (_activeMediaSlot)
+        {
+            case "profile": _profileMedia = media; break;
+            case "cover": _coverMedia = media; break;
+
+            // --- İşletme Evrakları Slotları ---
+            case "certificateOfIncorporation": _certificateOfIncorporation = media; break;
+            case "activityCertificate": _activityCertificate = media; break;
+            case "taxRegistration": _taxRegistration = media; break;
+            case "tradeRegistryGazette": _tradeRegistryGazette = media; break;
+            case "signatureCircular": _signatureCircular = media; break;
+            case "authorizedPersonId": _authorizedPersonId = media; break;
+            case "proofOfBusinessAddress": _proofOfBusinessAddress = media; break;
+            case "bankStatement": _bankStatement = media; break;
+            case "bankAccountConfirmation": _bankAccountConfirmation = media; break;
+            case "trademarkCertificate": _trademarkCertificate = media; break;
+            case "letterOfAuthorization": _letterOfAuthorization = media; break;
+            case "qualityCertificates": _qualityCertificates = media; break;
+            case "customsRegistration": _customsRegistration = media; break;
+            case "socialSecurityRegistration": _socialSecurityRegistration = media; break;
+            case "proofOfOwnership": _proofOfOwnership = media; break;
+
+            default: break;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ─── Çoklu Seçim Handler ────────────────────────────────────────────────
+    private void HandleMultiSelectionChanged(List<Data.Media> files)
+    {
+        if (files == null) return;
+
+        // Uzman Notu: Bileşen kümülatif (toplam) liste gönderiyorsa,
+        // diğer slotların verilerini mevcut 'files' içerisinden ayıklamalıyız.
+        switch (_activeMediaSlot)
+        {
+            case "galleryOutSide":
+                // files içerisinden, diğer slotlarda zaten var olanları çıkar.
+                _galleryOutSideFiles = files.Except(_galleryInSideFiles).Except(_galleryDocuments).ToList();
+                break;
+
+            case "galleryInSide":
+                _galleryInSideFiles = files.Except(_galleryOutSideFiles).Except(_galleryDocuments).ToList();
+                break;
+
+            case "galleryDocuments":
+                _galleryDocuments = files.Except(_galleryOutSideFiles).Except(_galleryInSideFiles).ToList();
+                break;
+
+            default: break;
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnInitialized()
+    {
+        FileService.OnFileSelected += HandleSingleFileSelected;
+        FileService.OnSelectionChanged += HandleMultiSelectionChanged;
+    }
 
     protected async Task OnCountrySelected(ChangeEventArgs e)
     {
@@ -765,6 +1779,8 @@
         _disposed = true;
 
         StateHub.OnDataChanged -= HandleGlobalDataChange;
+        FileService.OnFileSelected -= HandleSingleFileSelected;
+        FileService.OnSelectionChanged -= HandleMultiSelectionChanged;
 
         await _cts.CancelAsync();
         _cts.Dispose();
@@ -1050,7 +2066,7 @@
     private async Task ShowNotification(string type, string title, string text, string? image)
     {
         if (notificationRef is null) return;
-        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://efavori.com/_files/main/logo/logo.png" : image;
         await notificationRef.Launch(type, title, text, imageUrl);
     }
 }

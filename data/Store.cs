@@ -14,7 +14,7 @@ namespace data
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid? UserId { get; set; }
+        public Guid? UserId { get; set; } // *
         public string? Name { get; set; } = string.Empty; // +
 
         // Admin Kontrolleri
@@ -31,6 +31,23 @@ namespace data
         public ProfileCoverGallery? ProfileCoverGallery { get; set; } = new();
         public AddressInfo? AddressInfo { get; set; } = new(); // +
         public WorkingHours? WorkingHours { get; set; } = new(); // 
+
+        // Medya Slotları - Belge GUID Tanımlamaları
+        public Guid? CertificateOfIncorporation { get; set; }
+        public Guid? ActivityCertificate { get; set; }
+        public Guid? TaxRegistration { get; set; }
+        public Guid? TradeRegistryGazette { get; set; }
+        public Guid? SignatureCircular { get; set; }
+        public Guid? AuthorizedPersonId { get; set; }
+        public Guid? ProofOfBusinessAddress { get; set; }
+        public Guid? BankStatement { get; set; }
+        public Guid? BankAccountConfirmation { get; set; }
+        public Guid? TrademarkCertificate { get; set; }
+        public Guid? LetterOfAuthorization { get; set; }
+        public Guid? QualityCertificates { get; set; }
+        public Guid? CustomsRegistration { get; set; }
+        public Guid? SocialSecurityRegistration { get; set; }
+        public Guid? ProofOfOwnership { get; set; }
 
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 

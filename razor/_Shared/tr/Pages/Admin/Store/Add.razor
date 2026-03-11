@@ -850,7 +850,7 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label text-white"> Şehir</label>
-                            <select class="form-select bg-transparent text-white border-light-3" disabled="@(!_Cities.Any())">
+                            <select class="form-select bg-transparent text-white border-light-3" @onchange="O" disabled="@(!_Cities.Any())">
                                 <option value="0">@(_Cities.Any() ? "Şehir Seçiniz" : "---")</option>
                                 @foreach (var city in _Cities)
                                 {

@@ -394,3 +394,47 @@
         }
     }
 </script>
+
+@* Sayfa geçiş Egekti *@
+<script>
+    // 1. SAYFAYA GİRİŞ: Bulanıklıktan normale geçiş
+    window.addEventListener('load', function() {
+        const overlay = document.getElementById('page-transition-overlay');
+        if (overlay) {
+            // Yarım saniye bekleyip efekti kaldıralım (daha yumuşak bir geçiş için)
+            setTimeout(() => {
+                overlay.classList.add('loaded');
+            }, 100);
+        }
+    });
+
+    // 2. SAYFADAN ÇIKIŞ: Normalden bulanıklığa geçiş (Link tıklama)
+    document.addEventListener('click', function (e) {
+        const link = e.target.closest('a');
+
+        if (link) {
+            const href = link.getAttribute('href');
+            const target = link.getAttribute('target');
+
+            if (href &&
+                !href.startsWith('#') &&
+                !href.startsWith('javascript:') &&
+                link.hostname === window.location.hostname &&
+                target !== '_blank') {
+
+                const overlay = document.getElementById('page-transition-overlay');
+                if (overlay) {
+                    e.preventDefault();
+                    const targetUrl = link.href;
+
+                    // 'loaded' class'ını geri alarak bulanıklığı başlatıyoruz
+                    overlay.classList.remove('loaded');
+
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 500);
+                }
+            }
+        }
+    });
+</script>

@@ -1,0 +1,1390 @@
+﻿@using data
+<div class="container">
+    <!-- Arama Başlığı -->
+    <div class="mb-4">
+        <div class="input-group">
+            <input type="text" class="form-control form-control-lg" value="@SearchWantedText" placeholder="Ara...">
+            <button class="btn btn-light px-4" type="button">
+                <i class="fa fa-search"></i>
+            </button>
+        </div>
+        <p class="text-light mt-2 mb-0 small">
+            <strong>"@SearchWantedText"</strong> için <strong>142</strong> sonuç bulundu
+            <span class="ms-3 text-light"><i class="fa fa-clock-o me-1"></i>0.38 saniye</span>
+        </p>
+    </div>
+
+    <!-- Son Aramalar -->
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light border-0 fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="fa fa-history me-2 text-light"></i>Son Aramalar</span>
+                <button class="btn btn-sm btn-link text-light p-0">Tümünü Temizle</button>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-light text-light border px-3 py-2 rounded-pill">sandalye <i class="fa fa-times ms-1"></i></span>
+                    <span class="badge bg-light text-light border px-3 py-2 rounded-pill">ofis koltuğu <i class="fa fa-times ms-1"></i></span>
+                    <span class="badge bg-light text-light border px-3 py-2 rounded-pill">ergonomik masa <i class="fa fa-times ms-1"></i></span>
+                    <span class="badge bg-light text-light border px-3 py-2 rounded-pill">ahşap mobilya <i class="fa fa-times ms-1"></i></span>
+                    <span class="badge bg-light text-light border px-3 py-2 rounded-pill">bar taburesi <i class="fa fa-times ms-1"></i></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+
+            <!-- Tab Başlıkları -->
+            <ul class="nav nav-tabs nav-justified" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#Product" role="tab" aria-selected="true">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="tab-icon"><i class="fa fa-shopping-basket font-18 me-2"></i></div>
+                            <div class="tab-title">Ürün (86)</div>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" data-bs-toggle="tab" href="#Post" role="tab" aria-selected="false">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="tab-icon"><i class="fa fa-th-large font-18 me-2"></i></div>
+                            <div class="tab-title">Gönderi (24)</div>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" data-bs-toggle="tab" href="#Blog" role="tab" aria-selected="false">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="tab-icon"><i class="fa fa-paper-plane-o font-18 me-2"></i></div>
+                            <div class="tab-title">Yazı (24)</div>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" data-bs-toggle="tab" href="#User" role="tab" aria-selected="false">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="tab-icon"><i class="fa fa-user-circle-o font-18 me-2"></i></div>
+                            <div class="tab-title">Kullanıcı (12)</div>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" data-bs-toggle="tab" href="#Business" role="tab" aria-selected="false">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="tab-icon"><i class="fa fa-briefcase font-18 me-2"></i></div>
+                            <div class="tab-title">İşletme (20)</div>
+                        </div>
+                    </a>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <a class="nav-link" data-bs-toggle="tab" href="#Setting" role="tab" aria-selected="false">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="tab-icon"><i class="fa fa-cog font-18 me-2"></i></div>
+                            <div class="tab-title">Ayar *</div>
+                        </div>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content py-3">
+
+                <!-- ÜRÜN TAB -->
+                <div class="tab-pane fade show active" id="Product" role="tabpanel">
+
+                    <!-- Filtreler -->
+                    <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+                        <span class="text-light small me-1"><i class="fa fa-filter me-1"></i>Filtreler:</span>
+                        <span class="badge bg-dark text-light rounded-pill px-3 py-2">Tümü <i class="fa fa-times ms-1"></i></span>
+                        <span class="badge bg-light text-light border rounded-pill px-3 py-2">0 - 500₺</span>
+                        <span class="badge bg-light text-light border rounded-pill px-3 py-2">500 - 1000₺</span>
+                        <span class="badge bg-light text-light border rounded-pill px-3 py-2">1000₺ +</span>
+                        <span class="badge bg-light text-light border rounded-pill px-3 py-2"><i class="fa fa-star text-warning me-1"></i>4+ Yıldız</span>
+                        <div class="ms-auto">
+                            <select class="form-select form-select-sm">
+                                <option>Sırala: Önerilen</option>
+                                <option>En Çok Satan</option>
+                                <option>Fiyat: Düşükten Yükseğe</option>
+                                <option>Fiyat: Yüksekten Düşüğe</option>
+                                <option>En Yeni</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Ürün Grid -->
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5 g-3">
+
+                        <!-- Ürün 1 -->
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="position-relative">
+                                    <img src="https://placehold.co/300x220/e9ecef/495057?text=Sandalye+1" class="card-img-top" alt="Ergonomik Ofis Sandalyesi">
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-danger">-15%</span>
+                                    </div>
+                                    <div class="position-absolute top-0 start-0 m-2">
+                                        <span class="badge bg-success">Stokta</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title cursor-pointer mb-1">Ergonomik Ofis Sandalyesi</h6>
+                                    <p class="text-light small mb-2">Möbelix Mobilya</p>
+                                    <div class="clearfix">
+                                        <p class="mb-0 float-start small"><strong>289</strong> Satış</p>
+                                        <p class="mb-0 float-end fw-bold">
+                                            <span class="me-1 text-light text-decoration-line-through small">1.299₺</span>
+                                            <span class="text-danger">1.104₺</span>
+                                        </p>
+                                    </div>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <span class="text-warning small">
+                                            <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star-half-o"></i>
+                                        </span>
+                                        <span class="ms-1 text-light small">4.5 (312)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ürün 2 -->
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="position-relative">
+                                    <img src="https://placehold.co/300x220/e9ecef/495057?text=Sandalye+2" class="card-img-top" alt="Ahşap Yemek Sandalyesi">
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-danger">-10%</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title cursor-pointer mb-1">Ahşap Yemek Sandalyesi</h6>
+                                    <p class="text-light small mb-2">WoodHome</p>
+                                    <div class="clearfix">
+                                        <p class="mb-0 float-start small"><strong>134</strong> Satış</p>
+                                        <p class="mb-0 float-end fw-bold">
+                                            <span class="me-1 text-light text-decoration-line-through small">650₺</span>
+                                            <span class="text-danger">585₺</span>
+                                        </p>
+                                    </div>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <span class="text-warning small">
+                                            <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star-o"></i>
+                                        </span>
+                                        <span class="ms-1 text-light small">4.2 (182)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ürün 3 -->
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="position-relative">
+                                    <img src="https://placehold.co/300x220/e9ecef/495057?text=Sandalye+3" class="card-img-top" alt="Plastik Bahçe Sandalyesi">
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-warning text-light">Sınırlı</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title cursor-pointer mb-1">Plastik Bahçe Sandalyesi</h6>
+                                    <p class="text-light small mb-2">GardenLife</p>
+                                    <div class="clearfix">
+                                        <p class="mb-0 float-start small"><strong>57</strong> Satış</p>
+                                        <p class="mb-0 float-end fw-bold">
+                                            <span class="text-light">299₺</span>
+                                        </p>
+                                    </div>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <span class="text-warning small">
+                                            <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star-half-o"></i><i class="fa fa-star-o"></i>
+                                        </span>
+                                        <span class="ms-1 text-light small">3.7 (88)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ürün 4 -->
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="position-relative">
+                                    <img src="https://placehold.co/300x220/e9ecef/495057?text=Sandalye+4" class="card-img-top" alt="Döner Bilgisayar Koltuğu">
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-danger">-20%</span>
+                                    </div>
+                                    <div class="position-absolute top-0 start-0 m-2">
+                                        <span class="badge bg-primary">Çok Satan</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title cursor-pointer mb-1">Döner Bilgisayar Koltuğu</h6>
+                                    <p class="text-light small mb-2">OfficePro</p>
+                                    <div class="clearfix">
+                                        <p class="mb-0 float-start small"><strong>741</strong> Satış</p>
+                                        <p class="mb-0 float-end fw-bold">
+                                            <span class="me-1 text-light text-decoration-line-through small">2.500₺</span>
+                                            <span class="text-danger">1.999₺</span>
+                                        </p>
+                                    </div>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <span class="text-warning small">
+                                            <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i>
+                                        </span>
+                                        <span class="ms-1 text-light small">4.9 (520)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ürün 5 -->
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm">
+                                <div class="position-relative">
+                                    <img src="https://placehold.co/300x220/e9ecef/495057?text=Sandalye+6" class="card-img-top" alt="Çocuk Çalışma Sandalyesi">
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-info text-light">Yeni</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="card-title cursor-pointer mb-1">Çocuk Çalışma Sandalyesi</h6>
+                                    <p class="text-light small mb-2">KidsFurn</p>
+                                    <div class="clearfix">
+                                        <p class="mb-0 float-start small"><strong>22</strong> Satış</p>
+                                        <p class="mb-0 float-end fw-bold">
+                                            <span class="text-light">450₺</span>
+                                        </p>
+                                    </div>
+                                    <div class="d-flex align-items-center mt-2">
+                                        <span class="text-warning small">
+                                            <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star-half-o"></i>
+                                        </span>
+                                        <span class="ms-1 text-light small">4.6 (47)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Sayfalama -->
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <span class="text-light small">86 üründen 1-6 arası gösteriliyor</span>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item disabled"><a class="page-link" href="#">«</a></li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item"><a class="page-link" href="#">...</a></li>
+                                <li class="page-item"><a class="page-link" href="#">15</a></li>
+                                <li class="page-item"><a class="page-link" href="#">»</a></li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- GÖNDERİ TAB -->
+                <div class="tab-pane fade" id="Post" role="tabpanel">
+                    <div class="row g-3">
+                        <!-- Gönderi 1 -->
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-4">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-light">
+                                <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="position-relative">
+                                                <img src="https://placehold.co/45x45/0d6efd/ffffff?text=AK"
+                                                     class="rounded-circle border border-2 border-primary p-1"
+                                                     alt="avatar" width="45" height="45">
+
+                                                <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle"
+                                                      style="width: 12px; height: 12px;"
+                                                      title="Çevrimiçi">
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light small">Ahmet Kaya</h6>
+                                                <small class="text-light opacity-75" style="font-size: 0.7rem;">
+                                                    <i class="fa fa-clock-o me-1"></i>2 saat önce
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 bg-light bg-blur">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
+                                                        <i class="fa fa-warning opacity-50"></i> Şikayet Et
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="#">
+                                                        <i class="fa fa-user-times"></i> Takibi Bırak
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <p class="text-light mb-3 small-text" style="font-size: 0.9rem; line-height: 1.5;">
+                                        Yeni aldığım <span class="fw-medium">#ergonomik</span> sandalye harika!
+                                        Uzun mesailer artık çok daha konforlu. 🚀
+                                    </p>
+                                    <div class="position-relative rounded-3 overflow-hidden shadow-sm">
+                                        <img src="https://placehold.co/600x600/212529/6c757d?text=Sandalye+Detayı"
+                                             class="img-fluid w-100 object-fit-cover"
+                                             style="aspect-ratio: 1/1;" alt="post">
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-dark bg-opacity-50 backdrop-blur">1/1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                                        <div class="text-light opacity-75 d-flex align-items-center gap-1">
+                                            <i class="fa fa-eye" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">12.5k</span>
+                                        </div>
+                                        <a href="javascript:void(0)" class="text-danger text-decoration-none transition-all d-flex align-items-center gap-1">
+                                            <i class="fa fa-heart-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">1,148</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-info text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-comment-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">114</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-warning text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-share-alt me-1" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">11</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-light text-decoration-none opacity-75">
+                                            <i class="fa fa-bookmark-o" style="font-size: 0.8rem;"></i>
+                                        </a>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center w-100">
+                                            <span class="text-light small" style="font-size: 0.8rem;">Beraber: </span>
+                                            <div class="d-flex flex-row-reverse align-items-center ms-2">
+                                                <img src="https://i.pravatar.cc/150?u=7" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 1;" alt="p7">
+                                                <img src="https://i.pravatar.cc/150?u=6" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 2;" alt="p6">
+                                                <img src="https://i.pravatar.cc/150?u=5" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 3;" alt="p5">
+                                                <img src="https://i.pravatar.cc/150?u=4" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 4;" alt="p4">
+                                                <img src="https://i.pravatar.cc/150?u=3" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 5;" alt="p3">
+                                                <img src="https://i.pravatar.cc/150?u=2" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 6;" alt="p2">
+                                                <img src="https://i.pravatar.cc/150?u=1" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; position: relative; z-index: 7;" alt="p1">
+                                            </div>
+                                            <span class="text-light opacity-75 ms-auto" style="font-size: 0.7rem; margin-right:4px;">+4</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-4">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-light">
+                                <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="position-relative">
+                                                <img src="https://placehold.co/45x45/0d6efd/ffffff?text=AK"
+                                                     class="rounded-circle border border-2 border-primary p-1"
+                                                     alt="avatar" width="45" height="45">
+
+                                                <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle"
+                                                      style="width: 12px; height: 12px;"
+                                                      title="Çevrimiçi">
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light small">Ahmet Kaya</h6>
+                                                <small class="text-light opacity-75" style="font-size: 0.7rem;">
+                                                    <i class="fa fa-clock-o me-1"></i>2 saat önce
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 bg-light bg-blur">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
+                                                        <i class="fa fa-warning opacity-50"></i> Şikayet Et
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="#">
+                                                        <i class="fa fa-user-times"></i> Takibi Bırak
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <p class="text-light mb-3 small-text" style="font-size: 0.9rem; line-height: 1.5;">
+                                        Yeni aldığım <span class="fw-medium">#ergonomik</span> sandalye harika!
+                                        Uzun mesailer artık çok daha konforlu. 🚀
+                                    </p>
+                                    <div class="position-relative rounded-3 overflow-hidden shadow-sm">
+                                        <img src="https://placehold.co/600x600/212529/6c757d?text=Sandalye+Detayı"
+                                             class="img-fluid w-100 object-fit-cover"
+                                             style="aspect-ratio: 1/1;" alt="post">
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-dark bg-opacity-50 backdrop-blur">1/1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                                        <div class="text-light opacity-75 d-flex align-items-center gap-1">
+                                            <i class="fa fa-eye" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">12.5k</span>
+                                        </div>
+                                        <a href="javascript:void(0)" class="text-danger text-decoration-none transition-all d-flex align-items-center gap-1">
+                                            <i class="fa fa-heart-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">1,148</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-info text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-comment-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">114</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-warning text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-share-alt me-1" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">11</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-light text-decoration-none opacity-75">
+                                            <i class="fa fa-bookmark-o" style="font-size: 0.8rem;"></i>
+                                        </a>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center w-100">
+                                            <span class="text-light small" style="font-size: 0.8rem;">Beraber: </span>
+                                            <div class="d-flex flex-row-reverse align-items-center ms-2">
+                                                <img src="https://i.pravatar.cc/150?u=7" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 1;" alt="p7">
+                                                <img src="https://i.pravatar.cc/150?u=6" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 2;" alt="p6">
+                                                <img src="https://i.pravatar.cc/150?u=5" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 3;" alt="p5">
+                                                <img src="https://i.pravatar.cc/150?u=4" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 4;" alt="p4">
+                                                <img src="https://i.pravatar.cc/150?u=3" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 5;" alt="p3">
+                                                <img src="https://i.pravatar.cc/150?u=2" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 6;" alt="p2">
+                                                <img src="https://i.pravatar.cc/150?u=1" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; position: relative; z-index: 7;" alt="p1">
+                                            </div>
+                                            <span class="text-light opacity-75 ms-auto" style="font-size: 0.7rem; margin-right:4px;">+4</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-4">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-light">
+                                <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="position-relative">
+                                                <img src="https://placehold.co/45x45/0d6efd/ffffff?text=AK"
+                                                     class="rounded-circle border border-2 border-primary p-1"
+                                                     alt="avatar" width="45" height="45">
+
+                                                <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle"
+                                                      style="width: 12px; height: 12px;"
+                                                      title="Çevrimiçi">
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light small">Ahmet Kaya</h6>
+                                                <small class="text-light opacity-75" style="font-size: 0.7rem;">
+                                                    <i class="fa fa-clock-o me-1"></i>2 saat önce
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 bg-light bg-blur">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
+                                                        <i class="fa fa-warning opacity-50"></i> Şikayet Et
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="#">
+                                                        <i class="fa fa-user-times"></i> Takibi Bırak
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <p class="text-light mb-3 small-text" style="font-size: 0.9rem; line-height: 1.5;">
+                                        Yeni aldığım <span class="fw-medium">#ergonomik</span> sandalye harika!
+                                        Uzun mesailer artık çok daha konforlu. 🚀
+                                    </p>
+                                    <div class="position-relative rounded-3 overflow-hidden shadow-sm">
+                                        <img src="https://placehold.co/600x600/212529/6c757d?text=Sandalye+Detayı"
+                                             class="img-fluid w-100 object-fit-cover"
+                                             style="aspect-ratio: 1/1;" alt="post">
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-dark bg-opacity-50 backdrop-blur">1/1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                                        <div class="text-light opacity-75 d-flex align-items-center gap-1">
+                                            <i class="fa fa-eye" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">12.5k</span>
+                                        </div>
+                                        <a href="javascript:void(0)" class="text-danger text-decoration-none transition-all d-flex align-items-center gap-1">
+                                            <i class="fa fa-heart-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">1,148</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-info text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-comment-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">114</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-warning text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-share-alt me-1" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">11</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-light text-decoration-none opacity-75">
+                                            <i class="fa fa-bookmark-o" style="font-size: 0.8rem;"></i>
+                                        </a>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center w-100">
+                                            <span class="text-light small" style="font-size: 0.8rem;">Beraber: </span>
+                                            <div class="d-flex flex-row-reverse align-items-center ms-2">
+                                                <img src="https://i.pravatar.cc/150?u=7" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 1;" alt="p7">
+                                                <img src="https://i.pravatar.cc/150?u=6" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 2;" alt="p6">
+                                                <img src="https://i.pravatar.cc/150?u=5" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 3;" alt="p5">
+                                                <img src="https://i.pravatar.cc/150?u=4" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 4;" alt="p4">
+                                                <img src="https://i.pravatar.cc/150?u=3" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 5;" alt="p3">
+                                                <img src="https://i.pravatar.cc/150?u=2" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 6;" alt="p2">
+                                                <img src="https://i.pravatar.cc/150?u=1" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; position: relative; z-index: 7;" alt="p1">
+                                            </div>
+                                            <span class="text-light opacity-75 ms-auto" style="font-size: 0.7rem; margin-right:4px;">+4</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-4">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-light">
+                                <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="position-relative">
+                                                <img src="https://placehold.co/45x45/0d6efd/ffffff?text=AK"
+                                                     class="rounded-circle border border-2 border-primary p-1"
+                                                     alt="avatar" width="45" height="45">
+
+                                                <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle"
+                                                      style="width: 12px; height: 12px;"
+                                                      title="Çevrimiçi">
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light small">Ahmet Kaya</h6>
+                                                <small class="text-light opacity-75" style="font-size: 0.7rem;">
+                                                    <i class="fa fa-clock-o me-1"></i>2 saat önce
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 bg-light bg-blur">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
+                                                        <i class="fa fa-warning opacity-50"></i> Şikayet Et
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="#">
+                                                        <i class="fa fa-user-times"></i> Takibi Bırak
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <p class="text-light mb-3 small-text" style="font-size: 0.9rem; line-height: 1.5;">
+                                        Yeni aldığım <span class="fw-medium">#ergonomik</span> sandalye harika!
+                                        Uzun mesailer artık çok daha konforlu. 🚀
+                                    </p>
+                                    <div class="position-relative rounded-3 overflow-hidden shadow-sm">
+                                        <img src="https://placehold.co/600x600/212529/6c757d?text=Sandalye+Detayı"
+                                             class="img-fluid w-100 object-fit-cover"
+                                             style="aspect-ratio: 1/1;" alt="post">
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-dark bg-opacity-50 backdrop-blur">1/1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                                        <div class="text-light opacity-75 d-flex align-items-center gap-1">
+                                            <i class="fa fa-eye" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">12.5k</span>
+                                        </div>
+                                        <a href="javascript:void(0)" class="text-danger text-decoration-none transition-all d-flex align-items-center gap-1">
+                                            <i class="fa fa-heart-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">1,148</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-info text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-comment-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">114</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-warning text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-share-alt me-1" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">11</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-light text-decoration-none opacity-75">
+                                            <i class="fa fa-bookmark-o" style="font-size: 0.8rem;"></i>
+                                        </a>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center w-100">
+                                            <span class="text-light small" style="font-size: 0.8rem;">Beraber: </span>
+                                            <div class="d-flex flex-row-reverse align-items-center ms-2">
+                                                <img src="https://i.pravatar.cc/150?u=7" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 1;" alt="p7">
+                                                <img src="https://i.pravatar.cc/150?u=6" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 2;" alt="p6">
+                                                <img src="https://i.pravatar.cc/150?u=5" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 3;" alt="p5">
+                                                <img src="https://i.pravatar.cc/150?u=4" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 4;" alt="p4">
+                                                <img src="https://i.pravatar.cc/150?u=3" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 5;" alt="p3">
+                                                <img src="https://i.pravatar.cc/150?u=2" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 6;" alt="p2">
+                                                <img src="https://i.pravatar.cc/150?u=1" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; position: relative; z-index: 7;" alt="p1">
+                                            </div>
+                                            <span class="text-light opacity-75 ms-auto" style="font-size: 0.7rem; margin-right:4px;">+4</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-4">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-light">
+                                <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="position-relative">
+                                                <img src="https://placehold.co/45x45/0d6efd/ffffff?text=AK"
+                                                     class="rounded-circle border border-2 border-primary p-1"
+                                                     alt="avatar" width="45" height="45">
+
+                                                <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle"
+                                                      style="width: 12px; height: 12px;"
+                                                      title="Çevrimiçi">
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light small">Ahmet Kaya</h6>
+                                                <small class="text-light opacity-75" style="font-size: 0.7rem;">
+                                                    <i class="fa fa-clock-o me-1"></i>2 saat önce
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 bg-light bg-blur">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
+                                                        <i class="fa fa-warning opacity-50"></i> Şikayet Et
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="#">
+                                                        <i class="fa fa-user-times"></i> Takibi Bırak
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <p class="text-light mb-3 small-text" style="font-size: 0.9rem; line-height: 1.5;">
+                                        Yeni aldığım <span class="fw-medium">#ergonomik</span> sandalye harika!
+                                        Uzun mesailer artık çok daha konforlu. 🚀
+                                    </p>
+                                    <div class="position-relative rounded-3 overflow-hidden shadow-sm">
+                                        <img src="https://placehold.co/600x600/212529/6c757d?text=Sandalye+Detayı"
+                                             class="img-fluid w-100 object-fit-cover"
+                                             style="aspect-ratio: 1/1;" alt="post">
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-dark bg-opacity-50 backdrop-blur">1/1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                                        <div class="text-light opacity-75 d-flex align-items-center gap-1">
+                                            <i class="fa fa-eye" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">12.5k</span>
+                                        </div>
+                                        <a href="javascript:void(0)" class="text-danger text-decoration-none transition-all d-flex align-items-center gap-1">
+                                            <i class="fa fa-heart-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">1,148</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-info text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-comment-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">114</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-warning text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-share-alt me-1" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">11</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-light text-decoration-none opacity-75">
+                                            <i class="fa fa-bookmark-o" style="font-size: 0.8rem;"></i>
+                                        </a>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center w-100">
+                                            <span class="text-light small" style="font-size: 0.8rem;">Beraber: </span>
+                                            <div class="d-flex flex-row-reverse align-items-center ms-2">
+                                                <img src="https://i.pravatar.cc/150?u=7" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 1;" alt="p7">
+                                                <img src="https://i.pravatar.cc/150?u=6" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 2;" alt="p6">
+                                                <img src="https://i.pravatar.cc/150?u=5" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 3;" alt="p5">
+                                                <img src="https://i.pravatar.cc/150?u=4" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 4;" alt="p4">
+                                                <img src="https://i.pravatar.cc/150?u=3" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 5;" alt="p3">
+                                                <img src="https://i.pravatar.cc/150?u=2" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 6;" alt="p2">
+                                                <img src="https://i.pravatar.cc/150?u=1" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; position: relative; z-index: 7;" alt="p1">
+                                            </div>
+                                            <span class="text-light opacity-75 ms-auto" style="font-size: 0.7rem; margin-right:4px;">+4</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12 mb-4">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-light">
+                                <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="position-relative">
+                                                <img src="https://placehold.co/45x45/0d6efd/ffffff?text=AK"
+                                                     class="rounded-circle border border-2 border-primary p-1"
+                                                     alt="avatar" width="45" height="45">
+
+                                                <span class="position-absolute bottom-0 end-0 p-1 bg-success border border-2 border-dark rounded-circle"
+                                                      style="width: 12px; height: 12px;"
+                                                      title="Çevrimiçi">
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light small">Ahmet Kaya</h6>
+                                                <small class="text-light opacity-75" style="font-size: 0.7rem;">
+                                                    <i class="fa fa-clock-o me-1"></i>2 saat önce
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="dropdown">
+                                            <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fa fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 bg-light bg-blur">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
+                                                        <i class="fa fa-warning opacity-50"></i> Şikayet Et
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="#">
+                                                        <i class="fa fa-user-times"></i> Takibi Bırak
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
+                                    <p class="text-light mb-3 small-text" style="font-size: 0.9rem; line-height: 1.5;">
+                                        Yeni aldığım <span class="fw-medium">#ergonomik</span> sandalye harika!
+                                        Uzun mesailer artık çok daha konforlu. 🚀
+                                    </p>
+                                    <div class="position-relative rounded-3 overflow-hidden shadow-sm">
+                                        <img src="https://placehold.co/600x600/212529/6c757d?text=Sandalye+Detayı"
+                                             class="img-fluid w-100 object-fit-cover"
+                                             style="aspect-ratio: 1/1;" alt="post">
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-dark bg-opacity-50 backdrop-blur">1/1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                                        <div class="text-light opacity-75 d-flex align-items-center gap-1">
+                                            <i class="fa fa-eye" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">12.5k</span>
+                                        </div>
+                                        <a href="javascript:void(0)" class="text-danger text-decoration-none transition-all d-flex align-items-center gap-1">
+                                            <i class="fa fa-heart-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">1,148</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-info text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-comment-o" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">114</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-warning text-decoration-none d-flex align-items-center gap-1">
+                                            <i class="fa fa-share-alt me-1" style="font-size: 0.8rem;"></i>
+                                            <span class="fw-bold" style="font-size: 0.7rem; letter-spacing: -0.3px;">11</span>
+                                        </a>
+                                        <a href="javascript:void(0)" class="text-light text-decoration-none opacity-75">
+                                            <i class="fa fa-bookmark-o" style="font-size: 0.8rem;"></i>
+                                        </a>
+                                    </div>
+                                    <div class="mt-2">
+                                        <div class="d-flex align-items-center w-100">
+                                            <span class="text-light small" style="font-size: 0.8rem;">Beraber: </span>
+                                            <div class="d-flex flex-row-reverse align-items-center ms-2">
+                                                <img src="https://i.pravatar.cc/150?u=7" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 1;" alt="p7">
+                                                <img src="https://i.pravatar.cc/150?u=6" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 2;" alt="p6">
+                                                <img src="https://i.pravatar.cc/150?u=5" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 3;" alt="p5">
+                                                <img src="https://i.pravatar.cc/150?u=4" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 4;" alt="p4">
+                                                <img src="https://i.pravatar.cc/150?u=3" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 5;" alt="p3">
+                                                <img src="https://i.pravatar.cc/150?u=2" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; margin-left: -10px; position: relative; z-index: 6;" alt="p2">
+                                                <img src="https://i.pravatar.cc/150?u=1" class="rounded-circle border border-1 border-dark shadow-sm" style="width: 20px; height: 20px; position: relative; z-index: 7;" alt="p1">
+                                            </div>
+                                            <span class="text-light opacity-75 ms-auto" style="font-size: 0.7rem; margin-right:4px;">+4</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Yazı TAB -->
+                <div class="tab-pane fade" id="Blog" role="tabpanel">
+                    <div class="row g-3">
+
+                        <!-- Gönderi 1 -->
+                        <div class="col-lg-4 col-md-8 col-12 mx-auto">
+                            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <img src="https://placehold.co/48x48/6c757d/ffffff?text=AK"
+                                                 class="rounded-circle border border-2 border-white shadow-sm"
+                                                 width="50" height="50" alt="avatar">
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light">Ahmet Kaya</h6>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <small class="text-light">@@ahmetkaya</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-light small">
+                                            <i class="fa fa-clock-o me-1"></i>2s önce
+                                        </div>
+                                    </div>
+
+                                    <div class="post-content">
+                                        <span class="badge rounded-pill bg-light text-light border fw-normal  mb-2" style="font-size: 0.7rem; width:100%;">Mobilya Grubu</span>
+                                        <h6 class="fw-bold mb-2">Modern Ergonomi Hakkında</h6>
+                                        <p class="text-light lh-base mb-3">
+                                            Yeni aldığım <span class="fw-semibold text-primary">ergonomik sandalye</span> harika!
+                                            Uzun saatler çalışmak için mükemmel bir sırt desteği sunuyor.
+                                            Deneyimlerim neticesinde herkese tavsiye ederim.
+                                        </p>
+
+                                        <div class="position-relative mb-3">
+                                            <img src="https://placehold.co/600x300/e9ecef/495057?text=Sandalye+Detayı"
+                                                 class="img-fluid rounded-4 w-100 object-fit-cover"
+                                                 style="max-height: 300px;" alt="gönderi görseli">
+                                        </div>
+                                    </div>
+
+                                    <hr class="opacity-10">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex gap-4">
+                                            <span class="text-warning cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-eye me-1 text-warning"></i> <strong>1024</strong>
+                                            </span>
+                                            <span class="text-danger cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-heart-o me-1 text-danger"></i> <strong>124</strong>
+                                            </span>
+                                            <span class="text-info cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-comment-o me-1"></i> <strong>18</strong>
+                                            </span>
+                                        </div>
+                                        <button class="btn btn-sm text-light text-light p-0">
+                                            <i class="fa fa-share-alt me-1"></i> Paylaş
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-8 col-12 mx-auto">
+                            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <img src="https://placehold.co/48x48/6c757d/ffffff?text=AK"
+                                                 class="rounded-circle border border-2 border-white shadow-sm"
+                                                 width="50" height="50" alt="avatar">
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light">Ahmet Kaya</h6>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <small class="text-light">@@ahmetkaya</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-light small">
+                                            <i class="fa fa-clock-o me-1"></i>2s önce
+                                        </div>
+                                    </div>
+
+                                    <div class="post-content">
+                                        <span class="badge rounded-pill bg-light text-light border fw-normal  mb-2" style="font-size: 0.7rem; width:100%;">Mobilya Grubu</span>
+                                        <h6 class="fw-bold mb-2">Modern Ergonomi Hakkında</h6>
+                                        <p class="text-light lh-base mb-3">
+                                            Yeni aldığım <span class="fw-semibold text-primary">ergonomik sandalye</span> harika!
+                                            Uzun saatler çalışmak için mükemmel bir sırt desteği sunuyor.
+                                            Deneyimlerim neticesinde herkese tavsiye ederim.
+                                        </p>
+
+                                        <div class="position-relative mb-3">
+                                            <img src="https://placehold.co/600x300/e9ecef/495057?text=Sandalye+Detayı"
+                                                 class="img-fluid rounded-4 w-100 object-fit-cover"
+                                                 style="max-height: 300px;" alt="gönderi görseli">
+                                        </div>
+                                    </div>
+
+                                    <hr class="opacity-10">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex gap-4">
+                                            <span class="text-warning cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-eye me-1 text-warning"></i> <strong>1024</strong>
+                                            </span>
+                                            <span class="text-danger cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-heart-o me-1 text-danger"></i> <strong>124</strong>
+                                            </span>
+                                            <span class="text-info cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-comment-o me-1"></i> <strong>18</strong>
+                                            </span>
+                                        </div>
+                                        <button class="btn btn-sm text-light text-light p-0">
+                                            <i class="fa fa-share-alt me-1"></i> Paylaş
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-8 col-12 mx-auto">
+                            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <img src="https://placehold.co/48x48/6c757d/ffffff?text=AK"
+                                                 class="rounded-circle border border-2 border-white shadow-sm"
+                                                 width="50" height="50" alt="avatar">
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-light">Ahmet Kaya</h6>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <small class="text-light">@@ahmetkaya</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-light small">
+                                            <i class="fa fa-clock-o me-1"></i>2s önce
+                                        </div>
+                                    </div>
+
+                                    <div class="post-content">
+                                        <span class="badge rounded-pill bg-light text-light border fw-normal  mb-2" style="font-size: 0.7rem; width:100%;">Mobilya Grubu</span>
+                                        <h6 class="fw-bold mb-2">Modern Ergonomi Hakkında</h6>
+                                        <p class="text-light lh-base mb-3">
+                                            Yeni aldığım <span class="fw-semibold text-primary">ergonomik sandalye</span> harika!
+                                            Uzun saatler çalışmak için mükemmel bir sırt desteği sunuyor.
+                                            Deneyimlerim neticesinde herkese tavsiye ederim.
+                                        </p>
+
+                                        <div class="position-relative mb-3">
+                                            <img src="https://placehold.co/600x300/e9ecef/495057?text=Sandalye+Detayı"
+                                                 class="img-fluid rounded-4 w-100 object-fit-cover"
+                                                 style="max-height: 300px;" alt="gönderi görseli">
+                                        </div>
+                                    </div>
+
+                                    <hr class="opacity-10">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex gap-4">
+                                            <span class="text-warning cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-eye me-1 text-warning"></i> <strong>1024</strong>
+                                            </span>
+                                            <span class="text-danger cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-heart-o me-1 text-danger"></i> <strong>124</strong>
+                                            </span>
+                                            <span class="text-info cursor-pointer hover-primary transition-all small">
+                                                <i class="fa fa-comment-o me-1"></i> <strong>18</strong>
+                                            </span>
+                                        </div>
+                                        <button class="btn btn-sm text-light text-light p-0">
+                                            <i class="fa fa-share-alt me-1"></i> Paylaş
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <!-- KULLANICI TAB -->
+                <div class="tab-pane fade" id="User" role="tabpanel">
+                    <div class="row g-3">
+
+                        <!-- Kullanıcı 1 -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center gap-3 mb-3">
+                                        <img src="https://placehold.co/56x56/6c757d/ffffff?text=AK" class="rounded-circle" width="56" height="56" alt="avatar">
+                                        <div>
+                                            <strong class="d-block">Ahmet Kaya</strong>
+                                            <span class="text-light small">@@ahmetkaya</span>
+                                            <div><span class="badge bg-light text-light border small">Mobilya Tutkunu</span></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-light small mb-3">Mobilya ve dekorasyon üzerine içerikler üretiyorum. Sandalye koleksiyonum hakkında sorularınız için DM atabilirsiniz.</p>
+                                    <div class="d-flex text-center gap-3 border-top pt-3">
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">148</strong>
+                                            <span class="text-light small">Gönderi</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">2.4K</strong>
+                                            <span class="text-light small">Takipçi</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">312</strong>
+                                            <span class="text-light small">Takip</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-dark btn-sm w-100 mt-3"><i class="fa fa-user-plus me-1"></i>Takip Et</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kullanıcı 2 -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center gap-3 mb-3">
+                                        <img src="https://placehold.co/56x56/495057/ffffff?text=FY" class="rounded-circle" width="56" height="56" alt="avatar">
+                                        <div>
+                                            <strong class="d-block">Fatma Yılmaz</strong>
+                                            <span class="text-light small">@@fatmayilmaz</span>
+                                            <div><span class="badge bg-primary text-light small">Satıcı</span></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-light small mb-3">WoodHome mağazası sahibi. El yapımı ahşap mobilyalar ve sandalyeler tasarlıyorum. 10+ yıl deneyim.</p>
+                                    <div class="d-flex text-center gap-3 border-top pt-3">
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">89</strong>
+                                            <span class="text-light small">Gönderi</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">5.1K</strong>
+                                            <span class="text-light small">Takipçi</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">104</strong>
+                                            <span class="text-light small">Takip</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-outline-secondary btn-sm w-100 mt-3"><i class="fa fa-check me-1"></i>Takip Ediliyor</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kullanıcı 3 -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center gap-3 mb-3">
+                                        <img src="https://placehold.co/56x56/343a40/ffffff?text=SE" class="rounded-circle" width="56" height="56" alt="avatar">
+                                        <div>
+                                            <strong class="d-block">Selin Erdoğan</strong>
+                                            <span class="text-light small">@@selinerdogan</span>
+                                            <div><span class="badge bg-light text-light border small">İç Mimar</span></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-light small mb-3">İç mimar. Sandalye ve mobilya seçiminde profesyonel danışmanlık veriyorum. Projelerim için iletişime geçebilirsiniz.</p>
+                                    <div class="d-flex text-center gap-3 border-top pt-3">
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">215</strong>
+                                            <span class="text-light small">Gönderi</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">8.7K</strong>
+                                            <span class="text-light small">Takipçi</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong class="d-block">230</strong>
+                                            <span class="text-light small">Takip</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-dark btn-sm w-100 mt-3"><i class="fa fa-user-plus me-1"></i>Takip Et</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- İŞLETME TAB -->
+                <div class="tab-pane fade" id="Business" role="tabpanel">
+                    <div class="row g-3">
+
+                        <!-- İşletme 1 -->
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex gap-3 mb-3">
+                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=WH" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
+                                        <div>
+                                            <strong class="d-block">WoodHome Mobilya</strong>
+                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>İstanbul, Türkiye</span>
+                                            <div class="mt-1">
+                                                <span class="badge bg-success text-light small">Onaylı İşletme</span>
+                                                <span class="badge bg-light text-light border small ms-1">Mobilya</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-light small mb-3">El yapımı ahşap sandalye ve mobilya imalatı. Meşe, kayın ve çam ağacından özel sipariş üretim. 2010'dan beri hizmetinizdeyiz.</p>
+                                    <div class="row text-center g-2 border-top pt-3">
+                                        <div class="col-4">
+                                            <strong class="d-block">1.2K</strong>
+                                            <span class="text-light small">Ürün</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">4.8 <i class="fa fa-star text-warning small"></i></strong>
+                                            <span class="text-light small">Puan</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">14 yıl</strong>
+                                            <span class="text-light small">Deneyim</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
+                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İşletme 2 -->
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex gap-3 mb-3">
+                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=OP" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
+                                        <div>
+                                            <strong class="d-block">OfficePro Türkiye</strong>
+                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>Ankara, Türkiye</span>
+                                            <div class="mt-1">
+                                                <span class="badge bg-success text-light small">Onaylı İşletme</span>
+                                                <span class="badge bg-light text-light border small ms-1">Ofis Ekipmanı</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-light small mb-3">Ergonomik ofis sandalyeleri ve çalışma mobilyaları. Kurumsal ve bireysel müşterilere özel fiyat avantajları sunuyoruz.</p>
+                                    <div class="row text-center g-2 border-top pt-3">
+                                        <div class="col-4">
+                                            <strong class="d-block">340</strong>
+                                            <span class="text-light small">Ürün</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">4.6 <i class="fa fa-star text-warning small"></i></strong>
+                                            <span class="text-light small">Puan</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">8 yıl</strong>
+                                            <span class="text-light small">Deneyim</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
+                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İşletme 3 -->
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex gap-3 mb-3">
+                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=GL" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
+                                        <div>
+                                            <strong class="d-block">GardenLife Dış Mekan</strong>
+                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>İzmir, Türkiye</span>
+                                            <div class="mt-1">
+                                                <span class="badge bg-light text-light border small">Bahçe & Dış Mekan</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-light small mb-3">Dış mekan sandalyesi, masa ve bahçe mobilyaları. UV dayanımlı malzemeler, tüm hava koşullarına uygun ürünler.</p>
+                                    <div class="row text-center g-2 border-top pt-3">
+                                        <div class="col-4">
+                                            <strong class="d-block">580</strong>
+                                            <span class="text-light small">Ürün</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">4.3 <i class="fa fa-star text-warning small"></i></strong>
+                                            <span class="text-light small">Puan</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">6 yıl</strong>
+                                            <span class="text-light small">Deneyim</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
+                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- İşletme 4 -->
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body">
+                                    <div class="d-flex gap-3 mb-3">
+                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=UD" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
+                                        <div>
+                                            <strong class="d-block">UrbanDecor Studio</strong>
+                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>İstanbul, Türkiye</span>
+                                            <div class="mt-1">
+                                                <span class="badge bg-success text-light small">Onaylı İşletme</span>
+                                                <span class="badge bg-light text-light border small ms-1">Tasarım & Dekor</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-light small mb-3">Retro ve modern tarz sandalye, koltuk ve bar taburesi. Özel renk ve kumaş seçenekleriyle kişiselleştirme imkânı.</p>
+                                    <div class="row text-center g-2 border-top pt-3">
+                                        <div class="col-4">
+                                            <strong class="d-block">210</strong>
+                                            <span class="text-light small">Ürün</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">4.7 <i class="fa fa-star text-warning small"></i></strong>
+                                            <span class="text-light small">Puan</span>
+                                        </div>
+                                        <div class="col-4">
+                                            <strong class="d-block">4 yıl</strong>
+                                            <span class="text-light small">Deneyim</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 mt-3">
+                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
+                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- AYAR TAB -->
+                <div class="tab-pane fade" id="Setting" role="tabpanel">
+                    <div class="row g-4">
+
+                        <!-- Arama Tercihleri -->
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-light border-0 fw-bold">
+                                    <i class="fa fa-search me-2 text-light"></i>Arama Tercihleri
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Varsayılan Arama Kategorisi</label>
+                                        <select class="form-select form-select-sm">
+                                            <option selected>Tümü</option>
+                                            <option>Ürün</option>
+                                            <option>Gönderi</option>
+                                            <option>Kullanıcı</option>
+                                            <option>İşletme</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-semibold">Sayfa Başına Sonuç</label>
+                                        <select class="form-select form-select-sm">
+                                            <option>12</option>
+                                            <option selected>24</option>
+                                            <option>48</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="safeSearch" checked>
+                                        <label class="form-check-label small" for="safeSearch">Güvenli Arama</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="autoSuggest" checked>
+                                        <label class="form-check-label small" for="autoSuggest">Otomatik Tamamlama</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bildirim & Gizlilik -->
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-light border-0 fw-bold">
+                                    <i class="fa fa-bell me-2 text-light"></i>Bildirim & Gizlilik
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="searchHistory" checked>
+                                        <label class="form-check-label small" for="searchHistory">Arama Geçmişi Kaydet</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="personalResults">
+                                        <label class="form-check-label small" for="personalResults">Kişiselleştirilmiş Sonuçlar</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="priceAlert" checked>
+                                        <label class="form-check-label small" for="priceAlert">Fiyat Düşüşü Bildirimi</label>
+                                    </div>
+                                    <hr class="my-2">
+                                    <button class="btn btn-outline-danger btn-sm w-100">
+                                        <i class="fa fa-trash me-1"></i>Arama Geçmişini Temizle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public Users? use { get; set; }
+
+    [Parameter]
+    public string? SearchWantedText { get; set; }
+}

@@ -182,6 +182,43 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
         margin: -2px;
     }
+
+    .btn {
+        backdrop-filter: blur(12px);
+    }
+
+    .back-to-top {
+        backdrop-filter: blur(12px);
+    }
+
+    .modal {
+        backdrop-filter: blur(12px);
+    }
+</style>
+@* Sayfa geçiş Egekti *@
+<style>
+    #page-transition-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 999999;
+        pointer-events: none;
+        background: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out, backdrop-filter 0.3s ease-in-out;
+    }
+
+        #page-transition-overlay.loaded {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            backdrop-filter: blur(0px) !important;
+            -webkit-backdrop-filter: blur(0px) !important;
+        }
 </style>
 
 @* İkonların Gözükmesi İçin *@

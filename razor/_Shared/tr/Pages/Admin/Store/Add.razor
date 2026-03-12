@@ -42,7 +42,6 @@
 
                 <!-- Kapak Fotoğrafı -->
                 <div class="position-relative">
-
                     @if (_coverMedia is not null)
                     {
                         <img src="@_coverMedia.FileUrl"
@@ -54,7 +53,7 @@
                              class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
                     }
                     <div class="position-absolute bottom-0 end-0 m-3">
-                        <button type="button" class="btn btn-light btn-sm fw-bold shadow-sm border-0" data-bs-toggle="modal" data-bs-target="#modalCoverList"
+                        <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm border-0 text-dark" data-bs-toggle="modal" data-bs-target="#modalCoverList"
                                 @onclick='() => _activeMediaSlot = "cover"'>
                             <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
                         </button>
@@ -78,7 +77,7 @@
                                      width="168" height="168" style="object-fit: cover;" alt="No Image">
                             }
                             <button type="button"
-                                    class="btn btn-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                                    class="btn btn-outline-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
                                     style="width: 36px; height: 36px;" data-bs-toggle="modal" data-bs-target="#modalProfileList"
                                     @onclick='() => _activeMediaSlot = "profile"'>
                                 <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
@@ -88,8 +87,15 @@
 
                     <div class="col-12" style="margin-top:5px;">
                         <label class="form-label">İşletme/Mağza Adını Belirtiniz</label>
-                        <input class="form-control mb-3" type="text">
+                        <input class="form-control mb-3" type="text" @bind="_Store.Name">
                     </div>
+
+
+                    <div class="col-12">
+                        <label class="form-label">İşletme/Mağza Açıklaması</label>
+                        <textarea class="form-control" rows="3" @bind="_Store.Description"></textarea>
+                    </div>
+
 
                     <div class="card bg-light">
                         <div class="card-body">
@@ -97,9 +103,7 @@
                                 <li class="nav-item" role="presentation">
                                     <a class="nav-link active" data-bs-toggle="tab" href="#primaryhome" role="tab" aria-selected="true">
                                         <div class="d-flex align-items-center">
-                                            <div class="tab-icon">
-                                                <i class="fa fa-camera font-18 me-1"></i>
-                                            </div>
+                                            <div class="tab-icon"><i class="fa fa-camera font-18 me-1"></i></div>
                                             <div class="tab-title">İşletme Dış Çekimleri</div>
                                         </div>
                                     </a>
@@ -107,9 +111,7 @@
                                 <li class="nav-item" role="presentation">
                                     <a class="nav-link" data-bs-toggle="tab" href="#primaryprofile" role="tab" aria-selected="false">
                                         <div class="d-flex align-items-center">
-                                            <div class="tab-icon">
-                                                <i class="fa fa-building-o font-18 me-1"></i>
-                                            </div>
+                                            <div class="tab-icon"><i class="fa fa-building-o font-18 me-1"></i></div>
                                             <div class="tab-title">İşletme İç Çekimleri</div>
                                         </div>
                                     </a>
@@ -117,9 +119,7 @@
                                 <li class="nav-item" role="presentation">
                                     <a class="nav-link" data-bs-toggle="tab" href="#primarycontact" role="tab" aria-selected="false">
                                         <div class="d-flex align-items-center">
-                                            <div class="tab-icon">
-                                                <i class="fa fa-file-pdf-o font-18 me-1"></i>
-                                            </div>
+                                            <div class="tab-icon"><i class="fa fa-file-pdf-o font-18 me-1"></i></div>
                                             <div class="tab-title">İşletme Resmi Evrakları</div>
                                         </div>
                                     </a>
@@ -127,11 +127,12 @@
                             </ul>
 
                             <div class="tab-content py-3">
+                                <!-- Dış Çekim -->
                                 <div class="tab-pane fade show active" id="primaryhome" role="tabpanel">
                                     <div class="mb-4">
                                         <label class="form-label text-light fw-semibold">
                                             <i class="fa fa-tree me-1 text-success"></i>İşletme Dış Çekim Görselleri
-                                            <span class="badge bg-secondary ms-2 fw-normal" style="font-size:0.7rem;">En Az 3 Görsel</span>
+                                            <span class="badge bg-warning ms-2 fw-normal text-dark" style="font-size:0.7rem;">En Az 3 Görsel</span>
                                         </label>
                                         <div class="row g-2 mb-3">
                                             <div class="col-md-12">
@@ -166,11 +167,12 @@
                                     </div>
                                 </div>
 
+                                <!-- İç Çekim -->
                                 <div class="tab-pane fade" id="primaryprofile" role="tabpanel">
                                     <div class="mb-4">
                                         <label class="form-label text-light fw-semibold">
                                             <i class="fa fa-search-plus me-1 text-success"></i>İşletme İç Çekim Görselleri
-                                            <span class="badge bg-secondary ms-2 fw-normal" style="font-size:0.7rem;">En Az 3 Görsel</span>
+                                            <span class="badge bg-warning ms-2 fw-normal text-dark" style="font-size:0.7rem;">En Az 3 Görsel</span>
                                         </label>
                                         <div class="row g-2 mb-3">
                                             <div class="col-md-12">
@@ -196,55 +198,17 @@
                                                                 class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
                                                                 style="width:20px;height:20px;font-size:0.7rem; margin-top:-5px; margin-right:-5px;"
                                                                 @onclick="() => { _galleryInSideFiles.Remove(m); }">
-                                                            <i class="fa fa-trash-o text-white"></i>
+                                                            <i class="fa fa-trash-o text-white" style="margin-left:5px;"></i>
                                                         </button>
                                                     </div>
                                                 }
                                             </div>
                                         }
-
                                     </div>
                                 </div>
 
+                                <!-- Resmi Evraklar -->
                                 <div class="tab-pane fade" id="primarycontact" role="tabpanel">
-                                    @*                                   
-                                      <div class="mb-4">
-                                        <label class="form-label text-light fw-semibold">
-                                            <i class="fa fa-briefcase me-1 text-success"></i>Resmi Evraklar
-                                            <span class="badge bg-secondary ms-2 fw-normal" style="font-size:0.7rem;">En Az 3 Görsel</span>
-                                        </label>
-                                        <div class="row g-2 mb-3">
-                                            <div class="col-md-12">
-                                                <button type="button" class="btn btn-outline-light btn-sm w-100"
-                                                        data-bs-toggle="modal" data-bs-target="#modalGalleryDocuments"
-                                                        @onclick="OpenDocumentModal">
-                                                    <i class="fa fa-folder-open-o me-1"></i>Medyadan Seç
-                                                    @if (_galleryDocuments.Any())
-                                                    {
-                                                        <span class="badge bg-primary ms-1">@_galleryDocuments.Count</span>
-                                                    }
-                                                </button>
-                                            </div>
-                                        </div>
-                                        @if (_galleryDocuments.Any())
-                                        {
-                                            <div class="d-flex flex-wrap gap-2">
-                                                @foreach (var m in _galleryDocuments.ToList())
-                                                {
-                                                    <div class="position-relative">
-                                                        <img src="@m.FileUrl" class="rounded border border-secondary" style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
-                                                        <button type="button"
-                                                                class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
-                                                                style="width:20px;height:20px;font-size:0.7rem; margin-top:-5px; margin-right:-5px;"
-                                                                @onclick="() => { _galleryDocuments.Remove(m); }">
-                                                            <i class="fa fa-times text-white" style="margin-left:5px"></i>
-                                                        </button>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                    *@        
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-hover align-middle mb-0 bg-light">
                                             <thead class="table-light">
@@ -258,7 +222,6 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-file-pdf-o"></i></td>
                                                     <td class="fw-semibold">Kuruluş Belgesi <span class="text-danger">*</span></td>
@@ -270,6 +233,7 @@
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -290,7 +254,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-file-text-o"></i></td>
                                                     <td class="fw-semibold">Faaliyet Belgesi <span class="text-danger">*</span></td>
@@ -298,11 +261,11 @@
                                                     <td class="small">
                                                         @if (_activityCertificate is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_activityCertificate.FileName">@_activityCertificate.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -323,7 +286,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-university"></i></td>
                                                     <td class="fw-semibold">Vergi Levhası / VAT <span class="text-danger">*</span></td>
@@ -331,11 +293,11 @@
                                                     <td class="small">
                                                         @if (_taxRegistration is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_taxRegistration.FileName">@_taxRegistration.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -356,7 +318,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-newspaper-o"></i></td>
                                                     <td class="fw-semibold">Sicil Gazetesi</td>
@@ -364,11 +325,11 @@
                                                     <td class="small">
                                                         @if (_tradeRegistryGazette is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_tradeRegistryGazette.FileName">@_tradeRegistryGazette.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -389,7 +350,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-pencil-square-o"></i></td>
                                                     <td class="fw-semibold">İmza Sirküleri <span class="text-danger">*</span></td>
@@ -397,11 +357,11 @@
                                                     <td class="small">
                                                         @if (_signatureCircular is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_signatureCircular.FileName">@_signatureCircular.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -422,7 +382,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-id-card-o"></i></td>
                                                     <td class="fw-semibold">Yetkili Kimlik Belgesi <span class="text-danger">*</span></td>
@@ -430,11 +389,11 @@
                                                     <td class="small">
                                                         @if (_authorizedPersonId is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_authorizedPersonId.FileName">@_authorizedPersonId.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -455,7 +414,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-map-marker"></i></td>
                                                     <td class="fw-semibold">İşyeri Adres Kanıtı <span class="text-danger">*</span></td>
@@ -463,11 +421,11 @@
                                                     <td class="small">
                                                         @if (_proofOfBusinessAddress is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_proofOfBusinessAddress.FileName">@_proofOfBusinessAddress.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -488,7 +446,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-bank"></i></td>
                                                     <td class="fw-semibold">Banka Hesap Dökümü</td>
@@ -496,11 +453,11 @@
                                                     <td class="small">
                                                         @if (_bankStatement is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_bankStatement.FileName">@_bankStatement.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -521,7 +478,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-credit-card"></i></td>
                                                     <td class="fw-semibold">Banka Hesap Onayı <span class="text-danger">*</span></td>
@@ -529,11 +485,11 @@
                                                     <td class="small">
                                                         @if (_bankAccountConfirmation is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_bankAccountConfirmation.FileName">@_bankAccountConfirmation.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -554,7 +510,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-certificate"></i></td>
                                                     <td class="fw-semibold">Marka Tescil Belgesi</td>
@@ -562,11 +517,11 @@
                                                     <td class="small">
                                                         @if (_trademarkCertificate is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_trademarkCertificate.FileName">@_trademarkCertificate.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -587,7 +542,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-file-o"></i></td>
                                                     <td class="fw-semibold">Yetkili Satıcı Onay Belgesi</td>
@@ -595,11 +549,11 @@
                                                     <td class="small">
                                                         @if (_letterOfAuthorization is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_letterOfAuthorization.FileName">@_letterOfAuthorization.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -620,7 +574,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-star-o"></i></td>
                                                     <td class="fw-semibold">Kalite Sertifikaları</td>
@@ -628,11 +581,11 @@
                                                     <td class="small">
                                                         @if (_qualityCertificates is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_qualityCertificates.FileName">@_qualityCertificates.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -653,7 +606,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-ship"></i></td>
                                                     <td class="fw-semibold">Gümrük Kayıt Belgesi</td>
@@ -661,11 +613,11 @@
                                                     <td class="small">
                                                         @if (_customsRegistration is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_customsRegistration.FileName">@_customsRegistration.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -686,7 +638,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-shield"></i></td>
                                                     <td class="fw-semibold">SGK / İşveren Kayıt Belgesi</td>
@@ -694,11 +645,11 @@
                                                     <td class="small">
                                                         @if (_socialSecurityRegistration is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_socialSecurityRegistration.FileName">@_socialSecurityRegistration.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -719,7 +670,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                                 <tr>
                                                     <td class="text-center text-muted"><i class="fa fa-sitemap"></i></td>
                                                     <td class="fw-semibold">Ortaklık Yapısı / UBO <span class="text-danger">*</span></td>
@@ -727,11 +677,11 @@
                                                     <td class="small">
                                                         @if (_proofOfOwnership is not null)
                                                         {
-
                                                             <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_proofOfOwnership.FileName">@_proofOfOwnership.FileName</span>
                                                         }
                                                         else
                                                         {
+
                                                             <span class="text-muted fst-italic">—</span>
                                                         }
                                                     </td>
@@ -752,7 +702,6 @@
                                                         </button>
                                                     </td>
                                                 </tr>
-
                                             </tbody>
                                         </table>
                                     </div>
@@ -760,6 +709,7 @@
                             </div>
                         </div>
                     </div>
+
                     <hr class="my-3 opacity-10">
 
                     <!-- Temel Bilgiler -->
@@ -791,29 +741,33 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">E-Posta</label>
                             <div class="input-group">
-                                <input class="form-control" type="email" placeholder="ornek@email.com">
+                                <input class="form-control" type="email" placeholder="ornek@email.com"
+                                       @bind="_Store.ContactInformation!.Email">
                                 <div class="input-group-text">
                                     <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox" id="isActiveEmail">
+                                        <input class="form-check-input" type="checkbox" id="isActiveEmail"
+                                               @bind="_Store.ContactInformation!.IsActiveEmail">
                                         <label class="form-check-label small" for="isActiveEmail">Göster</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Telefon Numarası</label>
                             <div class="input-group">
-                                <select class="form-select" style="max-width: 160px;">
+                                <select class="form-select" style="max-width: 160px;"
+                                        @bind="_Store.ContactInformation!.CountryPhoneCode">
                                     @foreach (Country item in _Countries)
                                     {
                                         <option value="@item.phonecode">@item.phonecode @item.name</option>
                                     }
                                 </select>
-                                <input class="form-control" type="tel" placeholder="5XX XXX XX XX">
+                                <input class="form-control" type="tel" placeholder="5XX XXX XX XX"
+                                       @bind="_Store.ContactInformation!.PhoneNumber">
                                 <div class="input-group-text">
                                     <div class="form-check mb-0">
-                                        <input class="form-check-input" type="checkbox" id="isActivePhone">
+                                        <input class="form-check-input" type="checkbox" id="isActivePhone"
+                                               @bind="_Store.ContactInformation!.IsActivePhoneNumber">
                                         <label class="form-check-label small" for="isActivePhone">Göster</label>
                                     </div>
                                 </div>
@@ -829,7 +783,7 @@
                     </h6>
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <label class="form-label text-white"> Ülkeniz</label>
+                            <label class="form-label text-white">Ülkeniz</label>
                             <select class="form-select bg-transparent text-white border-light-3" @onchange="OnCountrySelected">
                                 <option value="0">Ülke Seçiniz</option>
                                 @foreach (var country in _Countries)
@@ -839,7 +793,7 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label class="form-label text-white"> Eyalet/İl</label>
+                            <label class="form-label text-white">Eyalet/İl</label>
                             <select class="form-select bg-transparent text-white border-light-3" @onchange="OnStateSelected" disabled="@(!_States.Any())">
                                 <option value="0">@(_States.Any() ? "İl Seçiniz" : "---")</option>
                                 @foreach (var state in _States)
@@ -849,8 +803,8 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label class="form-label text-white"> Şehir</label>
-                            <select class="form-select bg-transparent text-white border-light-3" @onchange="O" disabled="@(!_Cities.Any())">
+                            <label class="form-label text-white">Şehir</label>
+                            <select class="form-select bg-transparent text-white border-light-3" @onchange="OnCitySelected" disabled="@(!_Cities.Any())">
                                 <option value="0">@(_Cities.Any() ? "Şehir Seçiniz" : "---")</option>
                                 @foreach (var city in _Cities)
                                 {
@@ -860,16 +814,18 @@
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Posta Kodu</label>
-                            <input class="form-control" type="text" placeholder="Posta Kodu">
+                            <input class="form-control" type="text" placeholder="Posta Kodu"
+                                   @bind="_Store.AddressInfo!.ZipCode">
                         </div>
-
                         <div class="col-md-12 mb-3">
                             <label class="form-label">Açık Adres</label>
-                            <textarea class="form-control" rows="2" placeholder=""></textarea>
+                            <textarea class="form-control" rows="2"
+                                      @bind="_Store.AddressInfo!.Address"></textarea>
                         </div>
                         <div class="col-md-12 mb-3">
                             <label class="form-label">Google My Business Linki</label>
-                            <input class="form-control" type="url" placeholder="https://business.google.com/...">
+                            <input class="form-control" type="url" placeholder="https://business.google.com/..."
+                                   @bind="_Store.AddressInfo!.GoogleMyBusinessAccountLink">
                         </div>
 
                         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -911,7 +867,7 @@
 
                             document.addEventListener('DOMContentLoaded', initMap);
 
-                            document.getElementById('btnGetLocation').addEventListener('click', function() {
+                            document.getElementById('btnGetLocation').addEventListener('click', function () {
                                 const btn = this;
                                 const latInput = document.getElementById('lat');
                                 const lngInput = document.getElementById('lng');
@@ -927,6 +883,7 @@
                                             latInput.value = lat.toFixed(6);
                                             lngInput.value = lng.toFixed(6);
                                             updateMap(lat, lng);
+                                            DotNet.invokeMethodAsync('YourAssemblyName', 'SetLatLng', lat, lng);
                                             btn.disabled = false;
                                             btn.innerHTML = originalText;
                                         },
@@ -948,18 +905,12 @@
                                 if (map) {
                                     const coords = [lat, lng];
                                     map.setView(coords, 15);
-                                    if (marker) {
-                                        marker.setLatLng(coords);
-                                    } else {
-                                        marker = L.marker(coords).addTo(map);
-                                    }
+                                    if (marker) { marker.setLatLng(coords); }
+                                    else { marker = L.marker(coords).addTo(map); }
                                     marker.bindPopup("Bulunduğunuz Yer").openPopup();
-                                } else {
-                                    console.error("Harita nesnesi başlatılamadı!");
                                 }
                             }
                         </script>
-
                     </div>
 
                     <hr class="my-3 opacity-10">
@@ -975,20 +926,23 @@
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="monday">
+                                        <input class="form-check-input" type="checkbox" id="monday"
+                                               @bind="_Store.WorkingHours!.IsActiveMonday">
                                         <label class="form-check-label fw-semibold" for="monday">Pazartesi</label>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-play"></i></span>
-                                        <input type="time" class="form-control" placeholder="Açılış">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.StartTimeMonday">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                                        <input type="time" class="form-control" placeholder="Kapanış">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.FinishTimeMonday">
                                     </div>
                                 </div>
                             </div>
@@ -999,20 +953,23 @@
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="tuesday">
+                                        <input class="form-check-input" type="checkbox" id="tuesday"
+                                               @bind="_Store.WorkingHours!.IsActiveTuesday">
                                         <label class="form-check-label fw-semibold" for="tuesday">Salı</label>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-play"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.StartTimeTuesday">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.FinishTimeTuesday">
                                     </div>
                                 </div>
                             </div>
@@ -1023,20 +980,23 @@
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="wednesday">
+                                        <input class="form-check-input" type="checkbox" id="wednesday"
+                                               @bind="_Store.WorkingHours!.IsActiveWednesday">
                                         <label class="form-check-label fw-semibold" for="wednesday">Çarşamba</label>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-play"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.StartTimeWednesday">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.FinishTimeWednesday">
                                     </div>
                                 </div>
                             </div>
@@ -1047,20 +1007,23 @@
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="thursday">
+                                        <input class="form-check-input" type="checkbox" id="thursday"
+                                               @bind="_Store.WorkingHours!.IsActiveThursday">
                                         <label class="form-check-label fw-semibold" for="thursday">Perşembe</label>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-play"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.StartTimeThursday">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.FinishTimeThursday">
                                     </div>
                                 </div>
                             </div>
@@ -1071,20 +1034,23 @@
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="friday">
+                                        <input class="form-check-input" type="checkbox" id="friday"
+                                               @bind="_Store.WorkingHours!.IsActiveFriday">
                                         <label class="form-check-label fw-semibold" for="friday">Cuma</label>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-play"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.StartTimeFriday">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.FinishTimeFriday">
                                     </div>
                                 </div>
                             </div>
@@ -1095,20 +1061,23 @@
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="saturday">
+                                        <input class="form-check-input" type="checkbox" id="saturday"
+                                               @bind="_Store.WorkingHours!.IsActiveSaturday">
                                         <label class="form-check-label fw-semibold" for="saturday">Cumartesi</label>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-play"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.StartTimeSaturday">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.FinishTimeSaturday">
                                     </div>
                                 </div>
                             </div>
@@ -1119,20 +1088,23 @@
                             <div class="row align-items-center">
                                 <div class="col-md-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="sunday">
+                                        <input class="form-check-input" type="checkbox" id="sunday"
+                                               @bind="_Store.WorkingHours!.IsActiveSunday">
                                         <label class="form-check-label fw-semibold" for="sunday">Pazar</label>
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-play"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.StartTimeSunday">
                                     </div>
                                 </div>
                                 <div class="col-md-5">
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="fa fa-stop"></i></span>
-                                        <input type="time" class="form-control">
+                                        <input type="time" class="form-control"
+                                               @bind="_Store.WorkingHours!.FinishTimeSunday">
                                     </div>
                                 </div>
                             </div>
@@ -1150,182 +1122,168 @@
                     <!-- Global Platformlar -->
                     <p class="text-light small fw-semibold mb-2">Global Platformlar</p>
                     <div class="row">
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-facebook-square text-primary me-1"></i>Facebook</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://facebook.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveFacebook"></span>
+                                <input class="form-control" type="url" placeholder="https://facebook.com/..." @bind="_Store.ContactInformation!.Facebook">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-instagram text-danger me-1"></i>Instagram</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://instagram.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveInstagram"></span>
+                                <input class="form-control" type="url" placeholder="https://instagram.com/..." @bind="_Store.ContactInformation!.Instagram">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-twitter text-info me-1"></i>X (Twitter)</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://x.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveX"></span>
+                                <input class="form-control" type="url" placeholder="https://x.com/..." @bind="_Store.ContactInformation!.X">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-music text-dark me-1"></i>TikTok</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://tiktok.com/">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveTikTok"></span>
+                                <input class="form-control" type="url" placeholder="https://tiktok.com/" @bind="_Store.ContactInformation!.TikTok">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-youtube-play text-danger me-1"></i>YouTube</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://youtube.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveYouTube"></span>
+                                <input class="form-control" type="url" placeholder="https://youtube.com/..." @bind="_Store.ContactInformation!.YouTube">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-linkedin-square text-primary me-1"></i>LinkedIn</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://linkedin.com/in/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveLinkedin"></span>
+                                <input class="form-control" type="url" placeholder="https://linkedin.com/in/..." @bind="_Store.ContactInformation!.Linkedin">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-whatsapp text-success me-1"></i>WhatsApp</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://wa.me/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveWhatsApp"></span>
+                                <input class="form-control" type="url" placeholder="https://wa.me/..." @bind="_Store.ContactInformation!.WhatsApp">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-paper-plane text-info me-1"></i>Telegram</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://t.me/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveTelegram"></span>
+                                <input class="form-control" type="url" placeholder="https://t.me/..." @bind="_Store.ContactInformation!.Telegram">
                             </div>
                         </div>
-
                     </div>
 
                     <!-- Bölgesel Platformlar -->
                     <p class="text-light small fw-semibold mb-2 mt-1">Bölgesel Popüler Platformlar</p>
                     <div class="row">
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-commenting text-success me-1"></i>WeChat</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="text" placeholder="WeChat ID">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveWeChat"></span>
+                                <input class="form-control" type="text" placeholder="WeChat ID" @bind="_Store.ContactInformation!.WeChat">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-cloud text-danger me-1"></i>Weibo</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://weibo.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveWeibo"></span>
+                                <input class="form-control" type="url" placeholder="https://weibo.com/..." @bind="_Store.ContactInformation!.Weibo">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-comments text-success me-1"></i>Line</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="text" placeholder="Line ID">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveLine"></span>
+                                <input class="form-control" type="text" placeholder="Line ID" @bind="_Store.ContactInformation!.Line">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-comment text-warning me-1"></i>KakaoTalk</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="text" placeholder="KakaoTalk ID">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveKakaoTalk"></span>
+                                <input class="form-control" type="text" placeholder="KakaoTalk ID" @bind="_Store.ContactInformation!.KakaoTalk">
                             </div>
                         </div>
-
                         <div class="col-md-12 mb-3">
                             <label class="form-label"><i class="fa fa-vk text-primary me-1"></i>VKontakte</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://vk.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveVKontakte"></span>
+                                <input class="form-control" type="url" placeholder="https://vk.com/..." @bind="_Store.ContactInformation!.VKontakte">
                             </div>
                         </div>
-
                     </div>
 
                     <!-- Profesyonel / Niş Platformlar -->
                     <p class="text-light small fw-semibold mb-2 mt-1">Profesyonel / Niş Platformlar</p>
                     <div class="row">
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-pinterest text-danger me-1"></i>Pinterest</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://pinterest.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActivePinterest"></span>
+                                <input class="form-control" type="url" placeholder="https://pinterest.com/..." @bind="_Store.ContactInformation!.Pinterest">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-github text-dark me-1"></i>GitHub</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://github.com/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveGitHub"></span>
+                                <input class="form-control" type="url" placeholder="https://github.com/..." @bind="_Store.ContactInformation!.GitHub">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-behance text-primary me-1"></i>Behance</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://behance.net/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveBehance"></span>
+                                <input class="form-control" type="url" placeholder="https://behance.net/..." @bind="_Store.ContactInformation!.Behance">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-gamepad text-primary me-1"></i>Discord</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="text" placeholder="Kullanıcı Adı#0000">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveDiscord"></span>
+                                <input class="form-control" type="text" placeholder="Kullanıcı Adı#0000" @bind="_Store.ContactInformation!.Discord">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-reddit text-danger me-1"></i>Reddit</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://reddit.com/user/...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveReddit"></span>
+                                <input class="form-control" type="url" placeholder="https://reddit.com/user/..." @bind="_Store.ContactInformation!.Reddit">
                             </div>
                         </div>
-
                         <div class="col-md-6 mb-3">
                             <label class="form-label"><i class="fa fa-globe text-secondary me-1"></i>Web Sitesi</label>
                             <div class="input-group">
-                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster"></span>
-                                <input class="form-control" type="url" placeholder="https://...">
+                                <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveUserWebSite"></span>
+                                <input class="form-control" type="url" placeholder="https://..." @bind="_Store.ContactInformation!.UserWebSite">
                             </div>
                         </div>
-
                     </div>
 
                     <hr class="my-3 opacity-10">
 
                     <!-- Kaydet Butonu -->
                     <div class="d-flex justify-content-end gap-2 mb-2">
-                        <button type="reset" class="btn btn-outline-secondary px-4">
+                        <button type="button" class="btn btn-outline-secondary px-4">
                             <i class="fa fa-undo me-2"></i>Sıfırla
                         </button>
-                        <button type="submit" class="btn btn-primary px-4">
-                            <i class="fa fa-check me-2"></i>Kaydı Tamamla
+                        <button type="button" class="btn btn-primary px-4" @onclick="AddStore" disabled="@_isProcessing">
+                            @if (_isProcessing)
+                            {
+                                <i class="fa fa-spinner fa-spin me-2"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-check me-2"></i>
+                            }
+                            Kaydı Tamamla
                         </button>
                     </div>
                 </div>
@@ -1334,27 +1292,6 @@
     </div>
 </div>
 
-<!-- ===================== MEDYA MODALLARİ ===================== -->
-<!--
-    İZOLASYON MANTIĞI:
-    ─────────────────────────────────────────────────────────────
-    1. Her modalın HTML id'si BENZERSİZDİR:
-       #modalProfileList  → sadece "profile" slotu
-       #modalCoverList    → sadece "cover" slotu
-       #modalGalleryOutSide   → sadece "galleryOutSide" slotu   ✅ DÜZELTİLDİ
-       #modalGalleryInSide    → sadece "galleryInSide" slotu    ✅ DÜZELTİLDİ
-       #modalGalleryDocuments → sadece "galleryDocuments" slotu ✅ DÜZELTİLDİ
-
-    2. Her butonun data-bs-target'ı kendi modalının ID'sine işaret eder.
-
-    3. <List> component'i sadece _activeMediaSlot eşleştiğinde
-       if koşuluyla DOM'a eklenir; modal kapanınca DOM'dan çıkar.
-       Bu sayede FileService event'leri hiçbir zaman yanlış slota ulaşamaz.
-
-    4. HandleMultiSelectionChanged ve HandleSingleFileSelected içinde
-       _activeMediaSlot switch'i son savunma hattı olarak korunur.
-    ─────────────────────────────────────────────────────────────
--->
 <div class="modal fade" id="modalBusinessDocumentList" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content bg-dark border border-light-3">
@@ -1621,6 +1558,10 @@
 
     private Notification? notificationRef;
 
+    private Store _Store = new Store();
+    private ItemGallery _ItemGallery = new ItemGallery();
+
+
     // --- Medya Seçim State ---
     private string _activeMediaSlot = string.Empty;
 
@@ -1643,10 +1584,6 @@
     private Data.Media? _customsRegistration;        // Gümrük Kayıt Belgesi (EORI veya Gümrük No - Customs Registration)
     private Data.Media? _socialSecurityRegistration; // Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security/Employer ID)
     private Data.Media? _proofOfOwnership;           // Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership/UBO) *
-
-
-
-
 
     // Çoklu seçimler (Slot bazlı izole listeler)
     private List<Data.Media> _galleryOutSideFiles = new();
@@ -1737,6 +1674,8 @@
         int.TryParse(e.Value?.ToString(), out int countryId);
         _States.Clear();
         _Cities.Clear();
+        _Store.AddressInfo!.Country = _Countries
+            .FirstOrDefault(c => c.id == countryId)?.name;
 
         if (countryId > 0)
         {
@@ -1752,6 +1691,8 @@
     {
         int.TryParse(e.Value?.ToString(), out int stateId);
         _Cities.Clear();
+        _Store.AddressInfo!.State = _States
+            .FirstOrDefault(s => s.id == stateId)?.name;
 
         if (stateId > 0)
         {
@@ -1763,11 +1704,31 @@
         StateHasChanged();
     }
 
+    // Şehir seçimi → AddressInfo.City'e yaz
+    private void OnCitySelected(ChangeEventArgs e)
+    {
+        _Store.AddressInfo!.City = _Cities
+            .FirstOrDefault(c => c.id.ToString() == e.Value?.ToString())?.name;
+    }
+
+    // JS'den Lat/Lng almak için
+    [JSInvokable]
+    public void SetLatLng(double lat, double lng)
+    {
+        _Store.AddressInfo!.Latitude = lat;
+        _Store.AddressInfo!.Longitude = lng;
+        InvokeAsync(StateHasChanged);
+    }
+
     protected override async Task OnInitializedAsync()
     {
         if (_disposed || _isInitialized) return;
 
         _isInitialized = true;
+
+        // _Store null geliyorsa burada initialize et
+        _Store ??= new Store();
+
         StateHub.OnDataChanged += HandleGlobalDataChange;
 
         await LoadData(null);
@@ -1866,7 +1827,7 @@
         }
     }
 
-    protected async Task AddUser(Users newUser)
+    protected async Task AddStore()
     {
         if (_isProcessing) return;
 
@@ -1876,26 +1837,183 @@
             _isProcessing = true;
             StateHasChanged();
 
+            // ──────────────────────────────────────────
+            // 1. VALIDATION — Zorunlu Alan Kontrolleri
+            // ──────────────────────────────────────────
+            var errors = new List<string>();
+
+            // Temel Bilgiler
+            if (string.IsNullOrWhiteSpace(_Store.Name))
+                errors.Add("İşletme/Mağaza adı boş bırakılamaz.");
+
+            if (string.IsNullOrWhiteSpace(_Store.Description))
+                errors.Add("İşletme/Mağaza açıklaması boş bırakılamaz.");
+
+            // İletişim Bilgileri
+            if (_Store.ContactInformation == null)
+            {
+                errors.Add("İletişim bilgileri boş bırakılamaz.");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(_Store.ContactInformation.Email))
+                    errors.Add("E-posta adresi boş bırakılamaz.");
+
+                if (string.IsNullOrWhiteSpace(_Store.ContactInformation.CountryPhoneCode))
+                    errors.Add("Ülke telefon kodu seçilmedi.");
+
+                if (string.IsNullOrWhiteSpace(_Store.ContactInformation.PhoneNumber))
+                    errors.Add("Telefon numarası boş bırakılamaz.");
+            }
+
+            // Profil & Kapak Görseli
+            if (_profileMedia == null)
+                errors.Add("Profil görseli yüklenmedi.");
+
+            if (_coverMedia == null)
+                errors.Add("Kapak görseli yüklenmedi.");
+
+            // Dış / İç Çekim Galerileri
+            if (_galleryOutSideFiles.Count < 3)
+                errors.Add($"Dış çekim görseli en az 3 adet olmalıdır. (Şu an: {_galleryOutSideFiles.Count})");
+
+            if (_galleryInSideFiles.Count < 3)
+                errors.Add($"İç çekim görseli en az 3 adet olmalıdır. (Şu an: {_galleryInSideFiles.Count})");
+
+            // Zorunlu Belgeler
+            if (_certificateOfIncorporation == null)
+                errors.Add("Kuruluş belgesi (Certificate of Incorporation) yüklenmedi.");
+
+            if (_activityCertificate == null)
+                errors.Add("Faaliyet belgesi yüklenmedi.");
+
+            if (_taxRegistration == null)
+                errors.Add("Vergi kaydı belgesi yüklenmedi.");
+
+            if (_tradeRegistryGazette == null)
+                errors.Add("Ticaret sicil gazetesi yüklenmedi.");
+
+            if (_signatureCircular == null)
+                errors.Add("İmza sirküleri yüklenmedi.");
+
+            if (_authorizedPersonId == null)
+                errors.Add("Yetkili kişi kimlik belgesi yüklenmedi.");
+
+            if (_proofOfBusinessAddress == null)
+                errors.Add("İşyeri adres belgesi yüklenmedi.");
+
+            if (_bankStatement == null)
+                errors.Add("Banka ekstresi yüklenmedi.");
+
+            if (_bankAccountConfirmation == null)
+                errors.Add("Banka hesap doğrulama belgesi yüklenmedi.");
+
+            // Hata varsa toplu göster ve çık
+            if (errors.Any())
+            {
+                var errorMessage = string.Join("<br/>• ", errors.Prepend("Lütfen aşağıdaki alanları doldurun:"));
+                await ShowNotification("danger", "Eksik Bilgiler", $"• {errorMessage}", null);
+                return;
+            }
+
+            // ──────────────────────────────────────────
+            // 2. VERİ HAZIRLAMA
+            // ──────────────────────────────────────────
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            newUser.RegistrationDate = DateTime.UtcNow;
-            db.Users.Add(newUser);
+            // Admin Kontrolleri
+            _Store.UserId = use.Id;
+            _Store.AdminPermissionPending = true;
+            _Store.IsActiveStateAdmin = false;
+            _Store.IsActiveDateAdmin = new DateTime();
+
+            // Satıcı Kontrolleri
+            _Store.IsActiveStateVendor = true;
+            _Store.IsActiveDateVendor = DateTime.UtcNow;
+            _Store.CreatedAt = DateTime.UtcNow;
+
+            // Profil / Kapak Görselleri
+            _Store.ProfileCoverGallery ??= new();
+            _Store.ProfileCoverGallery.ProfileImagePath = _profileMedia?.FileUrl;
+            _Store.ProfileCoverGallery.CoverImagePath = _coverMedia?.FileUrl;
+
+            // FullPhoneNumber birleştir
+            if (_Store.ContactInformation != null &&
+                !string.IsNullOrWhiteSpace(_Store.ContactInformation.CountryPhoneCode) &&
+                !string.IsNullOrWhiteSpace(_Store.ContactInformation.PhoneNumber))
+            {
+                TextualFunctions textualFunctions = new TextualFunctions();
+                _Store.ContactInformation.FullPhoneNumber =
+                    _Store.ContactInformation.CountryPhoneCode.Trim() +
+                    textualFunctions.NormalizePhoneNumberEditor(
+                        _Store.ContactInformation.PhoneNumber.Trim());
+            }
+
+            // Belge GUID Atamaları
+            _Store.CertificateOfIncorporation = _certificateOfIncorporation?.Id;
+            _Store.ActivityCertificate = _activityCertificate?.Id;
+            _Store.TaxRegistration = _taxRegistration?.Id;
+            _Store.TradeRegistryGazette = _tradeRegistryGazette?.Id;
+            _Store.SignatureCircular = _signatureCircular?.Id;
+            _Store.AuthorizedPersonId = _authorizedPersonId?.Id;
+            _Store.ProofOfBusinessAddress = _proofOfBusinessAddress?.Id;
+            _Store.BankStatement = _bankStatement?.Id;
+            _Store.BankAccountConfirmation = _bankAccountConfirmation?.Id;
+            _Store.TrademarkCertificate = _trademarkCertificate?.Id;
+            _Store.LetterOfAuthorization = _letterOfAuthorization?.Id;
+            _Store.QualityCertificates = _qualityCertificates?.Id;
+            _Store.CustomsRegistration = _customsRegistration?.Id;
+            _Store.SocialSecurityRegistration = _socialSecurityRegistration?.Id;
+            _Store.ProofOfOwnership = _proofOfOwnership?.Id;
+
+            // Galeri Mapping
+            var galleryItems = _galleryOutSideFiles
+                .Select(m => new ItemGallery
+                {
+                    UserId = use.Id,
+                    ItemId = _Store.Id,
+                    ItemType = "OutShooting",
+                    MediaId = m.Id,
+                    ItemAddDate = DateTime.UtcNow,
+                    IsDelete = false
+                })
+                .Concat(_galleryInSideFiles.Select(m => new ItemGallery
+                {
+                    UserId = use.Id,
+                    ItemId = _Store.Id,
+                    ItemType = "InShooting",
+                    MediaId = m.Id,
+                    ItemAddDate = DateTime.UtcNow,
+                    IsDelete = false
+                }))
+                .ToList();
+
+            // ──────────────────────────────────────────
+            // 3. VERİTABANI İŞLEMİ
+            // ──────────────────────────────────────────
+            if (galleryItems.Any())
+            {
+                await db.ItemGallery.AddRangeAsync(galleryItems, _cts.Token);
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            db.Stores.Add(_Store);
             await db.SaveChangesAsync(_cts.Token);
 
-            await StateHub.NotifyDataChanged("Users");
-
-            await Logger.TakeIt(newUser.Id, PAGE, "AddUser");
-
-            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla eklendi.", null);
+            // ──────────────────────────────────────────
+            // 4. BAŞARI BİLDİRİMLERİ
+            // ──────────────────────────────────────────
+            await StateHub.NotifyDataChanged("AddStore");
+            await Logger.TakeIt(use.Id, PAGE, "razor._Shared.tr.Pages.Admin.Store");
+            await ShowNotification("success", "Başarılı", "İşletme/Mağaza başarıyla eklendi.", null);
             await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
         }
         catch (Exception ex)
         {
-            await Logger.TakeIt(use?.Id, PAGE, "AddUser",
+            await Logger.TakeIt(use?.Id, PAGE, "AddStore",
                 exception: ex.Message,
                 stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Kullanıcı eklenirken bir sorun oluştu.", null);
+            await ShowNotification("danger", "Hata", "İşletme/Mağaza eklenirken bir sorun oluştu.", null);
         }
         finally
         {

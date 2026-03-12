@@ -1,8 +1,17 @@
-﻿@using data
-@rendermode InteractiveServer
+﻿@using System.Globalization
+@using Microsoft.EntityFrameworkCore
+@using api
+@using data
+@using Data
+@using Microsoft.JSInterop
+@using api.tr
+@using data._Shared
+@using razor._Shared
+@inject IJSRuntime JSRuntime
 @code {
     [Parameter]
     public Users? _use { get; set; }
+    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 }
 <header>
 	<div class="topbar align-items-center">
@@ -15,14 +24,20 @@
 				</ul>
 			</div>
 			<div class="search-bar flex-grow-1">
-				<div class="position-relative search-bar-box">
-					<input type="search" name="site-search" id="site-search"
-						   class="form-control search-control"
+				<form action="/@culture/Public/Search/Wanted/" method="post" class="position-relative search-bar-box">
+					<input type="search" name="SearchWantedText" id="site-search"
+						   class="form-control search-control pe-5"
 						   placeholder="Ara"
 						   autocomplete="off">
-					<span class="position-absolute top-50 search-show translate-middle-y"><i class='bx bx-search'></i></span>
-					<span class="position-absolute top-50 search-close translate-middle-y"><i class='bx bx-x'></i></span>
-				</div>
+
+					<button type="submit" class="btn position-absolute top-50 translate-middle-y end-0 border-0 bg-transparent">
+						<i class="fa fa-search text-dark"></i>
+					</button>
+
+					<span class="position-absolute top-50 search-close translate-middle-y" style="right: 45px; cursor: pointer;">
+						<i class='bx bx-x'></i>
+					</span>
+				</form>
 			</div>
 			<div class="top-menu ms-auto">
 				<ul class="navbar-nav align-items-center gap-1">

@@ -14,23 +14,24 @@ namespace data
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid? UserId { get; set; } // *
-        public string? Name { get; set; } = string.Empty; // +
+        public Guid? UserId { get; set; } //
+        public string? Name { get; set; } = string.Empty; //
+        public string? Description { get; set; } = string.Empty; //
 
         // Admin Kontrolleri
-        public bool? AdminPermissionPending { get; set; } = true;
-        public bool? IsActiveStateAdmin { get; set; } = false;
-        public DateTime? IsActiveDateAdmin { get; set; } = new DateTime();
+        public bool? AdminPermissionPending { get; set; } = true; //
+        public bool? IsActiveStateAdmin { get; set; } = false; //
+        public DateTime? IsActiveDateAdmin { get; set; } = new DateTime(); //
 
 
         // Satıcı kontrolleri
-        public bool? IsActiveStateVendor { get; set; } = true;
-        public DateTime? IsActiveDateVendor { get; set; } = DateTime.Now;
+        public bool? IsActiveStateVendor { get; set; } = true; //
+        public DateTime? IsActiveDateVendor { get; set; } = DateTime.Now; //
 
-        public ContactInformation? ContactInformation { get; set; } = new(); // +
+        public ContactInformation? ContactInformation { get; set; } = new(); 
         public ProfileCoverGallery? ProfileCoverGallery { get; set; } = new();
-        public AddressInfo? AddressInfo { get; set; } = new(); // +
-        public WorkingHours? WorkingHours { get; set; } = new(); // 
+        public AddressInfo? AddressInfo { get; set; } = new(); 
+        public WorkingHours? WorkingHours { get; set; } = new(); 
 
         // Medya Slotları - Belge GUID Tanımlamaları
         public Guid? CertificateOfIncorporation { get; set; }
@@ -51,5 +52,6 @@ namespace data
 
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public IsDeleted? IsDeleted { get; set; } = new(); 
     }
 }

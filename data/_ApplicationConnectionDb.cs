@@ -11,6 +11,10 @@ namespace data
 {
     public class _ApplicationConnectionDb : DbContext
     {
+        // Arkadaşlıklar / Takipleşmeler
+        public DbSet<FriendShip> FriendShip { get; set; } = default!;
+        public DbSet<StoreShip> StoreShip { get; set; } = default!;
+
         public DbSet<WorkstationEmployeeGroup> WorkstationEmployeeGroup { get; set; } = default!;
 
         // Chat

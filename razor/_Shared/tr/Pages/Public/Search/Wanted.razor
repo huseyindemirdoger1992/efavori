@@ -1,17 +1,65 @@
-﻿@using data
+﻿@using System.Globalization
+@using data
+@using api
+@using api.tr
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+<Notification @ref="notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+{
+    ("fa fa-home", "efavori", "/"),
+    ("fa fa-search", "Arama Sonuçları", "javascript:void(0)"),
+    ("fa fa-commenting", $"Sorgu: {SearchWantedText}", "javascript:void(0)")
+};
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+@if (_isLoading)
+{
+    <p>Yükleniyor...</p>
+}
+
+@if (_Store is not null)
+{
+}
+
 <div class="container">
     <!-- Arama Başlığı -->
     <div class="mb-4">
-        <div class="input-group">
-            <input type="text" class="form-control form-control-lg" value="@SearchWantedText" placeholder="Ara...">
-            <button class="btn btn-light px-4" type="button">
-                <i class="fa fa-search"></i>
-            </button>
+        <form action="/@culture/Public/Search/Wanted/" method="post" class="position-relative">
+            <div class="input-group">
+                <input type="search"
+                       name="SearchWantedText"
+                       id="site-search"
+                       class="form-control search-control border-0 shadow-none ps-3"
+                       value="@SearchWantedText"
+                       placeholder="Ara..."
+                       autocomplete="off">
+
+                <button class="btn btn-light border-0 px-4" type="submit">
+                    <i class="fa fa-search"></i>
+                </button>
+            </div>
+        </form>
+
+        <div class="d-flex align-items-center mt-2 small">
+            <p class="text-light mb-0">
+                <strong>"@SearchWantedText"</strong> için <strong>142</strong> sonuç bulundu
+            </p>
+            <span class="ms-3 text-light opacity-75">
+                <i class="fa fa-clock-o me-1"></i>0.38 saniye
+            </span>
         </div>
-        <p class="text-light mt-2 mb-0 small">
-            <strong>"@SearchWantedText"</strong> için <strong>142</strong> sonuç bulundu
-            <span class="ms-3 text-light"><i class="fa fa-clock-o me-1"></i>0.38 saniye</span>
-        </p>
     </div>
 
     <!-- Son Aramalar -->
@@ -74,7 +122,7 @@
                     <a class="nav-link" data-bs-toggle="tab" href="#Business" role="tab" aria-selected="false">
                         <div class="d-flex align-items-center justify-content-center">
                             <div class="tab-icon"><i class="fa fa-briefcase font-18 me-2"></i></div>
-                            <div class="tab-title">İşletme (20)</div>
+                            <div class="tab-title">İşletme (@StoreCount)</div>
                         </div>
                     </a>
                 </li>
@@ -311,15 +359,25 @@
                                         </div>
                                         <div class="dropdown">
                                             <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fa fa-ellipsis-h"></i>
+                                                <i class="fa fa-ellipsis-h" style="margin-left:5px;"></i>
                                             </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 bg-light bg-blur">
+                                            <ul class="dropdown-menu dropdown-menu-end bg-blur">
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
+                                                        <i class="fa fa-user opacity-50"></i> Profile Git
+                                                    </a>
+                                                </li>
                                                 <li>
                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="#">
                                                         <i class="fa fa-warning opacity-50"></i> Şikayet Et
                                                     </a>
                                                 </li>
                                                 <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-primary" href="#">
+                                                        <i class="fa fa-user-times"></i> Takip Et
+                                                    </a>
+                                                </li>
                                                 <li>
                                                     <a class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger" href="#">
                                                         <i class="fa fa-user-times"></i> Takibi Bırak
@@ -1150,156 +1208,252 @@
                 <div class="tab-pane fade" id="Business" role="tabpanel">
                     <div class="row g-3">
 
-                        <!-- İşletme 1 -->
-                        <div class="col-12 col-md-6">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3 mb-3">
-                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=WH" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
-                                        <div>
-                                            <strong class="d-block">WoodHome Mobilya</strong>
-                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>İstanbul, Türkiye</span>
-                                            <div class="mt-1">
-                                                <span class="badge bg-success text-light small">Onaylı İşletme</span>
-                                                <span class="badge bg-light text-light border small ms-1">Mobilya</span>
-                                            </div>
-                                        </div>
+                        <!-- İşletme -->
+                        @foreach (Store item in _Store)
+                        {
+                            <div class="col-12 col-md-4 mb-4">
+                                <div class="card border-0 shadow-sm h-100 overflow-hidden position-relative"
+                                     style="background: linear-gradient(rgba(32, 32, 32, 0.9), rgba(32, 32, 32, 0.9)), url('@(item.ProfileCoverGallery?.CoverImagePath ?? "https://efavori.com/_files/main/NoImage.png")') center/cover no-repeat; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
+                                    <div class="position-absolute top-0 end-0 m-3" style="z-index: 1;">
+                                        @if (item.IsActiveStateAdmin == true && item.AdminPermissionPending == false)
+                                        {
+                                            <span class="badge bg-success text-light px-3 py-2 shadow-sm" style="margin-top:8px;">
+                                                <i class="fa fa-check-circle me-1"></i>Onaylı Mağaza
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark px-3 py-2 shadow-sm" style="margin-top:8px;">
+                                                <i class="fa fa-clock-o me-1"></i>Onay Bekliyor
+                                            </span>
+                                        }
                                     </div>
-                                    <p class="text-light small mb-3">El yapımı ahşap sandalye ve mobilya imalatı. Meşe, kayın ve çam ağacından özel sipariş üretim. 2010'dan beri hizmetinizdeyiz.</p>
-                                    <div class="row text-center g-2 border-top pt-3">
-                                        <div class="col-4">
-                                            <strong class="d-block">1.2K</strong>
-                                            <span class="text-light small">Ürün</span>
-                                        </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">4.8 <i class="fa fa-star text-warning small"></i></strong>
-                                            <span class="text-light small">Puan</span>
-                                        </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">14 yıl</strong>
-                                            <span class="text-light small">Deneyim</span>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-3">
-                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
-                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- İşletme 2 -->
-                        <div class="col-12 col-md-6">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3 mb-3">
-                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=OP" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
-                                        <div>
-                                            <strong class="d-block">OfficePro Türkiye</strong>
-                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>Ankara, Türkiye</span>
-                                            <div class="mt-1">
-                                                <span class="badge bg-success text-light small">Onaylı İşletme</span>
-                                                <span class="badge bg-light text-light border small ms-1">Ofis Ekipmanı</span>
-                                            </div>
+                                    <div class="card-body p-4">
+                                        <div class="d-flex align-items-start gap-3 mb-4">
+                                            <div class="position-relative">
+                                                <img src="@(string.IsNullOrEmpty(item.ProfileCoverGallery?.ProfileImagePath)
+                                                                                                                                                                                                                                                                                                             ? "https://efavori.com/_files/main/NoImage.png"
+                                                                                                                                                                                                                                                        : item.ProfileCoverGallery.ProfileImagePath)"
+                                                 class="rounded-3 border flex-shrink-0 shadow-sm"
+                                                 width="80" height="80" alt="Mağaza Logosu">
                                         </div>
-                                    </div>
-                                    <p class="text-light small mb-3">Ergonomik ofis sandalyeleri ve çalışma mobilyaları. Kurumsal ve bireysel müşterilere özel fiyat avantajları sunuyoruz.</p>
-                                    <div class="row text-center g-2 border-top pt-3">
-                                        <div class="col-4">
-                                            <strong class="d-block">340</strong>
-                                            <span class="text-light small">Ürün</span>
                                         </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">4.6 <i class="fa fa-star text-warning small"></i></strong>
-                                            <span class="text-light small">Puan</span>
-                                        </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">8 yıl</strong>
-                                            <span class="text-light small">Deneyim</span>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-3">
-                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
-                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- İşletme 3 -->
-                        <div class="col-12 col-md-6">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3 mb-3">
-                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=GL" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
-                                        <div>
-                                            <strong class="d-block">GardenLife Dış Mekan</strong>
-                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>İzmir, Türkiye</span>
-                                            <div class="mt-1">
-                                                <span class="badge bg-light text-light border small">Bahçe & Dış Mekan</span>
+                                        <p class="text-light small mb-3" style="line-height: 1.6;">
+                                            <div>
+                                                <h6 class="fw-bold mb-1 text-light">@item.Name</h6>
+                                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                                    <span class="text-light small">
+                                                        <i class="fa fa-globe me-1 text-info"></i>
+                                                    @if (!string.IsNullOrEmpty(item.AddressInfo?.Country))
+                                                        {
+                                                            <text> > @item.AddressInfo.Country</text>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(item.AddressInfo?.State))
+                                                        {
+                                                            <text> > @item.AddressInfo.State</text>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(item.AddressInfo?.City))
+                                                        {
+                                                            <text> > @item.AddressInfo.City</text>
+                                                        }
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                    <p class="text-light small mb-3">Dış mekan sandalyesi, masa ve bahçe mobilyaları. UV dayanımlı malzemeler, tüm hava koşullarına uygun ürünler.</p>
-                                    <div class="row text-center g-2 border-top pt-3">
-                                        <div class="col-4">
-                                            <strong class="d-block">580</strong>
-                                            <span class="text-light small">Ürün</span>
-                                        </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">4.3 <i class="fa fa-star text-warning small"></i></strong>
-                                            <span class="text-light small">Puan</span>
-                                        </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">6 yıl</strong>
-                                            <span class="text-light small">Deneyim</span>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-3">
-                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
-                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                                            <hr />
+                                            @item.Description
+                                        </p>
 
-                        <!-- İşletme 4 -->
-                        <div class="col-12 col-md-6">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <div class="d-flex gap-3 mb-3">
-                                        <img src="https://placehold.co/64x64/e9ecef/495057?text=UD" class="rounded flex-shrink-0" width="64" height="64" alt="logo">
-                                        <div>
-                                            <strong class="d-block">UrbanDecor Studio</strong>
-                                            <span class="text-light small"><i class="fa fa-map-marker me-1"></i>İstanbul, Türkiye</span>
-                                            <div class="mt-1">
-                                                <span class="badge bg-success text-light small">Onaylı İşletme</span>
-                                                <span class="badge bg-light text-light border small ms-1">Tasarım & Dekor</span>
+                                        <div class="mb-4">
+                                            <div class="table-responsive rounded-3 border">
+                                                <table class="table table-bordered table-sm mb-0 text-left">
+                                                    <thead class="bg-light text-light">
+                                                        <tr>
+                                                            <th class="py-2 fw-bold border-bottom" style="width: 40%;">
+                                                                Gün <i class="fa fa-calendar" aria-hidden="true"></i>
+                                                            </th>
+                                                            <th class="py-2 fw-bold border-bottom">
+                                                                Açılış <i class="fa fa-clock-o" aria-hidden="true"></i>
+                                                            </th>
+                                                            <th class="py-2 fw-bold border-bottom">
+                                                                Kapanış <i class="fa fa-clock-o" aria-hidden="true"></i>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="bg-light text-light">
+                                                        @if (item.WorkingHours?.IsActiveMonday == true)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-medium">Pazartesi</td>
+                                                                <td>@item.WorkingHours.StartTimeMonday?.ToString("HH:mm")</td>
+                                                                <td>@item.WorkingHours.FinishTimeMonday?.ToString("HH:mm")</td>
+                                                            </tr>
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr class="text-danger">
+                                                                <td class="fw-medium">Pazartesi</td>
+                                                                <td colspan="2" class="text-center"><i class="fa fa-times-circle me-1"></i>Kapalı</td>
+                                                            </tr>
+                                                        }
+                                                        @if (item.WorkingHours?.IsActiveTuesday == true)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-medium">Salı</td>
+                                                                <td>@item.WorkingHours.StartTimeTuesday?.ToString("HH:mm")</td>
+                                                                <td>@item.WorkingHours.FinishTimeTuesday?.ToString("HH:mm")</td>
+                                                            </tr>
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr class="text-danger">
+                                                                <td class="fw-medium">Salı</td>
+                                                                <td colspan="2" class="text-center"><i class="fa fa-times-circle me-1"></i>Kapalı</td>
+                                                            </tr>
+                                                        }
+                                                        @if (item.WorkingHours?.IsActiveWednesday == true)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-medium">Çarşamba</td>
+                                                                <td>@item.WorkingHours.StartTimeWednesday?.ToString("HH:mm")</td>
+                                                                <td>@item.WorkingHours.FinishTimeWednesday?.ToString("HH:mm")</td>
+                                                            </tr>
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr class="text-danger">
+                                                                <td class="fw-medium">Çarşamba</td>
+                                                                <td colspan="2" class="text-center"><i class="fa fa-times-circle me-1"></i>Kapalı</td>
+                                                            </tr>
+                                                        }
+                                                        @if (item.WorkingHours?.IsActiveThursday == true)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-medium">Perşembe</td>
+                                                                <td>@item.WorkingHours.StartTimeThursday?.ToString("HH:mm")</td>
+                                                                <td>@item.WorkingHours.FinishTimeThursday?.ToString("HH:mm")</td>
+                                                            </tr>
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr class="text-danger">
+                                                                <td class="fw-medium">Perşembe</td>
+                                                                <td colspan="2" class="text-center"><i class="fa fa-times-circle me-1"></i>Kapalı</td>
+                                                            </tr>
+                                                        }
+                                                        @if (item.WorkingHours?.IsActiveFriday == true)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-medium">Cuma</td>
+                                                                <td>@item.WorkingHours.StartTimeFriday?.ToString("HH:mm")</td>
+                                                                <td>@item.WorkingHours.FinishTimeFriday?.ToString("HH:mm")</td>
+                                                            </tr>
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr class="text-danger">
+                                                                <td class="fw-medium">Cuma</td>
+                                                                <td colspan="2" class="text-center"><i class="fa fa-times-circle me-1"></i>Kapalı</td>
+                                                            </tr>
+                                                        }
+                                                        @if (item.WorkingHours?.IsActiveSaturday == true)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-medium">Cumartesi</td>
+                                                                <td>@item.WorkingHours.StartTimeSaturday?.ToString("HH:mm")</td>
+                                                                <td>@item.WorkingHours.FinishTimeSaturday?.ToString("HH:mm")</td>
+                                                            </tr>
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr class="text-danger">
+                                                                <td class="fw-medium">Cumartesi</td>
+                                                                <td colspan="2" class="text-center"><i class="fa fa-times-circle me-1"></i>Kapalı</td>
+                                                            </tr>
+                                                        }
+                                                        @if (item.WorkingHours?.IsActiveSunday == true)
+                                                        {
+                                                            <tr>
+                                                                <td class="fw-medium">Pazar</td>
+                                                                <td>@item.WorkingHours.StartTimeSunday?.ToString("HH:mm")</td>
+                                                                <td>@item.WorkingHours.FinishTimeSunday?.ToString("HH:mm")</td>
+                                                            </tr>
+                                                        }
+                                                        else
+                                                        {
+                                                            <tr class="text-danger">
+                                                                <td class="fw-medium">Pazar</td>
+                                                                <td colspan="2" class="text-center"><i class="fa fa-times-circle me-1"></i>Kapalı</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
-                                    </div>
-                                    <p class="text-light small mb-3">Retro ve modern tarz sandalye, koltuk ve bar taburesi. Özel renk ve kumaş seçenekleriyle kişiselleştirme imkânı.</p>
-                                    <div class="row text-center g-2 border-top pt-3">
-                                        <div class="col-4">
-                                            <strong class="d-block">210</strong>
-                                            <span class="text-light small">Ürün</span>
+                                        <div class="row g-0 border rounded-3 overflow-hidden mb-4">
+                                            <div class="col-4 border-end bg-light py-3 text-center">
+                                                <div class="fw-bold text-light mb-0">1,240</div>
+                                                <div class="text-muted small text-light fw-semibold" style="font-size: 0.65rem;">Ürün</div>
+                                            </div>
+                                            <div class="col-4 border-end bg-light py-3 text-center border-start">
+                                                <div class="fw-bold text-light mb-0">4.8 <i class="fa fa-star text-warning"></i></div>
+                                                <div class="text-muted small text-light fw-semibold" style="font-size: 0.65rem;">Puan</div>
+                                            </div>
+                                            <div class="col-4 bg-light py-3 text-center border-start">
+                                                <div class="fw-bold text-light mb-0">
+                                                    @if (item.CreatedAt.HasValue)
+                                                    {
+                                                        @((DateTime.UtcNow.Day - item.CreatedAt.Value.Day).ToString())
+                                                        <text> Gün</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        <text>-</text>
+                                                    }
+                                                </div>
+                                                <div class="text-muted small text-light fw-semibold" style="font-size: 0.65rem;">Deneyim</div>
+                                            </div>
                                         </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">4.7 <i class="fa fa-star text-warning small"></i></strong>
-                                            <span class="text-light small">Puan</span>
+
+                                        <div class="d-flex gap-2">
+                                            <a href="/store/@item.Id" class="btn btn-primary btn-sm flex-grow-1 py-2 rounded-2 fw-medium border">
+                                                <i class="fa fa-shopping-bag me-2"></i>Mağazaya Git
+                                            </a>
+                                            <button class="btn btn-danger btn-sm px-2 rounded-2" title="Takip Et">
+                                                <i class="fa fa-heart-o"></i>
+                                            </button>
+                                            @if (item.ContactInformation?.IsActivePhoneNumber == true &&
+                                                                                    !string.IsNullOrEmpty(item.ContactInformation.FullPhoneNumber))
+                                            {
+                                                <a href="tel:@item.ContactInformation.FullPhoneNumber"
+                                                   class="btn btn-success btn-sm px-2 rounded-2" title="Telefon">
+                                                    <i class="fa fa-phone"></i>
+                                                </a>
+                                            }
+                                            @if (item.ContactInformation?.IsActiveEmail == true &&
+                                                                                    !string.IsNullOrEmpty(item.ContactInformation.Email))
+                                            {
+                                                <a href="mailto:@item.ContactInformation.Email"
+                                                   class="btn btn-primary btn-sm px-2 rounded-2" title="E-posta">
+                                                    <i class="fa fa-envelope-open-o"></i>
+                                                </a>
+                                            }
+                                            @if (item.AddressInfo?.Latitude.HasValue == true &&
+                                                                                    item.AddressInfo?.Longitude.HasValue == true)
+                                            {
+                                                <a href="https://www.google.com/maps?q=@item.AddressInfo.Latitude,@item.AddressInfo.Longitude"
+                                                   target="_blank"
+                                                   class="btn btn-warning btn-sm px-2 rounded-2" title="Konum">
+                                                    <i class="fa fa-map-o"></i>
+                                                </a>
+                                            }
                                         </div>
-                                        <div class="col-4">
-                                            <strong class="d-block">4 yıl</strong>
-                                            <span class="text-light small">Deneyim</span>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-3">
-                                        <button class="btn btn-dark btn-sm flex-grow-1"><i class="fa fa-store me-1"></i>Mağazayı Gör</button>
-                                        <button class="btn btn-outline-secondary btn-sm"><i class="fa fa-phone"></i></button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        }
+
 
                     </div>
                 </div>
@@ -1378,13 +1532,149 @@
             </div>
         </div>
     </div>
-
 </div>
 
-@code {
-    [Parameter]
-    public Users? use { get; set; }
 
-    [Parameter]
-    public string? SearchWantedText { get; set; }
+@code {
+
+    private const string PAGE = "DataManager";
+
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public string? SearchWantedText { get; set; }
+
+    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+
+    private readonly CancellationTokenSource _cts = new();
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
+
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _isProcessing;
+
+    private List<Users>? Users { get; set; } = new();
+
+    private List<Store>? _Store { get; set; } = new();
+    private int StoreCount = 0;
+
+    private Notification? notificationRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+
+        var shouldRefresh = entityName == "Wanted";
+
+        if (shouldRefresh)
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadData(null);
+                StateHasChanged();
+            });
+        }
+    }
+
+    protected virtual async Task LoadData(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(1000, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+            using var db = await DbFactory.CreateDbContextAsync();
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync("Wanted", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var query_Store = db.Stores.AsNoTracking().Where(s => s.IsDeleted.IsDeletedStatu != true
+                    && s.Name.Contains(SearchWantedText)
+                    && s.Description.Contains(SearchWantedText)
+                );
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(u =>
+                        u.FirstName.Contains(search) ||
+                        u.LastName.Contains(search));
+                }
+
+                var users = await query
+                    .OrderByDescending(u => u.RegistrationDate)
+                    .ToListAsync(token);
+                var _store = await query_Store
+                    .ToListAsync(token);
+
+                return new { Users = users, _Store = _store };
+
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+            {
+                Users = result.Users;
+                _Store = result._Store;
+                StoreCount = _Store.ToList().Count;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
 }

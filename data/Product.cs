@@ -1,4 +1,5 @@
-﻿using System;
+﻿using data._Shared;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -21,11 +22,10 @@ namespace data
         [Required]
         // Ürünün müşteriye görünen tam adı (Örn: Apple iPhone 15 Pro)
         public string Name { get; set; } = string.Empty;
-        public string UniqueName { get; set; } = string.Empty;
 
         [Required]
         // URL yapısı için kullanılan temizlenmiş isim (Örn: apple-iphone-15-pro)
-        public string Slug { get; set; } = string.Empty;
+        public string UniqueNameSlug { get; set; } = string.Empty;
 
         // Ürün listeleme sayfalarında görünecek olan kısa tanıtım metni
         public string? Description { get; set; }
@@ -59,5 +59,9 @@ namespace data
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         // Ürün bilgilerinin son güncellenme tarihi
         public DateTime? UpdatedAt { get; set; }
+
+        public Meta? Meta { get; set; } = new();
+        public InteractionCounts? Interaction { get; set; } = new();
+        public IsDeleted? IsDeleted { get; set; } = new();
     }
 }

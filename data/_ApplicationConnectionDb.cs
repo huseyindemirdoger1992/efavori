@@ -17,6 +17,11 @@ namespace data
 
         public DbSet<WorkstationEmployeeGroup> WorkstationEmployeeGroup { get; set; } = default!;
 
+        // Shared
+        public DbSet<Posts> Posts { get; set; } = default!;
+        public DbSet<Article> Article { get; set; } = default!;
+
+
         // Chat
         public DbSet<ChatMessage> ChatMessage { get; set; } = default!;
 
@@ -65,8 +70,7 @@ namespace data
         // Products & Stores
         public DbSet<Store> Stores { get; set; } = default!;
         public DbSet<Pricing> Pricing { get; set; } = default!;
-
-        // public DbSet<Product> Product { get; set; } = default!;
+        public DbSet<Product> Product { get; set; } = default!;
 
 
         //---------------- Constructor'lar ----------------//

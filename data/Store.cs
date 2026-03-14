@@ -52,6 +52,8 @@ namespace data
 
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public IsDeleted? IsDeleted { get; set; } = new(); 
+        public Meta? Meta { get; set; } = new();
+        public InteractionCounts? Interaction { get; set; } = new();
+        public IsDeleted? IsDeleted { get; set; } = new();
     }
 }

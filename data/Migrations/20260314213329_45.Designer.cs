@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260314213329_45")]
+    partial class _45
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,34 +90,6 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Addresses");
-                });
-
-            modelBuilder.Entity("data.Article", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("FeaturedImage")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsUser")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserStoreId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Article");
                 });
 
             modelBuilder.Entity("data.CategoriesAz", b =>
@@ -763,30 +738,6 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Logs");
-                });
-
-            modelBuilder.Entity("data.Posts", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsUser")
-                        .HasColumnType("bit");
-
-                    b.Property<Guid>("UserStoreId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("data.Pricing", b =>
@@ -1480,98 +1431,6 @@ namespace data.Migrations
                     b.Navigation("IsDeleted");
                 });
 
-            modelBuilder.Entity("data.Article", b =>
-                {
-                    b.OwnsOne("data._Shared.InteractionCounts", "Interaction", b1 =>
-                        {
-                            b1.Property<Guid>("ArticleId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<int?>("BookmarkCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("LikeCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ShareCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ViewCount")
-                                .HasColumnType("int");
-
-                            b1.HasKey("ArticleId");
-
-                            b1.ToTable("Article");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ArticleId");
-                        });
-
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ArticleId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ArticleId");
-
-                            b1.ToTable("Article");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ArticleId");
-                        });
-
-                    b.OwnsOne("data._Shared.Meta", "Meta", b1 =>
-                        {
-                            b1.Property<Guid>("ArticleId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CanonicalUrl")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("FocusKeywords")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("MetaDescription")
-                                .IsRequired()
-                                .HasMaxLength(160)
-                                .HasColumnType("nvarchar(160)");
-
-                            b1.Property<string>("MetaTitle")
-                                .IsRequired()
-                                .HasMaxLength(70)
-                                .HasColumnType("nvarchar(70)");
-
-                            b1.Property<string>("OgType")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("RobotsIndex")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("ArticleId");
-
-                            b1.ToTable("Article");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ArticleId");
-                        });
-
-                    b.Navigation("Interaction");
-
-                    b.Navigation("IsDeleted");
-
-                    b.Navigation("Meta");
-                });
-
             modelBuilder.Entity("data.FriendShip", b =>
                 {
                     b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
@@ -1596,125 +1455,8 @@ namespace data.Migrations
                     b.Navigation("IsDeleted");
                 });
 
-            modelBuilder.Entity("data.Posts", b =>
-                {
-                    b.OwnsOne("data._Shared.InteractionCounts", "Interaction", b1 =>
-                        {
-                            b1.Property<Guid>("PostsId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<int?>("BookmarkCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("LikeCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ShareCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ViewCount")
-                                .HasColumnType("int");
-
-                            b1.HasKey("PostsId");
-
-                            b1.ToTable("Posts");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PostsId");
-                        });
-
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("PostsId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("PostsId");
-
-                            b1.ToTable("Posts");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PostsId");
-                        });
-
-                    b.OwnsOne("data._Shared.Meta", "Meta", b1 =>
-                        {
-                            b1.Property<Guid>("PostsId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CanonicalUrl")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("FocusKeywords")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("MetaDescription")
-                                .IsRequired()
-                                .HasMaxLength(160)
-                                .HasColumnType("nvarchar(160)");
-
-                            b1.Property<string>("MetaTitle")
-                                .IsRequired()
-                                .HasMaxLength(70)
-                                .HasColumnType("nvarchar(70)");
-
-                            b1.Property<string>("OgType")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("RobotsIndex")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("PostsId");
-
-                            b1.ToTable("Posts");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PostsId");
-                        });
-
-                    b.Navigation("Interaction");
-
-                    b.Navigation("IsDeleted");
-
-                    b.Navigation("Meta");
-                });
-
             modelBuilder.Entity("data.Product", b =>
                 {
-                    b.OwnsOne("data._Shared.InteractionCounts", "Interaction", b1 =>
-                        {
-                            b1.Property<Guid>("ProductId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<int?>("BookmarkCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("LikeCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ShareCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ViewCount")
-                                .HasColumnType("int");
-
-                            b1.HasKey("ProductId");
-
-                            b1.ToTable("Product");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductId");
-                        });
-
                     b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
                         {
                             b1.Property<Guid>("ProductId")
@@ -1734,50 +1476,7 @@ namespace data.Migrations
                                 .HasForeignKey("ProductId");
                         });
 
-                    b.OwnsOne("data._Shared.Meta", "Meta", b1 =>
-                        {
-                            b1.Property<Guid>("ProductId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CanonicalUrl")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("FocusKeywords")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("MetaDescription")
-                                .IsRequired()
-                                .HasMaxLength(160)
-                                .HasColumnType("nvarchar(160)");
-
-                            b1.Property<string>("MetaTitle")
-                                .IsRequired()
-                                .HasMaxLength(70)
-                                .HasColumnType("nvarchar(70)");
-
-                            b1.Property<string>("OgType")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("RobotsIndex")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("ProductId");
-
-                            b1.ToTable("Product");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductId");
-                        });
-
-                    b.Navigation("Interaction");
-
                     b.Navigation("IsDeleted");
-
-                    b.Navigation("Meta");
                 });
 
             modelBuilder.Entity("data.Store", b =>
@@ -1973,31 +1672,6 @@ namespace data.Migrations
                                 .HasForeignKey("StoreId");
                         });
 
-                    b.OwnsOne("data._Shared.InteractionCounts", "Interaction", b1 =>
-                        {
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<int?>("BookmarkCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("LikeCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ShareCount")
-                                .HasColumnType("int");
-
-                            b1.Property<int?>("ViewCount")
-                                .HasColumnType("int");
-
-                            b1.HasKey("StoreId");
-
-                            b1.ToTable("Stores");
-
-                            b1.WithOwner()
-                                .HasForeignKey("StoreId");
-                        });
-
                     b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
                         {
                             b1.Property<Guid>("StoreId")
@@ -2008,45 +1682,6 @@ namespace data.Migrations
 
                             b1.Property<bool?>("IsDeletedStatu")
                                 .HasColumnType("bit");
-
-                            b1.HasKey("StoreId");
-
-                            b1.ToTable("Stores");
-
-                            b1.WithOwner()
-                                .HasForeignKey("StoreId");
-                        });
-
-                    b.OwnsOne("data._Shared.Meta", "Meta", b1 =>
-                        {
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CanonicalUrl")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("FocusKeywords")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("MetaDescription")
-                                .IsRequired()
-                                .HasMaxLength(160)
-                                .HasColumnType("nvarchar(160)");
-
-                            b1.Property<string>("MetaTitle")
-                                .IsRequired()
-                                .HasMaxLength(70)
-                                .HasColumnType("nvarchar(70)");
-
-                            b1.Property<string>("OgType")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("RobotsIndex")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
 
                             b1.HasKey("StoreId");
 
@@ -2155,11 +1790,7 @@ namespace data.Migrations
 
                     b.Navigation("ContactInformation");
 
-                    b.Navigation("Interaction");
-
                     b.Navigation("IsDeleted");
-
-                    b.Navigation("Meta");
 
                     b.Navigation("ProfileCoverGallery");
 

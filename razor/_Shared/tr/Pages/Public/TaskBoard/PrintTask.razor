@@ -937,7 +937,7 @@ else
             foreach (var n in notes) userIds.Add(n.UserId);
 
             var users = await db.Users
-                .Where(u => userIds.Contains(u.Id) && u.IsDeleted != true)
+                .Where(u => userIds.Contains(u.Id) && u.IsDeleted.IsDeletedStatu != true)
                 .ToListAsync();
 
             assignedByUser = users.FirstOrDefault(u => u.Id == task.AssignedByUserId);

@@ -466,7 +466,7 @@ else
                 await using var dbCtx = await DbFactory.CreateDbContextAsync(token);
 
                 var users = await dbCtx.Users.AsNoTracking()
-                    .Where(u => u.IsDeleted != true && u.IsActive == true)
+                    .Where(u => u.IsDeleted.IsDeletedStatu != true && u.IsActive == true)
                     .OrderByDescending(u => u.RegistrationDate)
                     .ToListAsync(token);
 

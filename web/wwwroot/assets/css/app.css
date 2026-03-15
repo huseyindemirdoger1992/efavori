@@ -3966,7 +3966,7 @@ input::placeholder {
 
 #theme1 {
 
-	background-image: url(../images/bg-themes/1.png);
+	background-image: url(../images/bg-themes/1.avif);
 
 	background-size: 100% 100%;
 
@@ -3978,7 +3978,7 @@ input::placeholder {
 
 #theme2 {
 
-	background-image: url(../images/bg-themes/2.png);
+	background-image: url(../images/bg-themes/2.avif);
 
 	background-size: 100% 100%;
 
@@ -3990,7 +3990,7 @@ input::placeholder {
 
 #theme3 {
 
-	background-image: url(../images/bg-themes/3.png);
+	background-image: url(../images/bg-themes/3.avif);
 
 	background-size: 100% 100%;
 
@@ -4002,7 +4002,7 @@ input::placeholder {
 
 #theme4 {
 
-	background-image: url(../images/bg-themes/4.png);
+	background-image: url(../images/bg-themes/4.avif);
 
 	background-size: 100% 100%;
 
@@ -4014,7 +4014,7 @@ input::placeholder {
 
 #theme5 {
 
-	background-image: url(../images/bg-themes/5.png);
+	background-image: url(../images/bg-themes/5.avif);
 
 	background-size: 100% 100%;
 
@@ -4026,7 +4026,7 @@ input::placeholder {
 
 #theme6 {
 
-	background-image: url(../images/bg-themes/6.png);
+	background-image: url(../images/bg-themes/6.avif);
 
 	background-size: 100% 100%;
 
@@ -4132,37 +4132,37 @@ input::placeholder {
 
 body.bg-theme1 {
 
-	background-image: url(../images/bg-themes/1.png);
+	background-image: url(../images/bg-themes/1.avif);
 
 }
 
 body.bg-theme2 {
 
-	background-image: url(../images/bg-themes/2.png);
+	background-image: url(../images/bg-themes/2.avif);
 
 }
 
 body.bg-theme3 {
 
-	background-image: url(../images/bg-themes/3.png);
+	background-image: url(../images/bg-themes/3.avif);
 
 }
 
 body.bg-theme4 {
 
-	background-image: url(../images/bg-themes/4.png);
+	background-image: url(../images/bg-themes/4.avif);
 
 }
 
 body.bg-theme5 {
 
-	background-image: url(../images/bg-themes/5.png);
+	background-image: url(../images/bg-themes/5.avif);
 
 }
 
 body.bg-theme6 {
 
-	background-image: url(../images/bg-themes/6.png);
+	background-image: url(../images/bg-themes/6.avif);
 
 }
 

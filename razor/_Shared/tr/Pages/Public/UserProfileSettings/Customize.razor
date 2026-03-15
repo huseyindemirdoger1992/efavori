@@ -1,0 +1,473 @@
+﻿@using api
+@using api.tr
+@using data
+@using Data
+@using data._Shared
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using razor._Shared.tr.Media
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+@inject FileUploadService FileService
+
+
+<Notification @ref="notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-globe",  "Anasayfa",         "/"),
+        ("fa fa-cog",    "Profil Ayarları",   "javascript:void(0)"),
+        ("fa fa-user",   "Özelleştir",      "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height:300px;">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+    </div>
+}
+else if (use != null)
+{
+    <div class="container-fluid px-3 py-4">
+        <div class="tab-pane fade show active" id="pane-basic" role="tabpanel">
+
+            <div class="row row-cols-1 row-cols-md-4 row-cols-lg-6 g-3" id="themeSelector">
+                @for (int i = 1; i <= 6; i++)
+                {
+                    var index = i;
+                    // Mevcut değerle karşılaştırma yaparken "bg-theme" formatını kontrol ediyoruz
+                    var isChecked = use?.BackgroundImagePath == $"bg-theme{index}";
+
+                    <div class="col">
+                        <label for="theme_@index" class="card h-100 border-2 shadow-sm bg-light" style="cursor: pointer;">
+
+                            <img src="/assets/images/bg-themes/@(index).avif"
+                                 class="card-img-top img-fluid rounded"
+                                 alt="Arkaplan @index"
+                                 style="height: 120px; object-fit: cover;"
+                                 loading="lazy">
+
+                            <div class="card-body p-2 text-center">
+                                <input type="radio"
+                                       name="ThemeId"
+                                       id="theme_@index"
+                                       value="bg-theme @index"
+                                       class="form-check-input me-1"
+                                       checked="@isChecked"
+                                       @onchange='() => use!.BackgroundImagePath = $"bg-theme{index}"' />
+
+                                <small class="text-dark fw-bold">Tema @index</small>
+                            </div>
+                        </label>
+                    </div>
+                }
+            </div>
+
+        </div>
+        <hr />
+        <button type="button" class="btn btn-light w-100 border shadow-sm"
+                @onclick="SaveBackgroundImage" disabled="@_isProcessing">
+            <i class="fa fa-save me-2"></i> Arka Planı Kaydet
+        </button>
+    </div>
+}
+
+
+@code {
+
+    private const string PAGE = "ProfileEdit";
+
+    private Users? _use;
+
+    [Parameter]
+    public Users? use
+    {
+        get => _use;
+        set
+        {
+            _use = value;
+            if (_use is null) return;
+            _use.ContactInformation ??= new ContactInformation();
+            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
+            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
+            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
+        }
+    }
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _disposed;
+    private bool _isInitialized;
+    private bool _isLoading;
+    private bool _isProcessing;
+    private CancellationTokenSource? _searchCts;
+
+    private string _activeMediaSlot = string.Empty;
+
+    private List<Users> Users { get; set; } = new();
+    private List<Country> _Countries = new();
+    private List<States> _States = new();
+    private List<Cities> _Cities = new();
+
+    private string? _currentPassword;
+    private string? _newPassword;
+    private string? _confirmPassword;
+
+    private Notification? notificationRef;
+
+    // ────────────────────────────────────────────────────────────────
+    // RENDER HELPERS
+    // ────────────────────────────────────────────────────────────────
+
+    private void CloseMediaModal() => _activeMediaSlot = string.Empty;
+
+    private void HandleSingleFileSelected(Data.Media media)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Sosyal medya satırı: metin input + "Herkese Açık" toggle
+    /// </summary>
+    private RenderFragment RenderSocialField(
+        string icon, string label,
+        string? value, Action<string?> onValueChange,
+        bool isActive, Action<bool?> onActiveChange,
+        string switchId) => __builder =>
+    {
+        <div class="col-md-6">
+            <label class="form-label  small fw-semibold">
+                <i class="@icon me-1"></i>@label
+            </label>
+            <input type="text" class="form-control "
+                   value="@value"
+                   @onchange="e => onValueChange(e.Value?.ToString())"
+                   placeholder="@label kullanıcı adı veya URL" />
+            <div class="form-check form-switch mt-1">
+                <input class="form-check-input" type="checkbox" id="@switchId"
+                       checked="@isActive"
+                       @onchange="e => onActiveChange((bool?)e.Value)" />
+                <label class="form-check-label small " for="@switchId">Herkese Açık</label>
+            </div>
+        </div>
+    };
+
+    /// <summary>
+    /// Gizlilik toggle kartı
+    /// </summary>
+    private RenderFragment RenderPrivacySwitch(
+        string label,
+        bool? value,
+        Action<bool?> onChange,
+        string switchId) => __builder =>
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center justify-content-between  rounded p-2 border">
+                <label class="form-check-label small mb-0" for="@switchId">@label</label>
+                <div class="form-check form-switch mb-0 ms-2">
+                    <input class="form-check-input" type="checkbox" id="@switchId"
+                           checked="@(value == true)"
+                           @onchange="e => onChange((bool?)e.Value)" />
+                </div>
+            </div>
+        </div>
+    };
+
+    // ────────────────────────────────────────────────────────────────
+    // LIFECYCLE
+    // ────────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+        FileService.OnFileSelected += HandleSingleFileSelected;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        FileService.OnFileSelected -= HandleSingleFileSelected;
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+        if (entityName != "Users") return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadData(null);
+            StateHasChanged();
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // DATA LOADING
+    // ────────────────────────────────────────────────────────────────
+
+    protected virtual async Task LoadData(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(1000, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
+            {
+                await using var db2 = await DbFactory.CreateDbContextAsync(token);
+                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                    query = query.Where(u =>
+                        u.FirstName!.Contains(search) ||
+                        u.LastName!.Contains(search));
+
+                var users = await query
+                    .OrderByDescending(u => u.RegistrationDate)
+                    .ToListAsync(token);
+
+                return new { Users = users };
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+                Users = result.Users;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // KONUM CASCADE
+    // ────────────────────────────────────────────────────────────────
+
+    protected async Task OnCountrySelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int countryId);
+        _States.Clear();
+        _Cities.Clear();
+
+        if (countryId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _States = await db.States.AsNoTracking()
+                .Where(s => s.country_id == countryId)
+                .OrderBy(s => s.name)
+                .ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    protected async Task OnStateSelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int stateId);
+        _Cities.Clear();
+
+        if (stateId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Cities = await db.Cities.AsNoTracking()
+                .Where(c => c.state_id == stateId)
+                .OrderBy(c => c.name)
+                .ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // KAYDETME İŞLEMLERİ
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task SaveBackgroundImage()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "Arka plan kaydedildi.", null);
+            await Task.Delay(3000); // 3000 milisaniye = 3 saniye bekler
+            await JS.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveBackgroundImage",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveBasicInfo()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "Temel bilgiler kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveBasicInfo",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveContactInfo()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "İletişim bilgileri kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveContactInfo",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SavePrivacySettings()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "Gizlilik ayarları kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SavePrivacySettings",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ChangePassword()
+    {
+        if (string.IsNullOrWhiteSpace(_currentPassword) ||
+            string.IsNullOrWhiteSpace(_newPassword) ||
+            _newPassword != _confirmPassword)
+        {
+            await ShowNotification("warning", "Uyarı",
+                "Şifreler eşleşmiyor veya alanlar boş bırakıldı.", null);
+            return;
+        }
+        // TODO: _currentPassword → hash doğrulama, _newPassword → hashleyip kaydet
+        await ShowNotification("success", "Başarılı", "Şifreniz güncellendi.", null);
+        _currentPassword = _newPassword = _confirmPassword = null;
+    }
+
+    private async Task FreezeAccount()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm",
+            "Hesabınızı dondurmak istediğinizden emin misiniz?");
+        if (!confirmed) return;
+
+        use!.IsActive = false;
+        await SaveBasicInfo();
+    }
+
+    private async Task DeleteAccount()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm",
+            "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
+        if (!confirmed) return;
+
+        use!.IsDeleted.IsDeletedStatu = true;
+        await SaveBasicInfo();
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // BİLDİRİM YARDIMCISI
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

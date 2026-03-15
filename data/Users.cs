@@ -41,7 +41,7 @@ namespace data
         public bool? IsActive { get; set; } = true; // Kullanıcı hesabı aktif mi dondurulmuş mu?
         public bool? IsActiveVendorStatu { get; set; } = false; // Mağaza açma yetkisi var mı?
         public bool? TermsOfUse { get; set; } // Kullanım koşullarını ve gizlilik sözleşmesini kabul etti mi?
-        public bool? IsDeleted { get; set; } = false; // Veritabanından silmek yerine "silindi" işaretlemek için (Soft Delete)
+        //public bool? IsDeleted { get; set; } = false; // Veritabanından silmek yerine "silindi" işaretlemek için (Soft Delete)
 
         // === Profil Bilgileri ===
         // Şifrele ***-***-***
@@ -52,5 +52,6 @@ namespace data
         public ProfileCoverGallery? ProfileCoverGallery { get; set; }
         public IsPrivateOrPublic? IsPrivateOrPublic { get; set; }
         public UserRolesAccessPermissions? UserRolesAccessPermissions { get; set; }
+        public IsDeleted? IsDeleted { get; set; }
     }
 }

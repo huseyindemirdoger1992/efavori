@@ -168,7 +168,7 @@
     <meta name="theme-color" content="#0000FF">
     @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
 </head>
-<body class="bg-theme bg-theme1">
+<body class="bg-theme @(use != null && !string.IsNullOrEmpty(use.BackgroundImagePath) ? use.BackgroundImagePath : "bg-theme1")">
     <div id="page-transition-overlay"></div>
     <div class="wrapper">
         @switch (lang)

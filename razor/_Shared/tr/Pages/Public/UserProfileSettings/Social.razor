@@ -1,0 +1,678 @@
+﻿@using api
+@using api.tr
+@using data
+@using Data
+@using data._Shared
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using razor._Shared.tr.Media
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+@inject FileUploadService FileService
+
+
+<Notification @ref="notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-globe",  "Anasayfa",         "/"),
+        ("fa fa-cog",    "Profil Ayarları",   "javascript:void(0)"),
+        ("fa fa-user",   "İletişim & Sosyal",      "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height:300px;">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+    </div>
+}
+else if (use != null)
+{
+    <div class="container-fluid px-3 py-4">
+
+        <!-- ════════════════════════════════════════
+             SEKME 2 – İLETİŞİM & SOSYAL
+        ════════════════════════════════════════ -->
+        <div class="tab-pane fade show active" id="pane-basic" role="tabpanel">
+
+            <!-- E-posta / Telefon / Web -->
+            <div class="card border-0 shadow-sm bg-light mb-3">
+                <div class="card-header bg-light border-bottom">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="fa fa-envelope-o me-2 text-light"></i>E-posta, Telefon &amp; Web
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">E-posta Adresi</label>
+                            <div class="input-group">
+                                <span class="input-group-text ">
+                                    <i class="fa fa-envelope-o text-light"></i>
+                                </span>
+                                <input type="email" class="form-control "
+                                       @bind="use.ContactInformation!.Email"
+                                       placeholder="ornek@email.com" />
+                            </div>
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" id="chkEmailActive"
+                                       checked="@(use.ContactInformation!.IsActiveEmail == true)"
+                                       @onchange="e => use.ContactInformation!.IsActiveEmail = (bool?)e.Value" />
+                                <label class="form-check-label small " for="chkEmailActive">
+                                    Herkese Açık
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Telefon</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control "
+                                       style="max-width:90px;"
+                                       @bind="use.ContactInformation!.CountryPhoneCode"
+                                       placeholder="+90" />
+                                <input type="tel" class="form-control "
+                                       @bind="use.ContactInformation!.PhoneNumber"
+                                       placeholder="5XX XXX XX XX" />
+                            </div>
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" id="chkPhoneActive"
+                                       checked="@(use.ContactInformation!.IsActivePhoneNumber == true)"
+                                       @onchange="e => use.ContactInformation!.IsActivePhoneNumber = (bool?)e.Value" />
+                                <label class="form-check-label small " for="chkPhoneActive">
+                                    Herkese Açık
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Kişisel Web Sitesi</label>
+                            <div class="input-group">
+                                <span class="input-group-text ">
+                                    <i class="fa fa-globe text-light"></i>
+                                </span>
+                                <input type="url" class="form-control "
+                                       @bind="use.ContactInformation!.UserWebSite"
+                                       placeholder="https://..." />
+                            </div>
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" id="chkWebActive"
+                                       checked="@(use.ContactInformation!.IsActiveUserWebSite == true)"
+                                       @onchange="e => use.ContactInformation!.IsActiveUserWebSite = (bool?)e.Value" />
+                                <label class="form-check-label small " for="chkWebActive">
+                                    Herkese Açık
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Platformlar -->
+            <div class="card border-0 shadow-sm bg-light mb-3">
+                <div class="card-header bg-light border-bottom">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="fa fa-share-alt me-2 text-light"></i>Global Platformlar
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @RenderSocialField("fa fa-facebook-square", "Facebook",
+                        use.ContactInformation!.Facebook,       v => use.ContactInformation!.Facebook = v,
+                                        use.ContactInformation!.IsActiveFacebook == true, v => use.ContactInformation!.IsActiveFacebook = v, "chkFb")
+                    @RenderSocialField("fa fa-instagram", "Instagram",
+                                        use.ContactInformation!.Instagram,      v => use.ContactInformation!.Instagram = v,
+                                        use.ContactInformation!.IsActiveInstagram == true, v => use.ContactInformation!.IsActiveInstagram = v, "chkIg")
+                    @RenderSocialField("fa fa-twitter", "X (Twitter)",
+                                        use.ContactInformation!.X,              v => use.ContactInformation!.X = v,
+                                        use.ContactInformation!.IsActiveX == true, v => use.ContactInformation!.IsActiveX = v, "chkX")
+                    @RenderSocialField("fa fa-youtube-play", "YouTube",
+                                        use.ContactInformation!.YouTube,        v => use.ContactInformation!.YouTube = v,
+                                        use.ContactInformation!.IsActiveYouTube == true, v => use.ContactInformation!.IsActiveYouTube = v, "chkYt")
+                    @RenderSocialField("fa fa-linkedin-square", "LinkedIn",
+                                        use.ContactInformation!.Linkedin,       v => use.ContactInformation!.Linkedin = v,
+                                        use.ContactInformation!.IsActiveLinkedin == true, v => use.ContactInformation!.IsActiveLinkedin = v, "chkLi")
+                    @RenderSocialField("fa fa-whatsapp", "WhatsApp",
+                                        use.ContactInformation!.WhatsApp,       v => use.ContactInformation!.WhatsApp = v,
+                                        use.ContactInformation!.IsActiveWhatsApp == true, v => use.ContactInformation!.IsActiveWhatsApp = v, "chkWa")
+                    @RenderSocialField("fa fa-paper-plane-o", "Telegram",
+                                        use.ContactInformation!.Telegram,       v => use.ContactInformation!.Telegram = v,
+                                        use.ContactInformation!.IsActiveTelegram == true, v => use.ContactInformation!.IsActiveTelegram = v, "chkTg")
+                    @RenderSocialField("fa fa-music", "TikTok",
+                                        use.ContactInformation!.TikTok,         v => use.ContactInformation!.TikTok = v,
+                                        use.ContactInformation!.IsActiveTikTok == true, v => use.ContactInformation!.IsActiveTikTok = v, "chkTt")
+                </div>
+            </div>
+        </div>
+
+        <!-- Bölgesel & Profesyonel -->
+        <div class="card border-0 shadow-sm bg-light mb-3">
+            <div class="card-header bg-light border-bottom">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="fa fa-map me-2 text-light"></i>Bölgesel &amp; Profesyonel Platformlar
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @RenderSocialField("fa fa-github", "GitHub",
+                                        use.ContactInformation!.GitHub,         v => use.ContactInformation!.GitHub = v,
+                                        use.ContactInformation!.IsActiveGitHub == true, v => use.ContactInformation!.IsActiveGitHub = v, "chkGh")
+                    @RenderSocialField("fa fa-pinterest", "Pinterest",
+                                        use.ContactInformation!.Pinterest,      v => use.ContactInformation!.Pinterest = v,
+                                        use.ContactInformation!.IsActivePinterest == true, v => use.ContactInformation!.IsActivePinterest = v, "chkPin")
+                    @RenderSocialField("fa fa-reddit", "Reddit",
+                                        use.ContactInformation!.Reddit,         v => use.ContactInformation!.Reddit = v,
+                                        use.ContactInformation!.IsActiveReddit == true, v => use.ContactInformation!.IsActiveReddit = v, "chkRed")
+                    @RenderSocialField("fa fa-comment", "Discord",
+                                        use.ContactInformation!.Discord,        v => use.ContactInformation!.Discord = v,
+                                        use.ContactInformation!.IsActiveDiscord == true, v => use.ContactInformation!.IsActiveDiscord = v, "chkDis")
+                    @RenderSocialField("fa fa-paint-brush", "Behance",
+                                        use.ContactInformation!.Behance,        v => use.ContactInformation!.Behance = v,
+                                        use.ContactInformation!.IsActiveBehance == true, v => use.ContactInformation!.IsActiveBehance = v, "chkBeh")
+                    @RenderSocialField("fa fa-weixin", "WeChat",
+                                        use.ContactInformation!.WeChat,         v => use.ContactInformation!.WeChat = v,
+                                        use.ContactInformation!.IsActiveWeChat == true, v => use.ContactInformation!.IsActiveWeChat = v, "chkWc")
+                    @RenderSocialField("fa fa-rss", "Weibo",
+                                        use.ContactInformation!.Weibo,          v => use.ContactInformation!.Weibo = v,
+                                        use.ContactInformation!.IsActiveWeibo == true, v => use.ContactInformation!.IsActiveWeibo = v, "chkWb")
+                    @RenderSocialField("fa fa-vk", "VKontakte",
+                                        use.ContactInformation!.VKontakte,      v => use.ContactInformation!.VKontakte = v,
+                                        use.ContactInformation!.IsActiveVKontakte == true, v => use.ContactInformation!.IsActiveVKontakte = v, "chkVk")
+                    @RenderSocialField("fa fa-line-chart", "Line",
+                                        use.ContactInformation!.Line,           v => use.ContactInformation!.Line = v,
+                                        use.ContactInformation!.IsActiveLine == true, v => use.ContactInformation!.IsActiveLine = v, "chkLine")
+                    @RenderSocialField("fa fa-commenting", "KakaoTalk",
+                                        use.ContactInformation!.KakaoTalk,      v => use.ContactInformation!.KakaoTalk = v,
+                                        use.ContactInformation!.IsActiveKakaoTalk == true, v => use.ContactInformation!.IsActiveKakaoTalk = v, "chkKk")
+                </div>
+            </div>
+        </div>
+
+        <div class="text-end">
+            <button class="btn btn-dark btn-sm px-4"
+                    @onclick="SaveContactInfo" disabled="@_isProcessing">
+                @if (_isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    <i class="fa fa-save me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+
+    </div>
+}
+<!-- [1] Profil Görseli Modal -->
+<div class="modal fade" id="modalProfileList" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-user-circle me-2 text-info"></i>Profil Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "profile")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [2] Kapak Görseli Modal -->
+<div class="modal fade" id="modalCoverList" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-image me-2 text-warning"></i>Kapak Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "cover")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+
+    private const string PAGE = "ProfileEdit";
+
+    private Users? _use;
+
+    [Parameter]
+    public Users? use
+    {
+        get => _use;
+        set
+        {
+            _use = value;
+            if (_use is null) return;
+            _use.ContactInformation ??= new ContactInformation();
+            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
+            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
+            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
+        }
+    }
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _disposed;
+    private bool _isInitialized;
+    private bool _isLoading;
+    private bool _isProcessing;
+    private CancellationTokenSource? _searchCts;
+
+    private string _activeMediaSlot = string.Empty;
+    // Tekli seçimler
+    private Data.Media? _profileMedia;
+    private Data.Media? _coverMedia;
+
+    private List<Users> Users { get; set; } = new();
+    private List<Country> _Countries = new();
+    private List<States> _States = new();
+    private List<Cities> _Cities = new();
+
+    private string? _currentPassword;
+    private string? _newPassword;
+    private string? _confirmPassword;
+
+    private Notification? notificationRef;
+
+    // ────────────────────────────────────────────────────────────────
+    // RENDER HELPERS
+    // ────────────────────────────────────────────────────────────────
+
+    private void CloseMediaModal()
+    {
+        // Modal kapanınca slot sıfırlanır → List component DOM'dan kaldırılır
+        // → FileService event'leri artık hiçbir List'e ulaşamaz.
+        _activeMediaSlot = string.Empty;
+    }
+
+    // ─── Tekli Seçim Handler ────────────────────────────────────────────────
+    private void HandleSingleFileSelected(Data.Media media)
+    {
+        switch (_activeMediaSlot)
+        {
+            case "profile": _profileMedia = media; break;
+            case "cover": _coverMedia = media; break;
+
+            default: break;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+
+    /// <summary>
+    /// Sosyal medya satırı: metin input + "Herkese Açık" toggle
+    /// </summary>
+    private RenderFragment RenderSocialField(
+        string icon, string label,
+        string? value, Action<string?> onValueChange,
+        bool isActive, Action<bool?> onActiveChange,
+        string switchId) => __builder =>
+    {
+        <div class="col-md-6">
+            <label class="form-label  small fw-semibold">
+                <i class="@icon me-1"></i>@label
+            </label>
+            <input type="text" class="form-control "
+                   value="@value"
+                   @onchange="e => onValueChange(e.Value?.ToString())"
+                   placeholder="@label kullanıcı adı veya URL" />
+            <div class="form-check form-switch mt-1">
+                <input class="form-check-input" type="checkbox" id="@switchId"
+                       checked="@isActive"
+                       @onchange="e => onActiveChange((bool?)e.Value)" />
+                <label class="form-check-label small " for="@switchId">Herkese Açık</label>
+            </div>
+        </div>
+    };
+
+    /// <summary>
+    /// Gizlilik toggle kartı
+    /// </summary>
+    private RenderFragment RenderPrivacySwitch(
+        string label,
+        bool? value,
+        Action<bool?> onChange,
+        string switchId) => __builder =>
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center justify-content-between  rounded p-2 border">
+                <label class="form-check-label small mb-0" for="@switchId">@label</label>
+                <div class="form-check form-switch mb-0 ms-2">
+                    <input class="form-check-input" type="checkbox" id="@switchId"
+                           checked="@(value == true)"
+                           @onchange="e => onChange((bool?)e.Value)" />
+                </div>
+            </div>
+        </div>
+    };
+
+    // ────────────────────────────────────────────────────────────────
+    // LIFECYCLE
+    // ────────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+        FileService.OnFileSelected += HandleSingleFileSelected;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+        if (entityName != "Users") return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadData(null);
+            StateHasChanged();
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // DATA LOADING
+    // ────────────────────────────────────────────────────────────────
+
+    protected virtual async Task LoadData(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(1000, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+
+            // Ülke listesi
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
+            StateHasChanged();
+
+            // Kullanıcılar (RAM cache — 5 sn)
+            var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
+            {
+                await using var db2 = await DbFactory.CreateDbContextAsync(token);
+                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                    query = query.Where(u =>
+                        u.FirstName!.Contains(search) ||
+                        u.LastName!.Contains(search));
+
+                var users = await query
+                    .OrderByDescending(u => u.RegistrationDate)
+                    .ToListAsync(token);
+
+                return new { Users = users };
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+                Users = result.Users;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // KONUM CASCADE
+    // ────────────────────────────────────────────────────────────────
+
+    protected async Task OnCountrySelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int countryId);
+        _States.Clear();
+        _Cities.Clear();
+
+        if (countryId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _States = await db.States.AsNoTracking()
+                .Where(s => s.country_id == countryId)
+                .OrderBy(s => s.name)
+                .ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    protected async Task OnStateSelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int stateId);
+        _Cities.Clear();
+
+        if (stateId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Cities = await db.Cities.AsNoTracking()
+                .Where(c => c.state_id == stateId)
+                .OrderBy(c => c.name)
+                .ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // RESİM YÜKLEME
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task OnProfileImageChanged(InputFileChangeEventArgs e)
+    {
+        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.ProfileImagePath güncelle
+        await ShowNotification("info", "Bilgi", "Profil fotoğrafı yükleme işlemi yapılacak.", null);
+    }
+
+    private async Task OnCoverImageChanged(InputFileChangeEventArgs e)
+    {
+        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.CoverImagePath güncelle
+        await ShowNotification("info", "Bilgi", "Kapak fotoğrafı yükleme işlemi yapılacak.", null);
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // KAYDETME İŞLEMLERİ
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task SaveBasicInfo()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main"); // GlobalStateHub.ClearCache(string)
+            await ShowNotification("success", "Başarılı", "Temel bilgiler kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveBasicInfo",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveContactInfo()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "İletişim bilgileri kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveContactInfo",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SavePrivacySettings()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "Gizlilik ayarları kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SavePrivacySettings",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ChangePassword()
+    {
+        if (string.IsNullOrWhiteSpace(_currentPassword) ||
+            string.IsNullOrWhiteSpace(_newPassword) ||
+            _newPassword != _confirmPassword)
+        {
+            await ShowNotification("warning", "Uyarı",
+                "Şifreler eşleşmiyor veya alanlar boş bırakıldı.", null);
+            return;
+        }
+        // TODO: _currentPassword → hash doğrulama, _newPassword → hashleyip kaydet
+        await ShowNotification("success", "Başarılı", "Şifreniz güncellendi.", null);
+        _currentPassword = _newPassword = _confirmPassword = null;
+    }
+
+    private async Task FreezeAccount()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm",
+            "Hesabınızı dondurmak istediğinizden emin misiniz?");
+        if (!confirmed) return;
+
+        use!.IsActive = false;
+        await SaveBasicInfo();
+    }
+
+    private async Task DeleteAccount()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm",
+            "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
+        if (!confirmed) return;
+
+        // Users.IsDeleted → bool? (Soft Delete flag)
+        use!.IsDeleted.IsDeletedStatu = true;
+        await SaveBasicInfo();
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // BİLDİRİM YARDIMCISI
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

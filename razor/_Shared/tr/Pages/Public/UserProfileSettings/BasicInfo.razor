@@ -1,0 +1,747 @@
+﻿@using api
+@using api.tr
+@using data
+@using Data
+@using data._Shared
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using razor._Shared.tr.Media
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+@inject FileUploadService FileService
+
+
+<Notification @ref="notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-globe",  "Anasayfa",         "/"),
+        ("fa fa-cog",    "Profil Ayarları",   "javascript:void(0)"),
+        ("fa fa-user",   "Temel Bilgiler",      "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+@if (_isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height:300px;">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+    </div>
+}
+else if (use != null)
+{
+    <div class="container-fluid px-3 py-4">
+
+        <!-- ══════════════════════════════════════════
+             PROFIL BAŞLIĞI  (Cover + Avatar)
+        ═══════════════════════════════════════════ -->
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+
+            <!-- Kapak Fotoğrafı -->
+            <div class="position-relative">
+                <img src="@(use?.ProfileCoverGallery?.CoverImagePath ?? _coverMedia?.FileUrl ?? "https://efavori.com/_files/main/NoImage.png")"
+                     class="img-fluid w-100 object-fit-cover"
+                     style="height: 350px; min-height: 200px;"
+                     alt="Kapak Fotoğrafı">
+                <div class="position-absolute bottom-0 end-0 m-3">
+                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm border-0 text-dark" data-bs-toggle="modal" data-bs-target="#modalCoverList"
+                            @onclick='() => _activeMediaSlot = "cover"'>
+                        <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
+                    </button>
+                </div>
+            </div>
+            <div class="card-body px-4 pt-0">
+                <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end gap-3" style="margin-top: -84px;">
+                    <!-- Profil Fotoğrafı -->
+                    <div class="position-relative flex-shrink-0">
+                        <img src="@(use?.ProfileCoverGallery?.ProfileImagePath ?? _profileMedia?.FileUrl ?? "https://efavori.com/_files/main/NoImage.png")" class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                             width="168" height="168" style="object-fit: cover;" alt="Profil Fotoğrafı">
+                        <button type="button"
+                                class="btn btn-outline-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                                style="width: 36px; height: 36px;" data-bs-toggle="modal" data-bs-target="#modalProfileList"
+                                @onclick='() => _activeMediaSlot = "profile"'>
+                            <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
+                        </button>
+                    </div>
+
+                    <!-- İsim / Tip / Email -->
+                    <div class="pb-1 mt-3 mt-md-0">
+                        <h5 class="mb-0 fw-semibold">@use.FirstName @use.LastName</h5>
+                        <small class="text-light">
+                            @use.UsersType &bull; @use.ContactInformation?.Email
+                        </small>
+                    </div>
+
+                    <!-- Aktif Badge -->
+                    <div class="ms-md-auto pb-1 mt-2 mt-md-0">
+                        @if (use.IsActive == true)
+                        {
+                            <span class="badge bg-success">
+                                <i class="fa fa-circle me-1" style="font-size:9px;"></i>Aktif
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">
+                                <i class="fa fa-circle me-1" style="font-size:9px;"></i>Pasif
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+
+
+        </div>
+
+        <!-- ════════════════════════════════════════
+             SEKME 1 – TEMEL BİLGİLER
+        ════════════════════════════════════════ -->
+        <div class="tab-pane fade show active" id="pane-basic" role="tabpanel">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-header bg-light border-bottom">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="fa fa-user me-2 text-light"></i>Kişisel Bilgiler
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Ad</label>
+                            <input type="text" class="form-control "
+                                   @bind="use.FirstName" placeholder="Adınız" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Soyad</label>
+                            <input type="text" class="form-control "
+                                   @bind="use.LastName" placeholder="Soyadınız" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Doğum Tarihi</label>
+                            <input type="date" class="form-control "
+                                   value="@(use.DateOfBirth?.ToString("yyyy-MM-dd"))"
+                                   @onchange="e => use.DateOfBirth = DateTime.TryParse(e.Value?.ToString(), out var d) ? d : use.DateOfBirth" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">
+                                <i class="fa fa-user-plus me-1"></i>Sponsor E-posta
+                            </label>
+                            <input type="email" class="form-control "
+                                   @bind="use.UserSponsorEmail" placeholder="sponsor@email.com" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Dil Tercihi</label>
+                            <select class="form-select " @bind="use.Language">
+                                <option value="tr">Türkçe</option>
+                                <option value="az">Azərbaycan</option>
+                                <option value="de">Deutsch</option>
+                                <option value="en">English</option>
+                                <option value="es">Español</option>
+                                <option value="fr">Français</option>
+                                <option value="hi">हिन्दी</option>
+                                <option value="pt">Português</option>
+                                <option value="ru">Русский</option>
+                                <option value="zh">中文</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Para Birimi</label>
+                            <select class="form-select " @bind="use.Currency">
+                                <option value="USD">USD – Amerikan Doları</option>
+                                <option value="EUR">EUR – Euro</option>
+                                <option value="TRY">TRY – Türk Lirası</option>
+                                <option value="GBP">GBP – İngiliz Sterlini</option>
+                            </select>
+                        </div>
+
+                        <!-- Konum -->
+                        <div class="col-12">
+                            <hr class="my-1" />
+                            <p class=" small fw-semibold mb-2">
+                                <i class="fa fa-map-marker me-1"></i>Konum
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">Ülke</label>
+                            <select class="form-select " @onchange="OnCountrySelected">
+                                <option value="">Ülke Seçin</option>
+                                @foreach (var country in _Countries)
+                                {
+                                    <option value="@country.id">@country.name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">İl / Bölge</label>
+                            <select class="form-select " @onchange="OnStateSelected"
+                                    disabled="@(!_States.Any())">
+                                <option value="">İl Seçin</option>
+                                @foreach (var state in _States)
+                                {
+                                    <option value="@state.id">@state.name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label  small fw-semibold">İlçe / Şehir</label>
+                            <select class="form-select " disabled="@(!_Cities.Any())">
+                                <option value="">İlçe Seçin</option>
+                                @foreach (var city in _Cities)
+                                {
+                                    <option value="@city.id">@city.name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Hesap Durumu -->
+                        <div class="col-12">
+                            <hr class="my-1" />
+                            <p class=" small fw-semibold mb-2">
+                                <i class="fa fa-toggle-on me-1"></i>Hesap Durumu
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkIsActive"
+                                       checked="@(use.IsActive == true)"
+                                       @onchange="e => use.IsActive = (bool?)e.Value" />
+                                <label class="form-check-label small" for="chkIsActive">Hesap Aktif</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkVendor"
+                                       checked="@(use.IsActiveVendorStatu == true)"
+                                       @onchange="e => use.IsActiveVendorStatu = (bool?)e.Value" />
+                                <label class="form-check-label small" for="chkVendor">Satıcı Yetkisi</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkEmployee"
+                                       checked="@(use.UserIsEmployee == true)"
+                                       @onchange="e => use.UserIsEmployee = (bool?)e.Value" />
+                                <label class="form-check-label small" for="chkEmployee">Çalışan</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkTerms"
+                                       checked="@(use.TermsOfUse == true)"
+                                       @onchange="e => use.TermsOfUse = (bool?)e.Value" />
+                                <label class="form-check-label small" for="chkTerms">
+                                    Kullanım Koşullarını Kabul Etti
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkStaff"
+                                       checked="@(use.UserRolesAccessPermissions!.IsItStaff == true)"
+                                       @onchange="e => use.UserRolesAccessPermissions!.IsItStaff = (bool?)e.Value" />
+                                <label class="form-check-label small" for="chkStaff">Personel Rolü</label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="card-footer bg-light border-top text-end">
+                    <button class="btn btn-dark btn-sm px-4"
+                            @onclick="SaveBasicInfo" disabled="@_isProcessing">
+                        @if (_isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        <i class="fa fa-save me-1"></i> Kaydet
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+}
+<!-- [1] Profil Görseli Modal -->
+<div class="modal fade" id="modalProfileList" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-user-circle me-2 text-info"></i>Profil Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "profile")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [2] Kapak Görseli Modal -->
+<div class="modal fade" id="modalCoverList" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-image me-2 text-warning"></i>Kapak Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "cover")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+
+    private const string PAGE = "ProfileEdit";
+
+    private Users? _use;
+
+    [Parameter]
+    public Users? use
+    {
+        get => _use;
+        set
+        {
+            _use = value;
+            if (_use is null) return;
+            _use.ContactInformation ??= new ContactInformation();
+            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
+            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
+            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
+        }
+    }
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _disposed;
+    private bool _isInitialized;
+    private bool _isLoading;
+    private bool _isProcessing;
+    private CancellationTokenSource? _searchCts;
+
+    private string _activeMediaSlot = string.Empty;
+    // Tekli seçimler
+    private Data.Media? _profileMedia;
+    private Data.Media? _coverMedia;
+
+    private List<Users> Users { get; set; } = new();
+    private List<Country> _Countries = new();
+    private List<States> _States = new();
+    private List<Cities> _Cities = new();
+
+    private string? _currentPassword;
+    private string? _newPassword;
+    private string? _confirmPassword;
+
+    private Notification? notificationRef;
+
+    // ────────────────────────────────────────────────────────────────
+    // RENDER HELPERS
+    // ────────────────────────────────────────────────────────────────
+
+    private void CloseMediaModal()
+    {
+        // Modal kapanınca slot sıfırlanır → List component DOM'dan kaldırılır
+        // → FileService event'leri artık hiçbir List'e ulaşamaz.
+        _activeMediaSlot = string.Empty;
+    }
+
+    // ─── Tekli Seçim Handler ────────────────────────────────────────────────
+    private void HandleSingleFileSelected(Data.Media media)
+    {
+        switch (_activeMediaSlot)
+        {
+            case "profile": _profileMedia = media; break;
+            case "cover": _coverMedia = media; break;
+
+            default: break;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+
+    /// <summary>
+    /// Sosyal medya satırı: metin input + "Herkese Açık" toggle
+    /// </summary>
+    private RenderFragment RenderSocialField(
+        string icon, string label,
+        string? value, Action<string?> onValueChange,
+        bool isActive, Action<bool?> onActiveChange,
+        string switchId) => __builder =>
+    {
+        <div class="col-md-6">
+            <label class="form-label  small fw-semibold">
+                <i class="@icon me-1"></i>@label
+            </label>
+            <input type="text" class="form-control "
+                   value="@value"
+                   @onchange="e => onValueChange(e.Value?.ToString())"
+                   placeholder="@label kullanıcı adı veya URL" />
+            <div class="form-check form-switch mt-1">
+                <input class="form-check-input" type="checkbox" id="@switchId"
+                       checked="@isActive"
+                       @onchange="e => onActiveChange((bool?)e.Value)" />
+                <label class="form-check-label small " for="@switchId">Herkese Açık</label>
+            </div>
+        </div>
+    };
+
+    /// <summary>
+    /// Gizlilik toggle kartı
+    /// </summary>
+    private RenderFragment RenderPrivacySwitch(
+        string label,
+        bool? value,
+        Action<bool?> onChange,
+        string switchId) => __builder =>
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center justify-content-between  rounded p-2 border">
+                <label class="form-check-label small mb-0" for="@switchId">@label</label>
+                <div class="form-check form-switch mb-0 ms-2">
+                    <input class="form-check-input" type="checkbox" id="@switchId"
+                           checked="@(value == true)"
+                           @onchange="e => onChange((bool?)e.Value)" />
+                </div>
+            </div>
+        </div>
+    };
+
+    // ────────────────────────────────────────────────────────────────
+    // LIFECYCLE
+    // ────────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+        FileService.OnFileSelected += HandleSingleFileSelected;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+        if (entityName != "Users") return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadData(null);
+            StateHasChanged();
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // DATA LOADING
+    // ────────────────────────────────────────────────────────────────
+
+    protected virtual async Task LoadData(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(1000, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+
+            // Ülke listesi
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
+            StateHasChanged();
+
+            // Kullanıcılar (RAM cache — 5 sn)
+            var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
+            {
+                await using var db2 = await DbFactory.CreateDbContextAsync(token);
+                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                    query = query.Where(u =>
+                        u.FirstName!.Contains(search) ||
+                        u.LastName!.Contains(search));
+
+                var users = await query
+                    .OrderByDescending(u => u.RegistrationDate)
+                    .ToListAsync(token);
+
+                return new { Users = users };
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+                Users = result.Users;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // KONUM CASCADE
+    // ────────────────────────────────────────────────────────────────
+
+    protected async Task OnCountrySelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int countryId);
+        _States.Clear();
+        _Cities.Clear();
+
+        if (countryId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _States = await db.States.AsNoTracking()
+                .Where(s => s.country_id == countryId)
+                .OrderBy(s => s.name)
+                .ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    protected async Task OnStateSelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int stateId);
+        _Cities.Clear();
+
+        if (stateId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Cities = await db.Cities.AsNoTracking()
+                .Where(c => c.state_id == stateId)
+                .OrderBy(c => c.name)
+                .ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // RESİM YÜKLEME
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task OnProfileImageChanged(InputFileChangeEventArgs e)
+    {
+        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.ProfileImagePath güncelle
+        await ShowNotification("info", "Bilgi", "Profil fotoğrafı yükleme işlemi yapılacak.", null);
+    }
+
+    private async Task OnCoverImageChanged(InputFileChangeEventArgs e)
+    {
+        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.CoverImagePath güncelle
+        await ShowNotification("info", "Bilgi", "Kapak fotoğrafı yükleme işlemi yapılacak.", null);
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // KAYDETME İŞLEMLERİ
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task SaveBasicInfo()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            if (_profileMedia != null)
+            {
+                use.ProfileCoverGallery.ProfileImagePath = _profileMedia.FileUrl;
+            }
+            if (_coverMedia != null)
+            {
+                use.ProfileCoverGallery.CoverImagePath = _coverMedia.FileUrl;
+            }
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main"); // GlobalStateHub.ClearCache(string)
+            await ShowNotification("success", "Başarılı", "Temel bilgiler kaydedildi.", null);
+            await Task.Delay(3000); // 3000 milisaniye = 3 saniye bekler
+            await JS.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveBasicInfo",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveContactInfo()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "İletişim bilgileri kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveContactInfo",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SavePrivacySettings()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Users.Update(use!);
+            await db.SaveChangesAsync();
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "Gizlilik ayarları kaydedildi.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SavePrivacySettings",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ChangePassword()
+    {
+        if (string.IsNullOrWhiteSpace(_currentPassword) ||
+            string.IsNullOrWhiteSpace(_newPassword) ||
+            _newPassword != _confirmPassword)
+        {
+            await ShowNotification("warning", "Uyarı",
+                "Şifreler eşleşmiyor veya alanlar boş bırakıldı.", null);
+            return;
+        }
+        // TODO: _currentPassword → hash doğrulama, _newPassword → hashleyip kaydet
+        await ShowNotification("success", "Başarılı", "Şifreniz güncellendi.", null);
+        _currentPassword = _newPassword = _confirmPassword = null;
+    }
+
+    private async Task FreezeAccount()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm",
+            "Hesabınızı dondurmak istediğinizden emin misiniz?");
+        if (!confirmed) return;
+
+        use!.IsActive = false;
+        await SaveBasicInfo();
+    }
+
+    private async Task DeleteAccount()
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm",
+            "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
+        if (!confirmed) return;
+
+        // Users.IsDeleted → bool? (Soft Delete flag)
+        use!.IsDeleted.IsDeletedStatu = true;
+        await SaveBasicInfo();
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // BİLDİRİM YARDIMCISI
+    // ────────────────────────────────────────────────────────────────
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

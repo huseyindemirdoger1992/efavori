@@ -60,9 +60,9 @@
 }
 @if (!User.Identity.IsAuthenticated)
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.UserProfileSettings.Profile>(RenderMode.Server, new { use = use }))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.UserProfileSettings.Security>(RenderMode.Server, new { use = use }))
 }
 else
 {
-    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.UserProfileSettings.Profile>(RenderMode.Server, new { use = use }))
+    @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Public.UserProfileSettings.Security>(RenderMode.Server, new { use = use }))
 }

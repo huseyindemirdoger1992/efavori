@@ -328,6 +328,47 @@ namespace razor._Shared.tr.Modals.Account
                     await emailSender.SendNewRegisterInfoEmailAsync(_user.Language, _user.ContactInformation.Email);
                     #endregion
 
+                    // Bu alan içerisindeki tüm değerler "true" olarak atanmalı: _user.IsPrivateOrPublic
+                    _user.IsPrivateOrPublic = new IsPrivateOrPublic
+                    {
+                        // 1. TEMEL GÖRÜNÜRLÜK AYARLARI
+                        IsProfilePublic = true,
+                        IsAllowPostsView = true,
+                        IsShowLastSeen = true,
+                        IsShowOnlineStatus = true,
+                        IsSearchEngineIndexingAllowed = true,
+
+                        // 2. İLETİŞİM VE BAĞLANTI AYARLARI
+                        IsAllowFriendRequest = true,
+                        IsAllowDirectMessages = true,
+                        IsAllowVoiceCalls = true,
+                        IsAllowVideoCalls = true,
+                        IsReadReceiptsEnabled = true,
+
+                        // 3. KİŞİSEL BİLGİ GİZLİLİĞİ
+                        IsLocationVisible = true,
+                        IsShowFollowerCount = true,
+                        IsShowFollowingList = true,
+                        IsShowFollowerList = true,
+
+                        // 4. ETKİLEŞİM VE İÇERİK YÖNETİMİ
+                        IsAllowComments = true,
+                        IsAllowTagging = true,
+                        IsAllowStorySharing = true,
+                        IsAllowPostDownloading = true,
+
+                        // 5. BİLDİRİM VE GÜVENLİK AYARLARI
+                        IsEmailNotificationEnabled = true,
+                        IsPushNotificationEnabled = true,
+                        IsSmsNotificationEnabled = true,
+                        IsTwoFactorAuthEnabled = true,
+
+                        // 6. VERİ POLİTİKASI VE REKLAM
+                        IsPersonalizedAdsEnabled = true,
+                        IsDataCollectionAllowed = true,
+                        IsAiTrainingAllowed = true,
+                    };
+
                     db.Users.Add(_user);
                     await db.SaveChangesAsync();
 

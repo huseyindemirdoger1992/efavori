@@ -1,168 +1,458 @@
-﻿@using data
-@code {
-    [Parameter]
-    public Users? _use { get; set; }
+﻿@using api
+@using api.tr
+@using data
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+<Notification @ref="notificationRef" />
+
+
+@if (_isLoading)
+{
+    <p>Yükleniyor...</p>
+}
+else
+{
+
 }
 
 <li class="nav-item dropdown dropdown-large">
-	<a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" data-bs-toggle="dropdown">
-		<span class="alert-count">7</span>
-		<i class='bx bx-bell'></i>
-	</a>
-	<div class="dropdown-menu dropdown-menu-end">
-		<a href="javascript:;">
-			<div class="msg-header">
-				<p class="msg-header-title">Notifications</p>
-				<p class="msg-header-badge">8 New</p>
-			</div>
-		</a>
-		<div class="header-notifications-list">
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="user-online">
-						<img src="/assets/images/avatars/avatar-1.png" class="msg-avatar" alt="user avatar">
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							Daisy Anderson<span class="msg-time float-end">
-								5 sec
-								ago
-							</span>
-						</h6>
-						<p class="msg-info">The standard chunk of lorem</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="notify bg-light-danger text-danger">
-						dc
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							New Orders <span class="msg-time float-end">
-								2 min
-								ago
-							</span>
-						</h6>
-						<p class="msg-info">You have recived new orders</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="user-online">
-						<img src="/assets/images/avatars/avatar-2.png" class="msg-avatar" alt="user avatar">
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							Althea Cabardo <span class="msg-time float-end">
-								14
-								sec ago
-							</span>
-						</h6>
-						<p class="msg-info">Many desktop publishing packages</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="notify bg-light-success text-success">
-						<img src="/assets/images/app/outlook.png" width="25" alt="user avatar">
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							Account Created<span class="msg-time float-end">
-								28 min
-								ago
-							</span>
-						</h6>
-						<p class="msg-info">Successfully created new email</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="notify bg-light-info text-info">
-						Ss
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							New Product Approved <span class="msg-time float-end">2 hrs ago</span>
-						</h6>
-						<p class="msg-info">Your new product has approved</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="user-online">
-						<img src="/assets/images/avatars/avatar-4.png" class="msg-avatar" alt="user avatar">
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							Katherine Pechon <span class="msg-time float-end">
-								15
-								min ago
-							</span>
-						</h6>
-						<p class="msg-info">Making this the first true generator</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="notify bg-light-success text-success">
-						<i class='bx bx-check-square'></i>
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							Your item is shipped <span class="msg-time float-end">
-								5 hrs
-								ago
-							</span>
-						</h6>
-						<p class="msg-info">Successfully shipped your item</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="notify bg-light-primary">
-						<img src="/assets/images/app/github.png" width="25" alt="user avatar">
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							New 24 authors<span class="msg-time float-end">
-								1 day
-								ago
-							</span>
-						</h6>
-						<p class="msg-info">24 new authors joined last week</p>
-					</div>
-				</div>
-			</a>
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center">
-					<div class="user-online">
-						<img src="/assets/images/avatars/avatar-8.png" class="msg-avatar" alt="user avatar">
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="msg-name">
-							Peter Costanzo <span class="msg-time float-end">
-								6 hrs
-								ago
-							</span>
-						</h6>
-						<p class="msg-info">It was popularised in the 1960s</p>
-					</div>
-				</div>
-			</a>
-		</div>
-		<a href="javascript:;">
-			<div class="text-center msg-footer">
-				<button class="btn btn-light w-100">View All Notifications</button>
-			</div>
-		</a>
-	</div>
+    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" data-bs-toggle="dropdown">
+        <span class="alert-count">@FriendShip.Count</span>
+        <i class='bx bx-bell'></i>
+    </a>
+    <div class="dropdown-menu dropdown-menu-end">
+        <a href="javascript:;">
+            <div class="msg-header">
+                <p class="msg-header-title">Bildirimler</p>
+                <p class="msg-header-badge">@FriendShip.Count</p>
+            </div>
+        </a>
+        <div class="header-notifications-list">
+            @foreach (FriendShip item in FriendShip)
+            {
+                var currentUser = Users?.FirstOrDefault(u => u.Id == item.RequestorId);
+                var profileImg = currentUser?.ProfileCoverGallery?.ProfileImagePath ?? "/images/default-avatar.png";
+                var fullName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Bilinmeyen Kullanıcı";
+
+                <div class="dropdown-item py-2 px-3 border-bottom shadow-none" style="transition: background 0.2s; cursor: pointer;">
+                    <div class="d-flex align-items-center py-1">
+
+                        <div class="user-online position-relative flex-shrink-0">
+                            @if (currentUser != null && !string.IsNullOrEmpty(currentUser.ProfileCoverGallery?.ProfileImagePath))
+                            {
+                                <img src="@profileImg" class="msg-avatar shadow-sm" alt="@fullName" style="width:42px; height:42px; object-fit: cover;">
+                            }
+                            else
+                            {
+                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width:42px; height:42px;">
+                                    <i class="fa fa-address-book-o" style="font-size: 1.1rem;"></i>
+                                </div>
+                            }
+                        </div>
+
+        
+
+                        <div class="flex-grow-1 ms-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-light" style="font-size: 0.85rem; letter-spacing: -0.1px;">@fullName</span>
+                                <small class="text-light" style="font-size: 0.7rem; opacity: 0.8;">Az önce</small>
+                            </div>
+
+                            <p class="mb-2 text-light" style="font-size: 0.8rem; margin-top: -2px;">Sana arkadaşlık isteği gönderdi.</p>
+
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary btn-sm px-3 py-1 flex-fill rounded-2 border-0"
+                                        style="font-size: 0.72rem; font-weight: 600;">
+                                    Onayla
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm px-3 py-1 flex-fill rounded-2 border"
+                                        style="font-size: 0.72rem; font-weight: 600;">
+                                    Sil
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            }
+        </div>
+        <a href="javascript:;">
+            <div class="text-center msg-footer">
+                <button class="btn btn-light w-100">Tüm Bildirimleri Gör</button>
+            </div>
+        </a>
+    </div>
 </li>
+@code {
+
+    private const string PAGE = "DataManager";
+
+    [Parameter] public Users? use { get; set; }
+
+    private readonly CancellationTokenSource _cts = new();
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
+
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _isProcessing;
+
+    private List<Users>? Users { get; set; } = new();
+    private List<FriendShip>? FriendShip { get; set; } = new();
+
+    private List<Country> _Countries = new();
+    private List<States> _States = new();
+    private List<Cities> _Cities = new();
+
+    private Notification? notificationRef;
+
+    protected async Task OnCountrySelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int countryId);
+        _States.Clear();
+        _Cities.Clear();
+
+        if (countryId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _States = await db.States.AsNoTracking()
+                .Where(s => s.country_id == countryId)
+                .OrderBy(s => s.name).ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    protected async Task OnStateSelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out int stateId);
+        _Cities.Clear();
+
+        if (stateId > 0)
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Cities = await db.Cities.AsNoTracking()
+                .Where(c => c.state_id == stateId)
+                .OrderBy(c => c.name).ToListAsync();
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+
+        var shouldRefresh = entityName == "Users";
+
+        if (shouldRefresh)
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadData(null);
+                StateHasChanged();
+            });
+        }
+    }
+
+    protected virtual async Task LoadData(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(1000, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+            using var db = await DbFactory.CreateDbContextAsync();
+            _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync("DataManager_Main", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var query_FriendShip = db.FriendShip.AsNoTracking().Where(u => u.ReceiverId == use.Id && u.IsDeleted.IsDeletedStatu != true);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(u =>
+                        u.FirstName.Contains(search) ||
+                        u.LastName.Contains(search));
+                }
+
+                var users = await query
+                    .OrderByDescending(u => u.RegistrationDate)
+                    .ToListAsync(token);
+                var friendShip = await query_FriendShip
+                    .ToListAsync(token);
+
+                return new { Users = users, FriendShip = friendShip };
+
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+                Users = result.Users;
+            FriendShip = result.FriendShip;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected async Task AddUser(Users newUser)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            newUser.RegistrationDate = DateTime.UtcNow;
+            db.Users.Add(newUser);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await StateHub.NotifyDataChanged("Users");
+
+            await Logger.TakeIt(newUser.Id, PAGE, "AddUser");
+
+            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla eklendi.", null);
+            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "AddUser",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Kullanıcı eklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task UpdateUser(Users updatedUser)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            db.Users.Update(updatedUser);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await StateHub.NotifyDataChanged("Users");
+
+            await Logger.TakeIt(updatedUser.Id, PAGE, "UpdateUser");
+
+            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla güncellendi.", null);
+            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "UpdateUser",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Kullanıcı güncellenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task DeleteUser(int userId)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var user = await db.Users.FindAsync(new object[] { userId }, _cts.Token);
+            if (user != null)
+            {
+                db.Users.Remove(user);
+                await db.SaveChangesAsync(_cts.Token);
+
+                await StateHub.NotifyDataChanged("Users");
+
+                await Logger.TakeIt(use?.Id, PAGE, "DeleteUser");
+
+                await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla silindi.", null);
+                await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "DeleteUser",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Kullanıcı silinirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task BulkImport(List<Users> users)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var now = DateTime.UtcNow;
+            foreach (var user in users)
+                user.RegistrationDate = now;
+
+            db.Users.AddRange(users);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await StateHub.NotifyDataChanged("Users");
+
+            await Logger.TakeIt(use?.Id, PAGE, $"BulkImport ({users.Count} kayıt)");
+
+            await ShowNotification("success", "Başarılı", $"{users.Count} kayıt başarıyla içe aktarıldı.", null);
+            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "BulkImport",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Toplu içe aktarma sırasında bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    public async Task CopyText(string textInfo)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            if (string.IsNullOrEmpty(textInfo))
+            {
+                await ShowNotification("warning", "Uyarı", "Kopyalanacak içerik bulunamadı.", null);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("navigator.clipboard.writeText", textInfo);
+                await ShowNotification("success", "Başarılı", "İçerik başarıyla kopyalandı.", null);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "CopyText",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", $"Kopyalama işlemi başarısız: {ex.Message}", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

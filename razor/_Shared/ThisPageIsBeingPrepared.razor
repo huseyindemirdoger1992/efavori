@@ -307,6 +307,7 @@ else
     </div>
 
     <!-- ===== SATIR 4: Sistem Logları ===== -->
+    @*     
     <div class="row row-cols-1 row-cols-md-1 row-cols-xl-1 g-3 mb-3">
         <div class="col">
             <div class="card radius-10 h-100">
@@ -337,6 +338,7 @@ else
             </div>
         </div>
     </div>
+    *@
 }
 
 @code {
@@ -365,7 +367,7 @@ else
     private List<Article> Article { get; set; } = new();
     private List<LoginTry> LoginTry { get; set; } = new();
     private List<Data.Media> Media { get; set; } = new();
-    private List<Logs> Logs { get; set; } = new();
+    // private List<Logs> Logs { get; set; } = new();
 
     private List<Country> _Countries = new();
     private List<States> _States = new();
@@ -495,9 +497,7 @@ else
                     .Where(m => m.IsDeletedStatu != true)
                     .ToListAsync(token);
 
-                var logs = await dbCtx.Logs.AsNoTracking()
-                    .OrderByDescending(l => l.Date)
-                    .ToListAsync(token);
+                // var logs = await dbCtx.Logs.AsNoTracking().OrderByDescending(l => l.Date).ToListAsync(token);
 
                 return new
                 {
@@ -508,7 +508,7 @@ else
                     Articles = articles,
                     LoginTry = loginTries,
                     Media = media,
-                    Logs = logs
+                    // Logs = logs
                 };
 
             }, token);
@@ -522,7 +522,7 @@ else
                 Article = result.Articles;
                 LoginTry = result.LoginTry;
                 Media = result.Media;
-                Logs = result.Logs;
+                // Logs = result.Logs;
             }
         }
         catch (OperationCanceledException) { }

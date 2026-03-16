@@ -11,16 +11,9 @@
 @inject IJSRuntime JS
 @inject TakeLogs Logger
 
-<Notification @ref="notificationRef" />
-
-
 @if (_isLoading)
 {
     <p>Yükleniyor...</p>
-}
-else
-{
-
 }
 
 <li class="nav-item dropdown dropdown-large">
@@ -44,7 +37,6 @@ else
 
                 <div class="dropdown-item py-2 px-3 border-bottom shadow-none" style="transition: background 0.2s; cursor: pointer;">
                     <div class="d-flex align-items-center py-1">
-
                         <div class="user-online position-relative flex-shrink-0">
                             @if (currentUser != null && !string.IsNullOrEmpty(currentUser.ProfileCoverGallery?.ProfileImagePath))
                             {
@@ -58,16 +50,12 @@ else
                             }
                         </div>
 
-        
-
                         <div class="flex-grow-1 ms-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="fw-bold text-light" style="font-size: 0.85rem; letter-spacing: -0.1px;">@fullName</span>
                                 <small class="text-light" style="font-size: 0.7rem; opacity: 0.8;">Az önce</small>
                             </div>
-
                             <p class="mb-2 text-light" style="font-size: 0.8rem; margin-top: -2px;">Sana arkadaşlık isteği gönderdi.</p>
-
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-primary btn-sm px-3 py-1 flex-fill rounded-2 border-0"
                                         style="font-size: 0.72rem; font-weight: 600;">
@@ -79,7 +67,6 @@ else
                                 </button>
                             </div>
                         </div>
-
                     </div>
                 </div>
             }
@@ -91,6 +78,7 @@ else
         </a>
     </div>
 </li>
+
 @code {
 
     private const string PAGE = "DataManager";
@@ -100,6 +88,12 @@ else
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
     private bool _isInitialized;
+
+    // ✅ Prerender tamamlandı mı takibi
+    private bool _isRendered;
+
+    // ✅ Render öncesi biriken bildirimler kuyruğu
+    private readonly Queue<(string type, string title, string text, string? image)> _pendingNotifications = new();
 
     private bool _isLoading;
     private CancellationTokenSource? _searchCts;
@@ -115,6 +109,21 @@ else
     private List<Cities> _Cities = new();
 
     private Notification? notificationRef;
+
+    // ✅ OnAfterRenderAsync: ilk render tamamlanınca bekleyen bildirimleri göster
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+
+            // Kuyrukta bekleyen bildirimler varsa şimdi göster
+            while (_pendingNotifications.TryDequeue(out var n))
+            {
+                await ShowNotificationDirect(n.type, n.title, n.text, n.image);
+            }
+        }
+    }
 
     protected async Task OnCountrySelected(ChangeEventArgs e)
     {
@@ -199,6 +208,7 @@ else
 
             if (_isLoading) return;
             _isLoading = true;
+
             using var db = await DbFactory.CreateDbContextAsync();
             _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
             StateHasChanged();
@@ -208,7 +218,8 @@ else
                 await using var db = await DbFactory.CreateDbContextAsync(token);
 
                 var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
-                var query_FriendShip = db.FriendShip.AsNoTracking().Where(u => u.ReceiverId == use.Id && u.IsDeleted.IsDeletedStatu != true);
+                var query_FriendShip = db.FriendShip.AsNoTracking()
+                    .Where(u => u.ReceiverId == use.Id && u.IsDeleted.IsDeletedStatu != true);
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
@@ -220,6 +231,7 @@ else
                 var users = await query
                     .OrderByDescending(u => u.RegistrationDate)
                     .ToListAsync(token);
+
                 var friendShip = await query_FriendShip
                     .ToListAsync(token);
 
@@ -228,8 +240,10 @@ else
             }, token);
 
             if (result != null && !token.IsCancellationRequested)
+            {
                 Users = result.Users;
-            FriendShip = result.FriendShip;
+                FriendShip = result.FriendShip;
+            }
         }
         catch (OperationCanceledException)
         {
@@ -240,6 +254,7 @@ else
                 exception: ex.Message,
                 stackTrace: ex.StackTrace);
 
+            // ✅ JS henüz hazır değilse kuyruğa al, hazırsa direkt göster
             await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
         }
         finally
@@ -269,9 +284,7 @@ else
             await db.SaveChangesAsync(_cts.Token);
 
             await StateHub.NotifyDataChanged("Users");
-
             await Logger.TakeIt(newUser.Id, PAGE, "AddUser");
-
             await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla eklendi.", null);
             await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
         }
@@ -307,9 +320,7 @@ else
             await db.SaveChangesAsync(_cts.Token);
 
             await StateHub.NotifyDataChanged("Users");
-
             await Logger.TakeIt(updatedUser.Id, PAGE, "UpdateUser");
-
             await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla güncellendi.", null);
             await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
         }
@@ -348,9 +359,7 @@ else
                 await db.SaveChangesAsync(_cts.Token);
 
                 await StateHub.NotifyDataChanged("Users");
-
                 await Logger.TakeIt(use?.Id, PAGE, "DeleteUser");
-
                 await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla silindi.", null);
                 await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
             }
@@ -391,9 +400,7 @@ else
             await db.SaveChangesAsync(_cts.Token);
 
             await StateHub.NotifyDataChanged("Users");
-
             await Logger.TakeIt(use?.Id, PAGE, $"BulkImport ({users.Count} kayıt)");
-
             await ShowNotification("success", "Başarılı", $"{users.Count} kayıt başarıyla içe aktarıldı.", null);
             await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
         }
@@ -449,7 +456,22 @@ else
         }
     }
 
+    // ✅ Ana bildirim metodu: render olduysa direkt göster, olmadıysa kuyruğa al
     private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (_isRendered)
+        {
+            await ShowNotificationDirect(type, title, text, image);
+        }
+        else
+        {
+            // Prerender aşamasındayız, JS hazır değil → kuyruğa ekle
+            _pendingNotifications.Enqueue((type, title, text, image));
+        }
+    }
+
+    // ✅ Gerçek JS çağrısı yapan iç metot (yalnızca render sonrası çağrılır)
+    private async Task ShowNotificationDirect(string type, string title, string text, string? image)
     {
         if (notificationRef is null) return;
         var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;

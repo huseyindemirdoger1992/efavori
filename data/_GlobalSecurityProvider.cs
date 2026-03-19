@@ -253,7 +253,6 @@ namespace data
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Optimized, blocking: false);
             }
         }
-
         // Bellek temizleme helper metodu
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void SecureClear(byte[] array)

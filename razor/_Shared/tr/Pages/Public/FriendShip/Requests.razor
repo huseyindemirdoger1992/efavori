@@ -21,7 +21,7 @@
 
 
 <div class="header-notifications-list">
-    @foreach (var item in FriendShipList)
+    @foreach (var item in FriendShipList.Where(x=> x.Status != true))
     {
         var currentUser = Users?.FirstOrDefault(u => u.Id == item.RequestorId);
         var profileImg = currentUser?.ProfileCoverGallery?.ProfileImagePath ?? "/images/default-avatar.png";
@@ -315,7 +315,7 @@
 
                 // ✅ FİX: Sorgu sonucu tipi açıkça data.FriendShip olarak belirtildi
                 var query_FriendShip = db.FriendShip.AsNoTracking()
-                    .Where(u => u.ReceiverId == use.Id && u.IsDeleted.IsDeletedStatu != true);
+                    .Where(u => u.ReceiverId == use.Id && (u.IsDeleted.IsDeletedStatu == null || u.IsDeleted.IsDeletedStatu != true));
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {

@@ -629,11 +629,25 @@
                     <div class="row g-3">
                         @foreach (Users item in _Users)
                         {
-                            var hasPendingRequest = _FriendShip != null &&
-                            _FriendShip.Any(fs =>
-                            fs.RequestorId == use.Id &&
-                            fs.ReceiverId == item.Id &&
-                            fs.IsDeleted?.IsDeletedStatu != true);
+                            // Mevcut kullanıcının (use) bu kişiye gönderdiği aktif istek
+                            var sentRequest = _FriendShip?.FirstOrDefault(fs =>
+                                fs.RequestorId == use.Id &&
+                                fs.ReceiverId == item.Id &&
+                                fs.IsDeleted?.IsDeletedStatu != true);
+
+                            // Karşı tarafın (item) bize gönderdiği aktif istek
+                            var receivedRequest = _FriendShip?.FirstOrDefault(fs =>
+                                fs.RequestorId == item.Id &&
+                                fs.ReceiverId == use.Id &&
+                                fs.IsDeleted?.IsDeletedStatu != true);
+
+                            // Durum değerlendirmesi
+                            bool isFriend = (sentRequest?.Status == true) || (receivedRequest?.Status == true);
+                            bool isBlocked = (sentRequest?.Block == true) || (receivedRequest?.Block == true);
+                            bool isPending = sentRequest != null && sentRequest.Status == null && sentRequest.Block != true;
+                            bool isRejected = sentRequest?.Status == false;
+                            bool hasIncoming = receivedRequest != null && receivedRequest.Status == null && receivedRequest.Block != true;
+
                             <div class="col-12 col-md-6 col-lg-4">
                                 <div class="card border-0 shadow-sm h-100">
                                     <div class="card-body p-4">
@@ -649,12 +663,12 @@
                                             </div>
                                             <div class="overflow-hidden">
                                                 <strong class="d-block text-truncate">@item.FirstName @item.LastName</strong>
-                                                <span class="text-light small d-block text-truncate">
+                                                <span class="text-muted small d-block text-truncate">
                                                     <i class="fa fa-envelope-o me-1"></i>@item.ContactInformation?.Email
                                                 </span>
                                                 @if (item.DateOfBirth.HasValue)
                                                 {
-                                                    <span class="badge bg-light text-light border small mt-1">
+                                                    <span class="badge bg-light text-secondary border small mt-1">
                                                         <i class="fa fa-calendar-o me-1"></i>@item.DateOfBirth.Value.ToString("dd.MM.yyyy")
                                                     </span>
                                                 }
@@ -665,19 +679,19 @@
                                         <div class="row g-0 text-center border rounded-3 overflow-hidden mb-3">
                                             <div class="col-4 bg-light py-2 border-end">
                                                 <strong class="d-block small">148</strong>
-                                                <span class="text-light" style="font-size:0.65rem;">
+                                                <span class="text-muted" style="font-size:0.65rem;">
                                                     <i class="fa fa-th-large me-1"></i>Gönderi
                                                 </span>
                                             </div>
                                             <div class="col-4 bg-light py-2 border-end">
                                                 <strong class="d-block small">2.4K</strong>
-                                                <span class="text-light" style="font-size:0.65rem;">
+                                                <span class="text-muted" style="font-size:0.65rem;">
                                                     <i class="fa fa-users me-1"></i>Takipçi
                                                 </span>
                                             </div>
                                             <div class="col-4 bg-light py-2">
                                                 <strong class="d-block small">312</strong>
-                                                <span class="text-light" style="font-size:0.65rem;">
+                                                <span class="text-muted" style="font-size:0.65rem;">
                                                     <i class="fa fa-user-plus me-1"></i>Takip
                                                 </span>
                                             </div>
@@ -685,30 +699,58 @@
 
                                         <!-- Aksiyon Butonları -->
                                         <div class="d-flex gap-2">
-                                            @if (hasPendingRequest)
+
+                                            @if (isBlocked)
+                                            {
+                                                <!-- Bloklandı -->
+                                                <button class="btn btn-outline-secondary btn-sm flex-grow-1" disabled
+                                                        title="Bu kullanıcı bloklandı">
+                                                    <i class="fa fa-ban me-1"></i>Bloklandı
+                                                </button>
+                                            }
+                                            else if (isFriend)
+                                            {
+                                                <!-- Zaten Arkadaş -->
+                                                <button class="btn btn-success btn-sm flex-grow-1" disabled
+                                                        title="Zaten arkadaşsınız">
+                                                    <i class="fa fa-check me-1"></i>Arkadaşsınız
+                                                </button>
+                                            }
+                                            else if (isPending)
                                             {
                                                 <!-- İstek Gönderilmiş: Geri Al -->
                                                 <button class="btn btn-outline-danger btn-sm flex-grow-1"
-                                                        @onclick="() => CancelFriendShip(item.Id)"
+                                                        @onclick="() => CancelFriendShip(sentRequest!.Id)"
                                                         title="Gönderilen isteği geri al">
                                                     <i class="fa fa-user-times me-1"></i>İsteği Geri Al
                                                 </button>
                                             }
+                                            else if (isRejected)
+                                            {
+                                                <!-- Reddedildi: Tekrar istek at -->
+                                                <button class="btn btn-outline-primary btn-sm flex-grow-1"
+                                                        @onclick="() => AddFriendShip(item.Id)"
+                                                        title="Tekrar arkadaşlık isteği gönder">
+                                                    <i class="fa fa-user-plus me-1"></i>Tekrar İstek Gönder
+                                                </button>
+                                            }
                                             else
                                             {
-                                                <!-- İstek Gönderilmemiş: Takip Et -->
+                                                <!-- Henüz İstek Yok -->
                                                 <button class="btn btn-primary btn-sm flex-grow-1"
                                                         @onclick="() => AddFriendShip(item.Id)"
                                                         title="Arkadaşlık isteği gönder">
                                                     <i class="fa fa-user-plus me-1"></i>Takip Et
                                                 </button>
                                             }
+
                                             <!-- Profil Sayfasına Git -->
                                             <a href="/profile/@item.Id"
                                                    class="btn btn-light border btn-sm px-3"
                                                    title="Profile Git">
                                                 <i class="fa fa-user-circle-o"></i>
                                             </a>
+
                                         </div>
 
                                     </div>

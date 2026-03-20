@@ -705,8 +705,8 @@
                                             }
                                             <!-- Profil Sayfasına Git -->
                                             <a href="/profile/@item.Id"
-                                               class="btn btn-light border btn-sm px-3"
-                                               title="Profile Git">
+                                                   class="btn btn-light border btn-sm px-3"
+                                                   title="Profile Git">
                                                 <i class="fa fa-user-circle-o"></i>
                                             </a>
                                         </div>
@@ -936,27 +936,27 @@
                                                 <i class="fa fa-heart-o"></i>
                                             </button>
                                             @if (item.ContactInformation?.IsActivePhoneNumber == true &&
-                                                                                    !string.IsNullOrEmpty(item.ContactInformation.FullPhoneNumber))
+                                                                                                                                                                            !string.IsNullOrEmpty(item.ContactInformation.FullPhoneNumber))
                                             {
                                                 <a href="tel:@item.ContactInformation.FullPhoneNumber"
-                                                   class="btn btn-success btn-sm px-2 rounded-2" title="Telefon">
+                                                       class="btn btn-success btn-sm px-2 rounded-2" title="Telefon">
                                                     <i class="fa fa-phone"></i>
                                                 </a>
                                             }
                                             @if (item.ContactInformation?.IsActiveEmail == true &&
-                                                                                    !string.IsNullOrEmpty(item.ContactInformation.Email))
+                                                                                                                                                                            !string.IsNullOrEmpty(item.ContactInformation.Email))
                                             {
                                                 <a href="mailto:@item.ContactInformation.Email"
-                                                   class="btn btn-primary btn-sm px-2 rounded-2" title="E-posta">
+                                                       class="btn btn-primary btn-sm px-2 rounded-2" title="E-posta">
                                                     <i class="fa fa-envelope-open-o"></i>
                                                 </a>
                                             }
                                             @if (item.AddressInfo?.Latitude.HasValue == true &&
-                                                                                    item.AddressInfo?.Longitude.HasValue == true)
+                                                                                                                                                                            item.AddressInfo?.Longitude.HasValue == true)
                                             {
                                                 <a href="https://www.google.com/maps?q=@item.AddressInfo.Latitude,@item.AddressInfo.Longitude"
-                                                   target="_blank"
-                                                   class="btn btn-warning btn-sm px-2 rounded-2" title="Konum">
+                                                       target="_blank"
+                                                       class="btn btn-warning btn-sm px-2 rounded-2" title="Konum">
                                                     <i class="fa fa-map-o"></i>
                                                 </a>
                                             }
@@ -1050,6 +1050,9 @@
 @code {
 
     private const string PAGE = "DataManager";
+    // GlobalStateHub.NotifyDataChanged("Wanted") → _cache.Remove("data_Wanted")
+    // GetOrLoadAsync cache key bu prefix ile eşleşmeli
+    private const string CACHE_KEY = "data_Wanted";
 
     [Parameter] public Users? use { get; set; }
     [Parameter] public string? SearchWantedText { get; set; }
@@ -1063,17 +1066,21 @@
     private bool _isLoading;
     private CancellationTokenSource? _searchCts;
 
-    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    // _writeLock kaldırıldı: erişim zaten _isProcessing flag'i ile seri hale getiriliyor.
+    // İkili mekanizma (hem SemaphoreSlim hem bool flag) gereksiz karmaşıklık yaratıyordu.
     private bool _isProcessing;
 
     private List<Users>? _Users { get; set; } = new();
     private List<Store>? _Store { get; set; } = new();
     private List<FriendShip>? _FriendShip { get; set; } = new();
 
-
     private int StoreCount = 0;
 
     private Notification? notificationRef;
+
+    // ────────────────────────────────────────────────
+    // Lifecycle
+    // ────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
@@ -1094,25 +1101,32 @@
 
         await _cts.CancelAsync();
         _cts.Dispose();
-        _writeLock.Dispose();
         GC.SuppressFinalize(this);
     }
+
+    // ────────────────────────────────────────────────
+    // Global broadcast handler
+    // ────────────────────────────────────────────────
 
     private async Task HandleGlobalDataChange(string entityName)
     {
         if (_disposed || !_isInitialized || _isProcessing) return;
 
-        var shouldRefresh = entityName == "Wanted";
+        // "Wanted" entity'si değiştiyse yenile.
+        // NotifyDataChanged("Wanted") zaten cache'i "data_Wanted" key'i ile siliyor,
+        // dolayısıyla LoadData → GetOrLoadAsync doğrudan DB'ye gidecek.
+        if (entityName != "Wanted") return;
 
-        if (shouldRefresh)
+        await InvokeAsync(async () =>
         {
-            await InvokeAsync(async () =>
-            {
-                await LoadData(null);
-                StateHasChanged();
-            });
-        }
+            await LoadData(null);
+            StateHasChanged();
+        });
     }
+
+    // ────────────────────────────────────────────────
+    // FriendShip işlemleri
+    // ────────────────────────────────────────────────
 
     private async Task AddFriendShip(Guid targetUserId)
     {
@@ -1123,42 +1137,29 @@
             _isProcessing = true;
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            // Daha önce silinmiş bir istek var mı? Varsa yeniden aktif et
             var existing = await db.FriendShip
                 .FirstOrDefaultAsync(x =>
                     x.RequestorId == use.Id &&
                     x.ReceiverId == targetUserId);
 
-            if (existing is not null)
+
+            db.FriendShip.Add(new FriendShip
             {
-                // Soft-delete'i geri al
-                if (existing.IsDeleted is not null)
-                {
-                    existing.IsDeleted.IsDeletedStatu = false;
-                    existing.IsDeleted.DeletedAtDate = null;
-                }
-                existing.CreatedAt = DateTime.UtcNow;
-                existing.ActionDate = null;
-                existing.Status = null;
-            }
-            else
-            {
-                // Yeni istek oluştur
-                var fs = new FriendShip
-                {
-                    RequestorId = use.Id,
-                    ReceiverId = targetUserId,
-                    Status = null,
-                    Block = null,
-                    CreatedAt = DateTime.UtcNow,
-                    ActionDate = null
-                };
-                db.FriendShip.Add(fs);
-            }
+                RequestorId = use.Id,
+                ReceiverId = targetUserId,
+                Status = null,
+                Block = null,
+                CreatedAt = DateTime.UtcNow,
+                ActionDate = null
+            });
+            
 
             await db.SaveChangesAsync();
 
-            // Yerel listeyi güncelle (UI hemen yansısın)
+            // Cache'i manuel temizle → bir sonraki LoadData DB'den çeker
+            StateHub.ClearCache(CACHE_KEY);
+
+            // Yerel listeyi anlık güncelle (DB dönüşünü bekleme)
             _FriendShip ??= new List<FriendShip>();
             _FriendShip.RemoveAll(x =>
                 x.RequestorId == use.Id &&
@@ -1168,7 +1169,6 @@
                 RequestorId = use.Id,
                 ReceiverId = targetUserId,
                 CreatedAt = DateTime.UtcNow
-                // IsDeleted = null → UI kontrolü zaten null-safe: IsDeleted?.IsDeletedStatu != true
             });
 
             StateHasChanged();
@@ -1195,7 +1195,6 @@
             _isProcessing = true;
             await using var db = await DbFactory.CreateDbContextAsync();
 
-            // DÜZELTİLDİ: İkinci koşul ReceiverId olmalıydı, RequestorId değil
             var fs = await db.FriendShip
                 .FirstOrDefaultAsync(x =>
                     x.RequestorId == use.Id &&
@@ -1208,21 +1207,23 @@
                 return;
             }
 
-            if (fs.IsDeleted is not null)
-            {
-                fs.IsDeleted.IsDeletedStatu = true;
-                fs.IsDeleted.DeletedAtDate = DateTime.UtcNow;
-            }
+            fs.IsDeleted ??= new data._Shared.IsDeleted();
+            fs.IsDeleted.IsDeletedStatu = true;
+            fs.IsDeleted.DeletedAtDate = DateTime.UtcNow;
 
             await db.SaveChangesAsync();
 
-            // Yerel listeyi güncelle (UI hemen yansısın)
+            // Cache'i manuel temizle
+            StateHub.ClearCache(CACHE_KEY);
+
+            // Yerel listeyi anlık güncelle
             var local = _FriendShip?.FirstOrDefault(x =>
                 x.RequestorId == use.Id &&
                 x.ReceiverId == targetUserId);
 
-            if (local?.IsDeleted is not null)
+            if (local is not null)
             {
+                local.IsDeleted ??= new data._Shared.IsDeleted();
                 local.IsDeleted.IsDeletedStatu = true;
                 local.IsDeleted.DeletedAtDate = DateTime.UtcNow;
             }
@@ -1242,33 +1243,56 @@
         }
     }
 
+    // ────────────────────────────────────────────────
+    // Veri yükleme
+    // ────────────────────────────────────────────────
+
     protected virtual async Task LoadData(string? search)
     {
+        // Önceki arama iptal et (debounce)
         _searchCts?.Cancel();
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
 
         try
         {
+            // Arama varsa kısa bir gecikme uygula (debounce)
             if (!string.IsNullOrWhiteSpace(search))
                 await Task.Delay(1000, token);
 
             if (_isLoading) return;
             _isLoading = true;
-            using var db = await DbFactory.CreateDbContextAsync();
             StateHasChanged();
 
-            var result = await StateHub.GetOrLoadAsync("Wanted", async () =>
+            // DÜZELTME: cache key "data_Wanted" olarak geçiliyor.
+            // GlobalStateHub.NotifyDataChanged("Wanted") → _cache.Remove("data_Wanted")
+            // → GetOrLoadAsync burada cache miss yaşar → DB'den taze veri çeker.
+            var result = await StateHub.GetOrLoadAsync(CACHE_KEY, async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
 
-                var query_User = db.Users.AsNoTracking().Where(u => u.IsActive == true && u.Id != use.Id);
-                var query_FriendShip = db.FriendShip.AsNoTracking().Where(u => u.IsDeleted.IsDeletedStatu != true);
-                var query_Store = db.Stores.AsNoTracking().Where(s => s.IsDeleted.IsDeletedStatu != true
-                    && s.Name.Contains(SearchWantedText)
-                    && s.Description.Contains(SearchWantedText)
-                );
+                // DÜZELTME: SearchWantedText null ise Store filtresi uygulanmaz (null-safety)
+                var query_User = db.Users
+                    .AsNoTracking()
+                    .Where(u => u.IsActive == true && u.Id != use!.Id);
 
+                var query_FriendShip = db.FriendShip
+                    .AsNoTracking()
+                    .Where(u => u.IsDeleted!.IsDeletedStatu != true);
+
+                var query_Store = db.Stores
+                    .AsNoTracking()
+                    .Where(s => s.IsDeleted!.IsDeletedStatu != true);
+
+                // SearchWantedText boş değilse Store filtresi ekle
+                if (!string.IsNullOrWhiteSpace(SearchWantedText))
+                {
+                    query_Store = query_Store.Where(s =>
+                        s.Name.Contains(SearchWantedText) ||
+                        s.Description.Contains(SearchWantedText));
+                }
+
+                // Kullanıcı arama filtresi
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     query_User = query_User.Where(u =>
@@ -1277,27 +1301,28 @@
                 }
 
                 var users = await query_User
+                    .Where(u =>
+                    u.FirstName.Contains(SearchWantedText) ||
+                    u.LastName.Contains(SearchWantedText))
                     .OrderByDescending(u => u.RegistrationDate)
-                    .ToListAsync(token);
-                var _store = await query_Store
-                    .ToListAsync(token);
-                var _friendShip = await query_FriendShip
-                    .ToListAsync(token);
+                    .ToListAsync(token); var stores = await query_Store.ToListAsync(token);
+                var friendShip = await query_FriendShip.ToListAsync(token);
 
-                return new { Users = users, _Store = _store, _FriendShip = _friendShip };
+                return new { Users = users, Store = stores, FriendShip = friendShip };
 
             }, token);
 
             if (result != null && !token.IsCancellationRequested)
             {
                 _Users = result.Users;
-                _Store = result._Store;
-                _FriendShip = result._FriendShip;
-                StoreCount = _Store.ToList().Count;
+                _Store = result.Store;
+                _FriendShip = result.FriendShip;
+                StoreCount = _Store?.Count ?? 0;
             }
         }
         catch (OperationCanceledException)
         {
+            // Kullanıcı yeni arama yaptı veya sayfa kapandı — normal
         }
         catch (Exception ex)
         {
@@ -1316,6 +1341,10 @@
             }
         }
     }
+
+    // ────────────────────────────────────────────────
+    // Yardımcı
+    // ────────────────────────────────────────────────
 
     private async Task ShowNotification(string type, string title, string text, string? image)
     {

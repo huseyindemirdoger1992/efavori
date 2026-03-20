@@ -1,5 +1,4 @@
-﻿@using System.Globalization
-@using api
+﻿@using api
 @using api.tr
 @using data
 @using Data
@@ -13,94 +12,72 @@
 @inject TakeLogs Logger
 @using data._Shared
 
+<Notification @ref="notificationRef" />
 
 @if (_isLoading)
 {
     <p>Yükleniyor...</p>
 }
 
-<li class="nav-item dropdown dropdown-large">
-    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
-           href="#"
-           role="button"
-           data-bs-toggle="dropdown"
-           data-bs-auto-close="outside">
-        <span class="alert-count">@FriendShipList.Count</span>
-        <i class='bx bx-bell'></i>
-    </a>
-    
-    <div class="dropdown-menu dropdown-menu-end shadow border-0">
-        <a href="javascript:;">
-            <div class="msg-header">
-                <p class="msg-header-title">Bildirimler</p>
-                <p class="msg-header-badge">@FriendShipList.Count</p>
-            </div>
-        </a>
-        
-        <div class="header-notifications-list">
-            @foreach (var item in FriendShipList)
-            {
-                var currentUser = Users?.FirstOrDefault(u => u.Id == item.RequestorId);
-                var profileImg = currentUser?.ProfileCoverGallery?.ProfileImagePath ?? "/images/default-avatar.png";
-                var fullName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Bilinmeyen Kullanıcı";
 
-                <div class="px-3 py-2 border-bottom" style="transition: background 0.2s;">
-                    <div class="d-flex align-items-center py-1">
-                        <div class="user-online position-relative flex-shrink-0">
-                            @if (!string.IsNullOrEmpty(currentUser?.ProfileCoverGallery?.ProfileImagePath))
-                            {
-                                <img src="@profileImg" class="msg-avatar shadow-sm" alt="@fullName" style="width:42px; height:42px; object-fit: cover; border-radius: 50%;">
-                            }
-                            else
-                            {
-                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width:42px; height:42px;">
-                                    <i class="fa fa-address-book-o" style="font-size: 1.1rem;"></i>
-                                </div>
-                            }
-                        </div>
+<div class="header-notifications-list">
+    @foreach (var item in FriendShipList)
+    {
+        var currentUser = Users?.FirstOrDefault(u => u.Id == item.RequestorId);
+        var profileImg = currentUser?.ProfileCoverGallery?.ProfileImagePath ?? "/images/default-avatar.png";
+        var fullName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Bilinmeyen Kullanıcı";
 
-                        <div class="flex-grow-1 ms-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-bold text-dark" style="font-size: 0.85rem;">@fullName</span>
-                                <small class="text-muted" style="font-size: 0.7rem;">Az önce</small>
-                            </div>
-                            <p class="mb-2 text-muted" style="font-size: 0.8rem; margin-top: -2px;">Sana arkadaşlık isteği gönderdi.</p>
-                            <div class="d-flex gap-2">
-                                <button type="button"
-                                        class="btn btn-primary btn-sm px-3 py-1 flex-fill rounded-2"
-                                        style="font-size: 0.72rem; font-weight: 600;"
-                                        disabled="@_isProcessing"
-                                        @onclick="() => AcceptFriendShip(item.Id)"
-                                        @onclick:stopPropagation="true">
-                                    Onayla
-                                </button>
-                                <button type="button"
-                                        class="btn btn-danger btn-sm px-3 py-1 flex-fill rounded-2"
-                                        style="font-size: 0.72rem; font-weight: 600;"
-                                        disabled="@_isProcessing"
-                                        @onclick="() => DeleteFriendShip(item.Id)"
-                                        @onclick:stopPropagation="true">
-                                    Sil
-                                </button>
-                            </div>
+        <div class="px-3 py-2 border-bottom" style="transition: background 0.2s;">
+            <div class="d-flex align-items-center py-1">
+                <div class="user-online position-relative flex-shrink-0">
+                    @if (!string.IsNullOrEmpty(currentUser?.ProfileCoverGallery?.ProfileImagePath))
+                    {
+                        <img src="@profileImg" class="msg-avatar shadow-sm" alt="@fullName" style="width:42px; height:42px; object-fit: cover; border-radius: 50%;">
+                    }
+                    else
+                    {
+                        <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border shadow-sm text-secondary" style="width:42px; height:42px;">
+                            <i class="fa fa-address-book-o" style="font-size: 1.1rem;"></i>
                         </div>
+                    }
+                </div>
+
+                <div class="flex-grow-1 ms-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">@fullName</span>
+                        <small class="text-muted" style="font-size: 0.7rem;">Az önce</small>
+                    </div>
+                    <p class="mb-2 text-muted" style="font-size: 0.8rem; margin-top: -2px;">Sana arkadaşlık isteği gönderdi.</p>
+                    <div class="d-flex gap-2">
+                        <button type="button"
+                                class="btn btn-primary btn-sm px-3 py-1 flex-fill rounded-2"
+                                style="font-size: 0.72rem; font-weight: 600;"
+                                disabled="@_isProcessing"
+                                @onclick="() => AcceptFriendShip(item.Id)"
+                                @onclick:stopPropagation="true">
+                            Onayla
+                        </button>
+                        <button type="button"
+                                class="btn btn-danger btn-sm px-3 py-1 flex-fill rounded-2"
+                                style="font-size: 0.72rem; font-weight: 600;"
+                                disabled="@_isProcessing"
+                                @onclick="() => DeleteFriendShip(item.Id)"
+                                @onclick:stopPropagation="true">
+                            Sil
+                        </button>
                     </div>
                 </div>
-            }
+            </div>
         </div>
+    }
+</div>
         
-        <div class="text-center msg-footer p-2">
-            <a class="btn btn-light btn-sm w-100" href="/@culture/Public/FriendShip/Requests/">Tüm Bildirimleri Gör</a>
-        </div>
-    </div>
-</li>
+
 @code {
 
     private const string PAGE = "DataManager";
 
     [Parameter] public Users? use { get; set; }
-
-    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 
     private readonly CancellationTokenSource _cts = new();
     private bool _disposed;
@@ -261,8 +238,6 @@
         }
     }
 
-
-
     protected async Task DeleteFriendShip(Guid friendShipId)
     {
         if (_isProcessing) return;
@@ -389,194 +364,6 @@
         }
     }
 
-    protected async Task AddUser(Users newUser)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            newUser.RegistrationDate = DateTime.UtcNow;
-            db.Users.Add(newUser);
-            await db.SaveChangesAsync(_cts.Token);
-
-            await StateHub.NotifyDataChanged("Users");
-            await Logger.TakeIt(newUser.Id, PAGE, "AddUser");
-            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla eklendi.", null);
-            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "AddUser",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Kullanıcı eklenirken bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    protected async Task UpdateUser(Users updatedUser)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            db.Users.Update(updatedUser);
-            await db.SaveChangesAsync(_cts.Token);
-
-            await StateHub.NotifyDataChanged("Users");
-            await Logger.TakeIt(updatedUser.Id, PAGE, "UpdateUser");
-            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla güncellendi.", null);
-            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "UpdateUser",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Kullanıcı güncellenirken bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    protected async Task DeleteUser(int userId)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            var user = await db.Users.FindAsync(new object[] { userId }, _cts.Token);
-            if (user != null)
-            {
-                db.Users.Remove(user);
-                await db.SaveChangesAsync(_cts.Token);
-
-                await StateHub.NotifyDataChanged("Users");
-                await Logger.TakeIt(use?.Id, PAGE, "DeleteUser");
-                await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla silindi.", null);
-                await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-            }
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "DeleteUser",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Kullanıcı silinirken bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    protected async Task BulkImport(List<Users> users)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            var now = DateTime.UtcNow;
-            foreach (var user in users)
-                user.RegistrationDate = now;
-
-            db.Users.AddRange(users);
-            await db.SaveChangesAsync(_cts.Token);
-
-            await StateHub.NotifyDataChanged("Users");
-            await Logger.TakeIt(use?.Id, PAGE, $"BulkImport ({users.Count} kayıt)");
-            await ShowNotification("success", "Başarılı", $"{users.Count} kayıt başarıyla içe aktarıldı.", null);
-            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "BulkImport",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Toplu içe aktarma sırasında bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    public async Task CopyText(string textInfo)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            if (string.IsNullOrEmpty(textInfo))
-            {
-                await ShowNotification("warning", "Uyarı", "Kopyalanacak içerik bulunamadı.", null);
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("navigator.clipboard.writeText", textInfo);
-                await ShowNotification("success", "Başarılı", "İçerik başarıyla kopyalandı.", null);
-            }
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "CopyText",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", $"Kopyalama işlemi başarısız: {ex.Message}", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
 
     private async Task ShowNotification(string type, string title, string text, string? image)
     {

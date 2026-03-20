@@ -306,8 +306,181 @@ else
         </div>
     </div>
 
-    <!-- ===== SATIR 4: Sistem Logları ===== -->
-    @*     
+    <!-- ===== SATIR 4: Arkadaşlık İstekleri ===== -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-2 row-cols-xl-3 g-3 mb-3">
+
+        <!-- Toplam Arkadaşlık -->
+        <div class="col">
+            <div class="card radius-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1 text-white fw-semibold">
+                                <i class="fa fa-user-plus me-1"></i> Arkadaşlık İstekleri
+                            </p>
+                            <h4 class="my-1 text-white">@FriendShips!.Count <small class="fs-6 fw-normal opacity-75">toplam</small></h4>
+                            <hr class="border-light opacity-25 my-2" />
+                            <div class="d-flex flex-wrap gap-3 small text-white opacity-90">
+                                <span><i class="fa fa-calendar-check-o me-1"></i> Bugün: <strong>@FriendShips.Count(f => f.CreatedAt.Date == DateTime.Today)</strong></span>
+                                <span><i class="fa fa-calendar me-1"></i> Bu Hafta: <strong>@FriendShips.Count(f => f.CreatedAt >= _weekStart)</strong></span>
+                                <span><i class="fa fa-calendar-o me-1"></i> Bu Ay: <strong>@FriendShips.Count(f => f.CreatedAt >= _monthStart)</strong></span>
+                            </div>
+                            <div class="mt-2 small text-white opacity-75">
+                                <i class="fa fa-hourglass-half text-warning me-1"></i> Bekleyen: <strong>@FriendShips.Count(f => f.Status == null && f.Block != true)</strong>
+                                &nbsp;|&nbsp;
+                                <i class="fa fa-ban text-danger me-1"></i> Engelli: <strong>@FriendShips.Count(f => f.Block == true)</strong>
+                            </div>
+                        </div>
+                        <div class="widgets-icons bg-light-transparent text-white ms-3">
+                            <i class="fa fa-user-plus"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kabul Edilen Arkadaşlıklar -->
+        <div class="col">
+            <div class="card radius-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1 text-white fw-semibold">
+                                <i class="fa fa-handshake-o me-1"></i> Kabul Edilen Arkadaşlıklar
+                            </p>
+                            <h4 class="my-1 text-white">@FriendShips!.Count(f => f.Status == true) <small class="fs-6 fw-normal opacity-75">toplam</small></h4>
+                            <hr class="border-light opacity-25 my-2" />
+                            <div class="d-flex flex-wrap gap-3 small text-white opacity-90">
+                                <span><i class="fa fa-calendar-check-o me-1"></i> Bugün: <strong>@FriendShips.Count(f => f.Status == true && f.ActionDate?.Date == DateTime.Today)</strong></span>
+                                <span><i class="fa fa-calendar me-1"></i> Bu Hafta: <strong>@FriendShips.Count(f => f.Status == true && f.ActionDate >= _weekStart)</strong></span>
+                                <span><i class="fa fa-calendar-o me-1"></i> Bu Ay: <strong>@FriendShips.Count(f => f.Status == true && f.ActionDate >= _monthStart)</strong></span>
+                            </div>
+                        </div>
+                        <div class="widgets-icons bg-light-transparent text-white ms-3">
+                            <i class="fa fa-handshake-o"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reddedilen Arkadaşlıklar -->
+        <div class="col">
+            <div class="card radius-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1 text-white fw-semibold">
+                                <i class="fa fa-user-times me-1"></i> Reddedilen Arkadaşlıklar
+                            </p>
+                            <h4 class="my-1 text-white">@FriendShips!.Count(f => f.Status == false && f.Block != true) <small class="fs-6 fw-normal opacity-75">toplam</small></h4>
+                            <hr class="border-light opacity-25 my-2" />
+                            <div class="d-flex flex-wrap gap-3 small text-white opacity-90">
+                                <span><i class="fa fa-calendar-check-o me-1"></i> Bugün: <strong>@FriendShips.Count(f => f.Status == false && f.Block != true && f.ActionDate?.Date == DateTime.Today)</strong></span>
+                                <span><i class="fa fa-calendar me-1"></i> Bu Hafta: <strong>@FriendShips.Count(f => f.Status == false && f.Block != true && f.ActionDate >= _weekStart)</strong></span>
+                                <span><i class="fa fa-calendar-o me-1"></i> Bu Ay: <strong>@FriendShips.Count(f => f.Status == false && f.Block != true && f.ActionDate >= _monthStart)</strong></span>
+                            </div>
+                        </div>
+                        <div class="widgets-icons bg-light-transparent text-white ms-3">
+                            <i class="fa fa-user-times"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SATIR 5: Mesajlaşma ===== -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-2 row-cols-xl-3 g-3 mb-3">
+
+        <!-- Toplam Mesaj -->
+        <div class="col">
+            <div class="card radius-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1 text-white fw-semibold">
+                                <i class="fa fa-comments me-1"></i> Mesajlar
+                            </p>
+                            <h4 class="my-1 text-white">@ChatMessages!.Count <small class="fs-6 fw-normal opacity-75">toplam</small></h4>
+                            <hr class="border-light opacity-25 my-2" />
+                            <div class="d-flex flex-wrap gap-3 small text-white opacity-90">
+                                <span><i class="fa fa-calendar-check-o me-1"></i> Bugün: <strong>@ChatMessages.Count(m => m.Timestamp.Date == DateTime.Today)</strong></span>
+                                <span><i class="fa fa-calendar me-1"></i> Bu Hafta: <strong>@ChatMessages.Count(m => m.Timestamp >= _weekStart)</strong></span>
+                                <span><i class="fa fa-calendar-o me-1"></i> Bu Ay: <strong>@ChatMessages.Count(m => m.Timestamp >= _monthStart)</strong></span>
+                            </div>
+                            <div class="mt-2 small text-white opacity-75">
+                                <i class="fa fa-check text-info me-1"></i> İletilen: <strong>@ChatMessages.Count(m => m.IsDelivered)</strong>
+                                &nbsp;|&nbsp;
+                                <i class="fa fa-check-circle text-success me-1"></i> Okunan: <strong>@ChatMessages.Count(m => m.IsRead)</strong>
+                            </div>
+                        </div>
+                        <div class="widgets-icons bg-light-transparent text-white ms-3">
+                            <i class="fa fa-comments"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Okunmamış Mesajlar -->
+        <div class="col">
+            <div class="card radius-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1 text-white fw-semibold">
+                                <i class="fa fa-envelope me-1"></i> Okunmamış Mesajlar
+                            </p>
+                            <h4 class="my-1 text-white">@ChatMessages!.Count(m => !m.IsRead && !m.IsDeletedBySenderAndReceiver) <small class="fs-6 fw-normal opacity-75">toplam</small></h4>
+                            <hr class="border-light opacity-25 my-2" />
+                            <div class="d-flex flex-wrap gap-3 small text-white opacity-90">
+                                <span><i class="fa fa-calendar-check-o me-1"></i> Bugün: <strong>@ChatMessages.Count(m => !m.IsRead && !m.IsDeletedBySenderAndReceiver && m.Timestamp.Date == DateTime.Today)</strong></span>
+                                <span><i class="fa fa-calendar me-1"></i> Bu Hafta: <strong>@ChatMessages.Count(m => !m.IsRead && !m.IsDeletedBySenderAndReceiver && m.Timestamp >= _weekStart)</strong></span>
+                                <span><i class="fa fa-calendar-o me-1"></i> Bu Ay: <strong>@ChatMessages.Count(m => !m.IsRead && !m.IsDeletedBySenderAndReceiver && m.Timestamp >= _monthStart)</strong></span>
+                            </div>
+                        </div>
+                        <div class="widgets-icons bg-light-transparent text-white ms-3">
+                            <i class="fa fa-envelope"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Silinen Mesajlar -->
+        <div class="col">
+            <div class="card radius-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <p class="mb-1 text-white fw-semibold">
+                                <i class="fa fa-trash me-1"></i> Silinen Mesajlar
+                            </p>
+                            <h4 class="my-1 text-white">@ChatMessages!.Count(m => m.IsDeletedBySender || m.IsDeletedBySenderAndReceiver) <small class="fs-6 fw-normal opacity-75">toplam</small></h4>
+                            <hr class="border-light opacity-25 my-2" />
+                            <div class="d-flex flex-wrap gap-3 small text-white opacity-90">
+                                <span><i class="fa fa-calendar-check-o me-1"></i> Bugün: <strong>@ChatMessages.Count(m => (m.IsDeletedBySender || m.IsDeletedBySenderAndReceiver) && m.Timestamp.Date == DateTime.Today)</strong></span>
+                                <span><i class="fa fa-calendar me-1"></i> Bu Hafta: <strong>@ChatMessages.Count(m => (m.IsDeletedBySender || m.IsDeletedBySenderAndReceiver) && m.Timestamp >= _weekStart)</strong></span>
+                                <span><i class="fa fa-calendar-o me-1"></i> Bu Ay: <strong>@ChatMessages.Count(m => (m.IsDeletedBySender || m.IsDeletedBySenderAndReceiver) && m.Timestamp >= _monthStart)</strong></span>
+                            </div>
+                            <div class="mt-2 small text-white opacity-75">
+                                <i class="fa fa-user text-warning me-1"></i> Tek Taraflı: <strong>@ChatMessages.Count(m => m.IsDeletedBySender && !m.IsDeletedBySenderAndReceiver)</strong>
+                                &nbsp;|&nbsp;
+                                <i class="fa fa-users text-danger me-1"></i> Çift Taraflı: <strong>@ChatMessages.Count(m => m.IsDeletedBySenderAndReceiver)</strong>
+                            </div>
+                        </div>
+                        <div class="widgets-icons bg-light-transparent text-white ms-3">
+                            <i class="fa fa-trash"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SATIR 6: Sistem Logları ===== -->
+    @*
     <div class="row row-cols-1 row-cols-md-1 row-cols-xl-1 g-3 mb-3">
         <div class="col">
             <div class="card radius-10 h-100">
@@ -367,6 +540,8 @@ else
     private List<Article> Article { get; set; } = new();
     private List<LoginTry> LoginTry { get; set; } = new();
     private List<Data.Media> Media { get; set; } = new();
+    private List<FriendShip> FriendShips { get; set; } = new();
+    private List<ChatMessage> ChatMessages { get; set; } = new();
     // private List<Logs> Logs { get; set; } = new();
 
     private List<Country> _Countries = new();
@@ -437,7 +612,8 @@ else
 
         var shouldRefresh = entityName is "Users" or "Store" or "Product"
                                        or "Posts" or "Article" or "LoginTry"
-                                       or "Media" or "Logs";
+                                       or "Media" or "Logs"
+                                       or "FriendShip" or "ChatMessage";
         if (shouldRefresh)
         {
             await InvokeAsync(async () =>
@@ -497,6 +673,15 @@ else
                     .Where(m => m.IsDeletedStatu != true)
                     .ToListAsync(token);
 
+                var friendShips = await dbCtx.FriendShip.AsNoTracking()
+                    .Where(f => f.IsDeleted.IsDeletedStatu != true)
+                    .OrderByDescending(f => f.CreatedAt)
+                    .ToListAsync(token);
+
+                var chatMessages = await dbCtx.ChatMessage.AsNoTracking()
+                    .OrderByDescending(m => m.Timestamp)
+                    .ToListAsync(token);
+
                 // var logs = await dbCtx.Logs.AsNoTracking().OrderByDescending(l => l.Date).ToListAsync(token);
 
                 return new
@@ -508,6 +693,8 @@ else
                     Articles = articles,
                     LoginTry = loginTries,
                     Media = media,
+                    FriendShips = friendShips,
+                    ChatMessages = chatMessages,
                     // Logs = logs
                 };
 
@@ -522,6 +709,8 @@ else
                 Article = result.Articles;
                 LoginTry = result.LoginTry;
                 Media = result.Media;
+                FriendShips = result.FriendShips;
+                ChatMessages = result.ChatMessages;
                 // Logs = result.Logs;
             }
         }

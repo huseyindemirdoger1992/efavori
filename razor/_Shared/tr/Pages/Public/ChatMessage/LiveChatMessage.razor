@@ -1,0 +1,859 @@
+﻿@using api
+@using data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+
+<div class="container-fluid p-0 h-100">
+    <div class="row g-0 h-100 border border-secondary-subtle rounded-2 overflow-hidden">
+
+        <div class="@(_selectedFriend == null ? "d-flex" : "d-none") d-md-flex flex-column col-md-4 col-lg-3 bg-light border-end border-secondary-subtle"
+             style="min-height: 0; overflow: hidden; height: calc(100vh - 120px);">
+
+            <div class="px-3 py-2 border-bottom border-secondary-subtle bg-light flex-shrink-0">
+                <div class="d-flex align-items-center gap-2">
+
+                    <div class="position-relative flex-shrink-0">
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center overflow-hidden"
+                             style="width: 42px; height: 42px; font-size: 0.82rem;">
+                            @if (use != null)
+                            {
+                                @if (!string.IsNullOrEmpty(use.ProfileCoverGallery?.ProfileImagePath))
+                                {
+                                    <img src="@use.ProfileCoverGallery.ProfileImagePath"
+                                         alt="Profil"
+                                         class="w-100 h-100 object-fit-cover" />
+                                }
+                                else
+                                {
+                                    @GetInitials(use)
+                                }
+                            }
+                            else
+                            {
+                                <i class="fa fa-user"></i>
+                            }
+                        </div>
+                        <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white"
+                              style="width: 10px; height: 10px;"></span>
+                    </div>
+
+                    <div class="flex-grow-1 overflow-hidden">
+                        <p class="mb-0 fw-semibold small text-truncate">
+                            @if (use != null)
+                            {
+                                @use.FirstName@(" ") @use.LastName
+                            }
+                        </p>
+                        <small class="text-light" style="font-size: 0.7rem;">
+                            <i class="fa fa-circle me-1" style="font-size: 0.5rem;"></i>Çevrimiçi
+                        </small>
+                    </div>
+
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn btn-sm btn-light border-0" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                            <li><a class="dropdown-item small" href="javascript:;"><i class="fa fa-cog me-2"></i>Ayarlar</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item small" href="javascript:;"><i class="fa fa-question-circle me-2"></i>Yardım</a></li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="px-3 py-2 border-bottom border-secondary-subtle bg-light flex-shrink-0">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 border-secondary-subtle">
+                        <i class="fa fa-search text-light"></i>
+                    </span>
+                    <input type="text"
+                           class="form-control form-control-sm bg-light border-start-0 border-secondary-subtle"
+                           placeholder="Kişi ara..."
+                           value="@_searchQuery"
+                           @oninput="OnSearchChanged" />
+                </div>
+            </div>
+
+            <div class="px-3 pt-3 pb-1 flex-shrink-0">
+                <small class="text-uppercase text-light fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
+                    Son Sohbetler
+                </small>
+            </div>
+
+            <div class="flex-grow-1 overflow-auto" style="min-height: 0;">
+                @if (_isLoading)
+                {
+                    <div class="text-center text-light py-5">
+                        <i class="fa fa-spinner fa-spin fa-2x mb-2 d-block"></i>
+                        <small>Yükleniyor...</small>
+                    </div>
+                }
+                else if (!_friends.Any())
+                {
+                    <div class="text-center text-light py-5 px-3">
+                        <i class="fa fa-user-times fa-2x mb-2 d-block opacity-50"></i>
+                        <small>Arkadaş bulunamadı</small>
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var friend in FilteredFriends)
+                        {
+                            var unread = _unreadCounts.GetValueOrDefault(friend.Id, 0);
+                            <a href="javascript:;"
+                                   class="list-group-item list-group-item-action border-0 px-3 py-2 @(_selectedFriend?.Id == friend.Id ? "active" : "")"
+                                   @onclick="() => SelectFriend(friend)">
+                                <div class="d-flex align-items-center gap-2">
+
+                                    <div class="position-relative flex-shrink-0">
+                                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center overflow-hidden @(_selectedFriend?.Id == friend.Id ? "bg-light text-primary" : "")"
+                                             style="width: 40px; height: 40px; font-size: 0.78rem;">
+                                            @if (!string.IsNullOrEmpty(friend.ProfileCoverGallery?.ProfileImagePath))
+                                            {
+                                                <img src="@friend.ProfileCoverGallery.ProfileImagePath"
+                                                     alt="@friend.FirstName @friend.LastName"
+                                                     class="w-100 h-100 object-fit-cover" />
+                                            }
+                                            else
+                                            {
+                                                @GetInitials(friend)
+                                            }
+                                        </div>
+                                        @if (_onlineUsers.Contains(friend.Id))
+                                        {
+                                            <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white"
+                                                  style="width: 10px; height: 10px;"></span>
+                                        }
+                                    </div>
+
+                                    <div class="flex-grow-1 overflow-hidden">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0 small fw-semibold text-truncate">
+                                                @friend.FirstName @friend.LastName
+                                            </h6>
+                                            @if (_lastMessages.TryGetValue(friend.Id, out var lastMsg))
+                                            {
+                                                <small class="flex-shrink-0 ms-1 @(_selectedFriend?.Id == friend.Id ? "text-white-50" : "text-light")"
+                                                       style="font-size: 0.68rem;">
+                                                    @FormatTime(lastMsg.Timestamp)
+                                                </small>
+                                            }
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center gap-1">
+                                            <p class="mb-0 text-truncate small @(_selectedFriend?.Id == friend.Id ? "text-white-50" : "text-light")"
+                                                   style="font-size: 0.76rem; max-width: 170px;">
+                                                @if (_lastMessages.TryGetValue(friend.Id, out var lm))
+                                                {
+                                                    @(GlobalSecurityProvider.Decrypt(lm.Content) ?? "")
+                                                }
+                                            </p>
+                                            @if (unread > 0)
+                                            {
+                                                <span class="badge bg-primary rounded-pill flex-shrink-0" style="font-size: 0.62rem;">
+                                                    @unread
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+
+        </div>
+
+        <div class="@(_selectedFriend != null ? "d-flex" : "d-none") d-md-flex flex-column col-md-8 col-lg-9 bg-light"
+             style="min-width: 0; min-height: 0; height: calc(100vh - 120px);">
+
+            @if (_selectedFriend == null)
+            {
+                <div class="flex-grow-1 d-none d-md-flex flex-column align-items-center justify-content-center text-light">
+                    <i class="fa fa-comments fa-3x mb-3 opacity-25"></i>
+                    <p class="mb-1 fw-semibold">Henüz bir sohbet seçilmedi</p>
+                    <small class="text-light opacity-75">Soldan bir arkadaş seçerek mesajlaşmaya başlayın.</small>
+                </div>
+            }
+            else
+            {
+                <div class="px-3 py-2 border-bottom border-secondary-subtle bg-light d-flex align-items-center gap-2 flex-shrink-0">
+
+                    <button class="btn btn-sm btn-light border-0 d-md-none"
+                            @onclick="() => _selectedFriend = null"
+                            title="Geri dön">
+                        <i class="fa fa-arrow-left"></i>
+                    </button>
+
+                    <div class="position-relative flex-shrink-0">
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center overflow-hidden"
+                             style="width: 40px; height: 40px; font-size: 0.78rem;">
+                            @if (!string.IsNullOrEmpty(_selectedFriend.ProfileCoverGallery?.ProfileImagePath))
+                            {
+                                <img src="@_selectedFriend.ProfileCoverGallery.ProfileImagePath"
+                                     alt="@_selectedFriend.FirstName"
+                                     class="w-100 h-100 object-fit-cover" />
+                            }
+                            else
+                            {
+                                @GetInitials(_selectedFriend)
+                            }
+                        </div>
+                        @if (_onlineUsers.Contains(_selectedFriend.Id))
+                        {
+                            <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white"
+                                  style="width: 10px; height: 10px;"></span>
+                        }
+                    </div>
+
+                    <div class="flex-grow-1 overflow-hidden">
+                        <h6 class="mb-0 fw-bold text-truncate">
+                            @_selectedFriend.FirstName @_selectedFriend.LastName
+                        </h6>
+                        <div class="d-flex align-items-center gap-2">
+                            @if (_onlineUsers.Contains(_selectedFriend.Id))
+                            {
+                                <small class="text-light d-flex align-items-center gap-1" style="font-size: 0.7rem;">
+                                    <i class="fa fa-circle" style="font-size: 0.45rem;"></i>Çevrimiçi
+                                </small>
+                            }
+                            else
+                            {
+                                <small class="text-light" style="font-size: 0.7rem;">Çevrimdışı</small>
+                            }
+                            <span class="text-light d-none d-sm-inline" style="font-size: 0.7rem;">|</span>
+                            <a href="javascript:;" class="text-light small text-decoration-none d-none d-sm-inline" style="font-size: 0.7rem;">
+                                <i class="fa fa-picture-o me-1"></i>Galeri
+                            </a>
+                            <span class="text-light d-none d-sm-inline" style="font-size: 0.7rem;">|</span>
+                            <a href="javascript:;" class="text-light small text-decoration-none d-none d-sm-inline" style="font-size: 0.7rem;">
+                                <i class="fa fa-search me-1"></i>Ara
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                        <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Görüntülü Arama">
+                            <i class="fa fa-video-camera"></i>
+                        </a>
+                        <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Sesli Arama">
+                            <i class="fa fa-phone"></i>
+                        </a>
+                        <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Arkadaş Ekle">
+                            <i class="fa fa-user-plus"></i>
+                        </a>
+                    </div>
+
+                </div>
+
+                <div class="flex-grow-1 overflow-auto p-3" id="chatMessageArea" style="min-height: 0;">
+
+                    @if (_isMessagesLoading)
+                    {
+                        <div class="text-center text-light py-5">
+                            <i class="fa fa-spinner fa-spin fa-2x mb-2 d-block"></i>
+                            <small>Mesajlar yükleniyor...</small>
+                        </div>
+                    }
+                    else if (!_messages.Any())
+                    {
+                        <div class="text-center text-light py-5">
+                            <i class="fa fa-envelope-o fa-2x mb-2 d-block opacity-50"></i>
+                            <small>Henüz mesaj yok. İlk mesajı siz gönderin!</small>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var group in _messages.GroupBy(m => m.Timestamp.Date))
+                        {
+                            <div class="d-flex align-items-center gap-2 my-3">
+                                <hr class="flex-grow-1 border-secondary-subtle m-0" />
+                                <span class="badge bg-secondary bg-opacity-10 text-light px-3 py-1 rounded-pill fw-normal"
+                                      style="font-size: 0.68rem; white-space: nowrap;">
+                                    @FormatDate(group.Key)
+                                </span>
+                                <hr class="flex-grow-1 border-secondary-subtle m-0" />
+                            </div>
+
+                            @foreach (var msg in group.OrderBy(m => m.Timestamp))
+                            {
+                                bool isMine = msg.SenderId == use?.Id;
+                                bool deleted = msg.IsDeletedBySender || msg.IsDeletedBySenderAndReceiver;
+
+                                @if (!isMine)
+                                {
+                                    <div class="d-flex align-items-end gap-2 mb-3">
+                                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
+                                             style="width: 36px; height: 36px; font-size: 0.72rem;">
+                                            @if (!string.IsNullOrEmpty(_selectedFriend.ProfileCoverGallery?.ProfileImagePath))
+                                            {
+                                                <img src="@_selectedFriend.ProfileCoverGallery.ProfileImagePath"
+                                                     alt="@_selectedFriend.FirstName"
+                                                     class="w-100 h-100 object-fit-cover" />
+                                            }
+                                            else
+                                            {
+                                                @GetInitials(_selectedFriend)
+                                            }
+                                        </div>
+                                        <div style="max-width: min(480px, 75%);">
+                                            <p class="mb-1 text-light" style="font-size: 0.68rem;">
+                                                @_selectedFriend.FirstName @_selectedFriend.LastName
+                                                <span class="ms-1">@msg.Timestamp.ToString("HH:mm")</span>
+                                            </p>
+                                            <p class="mb-0 px-3 py-2 bg-light border border-secondary-subtle shadow-sm rounded-3 @(deleted ? "fst-italic text-light" : "")"
+                                                   style="font-size: 0.86rem; border-radius: 0 1rem 1rem 1rem !important; word-break: break-word;">
+                                                @if (deleted)
+                                                {
+                                                    <i class="fa fa-ban me-1 text-danger opacity-50"></i>
+                                                    <small>Mesaj silindi</small>
+                                                }
+                                                else
+                                                {
+                                                    @GlobalSecurityProvider.Decrypt(msg.Content)
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-end justify-content-end gap-1 mb-3">
+                                        <div style="max-width: min(480px, 75%);">
+                                            <p class="mb-1 text-light text-end" style="font-size: 0.68rem;">
+                                                Siz <span class="ms-1">@msg.Timestamp.ToString("HH:mm")</span>
+                                            </p>
+                                            <div class="d-flex align-items-end justify-content-end gap-1">
+                                                @if (!deleted)
+                                                {
+                                                    <span class="flex-shrink-0 align-self-end mb-1" style="cursor: pointer;"
+                                                          @onclick="() => DeleteMessage(msg)" title="Sil">
+                                                        <i class="fa fa-trash-o text-danger" style="font-size: 0.68rem;"></i>
+                                                    </span>
+                                                    <span class="flex-shrink-0 align-self-end mb-1">
+                                                        @if (msg.IsRead)
+                                                        {
+                                                            <i class="fa fa-check-circle text-white-50" style="font-size: 0.68rem;" title="Okundu"></i>
+                                                        }
+                                                        else if (msg.IsDelivered)
+                                                        {
+                                                            <i class="fa fa-check-circle-o text-white-50" style="font-size: 0.68rem;" title="İletildi"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="fa fa-check text-white-50" style="font-size: 0.68rem;" title="Gönderildi"></i>
+                                                        }
+                                                    </span>
+                                                }
+                                                <p class="mb-0 px-3 py-2 bg-primary text-white shadow-sm @(deleted ? "fst-italic opacity-75" : "")"
+                                                       style="font-size: 0.86rem; border-radius: 1rem 0 1rem 1rem !important; word-break: break-word;">
+                                                    @if (deleted)
+                                                    {
+                                                        <i class="fa fa-ban me-1 opacity-75"></i>
+                                                        <small>Mesaj silindi</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        @GlobalSecurityProvider.Decrypt(msg.Content)
+                                                    }
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        }
+                        <div id="chatBottom"></div>
+                    }
+
+                </div>
+
+                <div class="border-top border-secondary-subtle bg-light px-3 py-2 flex-shrink-0">
+                    <div class="d-flex align-items-center gap-2">
+
+                        <div class="flex-grow-1">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-secondary-subtle border-end-0">
+                                    <i class="fa fa-smile-o text-light"></i>
+                                </span>
+                                <input type="text"
+                                       id="messageInput"
+                                       class="form-control bg-light border-secondary-subtle border-start-0 border-end-0"
+                                       placeholder="Mesajınızı yazın..."
+                                       @bind="_newMessage"
+                                       @bind:event="oninput"
+                                       @onkeydown="OnInputKeyDown"
+                                       maxlength="2000"
+                                       disabled="@_isSending" />
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                            <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Dosya Ekle">
+                                <i class="fa fa-paperclip text-light"></i>
+                            </a>
+                            <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Ses Kaydı">
+                                <i class="fa fa-microphone text-light"></i>
+                            </a>
+                            <button class="btn btn-outline-light btn-sm px-3"
+                                    @onclick="SendMessage"
+                                    disabled="@(string.IsNullOrWhiteSpace(_newMessage) || _isSending)"
+                                    title="Gönder">
+                                @if (_isSending)
+                                {
+                                    <i class="fa fa-spinner fa-spin"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-paper-plane"></i>
+                                }
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            }
+
+        </div>
+
+    </div>
+</div>
+
+@code {
+
+    private const string PAGE = "ChatManager";
+
+    [Parameter] public Users? use { get; set; }
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private Timer? _heartbeatTimer;
+    private const int HEARTBEAT_INTERVAL_MS = 25_000;
+
+    private bool _shouldScrollToBottom;
+    private bool _shouldFocusInput;
+
+    private bool _isLoading;
+    private bool _isMessagesLoading;
+    private bool _isSending;
+    private string _searchQuery = string.Empty;
+    private string _newMessage = string.Empty;
+
+    private List<Users> _friends = new();
+    private Users? _selectedFriend;
+    private List<ChatMessage> _messages = new();
+
+    private Dictionary<Guid, ChatMessage> _lastMessages = new();
+    private Dictionary<Guid, int> _unreadCounts = new();
+    private HashSet<Guid> _onlineUsers = new();
+
+    private IEnumerable<Users> FilteredFriends =>
+        string.IsNullOrWhiteSpace(_searchQuery)
+            ? _friends
+            : _friends.Where(f =>
+                (f.FirstName ?? "").Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                (f.LastName ?? "").Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+        StateHub.OnOnlineUsersChanged += HandleOnlineUsersChanged;
+
+        if (use != null)
+        {
+            await StateHub.Heartbeat(use.Id);
+
+            _heartbeatTimer = new Timer(
+                async _ =>
+                {
+                    if (!_disposed && use != null)
+                        await StateHub.Heartbeat(use.Id);
+                },
+                null,
+                HEARTBEAT_INTERVAL_MS,
+                HEARTBEAT_INTERVAL_MS);
+        }
+
+        _onlineUsers = StateHub.GetOnlineUsers();
+        await LoadFriends();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_shouldScrollToBottom)
+        {
+            _shouldScrollToBottom = false;
+            await JS.InvokeVoidAsync("eval",
+                "var el = document.getElementById('chatBottom'); if(el) el.scrollIntoView({behavior:'instant'});");
+        }
+
+        if (_shouldFocusInput)
+        {
+            _shouldFocusInput = false;
+            await JS.InvokeVoidAsync("eval",
+                "var inp = document.getElementById('messageInput'); if(inp) inp.focus();");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        if (_heartbeatTimer != null)
+        {
+            await _heartbeatTimer.DisposeAsync();
+            _heartbeatTimer = null;
+        }
+
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+        StateHub.OnOnlineUsersChanged -= HandleOnlineUsersChanged;
+
+        if (use != null)
+            await StateHub.UnregisterOnlineUser(use.Id);
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized) return;
+
+        if (entityName == "ChatMessage")
+        {
+            await InvokeAsync(async () =>
+            {
+                StateHub.ClearCache($"ChatManager_Friends_{use?.Id}");
+                await LoadFriends();
+
+                if (_selectedFriend != null)
+                    await RefreshMessages(_selectedFriend.Id);
+
+                _shouldScrollToBottom = true;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task HandleOnlineUsersChanged()
+    {
+        if (_disposed || !_isInitialized) return;
+
+        await InvokeAsync(() =>
+        {
+            _onlineUsers = StateHub.GetOnlineUsers();
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task LoadFriends()
+    {
+        if (use == null) return;
+
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync($"ChatManager_Friends_{use.Id}", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+                var friendships = await db.FriendShip
+                    .AsNoTracking()
+                    .Where(f => (f.RequestorId == use.Id || f.ReceiverId == use.Id)
+                                && f.Status == true
+                                && (f.Block == null || f.Block == false)
+                                && (f.IsDeleted == null || f.IsDeleted.IsDeletedStatu == false))
+                    .ToListAsync(_cts.Token);
+
+                var friendIds = friendships
+                    .Select(f => f.RequestorId == use.Id ? f.ReceiverId : f.RequestorId)
+                    .Distinct()
+                    .ToList();
+
+                var users = await db.Users
+                    .AsNoTracking()
+                    .Where(u => friendIds.Contains(u.Id) && u.IsActive == true)
+                    .ToListAsync(_cts.Token);
+
+                var lastMsgs = new Dictionary<Guid, ChatMessage>();
+                var unreadCounts = new Dictionary<Guid, int>();
+
+                foreach (var fid in friendIds)
+                {
+                    var last = await db.ChatMessage
+                        .AsNoTracking()
+                        .Where(m => (m.SenderId == use.Id && m.ReceiverId == fid)
+                                 || (m.SenderId == fid && m.ReceiverId == use.Id))
+                        .OrderByDescending(m => m.Timestamp)
+                        .FirstOrDefaultAsync(_cts.Token);
+
+                    if (last != null) lastMsgs[fid] = last;
+
+                    unreadCounts[fid] = await db.ChatMessage
+                        .AsNoTracking()
+                        .CountAsync(m => m.SenderId == fid
+                                      && m.ReceiverId == use.Id
+                                      && !m.IsRead, _cts.Token);
+                }
+
+                return new { Users = users, LastMsgs = lastMsgs, UnreadCounts = unreadCounts };
+
+            }, _cts.Token);
+
+            if (result != null)
+            {
+                _friends = result.Users;
+                _lastMessages = result.LastMsgs;
+                _unreadCounts = result.UnreadCounts;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] LoadFriends hata: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMessages(Guid friendId)
+    {
+        if (use == null) return;
+
+        try
+        {
+            _isMessagesLoading = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            _messages = await db.ChatMessage
+                .AsNoTracking()
+                .Where(m => ((m.SenderId == use.Id && m.ReceiverId == friendId)
+                          || (m.SenderId == friendId && m.ReceiverId == use.Id))
+                          && !m.IsDeletedBySenderAndReceiver)
+                .OrderBy(m => m.Timestamp)
+                .ToListAsync(_cts.Token);
+
+            var undelivered = _messages
+                .Where(m => m.SenderId == friendId && !m.IsDelivered)
+                .ToList();
+
+            if (undelivered.Any())
+            {
+                var ids = undelivered.Select(m => m.Id).ToList();
+                await db.ChatMessage
+                    .Where(m => ids.Contains(m.Id))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(m => m.IsDelivered, true)
+                        .SetProperty(m => m.IsRead, true), _cts.Token);
+
+                StateHub.ClearCache($"ChatManager_Friends_{friendId}");
+                StateHub.ClearCache($"ChatManager_Friends_{use.Id}");
+                await StateHub.NotifyDataChanged("ChatMessage");
+            }
+
+            _unreadCounts[friendId] = 0;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] LoadMessages hata: {ex.Message}");
+        }
+        finally
+        {
+            _isMessagesLoading = false;
+            _shouldScrollToBottom = true;
+            _shouldFocusInput = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshMessages(Guid friendId)
+    {
+        if (use == null) return;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            _messages = await db.ChatMessage
+                .AsNoTracking()
+                .Where(m => ((m.SenderId == use.Id && m.ReceiverId == friendId)
+                          || (m.SenderId == friendId && m.ReceiverId == use.Id))
+                          && !m.IsDeletedBySenderAndReceiver)
+                .OrderBy(m => m.Timestamp)
+                .ToListAsync(_cts.Token);
+
+            _unreadCounts[friendId] = 0;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] RefreshMessages hata: {ex.Message}");
+        }
+    }
+
+    private async Task SelectFriend(Users friend)
+    {
+        _selectedFriend = friend;
+        _messages.Clear();
+        StateHasChanged();
+        await LoadMessages(friend.Id);
+    }
+
+    private async Task SendMessage()
+    {
+        if (use == null || _selectedFriend == null) return;
+        if (string.IsNullOrWhiteSpace(_newMessage)) return;
+        if (_isSending) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isSending = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var message = new ChatMessage
+            {
+                Id = Guid.NewGuid(),
+                SenderId = use.Id,
+                ReceiverId = _selectedFriend.Id,
+                Content = GlobalSecurityProvider.Encrypt(_newMessage.Trim()),
+                Timestamp = DateTime.UtcNow,
+                IsRead = false,
+                IsDelivered = false,
+                IsDeletedBySender = false,
+                IsDeletedBySenderAndReceiver = false
+            };
+
+            db.ChatMessage.Add(message);
+            await db.SaveChangesAsync(_cts.Token);
+
+            _newMessage = string.Empty;
+            _messages.Add(message);
+
+            StateHub.ClearCache($"ChatManager_Friends_{use.Id}");
+            StateHub.ClearCache($"ChatManager_Friends_{_selectedFriend.Id}");
+            await StateHub.NotifyDataChanged("ChatMessage");
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] SendMessage hata: {ex.Message}");
+        }
+        finally
+        {
+            _isSending = false;
+            _writeLock.Release();
+            _shouldScrollToBottom = true;
+            _shouldFocusInput = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteMessage(ChatMessage msg)
+    {
+        if (use == null) return;
+        if (msg.SenderId != use.Id) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            await db.ChatMessage
+                .Where(m => m.Id == msg.Id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(m => m.IsDeletedBySender, true), _cts.Token);
+
+            var local = _messages.FirstOrDefault(m => m.Id == msg.Id);
+            if (local != null) local.IsDeletedBySender = true;
+
+            StateHub.ClearCache($"ChatManager_Friends_{use.Id}");
+            StateHub.ClearCache($"ChatManager_Friends_{_selectedFriend?.Id}");
+            await StateHub.NotifyDataChanged("ChatMessage");
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] DeleteMessage hata: {ex.Message}");
+        }
+        finally
+        {
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnInputKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+            await SendMessage();
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        _searchQuery = e.Value?.ToString() ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private string GetInitials(Users user)
+    {
+        var first = GlobalSecurityProvider.Decrypt(user.FirstName) ?? "?";
+        var last = GlobalSecurityProvider.Decrypt(user.LastName) ?? "";
+        return $"{(first.Length > 0 ? first[0] : '?')}{(last.Length > 0 ? last[0] : ' ')}".Trim().ToUpper();
+    }
+
+    private string FormatTime(DateTime dt)
+    {
+        var now = DateTime.UtcNow;
+        if (dt.Date == now.Date) return dt.ToString("HH:mm");
+        if (dt.Date == now.Date.AddDays(-1)) return "Dün";
+        if ((now - dt).TotalDays < 7) return dt.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "Pzt",
+            DayOfWeek.Tuesday => "Sal",
+            DayOfWeek.Wednesday => "Çrş",
+            DayOfWeek.Thursday => "Per",
+            DayOfWeek.Friday => "Cum",
+            DayOfWeek.Saturday => "Cmt",
+            DayOfWeek.Sunday => "Paz",
+            _ => dt.ToString("dd/MM")
+        };
+        return dt.ToString("dd/MM/yy");
+    }
+
+    private string FormatDate(DateTime dt)
+    {
+        var now = DateTime.UtcNow;
+        if (dt.Date == now.Date) return "Bugün";
+        if (dt.Date == now.Date.AddDays(-1)) return "Dün";
+        return dt.ToString("dd MMMM yyyy");
+    }
+}

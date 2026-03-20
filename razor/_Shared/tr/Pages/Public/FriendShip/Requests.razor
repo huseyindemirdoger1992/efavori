@@ -21,7 +21,7 @@
 
 
 <div class="header-notifications-list">
-    @foreach (var item in FriendShipList.Where(x=> x.Status != true))
+    @foreach (var item in FriendShipList.Where(x => x.Status != true))
     {
         var currentUser = Users?.FirstOrDefault(u => u.Id == item.RequestorId);
         var profileImg = currentUser?.ProfileCoverGallery?.ProfileImagePath ?? "/images/default-avatar.png";
@@ -92,6 +92,8 @@
 
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private bool _isProcessing;
+
+    private bool _bypassCache;
 
     private List<Users>? Users { get; set; } = new();
 
@@ -181,6 +183,7 @@
 
         if (shouldRefresh)
         {
+            _bypassCache = true;
             await InvokeAsync(async () =>
             {
                 await LoadData(null);
@@ -217,6 +220,10 @@
             request.ActionDate = DateTime.UtcNow;
 
             await db.SaveChangesAsync(_cts.Token);
+
+            // UI'ı anında güncelle — cache'i beklemeden item'ı listeden çıkar
+            FriendShipList.RemoveAll(f => f.Id == friendShipId);
+            StateHasChanged();
 
             await StateHub.NotifyDataChanged("FriendShip");
             await Logger.TakeIt(use?.Id, PAGE, "AcceptFriendShip");
@@ -268,6 +275,10 @@
 
                 await db.SaveChangesAsync(_cts.Token);
 
+                // UI'ı anında güncelle — cache'i beklemeden item'ı listeden çıkar
+                FriendShipList.RemoveAll(f => f.Id == friendShipId);
+                StateHasChanged();
+
                 await StateHub.NotifyDataChanged("FriendShip");
                 await Logger.TakeIt(use?.Id, PAGE, "DeleteFriendShip");
                 await ShowNotification("success", "Başarılı", "Arkadaşlık isteği reddedildi.", null);
@@ -307,7 +318,11 @@
             _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
             StateHasChanged();
 
-            var result = await StateHub.GetOrLoadAsync("DataManager_Main", async () =>
+            // Loader: cache'i bypass gereken durumlarda (Onayla/Sil sonrası) doğrudan DB'den yükle
+            var shouldBypass = _bypassCache;
+            if (_bypassCache) _bypassCache = false;
+
+            Func<Task<dynamic>> loader = async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
 
@@ -333,8 +348,12 @@
                     .ToListAsync(token);
 
                 return new { Users = users, FriendShip = (List<data.FriendShip>)friendShip };
+            };
 
-            }, token);
+            // Onayla/Sil sonrası bypass: cache'i atlayıp taze veri çek
+            var result = shouldBypass
+                ? await loader()
+                : await StateHub.GetOrLoadAsync("DataManager_Main", loader, token);
 
             if (result != null && !token.IsCancellationRequested)
             {

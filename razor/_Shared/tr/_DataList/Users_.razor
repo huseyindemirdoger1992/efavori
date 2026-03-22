@@ -349,13 +349,24 @@ else
                     .AsNoTracking()
                     .Where(u => u.IsDeleted!.IsDeletedStatu != true);
 
-                // SearchWantedText filtresi — null-safe
+                // SearchWantedText filtresi — null-safe, çok kelimeli arama desteği
+                // "numan çabuk" → ["numan", "çabuk"] → her token ad VEYA soyad içinde geçmeli (AND)
                 if (!string.IsNullOrWhiteSpace(SearchWantedText))
                 {
-                    var sw = SearchWantedText;
-                    query_User = query_User.Where(u =>
-                        u.FirstName.Contains(sw) ||
-                        u.LastName.Contains(sw));
+                    var tokens = SearchWantedText
+                        .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                    foreach (var token in tokens)
+                    {
+                        var t = token; // closure için yerel kopya
+                        query_User = query_User.Where(u =>
+                            u.FirstName.Contains(t) ||
+                            u.ContactInformation.Email.Contains(t) ||
+                            u.ContactInformation.PhoneNumber.Contains(t) ||
+                            u.ContactInformation.FullPhoneNumber.Contains(t) ||
+                            u.ContactInformation.UserWebSite.Contains(t) ||
+                            u.LastName.Contains(t));
+                    }
                 }
 
                 // Anlık arama filtresi (ileride kullanılabilir)

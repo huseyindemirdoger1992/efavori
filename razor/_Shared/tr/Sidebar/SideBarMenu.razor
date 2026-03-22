@@ -1,5 +1,5 @@
-﻿@rendermode InteractiveServer
-@using System.Globalization
+﻿@* @rendermode InteractiveServer
+ *@@using System.Globalization
 @using Microsoft.EntityFrameworkCore
 @using api
 @using data
@@ -73,6 +73,8 @@
     /// GLOBAL SİNYALİ YAKALA
     /// Başka bir kullanıcı veri eklerse/güncelleyerse burası tetiklenir
     /// </summary>
+    // ✅ Önce (mevcut):
+    // ✅ Sonra:
     private async Task HandleGlobalDataChange(string entityName)
     {
         if (_isProcessing) return;
@@ -88,13 +90,20 @@
                     await LoadData(null);
 
                 if (shouldRefreshSidebar)
+                {
+                    // Sidebar'a ait cache'leri manuel temizle
+                    // çünkü NotifyDataChanged yalnızca "data_TaskFramework" key'ini siler
+                    StateHub.ClearCache("Sidebar_TaskFramework");
+                    if (_use != null)
+                        StateHub.ClearCache($"Sidebar_TaskCounts_{_use.Id}");
+
                     await LoadSidebarSpecificData();
+                }
 
                 StateHasChanged();
             });
         }
     }
-
     /// <summary>
     /// ✅ MEMORY LEAK ÖNLEMİ: Event subscription'ları ve kaynakları temizle
     /// </summary>

@@ -926,7 +926,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 tf.CreatedAt = DateTime.UtcNow;
                 db.TaskFramework.Add(tf);
                 await db.SaveChangesAsync(_cts.Token);
-                await StateHub.NotifyDataChanged("AddNewTaskFramewok");
+                await StateHub.NotifyDataChanged("TaskFramework");
                 await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
                 await JS.InvokeVoidAsync("eval", "$('#AddNewEpisodeModal').modal('hide')");
                 // Formu temizle
@@ -972,7 +972,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await ShowNotification("success", "Başarılı", "Bölüm başarıyla güncellendi.", null);
 
                 // Diğer kullanıcılara bildir
-                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+                await StateHub.NotifyDataChanged("TaskFramework");
 
                 // Bu bileşeni manuel yenile (Gerekirse)
                 StateHasChanged();
@@ -1018,7 +1018,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await ShowNotification("success", "Başarılı", "Bölüm başarıyla silindi.", null);
 
                 // DİKKAT: En son tetiklemeyi yap ki render başladığında DB meşgul olmasın
-                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+                await StateHub.NotifyDataChanged("TaskFramework");
             }
         }
 

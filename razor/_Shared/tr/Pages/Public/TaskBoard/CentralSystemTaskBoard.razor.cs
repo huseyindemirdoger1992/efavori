@@ -929,6 +929,9 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 await StateHub.NotifyDataChanged("TaskFramework");
                 await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
                 await JS.InvokeVoidAsync("eval", "$('#AddNewEpisodeModal').modal('hide')");
+
+                await Task.Delay(3000);
+                await JS.InvokeVoidAsync("location.reload");
                 // Formu temizle
                 tf = new TaskFramework();
             });
@@ -970,7 +973,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
             {
                 await JS.InvokeVoidAsync("eval", "$('#EditFramework').modal('hide')");
                 await ShowNotification("success", "Başarılı", "Bölüm başarıyla güncellendi.", null);
-
+                await Task.Delay(3000);
+                await JS.InvokeVoidAsync("location.reload");
                 // Diğer kullanıcılara bildir
                 await StateHub.NotifyDataChanged("TaskFramework");
 
@@ -1016,7 +1020,8 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 // Modal kapat ve bildirim ver
                 await JS.InvokeVoidAsync("eval", "$('#TrashFramework').modal('hide')");
                 await ShowNotification("success", "Başarılı", "Bölüm başarıyla silindi.", null);
-
+                await Task.Delay(3000);
+                await JS.InvokeVoidAsync("location.reload");
                 // DİKKAT: En son tetiklemeyi yap ki render başladığında DB meşgul olmasın
                 await StateHub.NotifyDataChanged("TaskFramework");
             }

@@ -48,6 +48,9 @@
                                 @use.FirstName@(" ") @use.LastName
                             }
                         </p>
+                        <small class="text-light" style="font-size: 0.7rem;">
+                            <i class="fa fa-circle me-1" style="font-size: 0.5rem;"></i>Çevrimiçi
+                        </small>
                     </div>
 
                     <div class="dropdown flex-shrink-0">
@@ -216,6 +219,16 @@
                             @_selectedFriend.FirstName @_selectedFriend.LastName
                         </h6>
                         <div class="d-flex align-items-center gap-2">
+                            @if (_onlineUsers.Contains(_selectedFriend.Id))
+                            {
+                                <small class="text-light d-flex align-items-center gap-1" style="font-size: 0.7rem;">
+                                    <i class="fa fa-circle" style="font-size: 0.45rem;"></i>Çevrimiçi
+                                </small>
+                            }
+                            else
+                            {
+                                <small class="text-light" style="font-size: 0.7rem;">Çevrimdışı</small>
+                            }
                             <span class="text-light d-none d-sm-inline" style="font-size: 0.7rem;">|</span>
                             <a href="javascript:;" class="text-light small text-decoration-none d-none d-sm-inline" style="font-size: 0.7rem;">
                                 <i class="fa fa-picture-o me-1"></i>Galeri
@@ -390,7 +403,8 @@
                             <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Ses Kaydı">
                                 <i class="fa fa-microphone text-light"></i>
                             </a>
-                            <button class="btn btn-outline-light btn-sm px-3"
+                            <button class="btn btn-outlineprimary btn-sm px-3"
+
                                     @onclick="SendMessage"
                                     disabled="@(string.IsNullOrWhiteSpace(_newMessage) || _isSending)"
                                     title="Gönder">

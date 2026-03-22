@@ -480,7 +480,7 @@ else
     </div>
 
     <!-- ===== SATIR 6: Sistem Logları ===== -->
-    @*
+    
     <div class="row row-cols-1 row-cols-md-1 row-cols-xl-1 g-3 mb-3">
         <div class="col">
             <div class="card radius-10 h-100">
@@ -511,7 +511,7 @@ else
             </div>
         </div>
     </div>
-    *@
+   
 }
 
 @code {
@@ -528,11 +528,9 @@ else
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private bool _isProcessing;
 
-    // --- Tarih Aralıkları (UTC) ---
     private static DateTime _weekStart => DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek);
     private static DateTime _monthStart => new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    // --- Veri Listeleri ---
     private List<Users> Users { get; set; } = new();
     private List<Store> Store { get; set; } = new();
     private List<Product> Product { get; set; } = new();
@@ -542,7 +540,7 @@ else
     private List<Data.Media> Media { get; set; } = new();
     private List<FriendShip> FriendShips { get; set; } = new();
     private List<ChatMessage> ChatMessages { get; set; } = new();
-    // private List<Logs> Logs { get; set; } = new();
+    private List<Logs> Logs { get; set; } = new();
 
     private List<Country> _Countries = new();
     private List<States> _States = new();
@@ -682,7 +680,7 @@ else
                     .OrderByDescending(m => m.Timestamp)
                     .ToListAsync(token);
 
-                // var logs = await dbCtx.Logs.AsNoTracking().OrderByDescending(l => l.Date).ToListAsync(token);
+                 var logs = await dbCtx.Logs.AsNoTracking().OrderByDescending(l => l.Date).ToListAsync(token);
 
                 return new
                 {
@@ -695,7 +693,7 @@ else
                     Media = media,
                     FriendShips = friendShips,
                     ChatMessages = chatMessages,
-                    // Logs = logs
+                     Logs = logs
                 };
 
             }, token);
@@ -711,7 +709,7 @@ else
                 Media = result.Media;
                 FriendShips = result.FriendShips;
                 ChatMessages = result.ChatMessages;
-                // Logs = result.Logs;
+                 Logs = result.Logs;
             }
         }
         catch (OperationCanceledException) { }

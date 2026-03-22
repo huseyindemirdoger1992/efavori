@@ -1,0 +1,285 @@
+﻿@using System.Globalization
+@using data
+@using api
+@using api.tr
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+<Notification @ref="notificationRef" />
+
+@if (_isLoading && !_Products.Any())
+{
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-light mt-2 small">Ürünler yükleniyor...</p>
+    </div>
+}
+else if (!_Products.Any())
+{
+    <div class="col-12 text-center py-5">
+        <i class="fa fa-shopping-basket fa-3x text-light opacity-50 mb-3 d-block"></i>
+        <p class="text-light small">Ürün bulunamadı.</p>
+    </div>
+}
+else
+{
+    @foreach (Product item in _Products.Take(_visibleCount))
+    {
+        <div class="col-12 col-sm-4 col-lg-3 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="position-relative">
+                    @if (!string.IsNullOrEmpty(item.ImagePath))
+                    {
+                        <img src="@item.ImagePath" class="card-img-top"
+                             alt="@item.Name" style="height:180px;object-fit:cover;">
+                    }
+                    else
+                    {
+                        <img src="https://placehold.co/300x180/e9ecef/495057?text=Görsel+Yok"
+                             class="card-img-top" alt="@item.Name">
+                    }
+
+                    @if (item.IsFeatured)
+                    {
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge bg-primary">Öne Çıkan</span>
+                        </div>
+                    }
+                    @if (item.StockQuantity == 0)
+                    {
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-danger">Tükendi</span>
+                        </div>
+                    }
+                    else if (item.StockQuantity <= 5)
+                    {
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-warning text-dark">Son @item.StockQuantity Adet</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-success">Stokta</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="card-body">
+                    <h6 class="card-title cursor-pointer mb-1 text-truncate" title="@item.Name">
+                        @item.Name
+                    </h6>
+                    @if (!string.IsNullOrEmpty(item.Description))
+                    {
+                        <p class="text-light small mb-2 text-truncate" title="@item.Description">
+                            @item.Description
+                        </p>
+                    }
+
+                    <div class="d-flex align-items-center justify-content-between mt-2">
+                        <div class="d-flex align-items-center gap-2 text-light small">
+                            <span><i class="fa fa-eye me-1"></i>@(item.Interaction?.ViewCount ?? 0)</span>
+                            <span><i class="fa fa-heart-o me-1 text-danger"></i>@(item.Interaction?.LikeCount ?? 0)</span>
+                        </div>
+                        <span class="text-light small">
+                            <i class="fa fa-cubes me-1"></i>@item.StockQuantity adet
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent border-0 pt-0 pb-3 px-3">
+                    <div class="d-flex gap-2">
+                        <a href="/product/@item.UniqueNameSlug"
+                               class="btn btn-primary btn-sm flex-grow-1">
+                            <i class="fa fa-eye me-1"></i>İncele
+                        </a>
+                        <a href="/store/@item.StoreId"
+                               class="btn btn-light border btn-sm px-3" title="Mağazaya Git">
+                            <i class="fa fa-home"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_visibleCount < _Products.Count)
+    {
+        <div class="col-12 text-center mt-3">
+            <button class="btn btn-light btn-sm px-4" @onclick="LoadMore" disabled="@_isLoading">
+                @if (_isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="fa fa-chevron-down me-1"></i>Daha Fazla Göster
+                <span class="badge bg-light text-dark ms-1">
+                    +@(Math.Min(PAGE_SIZE, _Products.Count - _visibleCount))
+                </span>
+            </button>
+        </div>
+    }
+}
+
+@code {
+
+    private const string PAGE = "DataManager";
+    private const int PAGE_SIZE = 12;
+
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public string? SearchWantedText { get; set; }
+
+    private readonly CancellationTokenSource _cts = new();
+    private bool _disposed;
+    private bool _isInitialized;
+    private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
+    private bool _isProcessing;
+
+    private int _visibleCount = PAGE_SIZE;
+
+    private List<Product> _Products { get; set; } = new();
+
+    private Notification? notificationRef;
+
+    // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+        await LoadData(null);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_isInitialized) return;
+        _visibleCount = PAGE_SIZE;
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    // ── Global broadcast handler ───────────────────────────────────────────────
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+        if (entityName != "Wanted" && entityName != "Product") return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadData(null);
+            StateHasChanged();
+        });
+    }
+
+    // ── Sayfalama ─────────────────────────────────────────────────────────────
+
+    private void LoadMore()
+    {
+        _visibleCount += PAGE_SIZE;
+        StateHasChanged();
+    }
+
+    // ── Veri yükleme ──────────────────────────────────────────────────────────
+
+    protected virtual async Task LoadData(string? search)
+    {
+        if (use is null) return;
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(400, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+            StateHasChanged();
+
+            var cacheKey = $"data_Products_{SearchWantedText ?? "all"}";
+
+            var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                var query_Products = db.Product
+                    .AsNoTracking()
+                    .Where(p => p.IsActive == true &&
+                                p.IsDeleted!.IsDeletedStatu != true);
+
+                if (!string.IsNullOrWhiteSpace(SearchWantedText))
+                {
+                    var sw = SearchWantedText;
+                    query_Products = query_Products.Where(p =>
+                        p.Name.Contains(sw) ||
+                        (p.Description != null && p.Description.Contains(sw)) ||
+                        (p.Content != null && p.Content.Contains(sw)));
+                }
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var s = search;
+                    query_Products = query_Products.Where(p =>
+                        p.Name.Contains(s) ||
+                        (p.Description != null && p.Description.Contains(s)) ||
+                        (p.Content != null && p.Content.Contains(s)));
+                }
+
+                var products = await query_Products
+                    .OrderByDescending(p => p.IsFeatured)
+                    .ThenByDescending(p => p.CreatedAt)
+                    .ToListAsync(token);
+
+                return new { Products = products };
+
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+            {
+                _Products = result.Products;
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData", exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // ── Yardımcı ──────────────────────────────────────────────────────────────
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

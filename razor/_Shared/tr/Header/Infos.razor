@@ -1,4 +1,6 @@
-﻿@using System.Globalization
+﻿@rendermode InteractiveServer
+
+@using System.Globalization
 @using api
 @using api.tr
 @using data
@@ -6,18 +8,14 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
+@using data._Shared
 
 @inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
-@using data._Shared
 
-
-@if (_isLoading)
-{
-    <p>Yükleniyor...</p>
-}
+<Notification @ref="notificationRef" />
 
 <li class="nav-item dropdown dropdown-large">
     <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
@@ -25,14 +23,17 @@
            role="button"
            data-bs-toggle="dropdown"
            data-bs-auto-close="outside">
-        <span class="alert-count">@FriendShipList.Count</span>
-        <i class='bx bx-bell'></i>
+        @if (FriendShipList.Count > 0)
+        {
+            <span class="alert-count">@FriendShipList.Count</span>
+        }
+        <i class='fa fa-user-plus'></i>
     </a>
     
     <div class="dropdown-menu dropdown-menu-end shadow border-0">
         <a href="javascript:;">
             <div class="msg-header">
-                <p class="msg-header-title">Bildirimler</p>
+                <p class="msg-header-title">Arkadaşlık İstekleri</p>
                 <p class="msg-header-badge">@FriendShipList.Count</p>
             </div>
         </a>
@@ -61,10 +62,12 @@
 
                         <div class="flex-grow-1 ms-3">
                             <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-bold text-dark" style="font-size: 0.85rem;">@fullName</span>
-                                <small class="text-muted" style="font-size: 0.7rem;">Az önce</small>
+                                <span class="fw-bold text-light" style="font-size: 0.85rem;">
+                                    @(fullName != null && fullName.Length > 16 ? fullName.Substring(0, 16) + "..." : fullName)
+                                </span>
+                                <small class="text-light" style="font-size: 0.7rem;"> @item.CreatedAt </small>
                             </div>
-                            <p class="mb-2 text-muted" style="font-size: 0.8rem; margin-top: -2px;">Sana arkadaşlık isteği gönderdi.</p>
+                            <p class="mb-2 text-light" style="font-size: 0.8rem; margin-top: -2px;">Sana arkadaşlık isteği gönderdi.</p>
                             <div class="d-flex gap-2">
                                 <button type="button"
                                         class="btn btn-primary btn-sm px-3 py-1 flex-fill rounded-2"
@@ -90,10 +93,12 @@
         </div>
         
         <div class="text-center msg-footer p-2">
-            <a class="btn btn-light btn-sm w-100" href="/@culture/Public/FriendShip/Requests/">Tüm Bildirimleri Gör</a>
+            <a class="btn btn-light btn-sm w-100" href="/@culture/Public/FriendShip/Requests/">Tüm Arkadaşlık İstekleri</a>
         </div>
     </div>
 </li>
+
+
 @code {
 
     private const string PAGE = "DataManager";
@@ -118,9 +123,6 @@
 
     private List<Users>? Users { get; set; } = new();
 
-    // ✅ FİX: "FriendShip" isimli property, razor._Shared namespace'indeki sınıfla
-    // çakışıyordu. Property adı "FriendShipList" olarak değiştirildi,
-    // tipi ise açıkça "data.FriendShip" olarak belirtildi.
     private List<data.FriendShip> FriendShipList { get; set; } = new();
 
     private List<Country> _Countries = new();
@@ -180,7 +182,9 @@
         _isInitialized = true;
         StateHub.OnDataChanged += HandleGlobalDataChange;
 
-        await LoadData(null);
+        // ✅ FİX: Kullanıcı oturum açmamışsa LoadData çağrılmaz
+        if (use is not null)
+            await LoadData(null);
     }
 
     public async ValueTask DisposeAsync()
@@ -198,7 +202,8 @@
 
     private async Task HandleGlobalDataChange(string entityName)
     {
-        if (_disposed || !_isInitialized || _isProcessing) return;
+        // ✅ FİX: use null ise global değişiklik olsa bile LoadData tetiklenmez
+        if (_disposed || !_isInitialized || _isProcessing || use is null) return;
 
         var shouldRefresh = entityName == "Users" || entityName == "FriendShip";
 
@@ -241,6 +246,9 @@
 
             await db.SaveChangesAsync(_cts.Token);
 
+            FriendShipList.RemoveAll(f => f.Id == friendShipId);
+            StateHasChanged();
+
             await StateHub.NotifyDataChanged("FriendShip");
             await Logger.TakeIt(use?.Id, PAGE, "AcceptFriendShip");
             await ShowNotification("success", "Başarılı", "Arkadaşlık isteği onaylandı.", null);
@@ -261,8 +269,6 @@
         }
     }
 
-
-
     protected async Task DeleteFriendShip(Guid friendShipId)
     {
         if (_isProcessing) return;
@@ -275,7 +281,6 @@
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            // ✅ FİX: FindAsync tipi açıkça data.FriendShip olarak belirtildi
             var request = await db.FriendShip.FindAsync(
                 new object[] { friendShipId }, _cts.Token);
 
@@ -292,6 +297,9 @@
                 request.ActionDate = DateTime.UtcNow;
 
                 await db.SaveChangesAsync(_cts.Token);
+
+                FriendShipList.RemoveAll(f => f.Id == friendShipId);
+                StateHasChanged();
 
                 await StateHub.NotifyDataChanged("FriendShip");
                 await Logger.TakeIt(use?.Id, PAGE, "DeleteFriendShip");
@@ -316,6 +324,9 @@
 
     protected virtual async Task LoadData(string? search)
     {
+        // ✅ FİX: Kullanıcı null ise hiçbir şey yükleme, hata da gösterme
+        if (use is null) return;
+
         _searchCts?.Cancel();
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
@@ -338,9 +349,8 @@
 
                 var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
 
-                // ✅ FİX: Sorgu sonucu tipi açıkça data.FriendShip olarak belirtildi
                 var query_FriendShip = db.FriendShip.AsNoTracking()
-                    .Where(u => u.ReceiverId == use.Id && u.IsDeleted.IsDeletedStatu != true);
+                    .Where(u => u.ReceiverId == use.Id && u.IsDeleted.IsDeletedStatu != true && u.Status != true);
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
@@ -353,7 +363,6 @@
                     .OrderByDescending(u => u.RegistrationDate)
                     .ToListAsync(token);
 
-                // ✅ FİX: Tip açıkça List<data.FriendShip> olarak belirtildi
                 var friendShip = await query_FriendShip
                     .ToListAsync(token);
 
@@ -364,7 +373,6 @@
             if (result != null && !token.IsCancellationRequested)
             {
                 Users = result.Users;
-                // ✅ FİX: Property adı FriendShipList olarak güncellendi
                 FriendShipList = result.FriendShip;
             }
         }
@@ -386,195 +394,6 @@
                 _isLoading = false;
                 StateHasChanged();
             }
-        }
-    }
-
-    protected async Task AddUser(Users newUser)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            newUser.RegistrationDate = DateTime.UtcNow;
-            db.Users.Add(newUser);
-            await db.SaveChangesAsync(_cts.Token);
-
-            await StateHub.NotifyDataChanged("Users");
-            await Logger.TakeIt(newUser.Id, PAGE, "AddUser");
-            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla eklendi.", null);
-            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "AddUser",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Kullanıcı eklenirken bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    protected async Task UpdateUser(Users updatedUser)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            db.Users.Update(updatedUser);
-            await db.SaveChangesAsync(_cts.Token);
-
-            await StateHub.NotifyDataChanged("Users");
-            await Logger.TakeIt(updatedUser.Id, PAGE, "UpdateUser");
-            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla güncellendi.", null);
-            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "UpdateUser",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Kullanıcı güncellenirken bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    protected async Task DeleteUser(int userId)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            var user = await db.Users.FindAsync(new object[] { userId }, _cts.Token);
-            if (user != null)
-            {
-                db.Users.Remove(user);
-                await db.SaveChangesAsync(_cts.Token);
-
-                await StateHub.NotifyDataChanged("Users");
-                await Logger.TakeIt(use?.Id, PAGE, "DeleteUser");
-                await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla silindi.", null);
-                await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-            }
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "DeleteUser",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Kullanıcı silinirken bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    protected async Task BulkImport(List<Users> users)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-            var now = DateTime.UtcNow;
-            foreach (var user in users)
-                user.RegistrationDate = now;
-
-            db.Users.AddRange(users);
-            await db.SaveChangesAsync(_cts.Token);
-
-            await StateHub.NotifyDataChanged("Users");
-            await Logger.TakeIt(use?.Id, PAGE, $"BulkImport ({users.Count} kayıt)");
-            await ShowNotification("success", "Başarılı", $"{users.Count} kayıt başarıyla içe aktarıldı.", null);
-            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "BulkImport",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", "Toplu içe aktarma sırasında bir sorun oluştu.", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
-        }
-    }
-
-    public async Task CopyText(string textInfo)
-    {
-        if (_isProcessing) return;
-
-        await _writeLock.WaitAsync(_cts.Token);
-        try
-        {
-            _isProcessing = true;
-            StateHasChanged();
-
-            if (string.IsNullOrEmpty(textInfo))
-            {
-                await ShowNotification("warning", "Uyarı", "Kopyalanacak içerik bulunamadı.", null);
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("navigator.clipboard.writeText", textInfo);
-                await ShowNotification("success", "Başarılı", "İçerik başarıyla kopyalandı.", null);
-            }
-        }
-        catch (Exception ex)
-        {
-            await Logger.TakeIt(use?.Id, PAGE, "CopyText",
-                exception: ex.Message,
-                stackTrace: ex.StackTrace);
-
-            await ShowNotification("danger", "Hata", $"Kopyalama işlemi başarısız: {ex.Message}", null);
-        }
-        finally
-        {
-            _isProcessing = false;
-            _writeLock.Release();
-            StateHasChanged();
         }
     }
 

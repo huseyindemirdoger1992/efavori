@@ -313,7 +313,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     bool filterByStructure = TaskCategoriesValue != "All" && !string.IsNullOrEmpty(TaskCategoriesValue);
 
                     taskCategories = await baseCategoryFilter
-                        .Where(c => !filterByStructure || c.CategoryStructure == TaskCategoriesValue)
+                        .Where(c => !filterByStructure)
                         .OrderByDescending(t => t.CreatedAt)
                         .AsNoTracking()
                         .ToListAsync(_cts.Token);
@@ -321,8 +321,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     var tasksQuery = query
                         .AsNoTracking()
                         .Where(t => baseCategoryFilter
-                            .Any(c => c.Id == t.TaskCategoriesId &&
-                                      (!filterByStructure || c.CategoryStructure == TaskCategoriesValue)));
+                            .Any(c => c.Id == t.TaskCategoriesId));
 
                     if (!string.IsNullOrWhiteSpace(_SearchText))
                         tasksQuery = tasksQuery.Where(t =>
@@ -817,7 +816,7 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 !string.IsNullOrWhiteSpace(tce.Description))
                 {
                     await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-                    tce.CategoryStructure = CategoryStructure;
+                    //tce.CategoryStructure = CategoryStructure;
                     tce.TaskFrameworkId = TaskFrameworkId;
                     db.TaskCategories.Update(tce);
                     await db.SaveChangesAsync(_cts.Token);

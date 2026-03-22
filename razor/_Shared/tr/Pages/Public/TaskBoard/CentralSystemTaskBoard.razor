@@ -69,7 +69,7 @@
                     <razor._Shared.BreadCrumbLinksUrl roads="roads" />
                 </div>
 
-                @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
+                @if (use != null)
                 {
                     <div class="btn-group" role="group" aria-label="İşlem Butonları">
                         <button type="button" class="btn btn-light btn-sm"
@@ -156,9 +156,11 @@
                 {
                     <div class="btn-group" role="group" aria-label="İşlem Butonları">
                         <button type="button" class="btn btn-light btn-sm">
+                            <i class="fa fa-folder-open"></i> Yeni Bölüm
+                        </button>
+                        <button type="button" class="btn btn-light btn-sm">
                             <i class="fa fa-address-book"></i> Yeni Kategori
                         </button>
-
                         <button type="button" class="btn btn-light btn-sm">
                             <i class="fa fa-tasks"></i> Yeni Görev
                         </button>

@@ -232,14 +232,14 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     .ToListAsync(_cts.Token);
                 taskCategories = await db.TaskCategories
                     .AsNoTracking()
-                    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id && n.CategoryStructure == "PlanningTaskBoard")
+                    .Where(n => (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true) && n.UserId == use.Id)
                     .OrderByDescending(t => t.CreatedAt) // Filtrelemeden sonra sırala
                     .ToListAsync(_cts.Token);
                 tasks = await query
                     .AsNoTracking()
                     .Where(t => db.TaskCategories
                         .Any(c => c.Id == t.TaskCategoriesId && // Görevin kategorisini eşle
-                                  c.CategoryStructure == "PlanningTaskBoard" && // Yapıyı kontrol et
+                                  //c.CategoryStructure == "PlanningTaskBoard" && // Yapıyı kontrol et
                                   (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true) &&
                                   c.UserId == use.Id))
                     .OrderByDescending(t => t.DateCreatedAt)
@@ -621,7 +621,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                 // Null kontrolü ve validasyon
                 if (TaskCategories == null ||
                     TaskCategories.TaskFrameworkId == null ||
-                    TaskCategories.CategoryStructure == null ||
                     string.IsNullOrWhiteSpace(TaskCategories.Title) ||
                     string.IsNullOrWhiteSpace(TaskCategories.Description))
                 {
@@ -629,8 +628,6 @@ namespace razor._Shared.tr.Pages.Public.TaskBoard
                     return;
                 }
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-
-                TaskCategories.CategoryStructure = !string.IsNullOrEmpty(TaskCategories.CategoryStructure) ? TaskCategories.CategoryStructure : "PlanningTaskBoard";
 
                 TaskCategories.UserId = use?.Id;
                 TaskCategories.CreatedAt = DateTime.UtcNow;

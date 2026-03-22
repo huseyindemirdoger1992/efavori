@@ -27,17 +27,17 @@
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <div class="col-md-6 mb-6">
+                    <div class="col-md-12 mb-12">
                         <label class="form-label">Görev Bölümü</label>
                         <select class="form-select" @bind="TaskCategories.TaskFrameworkId">
                             <option value=@TaskCategories.TaskFrameworkId>@TaskCategories.TaskFrameworkId</option>
-                            @foreach (TaskFramework tf in db.TaskFramework.Where(x=> x.IsDeleted.IsDeletedStatu != true).ToList())
+                            @foreach (TaskFramework tf in db.TaskFramework.Where(x=> x.IsDeleted.IsDeletedStatu != true && x.UserId == use.Id).ToList())
                             {
                                 <option value=@tf.Id>@tf.Title</option>
                             }
                         </select>
                     </div>
-                    <div class="col-md-6 mb-6">
+@*                     <div class="col-md-6 mb-6">
                         <label class="form-label">Görev Durumu</label>
                         <select class="form-select" @bind="TaskCategories.CategoryStructure">
                             <option value="@TaskCategories.CategoryStructure">@TaskCategories.CategoryStructure</option>
@@ -45,7 +45,7 @@
                             <option value="InProcessTaskBoard">Aktif Görev</option>
                             <option value=CompletedTaskBoard>Tamamlandı</option>
                         </select>
-                    </div>
+                    </div> *@
                     <div class="col-md-12 mb-12" style="margin-top:12px;">
                         <label class="form-label">Kategori Adı</label>
                         <input class="form-control mb-3" type="text" @bind="TaskCategories.Title">

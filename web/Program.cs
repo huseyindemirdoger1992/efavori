@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using razor._Shared;
 using razor._Shared.tr.Media;
 using System.Globalization;
 using System.Text.Encodings.Web;

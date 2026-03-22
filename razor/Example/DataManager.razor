@@ -10,6 +10,7 @@
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
+@namespace razor._Shared
 
 <Notification @ref="notificationRef" />
 
@@ -423,3 +424,5 @@ else
         await notificationRef.Launch(type, title, text, imageUrl);
     }
 }
+
+

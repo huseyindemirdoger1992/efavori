@@ -19,84 +19,214 @@
     }
 }
 
-<div id="dxtr-v2-toaster-host"></div>
+<div id="dxtr-v3-toaster-host"></div>
 
 <style>
-    :root {
-        --dxtr-v2-blur: 12px;
-        --dxtr-v2-border: rgba(255, 255, 255, 0.18);
-        --dxtr-v2-bg: rgba(15, 15, 15, 0.6);
-    }
+    /* ═══════════════════════════════════════════
+       DXTR V3 · ULTRA — Notification System
+       Blazor-safe · Modal-proof · Responsive
+    ═══════════════════════════════════════════ */
 
-    #dxtr-v2-toaster-host {
+    #dxtr-v3-toaster-host {
         position: fixed;
         top: 1.5rem;
         right: 1.5rem;
-        z-index: 999999;
+        z-index: 2147483647;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
-        width: 380px;
+        gap: 12px;
+        width: 400px;
         max-width: calc(100vw - 3rem);
         pointer-events: none;
-        perspective: 1200px;
+        isolation: isolate;
+        contain: layout;
     }
 
-    .dxtr-v2-toast-node {
+    /* Tablet */
+    @@media (max-width: 768px) and (min-width: 481px) {
+        #dxtr-v3-toaster-host {
+            top: 1rem;
+            right: 1rem;
+            width: 360px;
+        }
+    }
+
+    /* Mobil — ekranın tam ortası */
+    @@media (max-width: 480px) {
+        #dxtr-v3-toaster-host {
+            top: 50% !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translate(-50%, -50%) !important;
+            width: calc(100vw - 2.5rem);
+            max-width: 360px;
+            align-items: center;
+        }
+    }
+
+    /* ── Kart ── */
+    .dxtr-v3-toast-node {
         pointer-events: auto;
         position: relative;
-        background: var(--dxtr-v2-bg);
-        backdrop-filter: blur(var(--dxtr-v2-blur));
-        -webkit-backdrop-filter: blur(var(--dxtr-v2-blur));
-        border: 1px solid var(--dxtr-v2-border);
+        width: 100%;
         border-radius: 20px;
-        padding: 16px;
-        color: #fff;
+        overflow: hidden;
         display: flex;
         align-items: center;
         gap: 14px;
+        padding: 16px;
+        color: #fff;
+
+        /* Transparan cam efekti */
+        background: rgba(5, 5, 9, 0.28);
+        backdrop-filter: blur(12px) saturate(1.8) brightness(1.05);
+        -webkit-backdrop-filter: blur(12px) saturate(1.8) brightness(1.05);
+
+        /* Giriş başlangıcı */
         opacity: 0;
-        transform: perspective(1000px) rotateX(-15deg) translateY(-20px) scale(0.95);
-        transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-        overflow: hidden;
+        transform: perspective(1000px) rotateX(-12deg) translateY(-20px) scale(0.94);
+        transition:
+            opacity  0.55s cubic-bezier(0.22, 1, 0.36, 1),
+            transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+            box-shadow 0.55s ease;
     }
 
-        .dxtr-v2-toast-node.v2-active {
-            opacity: 1;
-            transform: perspective(1000px) rotateX(0deg) translateY(0) scale(1);
-        }
+    /* Üst ince parlama şeridi */
+    .dxtr-v3-toast-node::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1.5px;
+        opacity: 0.85;
+    }
 
-        .dxtr-v2-toast-node.v2-exit {
-            opacity: 0 !important;
-            transform: scale(0.8) translateX(30px);
-            filter: blur(8px);
-            transition: all 0.4s ease-in;
-        }
+    /* Alt yansıma ışıması */
+    .dxtr-v3-toast-node::after {
+        content: '';
+        position: absolute;
+        bottom: -1px; left: 15%; right: 15%;
+        height: 1px;
+        opacity: 0.35;
+    }
 
-    .dxtr-v2-media {
+    /* ── info ── */
+    .dxtr-v3-toast-node.info {
+        border: 1px solid rgba(0, 229, 255, 0.2);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,229,255,0.05) inset;
+    }
+    .dxtr-v3-toast-node.info::before { background: linear-gradient(90deg, transparent, #00e5ff 50%, transparent); }
+    .dxtr-v3-toast-node.info::after  { background: linear-gradient(90deg, transparent, #00e5ff, transparent); }
+    .dxtr-v3-toast-node.info.v3-active { box-shadow: 0 12px 56px rgba(0,0,0,0.8), 0 0 40px rgba(0,229,255,0.06); }
+
+    /* ── success ── */
+    .dxtr-v3-toast-node.success {
+        border: 1px solid rgba(0, 255, 136, 0.2);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,255,136,0.05) inset;
+    }
+    .dxtr-v3-toast-node.success::before { background: linear-gradient(90deg, transparent, #00ff88 50%, transparent); }
+    .dxtr-v3-toast-node.success::after  { background: linear-gradient(90deg, transparent, #00ff88, transparent); }
+    .dxtr-v3-toast-node.success.v3-active { box-shadow: 0 12px 56px rgba(0,0,0,0.8), 0 0 40px rgba(0,255,136,0.06); }
+
+    /* ── warning ── */
+    .dxtr-v3-toast-node.warning {
+        border: 1px solid rgba(255, 204, 0, 0.2);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,204,0,0.05) inset;
+    }
+    .dxtr-v3-toast-node.warning::before { background: linear-gradient(90deg, transparent, #ffcc00 50%, transparent); }
+    .dxtr-v3-toast-node.warning::after  { background: linear-gradient(90deg, transparent, #ffcc00, transparent); }
+    .dxtr-v3-toast-node.warning.v3-active { box-shadow: 0 12px 56px rgba(0,0,0,0.8), 0 0 40px rgba(255,204,0,0.06); }
+
+    /* ── danger ── */
+    .dxtr-v3-toast-node.danger {
+        border: 1px solid rgba(255, 68, 102, 0.2);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,68,102,0.05) inset;
+    }
+    .dxtr-v3-toast-node.danger::before { background: linear-gradient(90deg, transparent, #ff4466 50%, transparent); }
+    .dxtr-v3-toast-node.danger::after  { background: linear-gradient(90deg, transparent, #ff4466, transparent); }
+    .dxtr-v3-toast-node.danger.v3-active { box-shadow: 0 12px 56px rgba(0,0,0,0.8), 0 0 40px rgba(255,68,102,0.06); }
+
+    /* Aktif */
+    .dxtr-v3-toast-node.v3-active {
+        opacity: 1;
+        transform: perspective(1000px) rotateX(0deg) translateY(0) scale(1);
+    }
+
+    /* Çıkış */
+    .dxtr-v3-toast-node.v3-exit {
+        opacity: 0 !important;
+        transform: scale(0.84) translateX(28px);
+        filter: blur(6px);
+        pointer-events: none;
+        transition: opacity 0.38s ease, transform 0.38s ease, filter 0.38s ease;
+    }
+
+    /* Mobil: 3D yok, sade scale */
+    @@media (max-width: 480px) {
+        .dxtr-v3-toast-node           { transform: scale(0.88); }
+        .dxtr-v3-toast-node.v3-active { transform: scale(1); }
+        .dxtr-v3-toast-node.v3-exit   { transform: scale(0.84); }
+    }
+
+    /* ── Scan-line hologram efekti ── */
+    .dxtr-v3-scan {
+        position: absolute;
+        inset: 0;
+        border-radius: 20px;
+        pointer-events: none;
+        overflow: hidden;
+    }
+    .dxtr-v3-scan::after {
+        content: '';
+        position: absolute;
+        left: 0; right: 0;
+        height: 35%;
+        top: -35%;
+        background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.022), transparent);
+        animation: dxtr-v3-scanline 3.5s linear infinite;
+    }
+    @@keyframes dxtr-v3-scanline { to { top: 135%; } }
+
+    /* ── İkon kutusu ── */
+    .dxtr-v3-media {
+        flex-shrink: 0;
         width: 56px;
         height: 56px;
-        flex-shrink: 0;
         border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
+    .dxtr-v3-media::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 1px solid rgba(255,255,255,0.07);
+    }
+    .info    .dxtr-v3-media { background: rgba(0, 229, 255, 0.09); }
+    .success .dxtr-v3-media { background: rgba(0, 255, 136, 0.09); }
+    .warning .dxtr-v3-media { background: rgba(255, 204, 0,  0.09); }
+    .danger  .dxtr-v3-media { background: rgba(255, 68, 102, 0.09); }
 
-        .dxtr-v2-media img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+    .dxtr-v3-media svg { width: 26px; height: 26px; }
+    .info    .dxtr-v3-media svg { stroke: #00e5ff; }
+    .success .dxtr-v3-media svg { stroke: #00ff88; }
+    .warning .dxtr-v3-media svg { stroke: #ffcc00; }
+    .danger  .dxtr-v3-media svg { stroke: #ff4466; }
 
-    .dxtr-v2-content {
+    /* ── İçerik ── */
+    .dxtr-v3-content {
         flex: 1;
         padding-right: 25px;
         text-align: left;
+        min-width: 0;
     }
 
-    .dxtr-v2-title {
+    /* Başlık */
+    .dxtr-v3-title {
         display: block;
         font-weight: 800;
         font-size: 0.8rem;
@@ -104,20 +234,30 @@
         letter-spacing: 1.5px;
         margin-bottom: 2px;
         opacity: 0.95;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: rgba(255,255,255,0.95);
     }
+    .info    .dxtr-v3-title { color: #00e5ff; }
+    .success .dxtr-v3-title { color: #00ff88; }
+    .warning .dxtr-v3-title { color: #ffcc00; }
+    .danger  .dxtr-v3-title { color: #ff4466; }
 
-    .dxtr-v2-desc {
+    /* Açıklama */
+    .dxtr-v3-desc {
         font-size: 0.88rem;
-        color: rgba(255, 255, 255, 0.8);
+        color: rgba(255, 255, 255, 0.55);
         line-height: 1.3;
         margin: 0;
         font-weight: 400;
     }
 
-    .dxtr-v2-close {
+    /* ── Kapat butonu ── */
+    .dxtr-v3-close {
         background: transparent;
         border: none;
-        color: rgba(255, 255, 255, 0.5);
+        color: rgba(255,255,255,0.5);
         width: 32px;
         height: 32px;
         border-radius: 50%;
@@ -130,140 +270,127 @@
         top: 8px;
         right: 8px;
         transition: all 0.2s;
+        line-height: 1;
+    }
+    .dxtr-v3-close:hover {
+        color: #fff;
+        background: rgba(255,255,255,0.1);
     }
 
-        .dxtr-v2-close:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-    .dxtr-v2-timer-wrapper {
+    /* ── Progress bar ── */
+    .dxtr-v3-timer-wrapper {
         position: absolute;
-        bottom: 0;
-        left: 0;
+        bottom: 0; left: 0;
         width: 100%;
         height: 3px;
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(255,255,255,0.03);
     }
-
-    .dxtr-v2-timer-bar {
+    .dxtr-v3-timer-bar {
         height: 100%;
-        width: 0%;
-        transition: width 4000ms linear;
-        box-shadow: 0 0 10px currentColor;
+        width: 100%;
+        transform-origin: left;
+        transform: scaleX(1);
+        transition: transform 4200ms linear;
     }
-
-    /* Durum Renkleri - Işıma Efekti ile */
-    .dxtr-v2-toast-node.info .dxtr-v2-title {
-        color: #00d2ff;
-    }
-
-    .dxtr-v2-toast-node.info .dxtr-v2-timer-bar {
-        background: #00d2ff;
-        color: #00d2ff;
-    }
-
-    .dxtr-v2-toast-node.success .dxtr-v2-title {
-        color: #00ff9d;
-    }
-
-    .dxtr-v2-toast-node.success .dxtr-v2-timer-bar {
-        background: #00ff9d;
-        color: #00ff9d;
-    }
-
-    .dxtr-v2-toast-node.warning .dxtr-v2-title {
-        color: #ffca28;
-    }
-
-    .dxtr-v2-toast-node.warning .dxtr-v2-timer-bar {
-        background: #ffca28;
-        color: #ffca28;
-    }
-
-    .dxtr-v2-toast-node.danger .dxtr-v2-title {
-        color: #ff4757;
-    }
-
-    .dxtr-v2-toast-node.danger .dxtr-v2-timer-bar {
-        background: #ff4757;
-        color: #ff4757;
-    }
-
-    /* --- MOBIL REVIZE --- */
-    @@media (max-width: 480px) {
-        #dxtr-v2-toaster-host {
-            top: auto;
-            bottom: 1.5rem;
-            right: 1rem;
-            left: 1rem;
-            width: auto;
-            max-width: none;
-            gap: 0.8rem;
-        }
-
-        .dxtr-v2-toast-node {
-            padding: 12px;
-            border-radius: 16px;
-            transform: translateY(20px) scale(0.9); /* Aşağıdan yukarı gelir */
-        }
-
-        .dxtr-v2-media {
-            width: 48px;
-            height: 48px;
-        }
-
-        .dxtr-v2-title {
-            font-size: 0.75rem;
-        }
-
-        .dxtr-v2-desc {
-            font-size: 0.82rem;
-        }
-    }
+    .info    .dxtr-v3-timer-bar { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
+    .success .dxtr-v3-timer-bar { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+    .warning .dxtr-v3-timer-bar { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
+    .danger  .dxtr-v3-timer-bar { background: #ff4466; box-shadow: 0 0 8px #ff4466; }
 </style>
 
 <script>
-    function dxtrV2_Notify(title, msg, img, status) {
-        let host = document.getElementById('dxtr-v2-toaster-host');
-        if (!host) {
-            host = document.createElement('div');
-            host.id = 'dxtr-v2-toaster-host';
-            document.body.appendChild(host);
+    (function () {
+        if (window.__dxtrV3Loaded) return;
+        window.__dxtrV3Loaded = true;
+
+        var ICONS = {
+            info:    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+            success: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+            warning: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            danger:  '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+        };
+
+        function getHost() {
+            var h = document.getElementById('dxtr-v3-toaster-host');
+            if (!h) {
+                h = document.createElement('div');
+                h.id = 'dxtr-v3-toaster-host';
+            }
+
+            document.body.appendChild(h);
+
+            var maxZ = 0;
+            document.querySelectorAll('*').forEach(function (el) {
+                var z = parseInt(window.getComputedStyle(el).zIndex, 10);
+                if (!isNaN(z) && z > maxZ) maxZ = z;
+            });
+            h.style.zIndex = Math.max(maxZ + 1, 2147483647);
+
+            return h;
         }
 
-        const toast = document.createElement('div');
-        toast.className = `dxtr-v2-toast-node ${status}`;
-        toast.innerHTML = `
-            <div class="dxtr-v2-media"><img src="${img}" alt="notify-img"></div>
-            <div class="dxtr-v2-content">
-                <span class="dxtr-v2-title">${title}</span>
-                <p class="dxtr-v2-desc">${msg}</p>
-            </div>
-            <button class="dxtr-v2-close" aria-label="Close">&times;</button>
-            <div class="dxtr-v2-timer-wrapper"><div class="dxtr-v2-timer-bar"></div></div>`;
+        window.dxtrV2_Notify = function (title, msg, _imgUrl, type) {
+            var status = type || 'info';
+            var host   = getHost();
+            var icon   = ICONS[status] || ICONS.info;
 
-        // Mobilde en yeni bildirimi en üstte veya en altta gösterme tercihi
-        // prepend (en üste) kullanımı mobil scroll için daha iyidir
-        host.prepend(toast);
+            var toast = document.createElement('div');
+            toast.className = 'dxtr-v3-toast-node ' + status;
+            toast.innerHTML =
+                '<div class="dxtr-v3-scan"></div>' +
+                '<div class="dxtr-v3-media">' + icon + '</div>' +
+                '<div class="dxtr-v3-content">' +
+                    '<span class="dxtr-v3-title">' + title + '</span>' +
+                    '<p class="dxtr-v3-desc">' + msg + '</p>' +
+                '</div>' +
+                '<button class="dxtr-v3-close" aria-label="Kapat">&times;</button>' +
+                '<div class="dxtr-v3-timer-wrapper"><div class="dxtr-v3-timer-bar"></div></div>';
 
-        toast.querySelector('.dxtr-v2-close').onclick = () => removeToast(toast);
+            /* ── DEĞİŞİKLİK: prepend → appendChild ──
+               Yeni bildirim altta eklenir, eskiler yukarıda kalır. */
+            host.appendChild(toast);
 
-        requestAnimationFrame(() => {
-            setTimeout(() => {
-                toast.classList.add('v2-active');
-                const bar = toast.querySelector('.dxtr-v2-timer-bar');
-                if(bar) bar.style.width = '100%';
-            }, 50);
-        });
+            var autoTimer;
 
-        let autoClose = setTimeout(() => removeToast(toast), 4000);
+            function dismiss() {
+                if (!toast.parentElement) return;
+                clearTimeout(autoTimer);
+                toast.classList.add('v3-exit');
+                setTimeout(function () { if (toast.parentElement) toast.remove(); }, 400);
+            }
 
-        function removeToast(el) {
-            if (!el.parentElement) return;
-            clearTimeout(autoClose);
-            el.classList.add('v2-exit');
-            setTimeout(() => { if(el.parentElement) el.remove(); }, 450);
-        }
-    }
+            toast.querySelector('.dxtr-v3-close').onclick = dismiss;
+
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    toast.classList.add('v3-active');
+                    setTimeout(function () {
+                        var bar = toast.querySelector('.dxtr-v3-timer-bar');
+                        if (bar) bar.style.transform = 'scaleX(0)';
+                    }, 50);
+                });
+            });
+
+            autoTimer = setTimeout(dismiss, 4250);
+
+            toast.addEventListener('mouseenter', function () {
+                clearTimeout(autoTimer);
+                var bar = toast.querySelector('.dxtr-v3-timer-bar');
+                if (bar) {
+                    var live = window.getComputedStyle(bar).transform;
+                    bar.style.transition = 'none';
+                    bar.style.transform  = live;
+                }
+            });
+            toast.addEventListener('mouseleave', function () {
+                var bar = toast.querySelector('.dxtr-v3-timer-bar');
+                if (bar) {
+                    bar.style.transition = 'transform 1500ms linear';
+                    bar.style.transform  = 'scaleX(0)';
+                }
+                autoTimer = setTimeout(dismiss, 1500);
+            });
+        };
+
+    })();
 </script>

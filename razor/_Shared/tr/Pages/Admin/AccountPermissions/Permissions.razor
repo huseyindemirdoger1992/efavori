@@ -1,0 +1,315 @@
+﻿@using System.Globalization
+@using data
+@using api
+@using api.tr
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using razor._Shared.tr._DataList
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+<Notification @ref="notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        // Ana sayfa için ev ikonu
+        ("fa fa-home", "efavori", "/"),
+        
+        // Oturum Ayarları başlığı için anahtar ikonu
+        ("fa fa-key", "Oturum Ayarları", "/@culture/Public/Home/GetGitHubCommits/"),
+        
+        // Oturum detayları veya kullanıcı güvenliği için kilit ikonu
+        ("fa fa-lock", $"İzin Ayarları", "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+
+@if (_isLoading)
+{
+    <p>Yükleniyor...</p>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-12 col-md-12">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="switchRegister" @bind="SinglePermission.CanRegister">
+                    <label class="form-check-label" for="switchRegister">
+                        Kayıt Yapılabilsin
+                    </label>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-12">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch"
+                           id="switchLogin" @bind="SinglePermission.CanLogin">
+                        <label class="form-check-label" for="switchLogin">
+                            Oturum Açma Yapılabilsin
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="switchReset" @bind="SinglePermission.CanResetPassword">
+                            <label class="form-check-label" for="switchReset">
+                                Şifre Sıfırlama Yapılabilsin
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+    <div class="row mt-3">
+    <div class="col-12">
+        <button class="btn btn-light border w-100" @onclick="UpdatePermissions" disabled="@_isProcessing">
+            @if (_isProcessing)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span> Kaydediliyor...</span>
+            }
+            else
+            {
+                <i class="fa fa-save"></i> <span>Değişiklikleri Kaydet</span>
+            }
+        </button>
+    </div>
+</div>
+}
+
+@code {
+
+    private const string PAGE = "DataManager";
+
+    [Parameter] public Users? use { get; set; }
+
+    private readonly CancellationTokenSource _cts = new();
+    public AccountPermissions SinglePermission { get; set; }
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
+
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _isProcessing;
+
+    private List<Users>? Users { get; set; } = new();
+
+    private Notification? notificationRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+
+        await LoadData(null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+
+        var shouldRefresh = entityName == "Users";
+
+        if (shouldRefresh)
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadData(null);
+                StateHasChanged();
+            });
+        }
+    }
+
+    protected virtual async Task LoadData(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(1000, token);
+
+            if (_isLoading) return;
+            _isLoading = true;
+        
+            using var db = await DbFactory.CreateDbContextAsync();
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync("DataManager_Main", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                // 1. Kullanıcı Sorgusu
+                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    query = query.Where(u =>
+                        u.FirstName.Contains(search) ||
+                        u.LastName.Contains(search));
+                }
+
+                var users = await query
+                    .OrderByDescending(u => u.RegistrationDate)
+                    .ToListAsync(token);
+
+                // 2. A_Permissions Sorgusu (Sadece Id = 1 olan tekil kayıt)
+                var permission = await db.AccountPermissions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == 1, token);
+
+                return new { Users = users, Permission = permission };
+
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+            {
+                Users = result.Users;
+                // Bileşeninizde 'SelectedPermission' veya benzeri bir property olduğunu varsayıyorum
+                SinglePermission = result.Permission;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Veriler yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected async Task UpdateUser(Users updatedUser)
+    {
+        if (_isProcessing) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            db.Users.Update(updatedUser);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await StateHub.NotifyDataChanged("Users");
+
+            await Logger.TakeIt(updatedUser.Id, PAGE, "UpdateUser");
+
+            await ShowNotification("success", "Başarılı", "Kullanıcı başarıyla güncellendi.", null);
+            await JS.InvokeVoidAsync("eval", $"$('#Modal_{null}').modal('hide')");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "UpdateUser",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Kullanıcı güncellenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    protected async Task UpdatePermissions()
+{
+    if (_isProcessing || SinglePermission == null) return;
+
+    await _writeLock.WaitAsync(_cts.Token);
+    try
+    {
+        _isProcessing = true;
+        StateHasChanged();
+
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+        // Güvenlik önlemi: Sadece Id'si 1 olan kaydı güncellemeye zorla
+        if (SinglePermission.Id == 1)
+        {
+            db.AccountPermissions.Update(SinglePermission);
+            await db.SaveChangesAsync(_cts.Token);
+
+            // Veri değiştiğini diğer bileşenlere haber ver
+            await StateHub.NotifyDataChanged("AccountPermissions");
+
+            // Log kaydı
+            await Logger.TakeIt(use?.Id, PAGE, "UpdatePermissions", "İzinler güncellendi.");
+
+            // Bildirim göster
+            await ShowNotification("success", "Başarılı", "İzin ayarları başarıyla güncellendi.", null);
+        }
+        else
+        {
+            await ShowNotification("warning", "Uyarı", "Geçersiz işlem denemesi.", null);
+        }
+    }
+    catch (Exception ex)
+    {
+        await Logger.TakeIt(use?.Id, PAGE, "UpdatePermissions",
+            exception: ex.Message,
+            stackTrace: ex.StackTrace);
+
+        await ShowNotification("danger", "Hata", "İzinler güncellenirken bir sorun oluştu.", null);
+    }
+    finally
+    {
+        _isProcessing = false;
+        _writeLock.Release();
+        StateHasChanged();
+    }
+}
+
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}
+
+
+@* await JS.InvokeVoidAsync("location.reload"); *@

@@ -501,6 +501,27 @@
                 </li>
             </ul>
         </li>
+
+        @if (_use?.UsersType == "SuperAdmin")
+        {
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-cog" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Website Ayarları</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/AccountPermissions/Permissions/">
+                            <i class="fa fa-key" aria-hidden="true"></i>
+                            Oturum Ayarları
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        }
+
         @if (_use?.UsersType == "SuperAdmin")
         {
             <li>

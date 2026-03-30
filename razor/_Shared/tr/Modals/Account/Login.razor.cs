@@ -17,6 +17,21 @@ namespace razor._Shared.tr.Modals.Account
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
+        // Tanımlama (Field yerine Property)
+        public AccountPermissions? SinglePermission { get; set; }
+
+        // Veriyi çekme ve Kontrolü sağlama
+        // Login.razor.cs içindeki değişiklik
+        protected override async Task OnInitializedAsync()
+        {
+            if (_db != null && _db.AccountPermissions != null)
+            {
+                SinglePermission = await _db.AccountPermissions
+                                        .AsNoTracking()
+                                        .FirstOrDefaultAsync(ap => ap.Id == 1);
+            }
+        }
+
         private Notification? notificationRef;
         private readonly TakeLogs _logger;
         private readonly _ApplicationConnectionDb _db;

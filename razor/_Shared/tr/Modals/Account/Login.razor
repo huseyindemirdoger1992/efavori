@@ -1,6 +1,8 @@
 ﻿@rendermode InteractiveServer
 <razor._Shared.Notification @ref="notificationRef" />
-<!-- Oturum Açma Modalı -->
+
+
+
 <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
@@ -30,26 +32,66 @@
                            autocomplete="current-password" />
                 </div>
                 <div class="d-flex justify-content-between">
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#resetModal">
-                        <i class="fa fa-key"></i> Şifremi Unuttum
-                    </button>
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal">
-                        <i class="fa fa-user-plus"></i> Kayıt Ol
-                    </button>
+                    @if (SinglePermission == null)
+                    {
+                        <span>Yükleniyor...</span>
+                    }
+                    else if (SinglePermission.CanResetPassword == true)
+                    {
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#resetModal">
+                            <i class="fa fa-key"></i> Şifremi Unuttum
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary" disabled="">
+                            <i class="fa fa-key"></i> Şifre Sıfırlama Kısa Süreliğine Kapatıldı
+                        </button>
+                    }
+
+                    @if (SinglePermission == null)
+                    {
+                        <span>Yükleniyor...</span>
+                    }
+                    else if (SinglePermission.CanRegister == true)
+                    {
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal">
+                            <i class="fa fa-user-plus"></i> Kayıt Ol
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary" disabled="">
+                            <i class="fa fa-user-plus"></i> Kayıtlar Kısa Süreliğine Kapatıldı
+                        </button>
+                    }
                 </div>
             </div>
             <div class="modal-footer border-top border-secondary">
-                <button type="button"
-                        class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
-                        style="width:100%;"
-                        @onclick="LoginUserAsync"
-                        disabled="@Btn_isProcessing_01">
-                    <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
-                    <span>@(Btn_isProcessing_01 ? "Giriş Yapılıyor..." : "Giriş Yap")</span>
-                </button>
+                @if (SinglePermission == null)
+                {
+                    <span>Yükleniyor...</span>
+                }
+                else if (SinglePermission.CanLogin == true)
+                {
+                    <button type="button"
+                            class="@(Btn_isProcessing_01 ? "btn btn-dark" : "btn btn-light")"
+                            style="width:100%;"
+                            @onclick="LoginUserAsync"
+                            disabled="@Btn_isProcessing_01">
+                        <i class="fa @(Btn_isProcessing_01 ? "fa-cog fa-spin" : "fa-sign-in")"></i>
+                        <span>@(Btn_isProcessing_01 ? "Giriş Yapılıyor..." : "Giriş Yap")</span>
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-secondary w-100" disabled="">
+                        <i class="fa fa-ban aria-hidden="></i>
+                        <span class="ms-2">Girişler Kısa Süreliğine Kapatıldı</span>
+                    </button>
+                }
 
             </div>
         </div>
     </div>
 </div>
-

@@ -11,6 +11,9 @@ namespace data
 {
     public class _ApplicationConnectionDb : DbContext
     {
+        // Oturum izinleri
+        public DbSet<AccountPermissions> AccountPermissions { get; set; } = default!;
+
         // Arkadaşlıklar / Takipleşmeler
         public DbSet<FriendShip> FriendShip { get; set; } = default!;
         public DbSet<StoreShip> StoreShip { get; set; } = default!;

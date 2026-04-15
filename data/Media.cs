@@ -36,8 +36,6 @@ namespace Data
 
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public bool? IsAvifConvert { get; set; } = false;
-
         public bool? IsDeletedStatu { get; set; } = false;
 
         public DateTime? DeletedAtDate { get; set; }

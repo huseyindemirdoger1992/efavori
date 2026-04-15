@@ -15,5 +15,6 @@ namespace data
         public bool CanResetPassword { get; set; } = true;
 
         public bool CanLogin { get; set; } = true;
+        public bool WebActionInfos { get; set; } = true;
     }
 }

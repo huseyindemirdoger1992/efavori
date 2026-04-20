@@ -139,7 +139,6 @@ namespace razor._Shared.tr.Modals.Account
         }
 
         #region Giriş/Çıkış Kayıtları (LoginTry)
-
         private async Task LogSuccessfulLoginAttempt(Guid userId, UserDetail userDetails)
         {
             try
@@ -195,7 +194,6 @@ namespace razor._Shared.tr.Modals.Account
         #endregion
 
         #region Hata Logları (Logs)
-
         private async Task LogException(Exception ex, string action)
         {
             try
@@ -229,7 +227,6 @@ namespace razor._Shared.tr.Modals.Account
         #endregion
 
         #region Yardımcı Metodlar
-
         /// <summary>
         /// User-Agent'ından platform bilgisini çıkarır (iOS, Android, Windows, macOS, Linux, Web)
         /// </summary>
@@ -279,7 +276,6 @@ namespace razor._Shared.tr.Modals.Account
 
             return "Unknown";
         }
-
         #endregion
     }
 }

@@ -5,4 +5,5 @@
   <Project Path="razor/razor.csproj" />
   <Project Path="snippets/snippets.csproj" Id="88aaf1f3-035b-4daf-ab6e-bd698c9134b3" />
   <Project Path="web/web.csproj" />
+  <Project Path="WinFormHelper/WinFormHelper.csproj" Id="25c343d2-ef05-440b-907c-d61090c6f7d0" />
 </Solution>

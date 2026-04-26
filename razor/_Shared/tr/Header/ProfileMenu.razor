@@ -16,13 +16,13 @@
 {
     <div class="user-box dropdown px-3">
         <a class="d-flex align-items-center nav-link dropdown-toggle gap-3 dropdown-toggle-nocaret"
-           href="#"
-           role="button"
-           data-bs-toggle="dropdown"
-           aria-expanded="false">
+               href="#"
+               role="button"
+               data-bs-toggle="dropdown"
+               aria-expanded="false">
             <img src="@(string.IsNullOrEmpty(_use.ProfileCoverGallery?.ProfileImagePath)
-                            ? "/assets/images/icons/UserAvatar.gif"
-                            : _use.ProfileCoverGallery.ProfileImagePath)"
+                                                         ? "/assets/images/icons/UserAvatar.gif"
+                                                         : _use.ProfileCoverGallery.ProfileImagePath)"
                  class="user-img bg-light"
                  alt="user avatar">
             <div class="user-info">
@@ -36,38 +36,38 @@
             <li>
                 <ul class="list-unstyled mb-0 overflow-y-auto" style="height: 80vh;">
                     <li>
-                        <h6 class="dropdown-header d-flex align-items-center text-light px-3 pt-3 pb-2">
+                        <h6 class="dropdown-header d-flex align-items-center text-secondary px-3 pt-3 pb-2">
                             <i class="fa fa-shopping-cart fa-fw me-2"></i>
                             <span>ALIŞVERİŞ</span>
                         </h6>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-history fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-list-alt fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Sipariş Geçmişim</span>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-heart-o fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-heart fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Favorilerim</span>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-ticket fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-scissors fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">İndirim Kuponlarım</span>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-star-o fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-star fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Değerlendirmelerim</span>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-envelope-o fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-comments fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Satıcı Mesajlarım</span>
                         </a>
                     </li>
@@ -75,20 +75,20 @@
                     <li><div class="dropdown-divider"></div></li>
 
                     <li>
-                        <h6 class="dropdown-header d-flex align-items-center text-light px-3 pt-3 pb-2">
-                            <i class="fa fa-user-circle-o fa-fw me-2"></i>
-                            <span>TAKİP</span>
+                        <h6 class="dropdown-header d-flex align-items-center text-secondary px-3 pt-3 pb-2">
+                            <i class="fa fa-link fa-fw me-2"></i>
+                            <span>BAĞLANTI</span>
                         </h6>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-building fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-home fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Takip Ettiğim Mağazalar</span>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-eye fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-clock-o fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Önceden Baktığım Ürünler</span>
                         </a>
                     </li>
@@ -96,14 +96,41 @@
                     <li><div class="dropdown-divider"></div></li>
 
                     <li>
+                        <h6 class="dropdown-header d-flex align-items-center text-secondary px-3 pt-3 pb-2">
+                            <i class="fa fa-cog fa-fw me-2"></i>
+                            <span>HESAP AYARLARI</span>
+                        </h6>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-map-marker fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Adres Bilgilerim</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-credit-card fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Kayıtlı Kartlarım</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-volume-up fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Duyuru Tercihlerim</span>
+                        </a>
+                    </li>
+
+                    <li><div class="dropdown-divider"></div></li>
+
+                    <li>
                         <h6 class="dropdown-header d-flex align-items-center text-light px-3 pt-3 pb-2">
-                            <i class="fa fa-id-card-o fa-fw me-2"></i>
+                            <i class="fa fa-id-card fa-fw me-2"></i>
                             <span>PROFİL BİLGİLERİM</span>
                         </h6>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="/@culture/Public/UserProfileSettings/BasicInfo/">
-                            <i class="fa fa-info-circle fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-user fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Temel Bilgiler</span>
                         </a>
                     </li>
@@ -115,13 +142,13 @@
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="/@culture/Public/UserProfileSettings/Privacy/">
-                            <i class="fa fa-bell-o fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-lock fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Gizlilik & Bildirimler</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="/@culture/Public/UserProfileSettings/Customize/">
-                            <i class="fa fa-sliders fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-paint-brush fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Özelleştir</span>
                         </a>
                     </li>
@@ -135,50 +162,23 @@
                     <li><div class="dropdown-divider"></div></li>
 
                     <li>
-                        <h6 class="dropdown-header d-flex align-items-center text-light px-3 pt-3 pb-2">
-                            <i class="fa fa-user-circle-o fa-fw me-2"></i>
-                            <span>HESAP AYARLARI</span>
-                        </h6>
-                    </li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-map-marker fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
-                            <span style="font-size:0.9rem;">Adres Bilgilerim</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-credit-card fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
-                            <span style="font-size:0.9rem;">Kayıtlı Kartlarım</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="#">
-                            <i class="fa fa-bullhorn fa-fw me-2 text-light" style="font-size:0.8rem;"></i>
-                            <span style="font-size:0.9rem;">Duyuru Tercihlerim</span>
-                        </a>
-                    </li>
-
-                    <li><div class="dropdown-divider"></div></li>
-
-                    <li>
-                        <h6 class="dropdown-header d-flex align-items-center text-light opacity-75 px-3 pt-3 pb-2">
-                            <i class="fa fa-life-ring fa-fw me-2"></i>
+                        <h6 class="dropdown-header d-flex align-items-center text-secondary opacity-75 px-3 pt-3 pb-2">
+                            <i class="fa fa-headphones fa-fw me-2"></i>
                             <span class="fw-bold" style="letter-spacing: 0.5px;">DESTEK MERKEZİ</span>
                         </h6>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center text-light ps-4 py-2" href="#">
-                            <i class="fa fa-plus-circle fa-fw me-2 opacity-75" style="font-size:0.85rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center text-secondary ps-4 py-2" href="#">
+                            <i class="fa fa-pencil-square-o fa-fw me-2 opacity-75" style="font-size:0.85rem;"></i>
                             <span style="font-size:0.9rem;">Yeni Destek Talebi</span>
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center text-light ps-4 py-2" href="#">
-                            <i class="fa fa-list-alt fa-fw me-2 opacity-75" style="font-size:0.85rem;"></i>
+                        <a class="dropdown-item d-flex align-items-center text-secondary ps-4 py-2" href="#">
+                            <i class="fa fa-folder-open-o fa-fw me-2 opacity-75" style="font-size:0.85rem;"></i>
                             <span style="font-size:0.9rem;">Taleplerimi Görüntüle</span>
                         </a>
-                    </li> 
+                    </li>
 
                 </ul>
             </li>
@@ -199,9 +199,9 @@ else
 {
     <div class="user-box px-3">
         <a class="d-flex align-items-center nav-link gap-3"
-           href="javascript:void(0)"
-           data-bs-toggle="modal"
-           data-bs-target="#loginModal">
+               href="javascript:void(0)"
+               data-bs-toggle="modal"
+               data-bs-target="#loginModal">
             <img src="/assets/images/icons/UserAvatar.gif" class="user-img" alt="user avatar">
             <div class="user-info">
                 <p class="user-name mb-0">Kayıt/Giriş</p>

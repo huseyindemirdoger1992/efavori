@@ -21,8 +21,8 @@
                data-bs-toggle="dropdown"
                aria-expanded="false">
             <img src="@(string.IsNullOrEmpty(_use.ProfileCoverGallery?.ProfileImagePath)
-                                                         ? "/assets/images/icons/UserAvatar.gif"
-                                                         : _use.ProfileCoverGallery.ProfileImagePath)"
+                                                                                      ? "/assets/images/icons/UserAvatar.gif"
+                                                                                      : _use.ProfileCoverGallery.ProfileImagePath)"
                  class="user-img bg-light"
                  alt="user avatar">
             <div class="user-info">
@@ -43,7 +43,13 @@
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
-                            <i class="fa fa-list-alt fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-shopping-basket fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Sepetlerim</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-history fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Sipariş Geçmişim</span>
                         </a>
                     </li>
@@ -55,19 +61,25 @@
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
-                            <i class="fa fa-scissors fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-heart-o fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Favori Geçmişim</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-ticket fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">İndirim Kuponlarım</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
-                            <i class="fa fa-star fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-star-half-o fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Değerlendirmelerim</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
-                            <i class="fa fa-comments fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-envelope-o fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Satıcı Mesajlarım</span>
                         </a>
                     </li>
@@ -82,14 +94,32 @@
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
-                            <i class="fa fa-home fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-building-o fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Takip Ettiğim Mağazalar</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
-                            <i class="fa fa-clock-o fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-eye fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Önceden Baktığım Ürünler</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-users fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Normal Arkadaşlarım</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-briefcase fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Çalışma Arkadaşlarım</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                            <i class="fa fa-ban fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <span style="font-size:0.9rem;">Engellediklerim</span>
                         </a>
                     </li>
 
@@ -110,12 +140,12 @@
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
                             <i class="fa fa-credit-card fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
-                            <span style="font-size:0.9rem;">Kayıtlı Kartlarım</span>
+                            <span style="font-size:0.9rem;">Ödeme Kartlarım</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
-                            <i class="fa fa-volume-up fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
+                            <i class="fa fa-bell fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Duyuru Tercihlerim</span>
                         </a>
                     </li>

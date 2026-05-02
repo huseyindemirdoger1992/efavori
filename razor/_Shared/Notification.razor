@@ -298,99 +298,78 @@
     .danger  .dxtr-v3-timer-bar { background: #ff4466; box-shadow: 0 0 8px #ff4466; }
 </style>
 
-<script>
+
+        <script>
     (function () {
         if (window.__dxtrV3Loaded) return;
         window.__dxtrV3Loaded = true;
 
         var ICONS = {
-            info:    '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
-            success: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-            warning: '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-            danger:  '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+            info: '<svg viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+            success: '<svg viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+            warning: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            danger: '<svg viewBox="0 0 24 24" fill="none" stroke="#ff4466" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
         };
 
-        function getHost() {
-            var h = document.getElementById('dxtr-v3-toaster-host');
-            if (!h) {
-                h = document.createElement('div');
-                h.id = 'dxtr-v3-toaster-host';
-            }
-
-            document.body.appendChild(h);
-
-            var maxZ = 0;
-            document.querySelectorAll('*').forEach(function (el) {
-                var z = parseInt(window.getComputedStyle(el).zIndex, 10);
-                if (!isNaN(z) && z > maxZ) maxZ = z;
-            });
-            h.style.zIndex = Math.max(maxZ + 1, 2147483647);
-
-            return h;
-        }
-
-        window.dxtrV2_Notify = function (title, msg, _imgUrl, type) {
+        window.dxtrV2_Notify = function (title, msg, _img, type) {
             var status = type || 'info';
-            var host   = getHost();
-            var icon   = ICONS[status] || ICONS.info;
+            var host = document.getElementById('dxtr-v3-toaster-host');
+            if (!host) return;
 
             var toast = document.createElement('div');
             toast.className = 'dxtr-v3-toast-node ' + status;
-            toast.innerHTML =
-                '<div class="dxtr-v3-scan"></div>' +
-                '<div class="dxtr-v3-media">' + icon + '</div>' +
-                '<div class="dxtr-v3-content">' +
-                    '<span class="dxtr-v3-title">' + title + '</span>' +
-                    '<p class="dxtr-v3-desc">' + msg + '</p>' +
-                '</div>' +
-                '<button class="dxtr-v3-close" aria-label="Kapat">&times;</button>' +
-                '<div class="dxtr-v3-timer-wrapper"><div class="dxtr-v3-timer-bar"></div></div>';
+            toast.innerHTML = `
+                <div class="dxtr-v3-media">${ICONS[status]}</div>
+                <div class="dxtr-v3-content">
+                    <span class="dxtr-v3-title">${title}</span>
+                    <p class="dxtr-v3-desc">${msg}</p>
+                </div>
+                <button class="dxtr-v3-close">&times;</button>
+                <div class="dxtr-v3-timer-wrapper"><div class="dxtr-v3-timer-bar"></div></div>
+            `;
 
-            /* ── DEĞİŞİKLİK: prepend → appendChild ──
-               Yeni bildirim altta eklenir, eskiler yukarıda kalır. */
-            host.appendChild(toast);
+            // YENİ GELENİ ÜSTE EKLE (Eskiler aşağı kayar)
+            host.prepend(toast);
 
             var autoTimer;
-
             function dismiss() {
                 if (!toast.parentElement) return;
-                clearTimeout(autoTimer);
+                toast.classList.remove('v3-active');
                 toast.classList.add('v3-exit');
-                setTimeout(function () { if (toast.parentElement) toast.remove(); }, 400);
+                setTimeout(() => { if (toast.parentElement) toast.remove(); }, 500);
             }
 
             toast.querySelector('.dxtr-v3-close').onclick = dismiss;
 
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
+            // Animasyonu başlat
+            requestAnimationFrame(() => {
+                setTimeout(() => {
                     toast.classList.add('v3-active');
-                    setTimeout(function () {
-                        var bar = toast.querySelector('.dxtr-v3-timer-bar');
-                        if (bar) bar.style.transform = 'scaleX(0)';
-                    }, 50);
-                });
+                    var bar = toast.querySelector('.dxtr-v3-timer-bar');
+                    if (bar) bar.style.transform = 'scaleX(0)';
+                }, 10);
             });
 
-            autoTimer = setTimeout(dismiss, 4250);
+            autoTimer = setTimeout(dismiss, 4000);
 
-            toast.addEventListener('mouseenter', function () {
+            // Hover kontrolü
+            toast.onmouseenter = () => {
                 clearTimeout(autoTimer);
                 var bar = toast.querySelector('.dxtr-v3-timer-bar');
                 if (bar) {
-                    var live = window.getComputedStyle(bar).transform;
                     bar.style.transition = 'none';
-                    bar.style.transform  = live;
+                    bar.style.transform = window.getComputedStyle(bar).transform;
                 }
-            });
-            toast.addEventListener('mouseleave', function () {
+            };
+
+            toast.onmouseleave = () => {
                 var bar = toast.querySelector('.dxtr-v3-timer-bar');
                 if (bar) {
-                    bar.style.transition = 'transform 1500ms linear';
-                    bar.style.transform  = 'scaleX(0)';
+                    bar.style.transition = 'transform 1000ms linear';
+                    bar.style.transform = 'scaleX(0)';
                 }
-                autoTimer = setTimeout(dismiss, 1500);
-            });
+                autoTimer = setTimeout(dismiss, 1000);
+            };
         };
-
     })();
 </script>

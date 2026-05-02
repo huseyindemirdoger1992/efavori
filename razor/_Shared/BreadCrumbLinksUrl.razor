@@ -3,48 +3,35 @@
     public List<(string icon, string Name, string Url)> roads { get; set; } = new();
 }
 
-@* @{
-    // Örnek Kullanım
-    var roads = new List<(string icon, string Name, string Url)>
-                                        {
-                                        ("fa fa-globe","efavori", $"/"),
-                                        ("fa fa-th-large","Görev Paneli", "javascript:void(0)"),
-                                        ("fa fa-th-large","Görev Yönetimi", "javascript:void(0)"),
-                                        ("fa fa-list-ul",$"{db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title}", "javascript:void(0)")
-                                        };
-}
-<razor._Shared.BreadCrumbLinksUrl roads=roads /> *@
-
 <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
-    <div class="ps-3">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0 p-0">
-                @if (roads != null)
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0 p-0">
+            @if (roads != null)
+            {
+                @foreach (var item in roads)
                 {
-                    @foreach (var item in roads)
-                    {
-                        // Listenin son elemanı olup olmadığını kontrol edelim
-                        bool isLast = (item == roads.LastOrDefault());
+                    // Listenin son elemanı olup olmadığını kontrol edelim
+                    bool isLast = (item == roads.LastOrDefault());
 
-                        <li class="breadcrumb-item @(isLast ? "active" : "")" aria-current="@(isLast ? "page" : "")">
-                            @if (isLast)
-                            {
-                                <a href="javascript:void(0)">
-                                    <i class="@item.icon"></i>
-                                    @item.Name
-                                </a>
-                            }
-                            else
-                            {
-                                <a href="@item.Url">
-                                    <i class="@item.icon"></i>
-                                    @item.Name
-                                </a>
-                            }
-                        </li>
-                    }
+                    <li class="breadcrumb-item @(isLast ? "active" : "")" aria-current="@(isLast ? "page" : "")">
+                        @if (isLast)
+                        {
+                            <a href="javascript:void(0)">
+                                <i class="@item.icon"></i>
+                                @item.Name
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="@item.Url">
+                                <i class="@item.icon"></i>
+                                @item.Name
+                            </a>
+                        }
+                    </li>
                 }
-            </ol>
-        </nav>
-    </div>
+            }
+        </ol>
+    </nav>
 </div>
+<hr />

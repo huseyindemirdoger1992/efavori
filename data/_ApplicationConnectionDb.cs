@@ -11,6 +11,14 @@ namespace data
 {
     public class _ApplicationConnectionDb : DbContext
     {
+        // CSS-JS
+        public DbSet<MainCss> MainCss { get; set; } = default!;
+        public DbSet<MainJs> MainJs { get; set; } = default!;
+
+        // Deneme Tabloları
+        public DbSet<TryTableSingle> TryTableSingle { get; set; } = default!;
+        public DbSet<TryTableMulti> TryTableMulti { get; set; } = default!;
+
         // Oturum izinleri
         public DbSet<AccountPermissions> AccountPermissions { get; set; } = default!;
 

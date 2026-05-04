@@ -40,7 +40,8 @@ else
             <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
                 <div class="modal-header border-bottom border-secondary">
                     <h5 class="modal-title text-white">
-                        <i class="fa fa-sign-in"></i> Oturum Aç
+                        <i class="fa fa-id-card" aria-hidden="true"></i>
+                        Örnek Modal
                     </h5>
                     <div class="btn-group shadow-sm border border-secondary rounded" role="group">
                         <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam     Ekran">
@@ -56,6 +57,92 @@ else
                 </div>
                 <div class="modal-body">
                     <div class="row">
+
+
+
+
+                        <div class="position-relative">
+                            @if (_coverMedia is not null)
+                            {
+                                <img src="@_coverMedia.FileUrl"
+                                     class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="@_coverMedia.FileName">
+                            }
+                            else
+                            {
+                                <img src="https://efavori.com/_files/main/NoImage.png"
+                                     class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+                            }
+                            <div class="position-absolute bottom-0 end-0 m-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm border-0 text-dark" data-bs-toggle="modal" data-bs-target="#modalCoverList"
+                                        @onclick='() => _activeMediaSlot = "cover"'>
+                                    <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
+                                </button>
+                            </div>
+                        </div>
+
+
+                        <div class="card-body px-4 pt-0">
+                            <!-- Profil Fotoğrafı -->
+                            <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
+                                <div class="position-relative">
+                                    @if (_profileMedia is not null)
+                                    {
+                                        <img src="@_profileMedia.FileUrl"
+                                             class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                             width="168" height="168" style="object-fit: cover;" alt="@_profileMedia.FileName">
+                                    }
+                                    else
+                                    {
+                                        <img src="https://efavori.com/_files/main/NoImage.png"
+                                             class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                             width="168" height="168" style="object-fit: cover;" alt="No Image">
+                                    }
+                                    <button type="button"
+                                            class="btn btn-outline-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                                            style="width: 36px; height: 36px;" data-bs-toggle="modal" data-bs-target="#modalProfileList"
+                                            @onclick='() => _activeMediaSlot = "profile"'>
+                                        <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="inputFirstName" class="form-label">First Name</label>
+                            <input type="email" class="form-control" id="inputFirstName">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="inputFirstName" class="form-label">Last Name</label>
+                            <input type="email" class="form-control" id="inputFirstName">
+                        </div>
+
+
                         <div class="col-md-4 mb-3">
                             <label class="form-label text-white"><i class="fa fa-map"></i> Ülkeniz</label>
                             <select class="form-select bg-transparent text-white border-light-3" @onchange="OnCountrySelected">
@@ -86,13 +173,50 @@ else
                                 }
                             </select>
                         </div>
+
+                        <div class="col-12 mb-3">
+                            <label for="inputAddress" class="form-label">Address</label>
+                            <textarea class="form-control" id="inputAddress" placeholder="" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="form-check">
+                                    <input type="radio" class="form-check-input" id="bsValidation6" name="radio-stacked" required="">
+                                    <label class="form-check-label" for="bsValidation6">Male</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="radio" class="form-check-input" id="bsValidation7" name="radio-stacked" required="">
+                                    <label class="form-check-label" for="bsValidation7">Female</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bsValidation14" required="">
+                                <label class="form-check-label" for="bsValidation14">Agree to terms and conditions</label>
+                                <div class="invalid-feedback">
+                                    You must agree before submitting.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
+                                <label class="form-check-label" for="flexSwitchCheckDefault">Default switch checkbox input</label>
+                            </div>
+                        </div>
+
                     </div>
 
                 </div>
                 <div class="modal-footer border-top border-secondary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
 
-@*                     <button type="button"
+                    @*
+                    <button type="button"
                             class="btn btn-light"
                             style="width:100%;"
                             @onclick="async () => await AddUser(newUser)"
@@ -107,12 +231,13 @@ else
                             <i class="fa fa-sign-in me-1"></i>
                             <span>Giriş Yap</span>
                         }
-                    </button> *@
+                    </button>
+                    *@
                     
                 </div>
             </div>
         </div>
-    </div> 
+    </div>
 }
 
 

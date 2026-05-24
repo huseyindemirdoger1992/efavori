@@ -12,7 +12,6 @@
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.8" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
-		<PackageReference Include="MiniExcel" Version="1.44.1" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\api\api.csproj" />

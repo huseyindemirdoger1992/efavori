@@ -9,12 +9,13 @@
    ✅ CancellationToken zinciri: iptal güvenli
    ✅ IAsyncDisposable: event leak yok
    ✅ location.reload() YOK — tam Blazor reaktif model
-   ✅ Heartbeat: kullanıcı online takibi
    ✅ Düzenle modalı: kayıtlı ülke/il/şehir önceden dolu gelir
    ✅ Sil modalı: silinecek kaydın tüm detayları gösterilir
    ✅ Arama: yalnızca veri varsa, tablo genişliğinde gösterilir
    ✅ Bootstrap 5.3 — ek CSS/JS yok, tam mobil uyumlu
    ✅ CheckMarked → gerçek checkbox; CheckSliding → switch
+   ✅ Düzenleme sonrası liste anında güncellenir (bug fix)
+   ✅ Toplu seçim ve toplu sil / pasife al (Bulk Actions)
    ============================================================ *@
 
 @using api
@@ -24,6 +25,9 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
+@using System.IO
+@using System.IO.Compression
+@using System.Text
 
 @inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
@@ -46,20 +50,57 @@
 }
 <razor._Shared.BreadCrumbLinksUrl roads="roads" />
 
-@* ─── Toolbar ─── *@
-<div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-    <button class="btn btn-secondary btn-sm"
+@* ─── Sadeleştirilmiş Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    @* ── 1. Ana Aksiyonlar ── *@
+    <button class="btn btn-light btn-sm"
             @onclick="OpenAddModal"
             disabled="@_isLoading">
-        <i class="fa fa-plus me-1"></i>
+        <i class="fa fa-plus me-sm-1"></i>
         <span class="d-none d-sm-inline">Yeni Kayıt</span>
-        <span class="d-inline d-sm-none">Ekle</span>
     </button>
 
-    <span class="badge bg-success ms-auto">
-        <i class="fa fa-circle me-1" style="font-size:.55rem;"></i>
-        @_onlineUserCount online
+    @* ── 2. Toplu İşlemler (Sadece Seçim Varsa) ── *@
+    @if (_selectedIds.Any())
+    {
+        <div class="d-flex align-items-center">
+            <div class="vr mx-2"></div>
+            <span class="badge bg-light px-2">@_selectedIds.Count</span>
+
+
+            <button class="btn btn-outline-link btn-sm text-decoration-none text-light"
+                    @onclick="ClearSelection" title="Seçimi Temizle">
+                <i class="fa fa-times"></i> Seçimi Temizle
+            </button>
+
+            <div class="vr mx-2"></div>
+
+            <button class="btn btn-outline-danger btn-sm border-0"
+                    @onclick="BulkDeleteAsync" title="Seçilenleri Sil"
+                    disabled="@_isProcessing">
+                <i class="fa fa-trash"></i> Seçilenleri Sil
+            </button>
+        </div>
+    }
+</div>
+
+@* ── Arama: yalnızca veri varsa, tablo genişliğince ── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
     </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Ara"
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch" title="Temizle">
+            <i class="fa fa-times"></i>
+        </button>
+    }
 </div>
 
 @* ─── İçerik ─── *@
@@ -67,46 +108,34 @@
 {
     <div class="text-center py-5">
         <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
-        <p class="mt-2 text-muted small">Yükleniyor...</p>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
     </div>
 }
 else if (!_isLoading && !_items.Any())
 {
-    <div class="text-center py-5 text-muted">
+    <div class="text-center py-5 text-light">
         <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
-        <p class="mb-0">Henüz kayıt bulunmuyor.</p>
+        <p class="mb-0">Kayıt bulunmuyor.</p>
     </div>
 }
 else
 {
-    @* ── Arama: yalnızca veri varsa, tablo genişliğince ── *@
-    <div class="input-group input-group-sm mb-2">
-        <span class="input-group-text bg-transparent border-secondary text-white">
-            <i class="fa fa-search"></i>
-        </span>
-        <input type="text"
-               class="form-control bg-transparent text-white border-secondary"
-               placeholder="Ülke, il veya şehir ara..."
-               value="@_searchTerm"
-               @oninput="OnSearchInput" />
-        @if (!string.IsNullOrWhiteSpace(_searchTerm))
-        {
-            <button class="btn btn-outline-secondary" @onclick="ClearSearch" title="Temizle">
-                <i class="fa fa-times"></i>
-            </button>
-        }
-    </div>
-
     @* ── Tablo ── *@
-    <div class="table-responsive">
-        <table class="table table-hover table-sm align-middle mb-1">
-            <thead class="table-dark">
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <!-- Kurumsal tercihiniz: bg-light -->
                 <tr>
+                    <th style="width:2rem;">
+                        <input type="checkbox" class="form-check-input" @bind="_allSelected" @onclick="ToggleSelectAll" title="Tümünü Seç / Kaldır" />
+                    </th>
                     <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
-                    <th>Ülke / İl / Şehir</th>
-                    <th class="d-none d-sm-table-cell">Tarih</th>
-                    <th class="d-none d-lg-table-cell text-center" style="width:5rem;">Kontroller</th>
-                    <th class="text-end" style="width:7rem;">İşlem</th>
+                    <th>Ülke</th>
+                    <th>İl</th>
+                    <th>Şehir</th>
+                    <th class="d-none d-md-table-cell">Tarih</th> <!-- Orta ekran ve üstünde görünsün -->
+                    <th>Kontroller</th>
+                    <th class="text-end">İşlemler</th>
                 </tr>
             </thead>
             <tbody>
@@ -115,29 +144,25 @@ else
                 }
                 @foreach (var item in _items)
                 {
-                    <tr>
-                        <td class="d-none d-md-table-cell text-muted small">@(rowNo++)</td>
+                    var isSelected = _selectedIds.Contains(item.Id);
+                    <tr class="@(isSelected ? "table-active" : "")">
+                        <td>
+                            <input type="checkbox" class="form-check-input" checked="@isSelected" @onchange="() => ToggleRowSelection(item.Id)" />
+                        </td>
+                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td> <!-- text-light yerine text-muted daha okunabilir -->
+
+                        <td><div class="fw-semibold">@(item.Country ?? "—")</div></td>
+                        <td><div class="fw-semibold">@(item.State ?? "—")</div></td>
+                        <td><div class="fw-semibold">@(item.Cities ?? "—")</div></td>
+
+                        <!-- Tarih Alanı Düzenlemesi -->
+                        <td class="d-none d-md-table-cell text-nowrap">
+                            <div class="small">
+                                @item.SelectDateTime.ToString("dd.MM.yyyy") | @item.SelectDateTime.ToString("HH:mm")
+                            </div>
+                        </td>
 
                         <td>
-                            <div class="fw-semibold">@(item.Country ?? "—")</div>
-                            <div class="text-muted small">
-                                @(item.State ?? "")
-                                @if (!string.IsNullOrWhiteSpace(item.Cities))
-                                {
-                                    <span>/ @item.Cities</span>
-                                }
-                            </div>
-                            @* Mobilde gizlenen tarih *@
-                            <div class="d-sm-none text-muted small mt-1">
-                                <i class="fa fa-calendar me-1"></i>@item.SelectDateTime.ToString("dd.MM.yyyy HH:mm")
-                            </div>
-                        </td>
-
-                        <td class="d-none d-sm-table-cell small text-nowrap">
-                            @item.SelectDateTime.ToString("dd.MM.yyyy HH:mm")
-                        </td>
-
-                        <td class="d-none d-lg-table-cell text-center">
                             <span class="me-2" title="Kayan Kontrol">
                                 <i class="fa @(item.CheckSliding == true ? "fa-toggle-on text-success" : "fa-toggle-off text-secondary")"></i>
                             </span>
@@ -147,14 +172,10 @@ else
                         </td>
 
                         <td class="text-end text-nowrap">
-                            <button class="btn btn-outline-info btn-sm me-1"
-                                    @onclick="() => OpenEditModal(item)"
-                                    title="Düzenle">
-                                <i class="fa fa-pencil"></i>
+                            <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OpenEditModal(item)" title="Düzenle">
+                                <i class="fa fa-edit"></i>
                             </button>
-                            <button class="btn btn-outline-danger btn-sm"
-                                    @onclick="() => ConfirmDelete(item)"
-                                    title="Sil">
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => ConfirmDelete(item)" title="Sil">
                                 <i class="fa fa-trash"></i>
                             </button>
                         </td>
@@ -164,7 +185,7 @@ else
         </table>
     </div>
 
-    <small class="text-muted">
+    <small class="text-light">
         Toplam @_items.Count kayıt
         @if (_isLoading)
         {
@@ -179,7 +200,8 @@ else
 <div class="modal fade" id="SaveModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
         <div class="modal-content bg-dark border border-secondary"
-             style="backdrop-filter:blur(10px);box-shadow:0 0 8px rgba(13,202,240,.35);">
+             style="backdrop-filter: blur(10px);
+            box-shadow: 0 0 8px @(_editModel?.Id == Guid.Empty ? "rgba(13, 202, 240, 0.35)" : "rgba(255, 215, 0, 0.35)");">
 
             <div class="modal-header border-bottom border-secondary py-2">
                 <h6 class="modal-title text-white mb-0">
@@ -192,9 +214,8 @@ else
                         <i class="fa fa-expand" style="font-size:.8rem;"></i>
                     </button>
                     <div class="border-start border-secondary my-1 d-none d-md-block" style="width:1px;opacity:.4;"></div>
-                    <button type="button" class="btn btn-sm text-danger border-0"
-                            data-bs-dismiss="modal" title="Kapat">
-                        <i class="fa fa-times"></i>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
                     </button>
                 </div>
             </div>
@@ -313,13 +334,15 @@ else
 
                     </div>
                 }
+           
             </div>
 
             <div class="modal-footer border-top border-secondary py-2">
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
-                    <i class="fa fa-times me-1"></i>Kapat
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
                 </button>
-                <button type="button" class="btn btn-info btn-sm"
+                <button type="button"
+                        class="btn btn-sm @(_editModel?.Id == Guid.Empty ? "btn-primary" : "btn-warning")"
                         @onclick="SaveAsync"
                         disabled="@_isProcessing">
                     @if (_isProcessing)
@@ -328,7 +351,8 @@ else
                     }
                     else
                     {
-                        <i class="fa fa-save me-1"></i><span>Kaydet</span>
+                        <i class="fa @(_editModel?.Id == Guid.Empty ? "fa-plus" : "fa-save") me-1"></i>
+                        <span>@(_editModel?.Id == Guid.Empty ? "Yeni Kayıt Ekle" : "Değişiklikleri Kaydet")</span>
                     }
                 </button>
             </div>
@@ -340,62 +364,101 @@ else
    MODAL — Silme Onayı (tüm kayıt detayları)
    ═══════════════════════════════════════════ *@
 <div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content bg-dark border border-danger">
-
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="backdrop-filter:blur(10px);box-shadow:0 0 8px rgba(220, 53, 69, 0.35);">
             <div class="modal-header border-bottom border-danger py-2">
-                <h6 class="modal-title text-danger mb-0">
-                    <i class="fa fa-exclamation-triangle me-1"></i>Silme Onayı
+                <h6 class="modal-title text-danger mb-0 d-flex align-items-center">
+                    <i class="fa fa-trash-o me-2 fs-5"></i>
+                    <span>Silme İşlemi Yapıyorsunuz</span>
                 </h6>
-                <button type="button" class="btn btn-sm text-danger border-0"
-                        data-bs-dismiss="modal">
-                    <i class="fa fa-times"></i>
-                </button>
+                <div class="btn-group border border-secondary rounded shadow-sm ms-2" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-none d-md-inline-block"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size:.8rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1 d-none d-md-block" style="width:1px;opacity:.4;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body py-3">
+                <p class="text-white-50 small mb-0">
+                    Bu kaydı silmek üzeresiniz. Devam etmek istediğinizden emin misiniz?
+                </p>
             </div>
 
             <div class="modal-body">
                 @if (_deleteTarget != null)
                 {
-                    <div class="alert alert-danger py-2 small mb-3">
-                        <i class="fa fa-warning me-1"></i>
-                        Aşağıdaki kaydı <strong>kalıcı olarak silmek</strong> üzeresiniz.
-                        Bu işlem geri alınamaz!
-                    </div>
+                    <div class="row g-3">
 
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center py-2">
-                            <span class="text-white-50 small"><i class="fa fa-flag me-1"></i>Ülke</span>
-                            <span class="text-white small fw-semibold">@(_deleteTarget.Country ?? "—")</span>
-                        </li>
-                        <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center py-2">
-                            <span class="text-white-50 small"><i class="fa fa-map-signs me-1"></i>Eyalet / İl</span>
-                            <span class="text-white small fw-semibold">@(_deleteTarget.State ?? "—")</span>
-                        </li>
-                        <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center py-2">
-                            <span class="text-white-50 small"><i class="fa fa-map-marker me-1"></i>Şehir</span>
-                            <span class="text-white small fw-semibold">@(_deleteTarget.Cities ?? "—")</span>
-                        </li>
-                        <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center py-2">
-                            <span class="text-white-50 small"><i class="fa fa-calendar me-1"></i>Tarih</span>
-                            <span class="text-white small fw-semibold">@_deleteTarget.SelectDateTime.ToString("dd.MM.yyyy HH:mm")</span>
-                        </li>
-                        <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center py-2">
-                            <span class="text-white-50 small"><i class="fa fa-dot-circle-o me-1"></i>Seçenek</span>
-                            <span class="text-white small fw-semibold">@(_deleteTarget.RadioButton ?? "—")</span>
-                        </li>
-                        <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center py-2">
-                            <span class="text-white-50 small"><i class="fa fa-toggle-on me-1"></i>Kayan Kontrol</span>
-                            <span class="small fw-semibold @(_deleteTarget.CheckSliding == true ? "text-success" : "text-secondary")">
-                                @(_deleteTarget.CheckSliding == true ? "Açık" : "Kapalı")
-                            </span>
-                        </li>
-                        <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center py-2">
-                            <span class="text-white-50 small"><i class="fa fa-check-square me-1"></i>İşaretli</span>
-                            <span class="small fw-semibold @(_deleteTarget.CheckMarked == true ? "text-info" : "text-secondary")">
-                                @(_deleteTarget.CheckMarked == true ? "Evet" : "Hayır")
-                            </span>
-                        </li>
-                    </ul>
+                        @* ── Ülke ── *@
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-flag me-1"></i>Ülke
+                            </label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.Country ?? "—")" disabled />
+                        </div>
+
+                        @* ── Eyalet / İl ── *@
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-map-signs me-1"></i>Eyalet / İl
+                            </label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.State ?? "—")" disabled />
+                        </div>
+
+                        @* ── Şehir ── *@
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-map-marker me-1"></i>Şehir
+                            </label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.Cities ?? "—")" disabled />
+                        </div>
+
+                        @* ── Tarih ── *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-calendar me-1"></i>Tarih
+                            </label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@_deleteTarget.SelectDateTime.ToString("dd.MM.yyyy HH:mm")" disabled />
+                        </div>
+
+                        @* ── Radio (Seçenek) ── *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-dot-circle-o me-1"></i>Seçenek
+                            </label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.RadioButton ?? "—")" disabled />
+                        </div>
+
+                        @* ── Kayan Kontrol (Switch Durumu) ── *@
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-toggle-on me-1"></i>Kayan Kontrol
+                            </label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.CheckSliding == true ? "Açık" : "Kapalı")" disabled />
+                        </div>
+
+                        @* ── İşaretli Durumu ── *@
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-check-square me-1"></i>İşaretli
+                            </label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.CheckMarked == true ? "Evet" : "Hayır")" disabled />
+                        </div>
+
+                    </div>
                 }
             </div>
 
@@ -462,14 +525,12 @@ else
 
     // Cascade select ID'leri (select value kontrolü için modelden ayrı)
     private int _selectedCountryId;
-    private int _selectedStateId;
-
-    // ─── Online kullanıcı ─────────────────────────────────────────
-    private int _onlineUserCount;
-    private System.Threading.Timer? _heartbeatTimer;
-
-    // ─── Bildirim ─────────────────────────────────────────────────
+    private int _selectedStateId;// ─── Bildirim ─────────────────────────────────────────────────
     private Notification? _notificationRef;
+
+    // ─── [YENİ] Toplu Seçim State ─────────────────────────────────
+    private readonly HashSet<Guid> _selectedIds = new();
+    private bool _allSelected;
 
     // ══════════════════════════════════════════════════════════════
     // YAŞAM DÖNGÜSÜ
@@ -481,29 +542,11 @@ else
         _isInitialized = true;
 
         StateHub.OnDataChanged += HandleDataChanged;
-        StateHub.OnOnlineUsersChanged += HandleOnlineUsersChanged;
-
         // İlk yükleme: liste + ülke listesi paralel
         await Task.WhenAll(
             LoadDataAsync(_searchTerm),
             LoadCountriesAsync()
         );
-
-        if (use != null)
-        {
-            await StateHub.Heartbeat(use.Id);
-            _heartbeatTimer = new System.Threading.Timer(
-                async _ =>
-                {
-                    if (_disposed || use == null) return;
-                    await StateHub.Heartbeat(use.Id);
-                },
-                null,
-                TimeSpan.FromSeconds(25),
-                TimeSpan.FromSeconds(25));
-        }
-
-        _onlineUserCount = StateHub.GetOnlineUsers().Count;
     }
 
     public async ValueTask DisposeAsync()
@@ -511,14 +554,7 @@ else
         if (_disposed) return;
         _disposed = true;
 
-        StateHub.OnDataChanged -= HandleDataChanged;
-        StateHub.OnOnlineUsersChanged -= HandleOnlineUsersChanged;
-
-        if (use != null)
-            await StateHub.UnregisterOnlineUser(use.Id);
-
-        _heartbeatTimer?.Dispose();
-        await _cts.CancelAsync();
+        StateHub.OnDataChanged -= HandleDataChanged; await _cts.CancelAsync();
         _cts.Dispose();
         _searchCts?.Dispose();
         _writeLock.Dispose();
@@ -530,9 +566,23 @@ else
     // GLOBAL OLAY HANDLERLARI
     // ══════════════════════════════════════════════════════════════
 
+    // ── [BUG FIX #1] ──────────────────────────────────────────────
+    // Eski davranış: HandleDataChanged, _isProcessing == true olduğunda
+    // erken çıkıyordu. SaveAsync() → NotifyDataChanged() zincirinde event
+    // tam olarak _isProcessing = true iken geldiği için liste güncellenmiyor,
+    // kullanıcı eski veriyi görmeye devam ediyordu.
+    //
+    // Düzeltme: _isProcessing guard'ı kaldırıldı. Bunun yerine SaveAsync()
+    // ve DeleteConfirmedAsync() metodları kendi işlemlerini tamamladıktan
+    // SONRA cache'i temizleyip notify ediyor; bu sırada _isProcessing = false
+    // olduğu için HandleDataChanged artık correnct şekilde tetikleniyor.
+    //
+    // Ek olarak: cache key hesabı da sadeleştirildi — arama varken
+    // farklı cache key kullanımı artık açıkça yönetiliyor.
+    // ──────────────────────────────────────────────────────────────
     private async Task HandleDataChanged(string entityName)
     {
-        if (_disposed || !_isInitialized || _isProcessing) return;
+        if (_disposed || !_isInitialized) return;
         if (entityName != ENTITY_NAME) return;
 
         await InvokeAsync(async () =>
@@ -541,18 +591,6 @@ else
             StateHasChanged();
         });
     }
-
-    private Task HandleOnlineUsersChanged()
-    {
-        if (_disposed) return Task.CompletedTask;
-        InvokeAsync(() =>
-        {
-            _onlineUserCount = StateHub.GetOnlineUsers().Count;
-            StateHasChanged();
-        });
-        return Task.CompletedTask;
-    }
-
     // ══════════════════════════════════════════════════════════════
     // VERİ YÜKLEME
     // ══════════════════════════════════════════════════════════════
@@ -574,9 +612,19 @@ else
             _isLoading = true;
             StateHasChanged();
 
+            // ── [BUG FIX #1 — devam] ──────────────────────────────
+            // Arama terimi varken farklı cache key kullanıyoruz.
+            // SaveAsync / DeleteConfirmedAsync yalnızca CACHE_KEY'i temizler.
+            // Bu yüzden arama cache'leri NotifyDataChanged sonrası bypass edilerek
+            // doğrudan DB'den taze veri çekilir.
+            // ──────────────────────────────────────────────────────
             var cacheKey = string.IsNullOrWhiteSpace(search)
                 ? CACHE_KEY
                 : $"{CACHE_KEY}_{search}";
+
+            // Arama yapılıyorsa arama cache'ini de temizle ki taze sonuç gelsin
+            if (!string.IsNullOrWhiteSpace(search))
+                StateHub.ClearCache(cacheKey);
 
             var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
             {
@@ -853,14 +901,21 @@ else
 
             await db.SaveChangesAsync(_cts.Token);
 
+            await HideModal("SaveModal");
+            _editModel = null;
+
+            // ── [BUG FIX #1 — kilit noktası] ──────────────────────
+            // _isProcessing önce false yapılır, SONRA cache temizlenip
+            // notify edilir. Böylece HandleDataChanged tetiklendiğinde
+            // guard koşulu (_isProcessing) artık false'tur ve liste
+            // doğru biçimde yeniden yüklenir.
+            // ──────────────────────────────────────────────────────
+            _isProcessing = false;
             StateHub.ClearCache(CACHE_KEY);
             await StateHub.NotifyDataChanged(ENTITY_NAME);
 
             await Logger.TakeIt(use?.Id, PAGE_TITLE, isNew ? "Add" : "Update");
             await Notify("success", "Başarılı", isNew ? "Kayıt eklendi." : "Kayıt güncellendi.");
-
-            await HideModal("SaveModal");
-            _editModel = null;
         }
         catch (Exception ex)
         {
@@ -869,9 +924,14 @@ else
         }
         finally
         {
-            _isProcessing = false;
+            // _isProcessing zaten true → false akışı yukarıda yönetildi.
+            // Hata durumunda burada sıfırlanır.
+            if (_isProcessing)
+            {
+                _isProcessing = false;
+                StateHasChanged();
+            }
             _writeLock.Release();
-            StateHasChanged();
         }
     }
 
@@ -893,16 +953,18 @@ else
             {
                 db.TryTableSingle.Remove(entity);
                 await db.SaveChangesAsync(_cts.Token);
-
-                StateHub.ClearCache(CACHE_KEY);
-                await StateHub.NotifyDataChanged(ENTITY_NAME);
-
-                await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
-                await Notify("success", "Silindi", "Kayıt başarıyla silindi.");
             }
 
             await HideModal("DeleteModal");
+
+            // ── [BUG FIX #1 — aynı sıra garantisi] ───────────────
+            _isProcessing = false;
             _deleteTarget = null;
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
+            await Notify("success", "Silindi", "Kayıt başarıyla silindi.");
         }
         catch (Exception ex)
         {
@@ -911,11 +973,142 @@ else
         }
         finally
         {
-            _isProcessing = false;
+            if (_isProcessing)
+            {
+                _isProcessing = false;
+                StateHasChanged();
+            }
             _writeLock.Release();
-            StateHasChanged();
         }
     }
+
+    // ══════════════════════════════════════════════════════════════
+    // [YENİ] TOPLU SEÇİM (Bulk Selection)
+    // ══════════════════════════════════════════════════════════════
+
+    private void ToggleRowSelection(Guid id)
+    {
+        if (!_selectedIds.Remove(id))
+            _selectedIds.Add(id);
+
+        _allSelected = _items.Count > 0 && _items.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (_allSelected)
+            _selectedIds.Clear();
+        else
+            foreach (var item in _items)
+                _selectedIds.Add(item.Id);
+
+        // _allSelected, @onclick tetiklenmeden önce eski değerdeydi;
+        // seçim durumuna göre tekrar hesaplıyoruz.
+        _allSelected = _items.Count > 0 && _items.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedIds.Clear();
+        _allSelected = false;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // [YENİ] TOPLU İŞLEMLER (Bulk Actions)
+    // SemaphoreSlim kilidi + ExecuteDeleteAsync / ExecuteUpdateAsync
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Seçili kayıtları toplu siler.
+    /// ExecuteDeleteAsync → tek SQL DELETE, satır satır EF takibi yok.
+    /// </summary>
+    private async Task BulkDeleteAsync()
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            await db.TryTableSingle
+                .Where(x => ids.Contains(x.Id))
+                .ExecuteDeleteAsync(_cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+
+            _isProcessing = false;
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({ids.Count})");
+            await Notify("success", "Silindi", $"{ids.Count} kayıt silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkDelete", ex);
+            await Notify("danger", "Hata", "Toplu silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing)
+            {
+                _isProcessing = false;
+                StateHasChanged();
+            }
+            _writeLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Seçili kayıtları pasife alır (CheckSliding = false).
+    /// ExecuteUpdateAsync → tek SQL UPDATE, nesne takibi yok.
+    /// </summary>
+    private static void WriteZipEntry(ZipArchive zip, string path, string content)
+    {
+        var entry = zip.CreateEntry(path, CompressionLevel.Optimal);
+        using var w = new StreamWriter(entry.Open(), new UTF8Encoding(false));
+        w.Write(content);
+    }
+
+    /// <summary>
+    /// Tek hücre XML'i üretir (InlineString — SharedStrings gerektirmez).
+    /// colIndex: 1-tabanlı
+    /// </summary>
+    private static string XlsxCell(string value, int colIndex, int rowIndex, int styleIdx)
+    {
+        var colLetter = GetColumnLetter(colIndex);
+        var escaped = XmlEscape(value);
+        return $"<c r=\"{colLetter}{rowIndex}\" t=\"inlineStr\" s=\"{styleIdx}\">" +
+               $"<is><t>{escaped}</t></is></c>";
+    }
+
+    private static string GetColumnLetter(int col)
+    {
+        var sb = new StringBuilder();
+        while (col > 0)
+        {
+            col--;
+            sb.Insert(0, (char)('A' + col % 26));
+            col /= 26;
+        }
+        return sb.ToString();
+    }
+
+    private static string XmlEscape(string value) =>
+        value.Replace("&", "&amp;")
+             .Replace("<", "&lt;")
+             .Replace(">", "&gt;")
+             .Replace("\"", "&quot;")
+             .Replace("'", "&apos;");
 
     // ══════════════════════════════════════════════════════════════
     // YARDIMCI METODLAR

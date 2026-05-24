@@ -10,6 +10,7 @@ namespace data
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid UserId { get; set; }
 
         public string? Country { get; set; }
         public string? State { get; set; }

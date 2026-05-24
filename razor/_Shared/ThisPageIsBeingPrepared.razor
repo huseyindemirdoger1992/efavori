@@ -1027,6 +1027,7 @@ else
             _addModel.RadioButton = GlobalSecurityProvider.Encrypt(_addModel.RadioButton ?? "");
 
             _addModel.Id = Guid.NewGuid();
+            _addModel.UserId = use.Id;
             _addModel.GetDateTime = DateTime.UtcNow;
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);

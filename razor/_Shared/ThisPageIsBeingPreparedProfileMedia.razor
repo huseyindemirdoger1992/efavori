@@ -18,11 +18,13 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
+@using razor._Shared.tr.Media
 
 @inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
+@inject FileUploadService FileService
 
 @namespace razor._Shared
 @implements IAsyncDisposable
@@ -112,6 +114,8 @@ else
                                @onchange="ToggleSelectAll" />
                     </th>
                     <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Profil</th>
+                    <th>Kapak</th>
                     <th>Ülke</th>
                     <th>İl</th>
                     <th>Şehir</th>
@@ -134,6 +138,38 @@ else
                                    @onchange="() => ToggleRowSelection(item.Id)" />
                         </td>
                         <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.ProfileImagePath))
+                            {
+                                <img src="@item.ProfileCoverGallery!.ProfileImagePath"
+                                     class="rounded-circle border border-secondary"
+                                     style="width:42px;height:42px;object-fit:cover;"
+                                     alt="Profil" />
+                            }
+                            else
+                            {
+                                <img src="https://efavori.com/_files/main/NoImage.png"
+                                     class="rounded-circle border border-secondary"
+                                     style="width:42px;height:42px;object-fit:cover;"
+                                     alt="Profil" />
+                            }
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.CoverImagePath))
+                            {
+                                <img src="@item.ProfileCoverGallery!.CoverImagePath"
+                                     class="rounded border border-secondary"
+                                     style="width:72px;height:42px;object-fit:cover;"
+                                     alt="Kapak" />
+                            }
+                            else
+                            {
+                                <img src="https://efavori.com/_files/main/NoImage.png"
+                                     class="rounded border border-secondary"
+                                     style="width:72px;height:42px;object-fit:cover;"
+                                     alt="Kapak" />
+                            }
+                        </td>
                         <td><div class="fw-semibold">@(Decrypt(item.Country))</div></td>
                         <td><div class="fw-semibold">@(Decrypt(item.State))</div></td>
                         <td><div class="fw-semibold">@(Decrypt(item.Cities))</div></td>
@@ -234,6 +270,52 @@ else
             <div class="modal-body">
                 @if (_addModel != null)
                 {
+                    <!-- Kapak Fotoğrafı -->
+                    <div class="position-relative">
+                        @if (_coverMedia is not null)
+                        {
+                            <img src="@_coverMedia.FileUrl"
+                                 class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="@_coverMedia.FileName">
+                        }
+                        else
+                        {
+                            <img src="https://efavori.com/_files/main/NoImage.png"
+                                 class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+                        }
+                        <div class="position-absolute bottom-0 end-0 m-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm border-0 text-dark"
+                                    @onclick='() => OpenMediaModal("cover")'>
+                                <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Profil Fotoğrafı -->
+                    <div class="card-body px-4 pt-0">
+                        <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
+                            <div class="position-relative">
+                                @if (_profileMedia is not null)
+                                {
+                                    <img src="@_profileMedia.FileUrl"
+                                         class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                         width="168" height="168" style="object-fit: cover;" alt="@_profileMedia.FileName">
+                                }
+                                else
+                                {
+                                    <img src="https://efavori.com/_files/main/NoImage.png"
+                                         class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                         width="168" height="168" style="object-fit: cover;" alt="No Image">
+                                }
+                                <button type="button"
+                                        class="btn btn-outline-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                                        style="width: 36px; height: 36px;"
+                                        @onclick='() => OpenMediaModal("profile")'>
+                                    <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+
                     <div class="row g-3">
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-flag me-1"></i>Ülke</label>
@@ -316,6 +398,40 @@ else
                                 <label class="form-check-label text-white-50" for="add_chkMarked">İşaretli</label>
                             </div>
                         </div>
+
+                        @* ─── Galeri ─── *@
+                        <div class="col-12">
+                            <hr class="border-secondary my-1" />
+                            <label class="form-label text-white-50 small mb-2">
+                                <i class="fa fa-picture-o me-1"></i>Galeri
+                                @if (_galleryFiles.Any())
+                                {
+                                    <span class="badge bg-primary ms-1">@_galleryFiles.Count</span>
+                                }
+                            </label>
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100 mb-2"
+                                    @onclick="OpenGalleryModal">
+                                <i class="fa fa-folder-open-o me-1"></i>Medyadan Seç
+                            </button>
+                            @if (_galleryFiles.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-2 mt-1">
+                                    @foreach (var m in _galleryFiles.ToList())
+                                    {
+                                        <div class="position-relative">
+                                            <img src="@m.FileUrl" class="rounded border border-secondary"
+                                                 style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
+                                            <button type="button"
+                                                    class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                    style="width:20px;height:20px;font-size:0.7rem;margin-top:-5px;margin-right:-5px;"
+                                                    @onclick="() => _galleryFiles.Remove(m)">
+                                                <i class="fa fa-times text-white" style="margin-left:5px"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
                     </div>
                 }
             </div>
@@ -368,6 +484,51 @@ else
             <div class="modal-body">
                 @if (_editModel != null)
                 {
+                    <!-- Kapak Fotoğrafı -->
+                    <div class="position-relative">
+                        @if (_coverMedia is not null)
+                        {
+                            <img src="@_coverMedia.FileUrl"
+                                 class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="@_coverMedia.FileName">
+                        }
+                        else
+                        {
+                            <img src="https://efavori.com/_files/main/NoImage.png"
+                                 class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+                        }
+                        <div class="position-absolute bottom-0 end-0 m-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm border-0 text-dark"
+                                    @onclick='() => OpenMediaModal("cover")'>
+                                <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Profil Fotoğrafı -->
+                    <div class="card-body px-4 pt-0">
+                        <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
+                            <div class="position-relative">
+                                @if (_profileMedia is not null)
+                                {
+                                    <img src="@_profileMedia.FileUrl"
+                                         class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                         width="168" height="168" style="object-fit: cover;" alt="@_profileMedia.FileName">
+                                }
+                                else
+                                {
+                                    <img src="https://efavori.com/_files/main/NoImage.png"
+                                         class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                         width="168" height="168" style="object-fit: cover;" alt="No Image">
+                                }
+                                <button type="button"
+                                        class="btn btn-outline-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                                        style="width: 36px; height: 36px;"
+                                        @onclick='() => OpenMediaModal("profile")'>
+                                    <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row g-3">
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-flag me-1"></i>Ülke</label>
@@ -449,6 +610,40 @@ else
                                        id="edit_chkMarked" @bind="_editModel.CheckMarked" />
                                 <label class="form-check-label text-white-50" for="edit_chkMarked">İşaretli</label>
                             </div>
+                        </div>
+
+                        @* ─── Galeri ─── *@
+                        <div class="col-12">
+                            <hr class="border-secondary my-1" />
+                            <label class="form-label text-white-50 small mb-2">
+                                <i class="fa fa-picture-o me-1"></i>Galeri
+                                @if (_galleryFiles.Any())
+                                {
+                                    <span class="badge bg-primary ms-1">@_galleryFiles.Count</span>
+                                }
+                            </label>
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100 mb-2"
+                                    @onclick="OpenGalleryModal">
+                                <i class="fa fa-folder-open-o me-1"></i>Medyadan Seç
+                            </button>
+                            @if (_galleryFiles.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-2 mt-1">
+                                    @foreach (var m in _galleryFiles.ToList())
+                                    {
+                                        <div class="position-relative">
+                                            <img src="@m.FileUrl" class="rounded border border-secondary"
+                                                 style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
+                                            <button type="button"
+                                                    class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                    style="width:20px;height:20px;font-size:0.7rem;margin-top:-5px;margin-right:-5px;"
+                                                    @onclick="() => _galleryFiles.Remove(m)">
+                                                <i class="fa fa-times text-white" style="margin-left:5px"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
                 }
@@ -628,6 +823,235 @@ else
     </div>
 </div>
 
+<!-- [1] Profil Görseli Modal -->
+<div class="modal fade" id="modalProfileList" tabindex="-1"
+     data-bs-backdrop="false" data-bs-keyboard="false"
+     style="z-index: 1080;">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-user-circle me-2 text-info"></i>Profil Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "profile")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [2] Kapak Görseli Modal -->
+<div class="modal fade" id="modalCoverList" tabindex="-1"
+     data-bs-backdrop="false" data-bs-keyboard="false"
+     style="z-index: 1080;">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-image me-2 text-warning"></i>Kapak Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <razor._Shared.tr.Media.Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "cover")
+                {
+                    <List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- [3] Galeri Görselleri Modal -->
+<div class="modal fade" id="modalGalleryList" tabindex="-1"
+     data-bs-backdrop="false" data-bs-keyboard="false"
+     style="z-index: 1080;">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white">
+                    <i class="fa fa-picture-o me-2 text-info"></i>Galeri Görseli Seç
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+
+                @* ─── Galeri seçim grid'i (parent yönetiminde) ───────────────
+                   List bileşeni yerine burada kendi grid'imizi render ediyoruz.
+                   Sebep: List bileşeni FileService üzerinden referans tabanlı
+                   "Contains" karşılaştırması yapıyor; bizim _galleryFiles
+                   instance'larımız ile List'in mediaItems instance'ları farklı
+                   DbContext'lerden geldiği için "Seçildi" rozetleri tutmuyordu.
+                   Burada Id bazlı karşılaştırma kullanıyoruz → daha önce seçilen
+                   medyalar binlerce öğe arasında doğru şekilde işaretlenir.
+                   ─────────────────────────────────────────────────────────── *@
+                @if (_activeMediaSlot == "gallery")
+                {
+                    @* Arama kutusu *@
+                    <div class="input-group input-group-sm mb-3">
+                        <span class="input-group-text bg-dark-transparent border-light-3 text-white-50">
+                            <i class="fa fa-search"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control bg-dark-transparent border-light-3 text-white"
+                               placeholder="Ara..."
+                               value="@_gallerySearch"
+                               @oninput="OnGallerySearchInput" />
+                        @if (!string.IsNullOrWhiteSpace(_gallerySearch))
+                        {
+                            <button class="btn btn-outline-light border-light-3" type="button"
+                                    @onclick="ClearGallerySearch">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        }
+                    </div>
+
+                    @if (_galleryLoading)
+                    {
+                        <div class="text-center py-5">
+                            <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+                            <p class="mt-2 text-light small">Yükleniyor...</p>
+                        </div>
+                    }
+                    else if (!_galleryFilteredMedia.Any())
+                    {
+                        <div class="text-center py-5 text-white-50">
+                            <i class="fa fa-folder-open fa-3x mb-3 d-block"></i>
+                            <p class="mb-0">@(string.IsNullOrWhiteSpace(_gallerySearch) ? "Henüz medya yok" : "Sonuç bulunamadı")</p>
+                        </div>
+                    }
+                    else
+                    {
+                        var selectedIdSet = _galleryFiles.Select(g => g.Id).ToHashSet();
+                        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+                            @foreach (var m in _galleryFilteredMedia.Take(_galleryDisplayCount))
+                            {
+                                var isSel = selectedIdSet.Contains(m.Id);
+                                <div class="col">
+                                    <div class="card bg-dark-transparent border-light-3 h-100 overflow-hidden shadow-sm position-relative @(isSel ? "border-primary shadow" : "")"
+                                         style="cursor:pointer;"
+                                         @onclick="() => ToggleGalleryItem(m)">
+                                        @if (isSel)
+                                        {
+                                            <div class="position-absolute top-0 end-0 m-2" style="z-index:10;">
+                                                <span class="badge bg-primary">
+                                                    <i class="fa fa-check"></i> Seçildi
+                                                </span>
+                                            </div>
+                                        }
+
+                                        @{
+                                            var ext = m.FileExtensionType?.ToLower() ?? "";
+                                            var isImg = IsGalleryImage(ext);
+                                            var isVid = IsGalleryVideo(ext);
+                                        }
+
+                                        @if (isImg)
+                                        {
+                                            <img src="@m.FileUrl"
+                                                 style="height:150px;object-fit:cover;width:100%;"
+                                                 alt="@m.FileName"
+                                                 loading="lazy" />
+                                        }
+                                        else if (isVid)
+                                        {
+                                            <div class="position-relative" style="height:150px;background:#000;">
+                                                <video class="w-100 h-100" style="object-fit:cover;">
+                                                    <source src="@m.FileUrl" type="@m.ContentType">
+                                                </video>
+                                                <div class="position-absolute top-50 start-50 translate-middle">
+                                                    <i class="fa fa-play-circle fa-3x text-white opacity-75"></i>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height:150px;">
+                                                <i class="fa fa-file-o fa-4x"></i>
+                                            </div>
+                                        }
+
+                                        <div class="card-body p-2">
+                                            <div class="text-white small text-truncate fw-bold" title="@m.FileName">
+                                                <i class="fa fa-file-text-o me-1 text-info"></i>@m.FileName
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        @if (_galleryDisplayCount < _galleryFilteredMedia.Count)
+                        {
+                            <div class="text-center mt-3">
+                                <button class="btn btn-outline-light btn-sm px-4"
+                                        @onclick="() => _galleryDisplayCount += 15">
+                                    <i class="fa fa-arrow-down me-1"></i>Daha Fazla Göster
+                                </button>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+            <div class="modal-footer border-light-3">
+                <span class="text-white-50 small me-auto">@_galleryFiles.Count görsel seçildi</span>
+                <button type="button" class="btn btn-primary btn-sm"
+                        @onclick="CloseMediaModal">
+                    <i class="fa fa-check me-1"></i>Seçimi Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @* ═══════════════════════════════════════════
    CODE BLOCK
    ═══════════════════════════════════════════ *@
@@ -635,13 +1059,33 @@ else
 
     // ─── Sabitler ────────────────────────────────────────────────
     private const string PAGE_TITLE = "Kayıt Yönetimi";
-    private const string ENTITY_NAME = "ThisPageIsBeingPrepared";
-    private const string CACHE_KEY = "ThisPageIsBeingPrepared_List";
+    private const string ENTITY_NAME = "ThisPageIsBeingPreparedProfileMedia";
+    private const string CACHE_KEY = "ThisPageIsBeingPreparedProfileMedia_List";
     private const int SEARCH_DELAY = 500;
     private const int PAGE_SIZE = 5;
 
     // ─── Parametre ────────────────────────────────────────────────
     [Parameter] public Users? use { get; set; }
+
+    // ─── Profil Kapak Görseli ─────────────────────────────────────
+    private Data.Media? _profileMedia;
+    private Data.Media? _coverMedia;
+    private string _activeMediaSlot = string.Empty;
+
+    // ─── Galeri (çoklu seçim) ─────────────────────────────────────
+    private List<Data.Media> _galleryFiles = new();
+
+    // ─── Galeri seçim grid'i (parent yönetiminde) ─────────────────
+    // List bileşeni yerine kendi grid'imizi kullanıyoruz; sebep:
+    // List bileşeninin "Contains" karşılaştırması referans tabanlı,
+    // bizim instance'larımız farklı DbContext'lerden geldiği için
+    // referans eşleşmesi tutmuyor → daha önce seçilen medyalar
+    // rozetlenmiyordu. Kendi grid'imizde Id bazlı karşılaştırma yapıyoruz.
+    private List<Data.Media> _galleryAllMedia = new();
+    private List<Data.Media> _galleryFilteredMedia = new();
+    private string _gallerySearch = string.Empty;
+    private int _galleryDisplayCount = 15;
+    private bool _galleryLoading;
 
     // ─── Yaşam döngüsü ────────────────────────────────────────────
     private bool _disposed;
@@ -713,11 +1157,28 @@ else
         _isInitialized = true;
 
         StateHub.OnDataChanged += HandleDataChanged;
+        FileService.OnFileSelected += HandleSingleFileSelected;
+        // OnSelectionChanged aboneliği KALDIRILDI: galeri seçimi artık parent grid'i
+        // tarafından Id bazlı yönetiliyor; FileService'in çoklu seçim event'ine
+        // ihtiyaç kalmadı.
+        // OnFileUploaded: Upload bileşeni galeri modali içinde duruyor; modal açıkken
+        // yeni dosya yüklenirse grid'i yenileyip yeni medyayı göstermek için dinliyoruz.
+        FileService.OnFileUploaded += HandleGalleryFileUploaded;
 
         await Task.WhenAll(
             LoadDataAsync(_searchTerm),
             LoadCountriesAsync()
         );
+    }
+
+    // Upload bileşeninden yeni dosya geldiğinde galeri grid'i açıksa listeyi yenile.
+    private void HandleGalleryFileUploaded()
+    {
+        if (_activeMediaSlot != "gallery") return;
+        InvokeAsync(async () =>
+        {
+            await LoadGalleryAllMediaAsync();
+        });
     }
 
     public async ValueTask DisposeAsync()
@@ -726,6 +1187,9 @@ else
         _disposed = true;
 
         StateHub.OnDataChanged -= HandleDataChanged;
+        FileService.OnFileSelected -= HandleSingleFileSelected;
+        FileService.OnFileUploaded -= HandleGalleryFileUploaded;
+        // OnSelectionChanged aboneliği OnInitializedAsync'te de kurulmuyor; abonelik kaldırma yok.
         await _cts.CancelAsync();
         _cts.Dispose();
         _searchCts?.Dispose();
@@ -780,11 +1244,9 @@ else
                 await using var db = await DbFactory.CreateDbContextAsync(token);
                 var q = db.TryTableSingle.AsNoTracking().AsQueryable();
 
-                // Soft delete: silinmemiş kayıtları getir
-                // (IsDeleted owned entity'si hiç set edilmemiş eski kayıtlar da dahil)
-                q = q.Where(x => x.IsDeleted == null
-                              || x.IsDeleted.IsDeletedStatu == null
-                              || x.IsDeleted.IsDeletedStatu == false);
+                // Soft Delete filtresi: silinmiş kayıtlar listede görünmez
+                // (IsDeleted owned entity — IsDeletedStatu null veya false olanlar gösterilir)
+                q = q.Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu == null || x.IsDeleted.IsDeletedStatu == false);
 
                 // Arama: şifreli alanlar DB'de şifreli olduğundan
                 // tam liste çekilip bellek içi filtreleme yapılır.
@@ -970,6 +1432,13 @@ else
         _addStateId = 0;
         _addStates.Clear();
         _addCities.Clear();
+
+        // Profil/Kapak medyasını sıfırla (önceki açılıştan kalan seçimler taşmasın)
+        _profileMedia = null;
+        _coverMedia = null;
+        _galleryFiles.Clear();
+        _activeMediaSlot = string.Empty;
+
         await ShowModal("AddModal");
     }
 
@@ -986,13 +1455,33 @@ else
             CheckSliding = item.CheckSliding,
             CheckMarked = item.CheckMarked,
             SelectDateTime = item.SelectDateTime,
-            GetDateTime = item.GetDateTime
+            GetDateTime = item.GetDateTime,
+            // Owned entity — değerleriyle birlikte yeni instance taşı (referans paylaşmamak için)
+            ProfileCoverGallery = item.ProfileCoverGallery == null ? null : new ProfileCoverGallery
+            {
+                ProfileImagePath = item.ProfileCoverGallery.ProfileImagePath,
+                CoverImagePath = item.ProfileCoverGallery.CoverImagePath
+            }
         };
 
         _editCountryId = 0;
         _editStateId = 0;
         _editStates.Clear();
         _editCities.Clear();
+
+        // Profil/Kapak görsellerini UI state'ine geri yükle
+        _profileMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.ProfileImagePath)
+            ? null
+            : new Data.Media { FileUrl = _editModel.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
+
+        _coverMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.CoverImagePath)
+            ? null
+            : new Data.Media { FileUrl = _editModel.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
+
+        _activeMediaSlot = string.Empty;
+
+        // Mevcut galeri kayıtlarını DB'den yükle (ItemGallery → Media join)
+        _galleryFiles = await LoadGalleryAsync(item.Id);
 
         // Cascade preload
         if (!string.IsNullOrWhiteSpace(_editModel.Country))
@@ -1069,7 +1558,14 @@ else
             _addModel.UserId = use.Id;
             _addModel.GetDateTime = DateTime.UtcNow;
 
-            // Soft delete: yeni kayıt aktif (silinmemiş) durumda başlasın
+            // Profil/Kapak görsel yollarını owned entity'ye yaz
+            _addModel.ProfileCoverGallery = new ProfileCoverGallery
+            {
+                ProfileImagePath = _profileMedia?.FileUrl,
+                CoverImagePath = _coverMedia?.FileUrl
+            };
+
+            // Soft Delete owned entity'sini başlat (yeni kayıt — silinmemiş durumda)
             _addModel.IsDeleted = new IsDeleted
             {
                 IsDeletedStatu = false,
@@ -1080,8 +1576,28 @@ else
             db.TryTableSingle.Add(_addModel);
             await db.SaveChangesAsync(_cts.Token);
 
+            // Galeri kayıtlarını ItemGallery tablosuna ekle
+            if (_galleryFiles.Any())
+            {
+                var galleryItems = _galleryFiles.Select(m => new ItemGallery
+                {
+                    UserId = use!.Id,
+                    ItemId = _addModel.Id,
+                    ItemType = "Gallery",
+                    MediaId = m.Id,
+                    ItemAddDate = DateTime.UtcNow,
+                    IsDelete = false
+                }).ToList();
+
+                await db.ItemGallery.AddRangeAsync(galleryItems, _cts.Token);
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
             await HideModal("AddModal");
             _addModel = null;
+            _profileMedia = null;
+            _coverMedia = null;
+            _galleryFiles.Clear();
             _isProcessing = false;
 
             StateHub.ClearCache(CACHE_KEY);
@@ -1133,10 +1649,75 @@ else
             existing.CheckMarked = _editModel.CheckMarked;
             existing.SelectDateTime = _editModel.SelectDateTime;
 
+            // Profil/Kapak görsel yollarını owned entity'ye yaz
+            existing.ProfileCoverGallery = new ProfileCoverGallery
+            {
+                ProfileImagePath = _profileMedia?.FileUrl,
+                CoverImagePath = _coverMedia?.FileUrl
+            };
+
+            // Galeri: TryTableSingle.IsDeleted mantığıyla tutarlı SOFT DELETE.
+            // Mevcut (silinmemiş) ItemGallery kayıtları kalıcı olarak silinmez;
+            // sadece IsDelete = true olarak işaretlenir (audit izi korunur).
+            // Yeniden seçilen MediaId'ler için daha önce soft delete edilmiş kayıt varsa
+            // o satır yeniden aktive edilir (yeni satır oluşturmak yerine) — bu hem
+            // tablonun şişmesini önler hem de geçmiş izini bozmaz.
+            var oldGallery = await db.ItemGallery
+                .Where(g => g.ItemId == existing.Id && g.ItemType == "Gallery")
+                .ToListAsync(_cts.Token);
+
+            var selectedMediaIds = _galleryFiles.Select(m => m.Id).ToHashSet();
+
+            // Artık seçili olmayan, aktif kayıtları soft delete et
+            foreach (var g in oldGallery)
+            {
+                var stillSelected = g.MediaId.HasValue && selectedMediaIds.Contains(g.MediaId.Value);
+
+                if (!stillSelected && g.IsDelete != true)
+                {
+                    // Aktif → silindi
+                    g.IsDelete = true;
+                }
+                else if (stillSelected && g.IsDelete == true)
+                {
+                    // Daha önce soft delete edilmiş ama tekrar seçildi → yeniden aktive et
+                    g.IsDelete = false;
+                    g.ItemAddDate = DateTime.UtcNow;
+                }
+            }
+
+            // Sadece DB'de hiç kaydı olmayan (ne aktif ne soft-deleted) yeni MediaId'ler eklenir
+            var existingMediaIds = oldGallery
+                .Where(g => g.MediaId.HasValue)
+                .Select(g => g.MediaId!.Value)
+                .ToHashSet();
+
+            var trulyNewMedia = _galleryFiles
+                .Where(m => !existingMediaIds.Contains(m.Id))
+                .ToList();
+
+            if (trulyNewMedia.Any())
+            {
+                var newGallery = trulyNewMedia.Select(m => new ItemGallery
+                {
+                    UserId = use!.Id,
+                    ItemId = existing.Id,
+                    ItemType = "Gallery",
+                    MediaId = m.Id,
+                    ItemAddDate = DateTime.UtcNow,
+                    IsDelete = false
+                }).ToList();
+
+                await db.ItemGallery.AddRangeAsync(newGallery, _cts.Token);
+            }
+
             await db.SaveChangesAsync(_cts.Token);
 
             await HideModal("EditModal");
             _editModel = null;
+            _profileMedia = null;
+            _coverMedia = null;
+            _galleryFiles.Clear();
             _isProcessing = false;
 
             StateHub.ClearCache(CACHE_KEY);
@@ -1175,12 +1756,19 @@ else
 
             if (entity != null)
             {
-                // Soft delete: kaydı kalıcı silmek yerine işaretle
-                entity.IsDeleted = new IsDeleted
-                {
-                    IsDeletedStatu = true,
-                    DeletedAtDate = DateTime.UtcNow
-                };
+                // Bağlı galeri kayıtlarını soft delete et (ItemGallery.IsDelete = true)
+                var galleryItems = await db.ItemGallery
+                    .Where(g => g.ItemId == entity.Id && g.ItemType == "Gallery" && g.IsDelete != true)
+                    .ToListAsync(_cts.Token);
+
+                foreach (var g in galleryItems)
+                    g.IsDelete = true;
+
+                // Ana kaydı soft delete et (IsDeleted owned entity)
+                entity.IsDeleted ??= new IsDeleted();
+                entity.IsDeleted.IsDeletedStatu = true;
+                entity.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+
                 await db.SaveChangesAsync(_cts.Token);
             }
 
@@ -1224,8 +1812,16 @@ else
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            // Soft delete: seçili kayıtları kalıcı silmek yerine işaretle
             var now = DateTime.UtcNow;
+
+            // Bağlı galeri kayıtlarını toplu soft delete (ItemGallery.IsDelete = true)
+            await db.ItemGallery
+                .Where(g => ids.Contains(g.ItemId!.Value) && g.ItemType == "Gallery" && g.IsDelete != true)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(g => g.IsDelete, true),
+                    _cts.Token);
+
+            // Ana kayıtları toplu soft delete (IsDeleted owned entity alanları)
             await db.TryTableSingle
                 .Where(x => ids.Contains(x.Id))
                 .ExecuteUpdateAsync(s => s
@@ -1298,6 +1894,161 @@ else
     private async Task HideModal(string id) =>
         await JS.InvokeVoidAsync("eval",
             $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    // Resim seçim modalini açar — dış modal (AddModal/EditModal) açık kalır,
+    // backdrop=false + manuel z-index sayesinde Bootstrap'in "diğerini kapat" davranışı tetiklenmez
+    private async Task OpenMediaModal(string slot)
+    {
+        _activeMediaSlot = slot;
+        var modalId = slot == "cover" ? "modalCoverList" : "modalProfileList";
+        await ShowModal(modalId);
+    }
+
+    // Galeri modalini açar (çoklu seçim).
+    //
+    // Artık FileService event'lerine bağlı değiliz; modal içindeki grid
+    // doğrudan _galleryAllMedia üzerinden render olur ve "Seçildi" rozeti
+    // _galleryFiles'taki Id'lere göre Id bazlı eşleştirme ile çizilir.
+    private async Task OpenGalleryModal()
+    {
+        _activeMediaSlot = "gallery";
+        _gallerySearch = string.Empty;
+        _galleryDisplayCount = 15;
+
+        // Kullanıcının tüm medyalarını yükle (modal her açıldığında taze veri)
+        await LoadGalleryAllMediaAsync();
+
+        await ShowModal("modalGalleryList");
+    }
+
+    // Kullanıcının tüm medyalarını DB'den çeker (galeri grid'i için).
+    private async Task LoadGalleryAllMediaAsync()
+    {
+        if (use == null) return;
+        _galleryLoading = true;
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _galleryAllMedia = await db.Media
+                .AsNoTracking()
+                .Where(m => m.IsDeletedStatu != true && m.UserId == use.Id)
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync(_cts.Token);
+            ApplyGalleryFilter();
+        }
+        catch (Exception ex) { await LogError("LoadGalleryAllMedia", ex); }
+        finally
+        {
+            _galleryLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Arama kutusu inputu — anlık filtre.
+    private void OnGallerySearchInput(ChangeEventArgs e)
+    {
+        _gallerySearch = e.Value?.ToString() ?? string.Empty;
+        _galleryDisplayCount = 15;
+        ApplyGalleryFilter();
+    }
+
+    // Arama kutusunu temizler ve filtreyi yeniden uygular.
+    private void ClearGallerySearch()
+    {
+        _gallerySearch = string.Empty;
+        _galleryDisplayCount = 15;
+        ApplyGalleryFilter();
+    }
+
+    // _galleryAllMedia'yı _gallerySearch'e göre filtreleyip _galleryFilteredMedia'ya yazar.
+    private void ApplyGalleryFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_gallerySearch))
+        {
+            _galleryFilteredMedia = _galleryAllMedia.ToList();
+        }
+        else
+        {
+            var s = _gallerySearch.Trim();
+            _galleryFilteredMedia = _galleryAllMedia
+                .Where(m => m.FileName != null && m.FileName.Contains(s, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    // Galeri grid'inde bir karta tıklanınca: Id bazlı toggle.
+    private void ToggleGalleryItem(Data.Media m)
+    {
+        var existing = _galleryFiles.FirstOrDefault(x => x.Id == m.Id);
+        if (existing != null)
+        {
+            _galleryFiles.Remove(existing);
+        }
+        else
+        {
+            _galleryFiles.Add(m);
+        }
+    }
+
+    // Görsel/video uzantı yardımcıları (galeri grid'i için).
+    private static readonly string[] _galleryImageExt =
+        { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".svg", ".ico", ".avif" };
+    private static readonly string[] _galleryVideoExt =
+        { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg" };
+
+    private static bool IsGalleryImage(string ext) => _galleryImageExt.Contains(ext);
+    private static bool IsGalleryVideo(string ext) => _galleryVideoExt.Contains(ext);
+
+    private async Task CloseMediaModal()
+    {
+        // Slot'a göre doğru modalı kapat
+        var modalId = _activeMediaSlot switch
+        {
+            "cover" => "modalCoverList",
+            "gallery" => "modalGalleryList",
+            _ => "modalProfileList"
+        };
+        await HideModal(modalId);
+        _activeMediaSlot = string.Empty;
+    }
+
+    // Tekli seçim handler — FileService.OnFileSelected event'inden tetiklenir.
+    // Aktif slot'a göre profil veya kapak medyasını set eder.
+    private void HandleSingleFileSelected(Data.Media media)
+    {
+        switch (_activeMediaSlot)
+        {
+            case "profile": _profileMedia = media; break;
+            case "cover": _coverMedia = media; break;
+            default: return;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    // Mevcut kayda ait galeri görsellerini DB'den yükler (ItemGallery → Media join)
+    private async Task<List<Data.Media>> LoadGalleryAsync(Guid itemId)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var mediaIds = await db.ItemGallery
+                .Where(g => g.ItemId == itemId && g.ItemType == "Gallery" && g.IsDelete != true)
+                .Select(g => g.MediaId)
+                .ToListAsync(_cts.Token);
+
+            if (!mediaIds.Any()) return new();
+
+            return await db.Media
+                .Where(m => mediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                .ToListAsync(_cts.Token);
+        }
+        catch (Exception ex)
+        {
+            await LogError("LoadGalleryAsync", ex);
+            return new();
+        }
+    }
 
     private async Task Notify(string type, string title, string text)
     {

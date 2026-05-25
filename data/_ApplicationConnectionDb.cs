@@ -17,7 +17,6 @@ namespace data
 
         // Deneme Tabloları
         public DbSet<TryTableSingle> TryTableSingle { get; set; } = default!;
-        public DbSet<TryTableMulti> TryTableMulti { get; set; } = default!;
 
         // Oturum izinleri
         public DbSet<AccountPermissions> AccountPermissions { get; set; } = default!;

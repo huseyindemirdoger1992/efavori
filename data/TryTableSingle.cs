@@ -24,6 +24,7 @@ namespace data
         public DateTime GetDateTime { get; set; }
 
         public ProfileCoverGallery? ProfileCoverGallery { get; set; }
+        public IsDeleted? IsDeleted { get; set; }
 
     }
 }

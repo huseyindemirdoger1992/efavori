@@ -60,8 +60,8 @@
                     </div>
                 </div>
 
+                <!-- Profil Fotoğrafı -->
                 <div class="card-body px-4 pt-0">
-                    <!-- Profil Fotoğrafı -->
                     <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
                         <div class="position-relative">
                             @if (_profileMedia is not null)
@@ -857,58 +857,58 @@
                             let marker = null;
 
                             function initMap() {
-                                const mapDiv = document.getElementById('map');
-                                if (!mapDiv || map) return;
-                                map = L.map('map').setView([38.9637, 35.2433], 6);
-                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                    attribution: '© OpenStreetMap'
-                                }).addTo(map);
+                            const mapDiv = document.getElementById('map');
+                            if (!mapDiv || map) return;
+                            map = L.map('map').setView([38.9637, 35.2433], 6);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '© OpenStreetMap'
+                            }).addTo(map);
                             }
 
                             document.addEventListener('DOMContentLoaded', initMap);
 
                             document.getElementById('btnGetLocation').addEventListener('click', function () {
-                                const btn = this;
-                                const latInput = document.getElementById('lat');
-                                const lngInput = document.getElementById('lng');
-                                if (!map) initMap();
-                                btn.disabled = true;
-                                const originalText = btn.innerHTML;
-                                btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Konum Alınıyor...';
-                                if ("geolocation" in navigator) {
-                                    navigator.geolocation.getCurrentPosition(
-                                        (position) => {
-                                            const lat = position.coords.latitude;
-                                            const lng = position.coords.longitude;
-                                            latInput.value = lat.toFixed(6);
-                                            lngInput.value = lng.toFixed(6);
-                                            updateMap(lat, lng);
-                                            DotNet.invokeMethodAsync('YourAssemblyName', 'SetLatLng', lat, lng);
-                                            btn.disabled = false;
-                                            btn.innerHTML = originalText;
-                                        },
-                                        (error) => {
-                                            alert("Hata: " + error.message);
-                                            btn.disabled = false;
-                                            btn.innerHTML = originalText;
-                                        },
-                                        { enableHighAccuracy: true, timeout: 5000 }
-                                    );
-                                } else {
-                                    alert("Tarayıcınız konumu desteklemiyor.");
-                                    btn.disabled = false;
-                                    btn.innerHTML = originalText;
-                                }
+                            const btn = this;
+                            const latInput = document.getElementById('lat');
+                            const lngInput = document.getElementById('lng');
+                            if (!map) initMap();
+                            btn.disabled = true;
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Konum Alınıyor...';
+                            if ("geolocation" in navigator) {
+                            navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+                            latInput.value = lat.toFixed(6);
+                            lngInput.value = lng.toFixed(6);
+                            updateMap(lat, lng);
+                            DotNet.invokeMethodAsync('YourAssemblyName', 'SetLatLng', lat, lng);
+                            btn.disabled = false;
+                            btn.innerHTML = originalText;
+                            },
+                            (error) => {
+                            alert("Hata: " + error.message);
+                            btn.disabled = false;
+                            btn.innerHTML = originalText;
+                            },
+                            { enableHighAccuracy: true, timeout: 5000 }
+                            );
+                            } else {
+                            alert("Tarayıcınız konumu desteklemiyor.");
+                            btn.disabled = false;
+                            btn.innerHTML = originalText;
+                            }
                             });
 
                             function updateMap(lat, lng) {
-                                if (map) {
-                                    const coords = [lat, lng];
-                                    map.setView(coords, 15);
-                                    if (marker) { marker.setLatLng(coords); }
-                                    else { marker = L.marker(coords).addTo(map); }
-                                    marker.bindPopup("Bulunduğunuz Yer").openPopup();
-                                }
+                            if (map) {
+                            const coords = [lat, lng];
+                            map.setView(coords, 15);
+                            if (marker) { marker.setLatLng(coords); }
+                            else { marker = L.marker(coords).addTo(map); }
+                            marker.bindPopup("Bulunduğunuz Yer").openPopup();
+                            }
                             }
                         </script>
                     </div>
@@ -1287,8 +1287,8 @@
                         </button>
                     </div>
                 </div>
+
          
-            
             </div>
         </div>
     </div>

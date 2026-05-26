@@ -13,6 +13,10 @@ namespace api
         // Online kullanıcı değişikliği eventi
         public event Func<Task>? OnOnlineUsersChanged;
 
+        // ✅ Sesli/Görüntülü arama sinyal eventi (WebRTC signaling: offer/answer/ice/hangup/ring)
+        // Args: fromUserId, toUserId, signalType, payload (JSON)
+        public event Func<Guid, Guid, string, string, Task>? OnCallSignal;
+
         #endregion
 
         #region Configuration
@@ -41,8 +45,21 @@ namespace api
             _cache = memoryCache;
 
             // ✅ Süresi dolan heartbeat'leri temizleyen arka plan zamanlayıcısı
+            // Async lambda + try/catch: callback içindeki unhandled exception process'i çökertmesin
             _cleanupTimer = new Timer(
-                async _ => await CleanupStaleUsers(),
+                async _ =>
+                {
+                    try
+                    {
+                        await CleanupStaleUsers();
+                        CleanupOldDebounceKeys();
+                    }
+                    catch (ObjectDisposedException) { }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[GlobalStateHub] Cleanup timer hata: {ex.Message}");
+                    }
+                },
                 null,
                 CLEANUP_INTERVAL_MS,
                 CLEANUP_INTERVAL_MS);
@@ -252,7 +269,43 @@ namespace api
 
         #endregion
 
-        #region Memory Leak Koruması
+        #region Call Signaling (Sesli/Görüntülü Arama - WebRTC)
+
+        /// <summary>
+        /// Aramaya dair sinyali (offer/answer/ice/ring/accept/reject/hangup) hedef kullanıcıya yönlendirir.
+        /// Broadcast tüm dinleyicilere gider; component tarafı toUserId filtresiyle kendi mesajını ayırır.
+        /// Bu event DEBOUNCE EDİLMEZ — ICE candidate'ları geciktirmek bağlantıyı bozar.
+        /// </summary>
+        public async Task SendCallSignal(Guid fromUserId, Guid toUserId, string signalType, string payload)
+        {
+            if (_disposed || OnCallSignal == null) return;
+            if (string.IsNullOrWhiteSpace(signalType)) return;
+
+            var handlers = OnCallSignal.GetInvocationList()
+                .Cast<Func<Guid, Guid, string, string, Task>>()
+                .ToList();
+
+            await Task.WhenAll(handlers.Select(h => SafeInvokeCallSignal(h, fromUserId, toUserId, signalType, payload ?? string.Empty)));
+        }
+
+        #endregion
+
+        #region Debounce Bakım (Memory Sızıntısı Önleme)
+
+        // 30 saniyeden eski debounce anahtarlarını temizle. _lastBroadcast sonsuz büyümesin.
+        private void CleanupOldDebounceKeys()
+        {
+            if (_disposed) return;
+
+            var threshold = DateTime.UtcNow.AddSeconds(-30);
+            var stale = _lastBroadcast
+                .Where(kv => kv.Value < threshold)
+                .Select(kv => kv.Key)
+                .ToList();
+
+            foreach (var key in stale)
+                _lastBroadcast.TryRemove(key, out _);
+        }
 
         private static async Task SafeInvoke(Func<string, Task> handler, string arg)
         {
@@ -275,6 +328,15 @@ namespace api
             catch { }
         }
 
+        private static async Task SafeInvokeCallSignal(
+            Func<Guid, Guid, string, string, Task> handler,
+            Guid fromUserId, Guid toUserId, string signalType, string payload)
+        {
+            try { await handler(fromUserId, toUserId, signalType, payload); }
+            catch (ObjectDisposedException) { }
+            catch { }
+        }
+
         /// <summary>
         /// Tüm event subscriber'ları temizle (memory leak önlemi)
         /// </summary>
@@ -283,6 +345,7 @@ namespace api
             OnDataChanged = null;
             OnSystemError = null;
             OnOnlineUsersChanged = null;
+            OnCallSignal = null;
         }
 
         #endregion

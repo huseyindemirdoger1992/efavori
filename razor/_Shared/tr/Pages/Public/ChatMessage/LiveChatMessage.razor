@@ -3,6 +3,8 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 
+@implements IAsyncDisposable
+
 @inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
@@ -45,7 +47,8 @@
                         <p class="mb-0 fw-semibold small text-truncate">
                             @if (use != null)
                             {
-                                @use.FirstName@(" ") @use.LastName
+                                @use.FirstName
+                                @(" ") @use.LastName
                             }
                         </p>
                         <small class="text-light" style="font-size: 0.7rem;">
@@ -108,8 +111,8 @@
                         {
                             var unread = _unreadCounts.GetValueOrDefault(friend.Id, 0);
                             <a href="javascript:;"
-                                   class="list-group-item list-group-item-action border-0 px-3 py-2 @(_selectedFriend?.Id == friend.Id ? "active" : "")"
-                                   @onclick="() => SelectFriend(friend)">
+                               class="list-group-item list-group-item-action border-0 px-3 py-2 @(_selectedFriend?.Id == friend.Id ? "active" : "")"
+                               @onclick="() => SelectFriend(friend)">
                                 <div class="d-flex align-items-center gap-2">
 
                                     <div class="position-relative flex-shrink-0">
@@ -148,7 +151,7 @@
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center gap-1">
                                             <p class="mb-0 text-truncate small @(_selectedFriend?.Id == friend.Id ? "text-white-50" : "text-light")"
-                                                   style="font-size: 0.76rem; max-width: 170px;">
+                                               style="font-size: 0.76rem; max-width: 170px;">
                                                 @if (_lastMessages.TryGetValue(friend.Id, out var lm))
                                                 {
                                                     @(GlobalSecurityProvider.Decrypt(lm.Content) ?? "")
@@ -241,12 +244,16 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                        <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Görüntülü Arama">
+                        <button class="btn btn-sm btn-light border-0" title="Görüntülü Arama"
+                                @onclick="@(() => StartCall(true))"
+                                disabled="@(_call.IsActive || _call.IsIncoming || !_onlineUsers.Contains(_selectedFriend.Id))">
                             <i class="fa fa-video-camera"></i>
-                        </a>
-                        <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Sesli Arama">
+                        </button>
+                        <button class="btn btn-sm btn-light border-0" title="Sesli Arama"
+                                @onclick="@(() => StartCall(false))"
+                                disabled="@(_call.IsActive || _call.IsIncoming || !_onlineUsers.Contains(_selectedFriend.Id))">
                             <i class="fa fa-phone"></i>
-                        </a>
+                        </button>
                         <a href="javascript:;" class="btn btn-sm btn-light border-0" title="Arkadaş Ekle">
                             <i class="fa fa-user-plus"></i>
                         </a>
@@ -287,8 +294,40 @@
                             {
                                 bool isMine = msg.SenderId == use?.Id;
                                 bool deleted = msg.IsDeletedBySender || msg.IsDeletedBySenderAndReceiver;
+                                var decoded = deleted ? null : GlobalSecurityProvider.Decrypt(msg.Content);
+                                var callInfo = ParseCallMessage(decoded);
 
-                                @if (!isMine)
+                                @if (callInfo != null && !deleted)
+                                {
+                                    // ===== ÇAĞRI SİSTEM MESAJI (WhatsApp tarzı, ortalanmış, özel ikon) =====
+                                    var iconClass = callInfo.IsVideo ? "fa-video-camera" : "fa-phone";
+                                    var statusColor = callInfo.Status switch
+                                    {
+                                        "completed" => "text-success",
+                                        "missed" => "text-danger",
+                                        "rejected" => "text-danger",
+                                        "busy" => "text-warning",
+                                        "canceled" => "text-light",
+                                        _ => "text-light"
+                                    };
+                                    var statusText = BuildCallStatusText(callInfo, isMine);
+
+                                    <div class="d-flex justify-content-center my-2">
+                                        <div class="px-3 py-2 bg-light border border-secondary-subtle rounded-pill shadow-sm d-inline-flex align-items-center gap-2"
+                                             style="max-width: 90%;">
+                                            <i class="fa @iconClass @statusColor" style="font-size: 0.85rem;"></i>
+                                            <small class="text-body" style="font-size: 0.78rem;">@statusText</small>
+                                            <small class="text-light" style="font-size: 0.68rem;">@msg.Timestamp.ToString("HH:mm")</small>
+                                            @if (isMine)
+                                            {
+                                                <span style="cursor: pointer;" @onclick="() => DeleteMessage(msg)" title="Sil">
+                                                    <i class="fa fa-trash-o text-danger" style="font-size: 0.68rem;"></i>
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                else if (!isMine)
                                 {
                                     <div class="d-flex align-items-end gap-2 mb-3">
                                         <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
@@ -310,7 +349,7 @@
                                                 <span class="ms-1">@msg.Timestamp.ToString("HH:mm")</span>
                                             </p>
                                             <p class="mb-0 px-3 py-2 bg-light border border-secondary-subtle shadow-sm rounded-3 @(deleted ? "fst-italic text-light" : "")"
-                                                   style="font-size: 0.86rem; border-radius: 0 1rem 1rem 1rem !important; word-break: break-word;">
+                                               style="font-size: 0.86rem; border-radius: 0 1rem 1rem 1rem !important; word-break: break-word;">
                                                 @if (deleted)
                                                 {
                                                     <i class="fa fa-ban me-1 text-danger opacity-50"></i>
@@ -318,7 +357,7 @@
                                                 }
                                                 else
                                                 {
-                                                    @GlobalSecurityProvider.Decrypt(msg.Content)
+                                                    @decoded
                                                 }
                                             </p>
                                         </div>
@@ -354,7 +393,7 @@
                                                     </span>
                                                 }
                                                 <p class="mb-0 px-3 py-2 bg-primary text-white shadow-sm @(deleted ? "fst-italic opacity-75" : "")"
-                                                       style="font-size: 0.86rem; border-radius: 1rem 0 1rem 1rem !important; word-break: break-word;">
+                                                   style="font-size: 0.86rem; border-radius: 1rem 0 1rem 1rem !important; word-break: break-word;">
                                                     @if (deleted)
                                                     {
                                                         <i class="fa fa-ban me-1 opacity-75"></i>
@@ -362,7 +401,7 @@
                                                     }
                                                     else
                                                     {
-                                                        @GlobalSecurityProvider.Decrypt(msg.Content)
+                                                        @decoded
                                                     }
                                                 </p>
                                             </div>
@@ -380,10 +419,13 @@
                     <div class="d-flex align-items-center gap-2">
 
                         <div class="flex-grow-1">
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-secondary-subtle border-end-0">
+                            <div class="input-group position-relative">
+                                <button type="button"
+                                        class="input-group-text bg-light border-secondary-subtle border-end-0 border-0"
+                                        @onclick="ToggleEmojiPicker"
+                                        title="Emoji">
                                     <i class="fa fa-smile-o text-light"></i>
-                                </span>
+                                </button>
                                 <input type="text"
                                        id="messageInput"
                                        class="form-control bg-light border-secondary-subtle border-start-0 border-end-0"
@@ -393,6 +435,41 @@
                                        @onkeydown="OnInputKeyDown"
                                        maxlength="2000"
                                        disabled="@_isSending" />
+
+                                @if (_emojiPickerOpen)
+                                {
+                                    <div class="position-absolute shadow border border-secondary-subtle rounded-3 bg-light"
+                                         id="emojiPickerPanel"
+                                         style="bottom: calc(100% + 6px); left: 0; width: 320px; max-height: 280px; z-index: 1080; overflow: hidden;">
+
+                                        <div class="d-flex border-bottom border-secondary-subtle px-2 py-1 gap-1 flex-wrap" style="font-size: 0.85rem;">
+                                            @foreach (var cat in EmojiCategories)
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-sm btn-light border-0 px-2 py-1 @(_emojiActiveCategory == cat.Key ? "bg-secondary bg-opacity-25" : "")"
+                                                        style="font-size: 0.95rem; line-height: 1;"
+                                                        @onclick="@(() => _emojiActiveCategory = cat.Key)"
+                                                        title="@cat.Key">
+                                                    @cat.Value[0]
+                                                </button>
+                                            }
+                                        </div>
+
+                                        <div class="p-2 overflow-auto" style="max-height: 232px;">
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var emoji in EmojiCategories[_emojiActiveCategory])
+                                                {
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-light border-0 p-1"
+                                                            style="font-size: 1.25rem; line-height: 1; font-family: 'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol',sans-serif; min-width: 32px;"
+                                                            @onclick="@(() => InsertEmoji(emoji))">
+                                                        @emoji
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         </div>
 
@@ -404,7 +481,6 @@
                                 <i class="fa fa-microphone text-light"></i>
                             </a>
                             <button class="btn btn-outlineprimary btn-sm px-3"
-
                                     @onclick="SendMessage"
                                     disabled="@(string.IsNullOrWhiteSpace(_newMessage) || _isSending)"
                                     title="Gönder">
@@ -427,6 +503,158 @@
 
     </div>
 </div>
+
+@* ====== SESLİ / GÖRÜNTÜLÜ ARAMA: GELEN ARAMA BİLDİRİMİ ====== *@
+@if (_call.IsIncoming && !_call.IsActive)
+{
+    <div class="position-fixed top-0 start-50 translate-middle-x mt-3 shadow-lg rounded-3 bg-light border border-secondary-subtle"
+         style="z-index: 1090; min-width: 320px; max-width: 92vw;">
+        <div class="px-3 py-3">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0"
+                     style="width: 48px; height: 48px;">
+                    @if (!string.IsNullOrEmpty(_call.PeerUser?.ProfileCoverGallery?.ProfileImagePath))
+                    {
+                        <img src="@_call.PeerUser.ProfileCoverGallery.ProfileImagePath" alt="P" class="w-100 h-100 object-fit-cover" />
+                    }
+                    else if (_call.PeerUser != null)
+                    {
+                        @GetInitials(_call.PeerUser)
+                    }
+                </div>
+                <div class="flex-grow-1 overflow-hidden">
+                    <p class="mb-0 fw-semibold text-truncate">
+                        @if (_call.PeerUser != null)
+                        {
+                            @_call.PeerUser.FirstName
+                            @(" ")
+                            @_call.PeerUser.LastName
+                        }
+                    </p>
+                    <small class="text-light">
+                        <i class="fa @(_call.IsVideo ? "fa-video-camera" : "fa-phone") me-1"></i>
+                        @(_call.IsVideo ? "Görüntülü arıyor..." : "Sesli arıyor...")
+                    </small>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm flex-grow-1" @onclick="AcceptCall">
+                    <i class="fa fa-phone me-1"></i> Kabul Et
+                </button>
+                <button class="btn btn-danger btn-sm flex-grow-1" @onclick="RejectCall">
+                    <i class="fa fa-times me-1"></i> Reddet
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ====== SESLİ / GÖRÜNTÜLÜ ARAMA: AKTİF ARAMA EKRANI ====== *@
+@if (_call.IsActive)
+{
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+         style="z-index: 1085; background: rgba(0,0,0,0.85);">
+        <div class="d-flex flex-column align-items-center justify-content-center text-white p-3"
+             style="width: 100%; max-width: 960px; height: 100%; max-height: 100vh;">
+
+            <div class="d-flex align-items-center justify-content-between w-100 mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center overflow-hidden"
+                         style="width: 40px; height: 40px;">
+                        @if (!string.IsNullOrEmpty(_call.PeerUser?.ProfileCoverGallery?.ProfileImagePath))
+                        {
+                            <img src="@_call.PeerUser.ProfileCoverGallery.ProfileImagePath" alt="P" class="w-100 h-100 object-fit-cover" />
+                        }
+                        else if (_call.PeerUser != null)
+                        {
+                            @GetInitials(_call.PeerUser)
+                        }
+                    </div>
+                    <div>
+                        <p class="mb-0 fw-semibold">
+                            @if (_call.PeerUser != null)
+                            {
+                                @_call.PeerUser.FirstName
+                                @(" ")
+                                @_call.PeerUser.LastName
+                            }
+                        </p>
+                        <small class="opacity-75">
+                            @(_call.IsConnected ? FormatCallDuration() : (_call.IsCaller ? "Aranıyor..." : "Bağlanıyor..."))
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="position-relative w-100 flex-grow-1 d-flex align-items-center justify-content-center rounded-3 overflow-hidden"
+                 style="background: #111; min-height: 280px;">
+
+                @if (_call.IsVideo)
+                {
+                    <video id="remoteVideo" autoplay playsinline class="w-100 h-100" style="object-fit: cover; background: #000;"></video>
+
+                    <video id="localVideo" autoplay playsinline muted
+                           class="position-absolute shadow border border-light rounded-2"
+                           style="bottom: 12px; right: 12px; width: 28%; max-width: 200px; min-width: 100px; object-fit: cover; background: #222;"></video>
+                }
+                else
+                {
+                    <audio id="remoteVideo" autoplay></audio>
+                    <audio id="localVideo" autoplay muted></audio>
+                    <div class="d-flex flex-column align-items-center text-white">
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mb-3 overflow-hidden"
+                             style="width: 120px; height: 120px; font-size: 2rem;">
+                            @if (!string.IsNullOrEmpty(_call.PeerUser?.ProfileCoverGallery?.ProfileImagePath))
+                            {
+                                <img src="@_call.PeerUser.ProfileCoverGallery.ProfileImagePath" alt="P" class="w-100 h-100 object-fit-cover" />
+                            }
+                            else if (_call.PeerUser != null)
+                            {
+                                @GetInitials(_call.PeerUser)
+                            }
+                        </div>
+                        <p class="mb-0 fw-semibold">
+                            @if (_call.PeerUser != null)
+                            {
+                                @_call.PeerUser.FirstName
+                                @(" ")
+                                @_call.PeerUser.LastName
+                            }
+                        </p>
+                        <small class="opacity-75">Sesli arama</small>
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex align-items-center gap-3 mt-3">
+                <button class="btn @(_call.MicMuted ? "btn-warning" : "btn-light") rounded-circle"
+                        style="width: 52px; height: 52px;"
+                        @onclick="ToggleMic"
+                        title="@(_call.MicMuted ? "Mikrofonu Aç" : "Mikrofonu Kapat")">
+                    <i class="fa @(_call.MicMuted ? "fa-microphone-slash" : "fa-microphone")"></i>
+                </button>
+
+                @if (_call.IsVideo)
+                {
+                    <button class="btn @(_call.CamMuted ? "btn-warning" : "btn-light") rounded-circle"
+                            style="width: 52px; height: 52px;"
+                            @onclick="ToggleCam"
+                            title="@(_call.CamMuted ? "Kamerayı Aç" : "Kamerayı Kapat")">
+                        <i class="fa @(_call.CamMuted ? "fa-video-camera" : "fa-video-camera")"></i>
+                    </button>
+                }
+
+                <button type="button"
+                        class="btn btn-danger rounded-circle d-inline-flex align-items-center justify-content-center"
+                        style="width: 62px; height: 62px;"
+                        @onclick="() => HangUp()"
+                        title="Aramayı Sonlandır">
+                    <i class="fa fa-phone" style="transform: rotate(135deg); font-size: 1.5rem;"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
 
@@ -459,6 +687,90 @@
     private Dictionary<Guid, int> _unreadCounts = new();
     private HashSet<Guid> _onlineUsers = new();
 
+    // ====== EMOJI PICKER ======
+    private bool _emojiPickerOpen;
+    private string _emojiActiveCategory = "Yüzler";
+
+    // Google / Noto emoji setiyle render edilen kategorize emoji koleksiyonu
+    // (font-family fallback: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji')
+    private static readonly Dictionary<string, string[]> EmojiCategories = new()
+    {
+        ["Yüzler"] = new[]
+        {
+            "😀","😁","😂","🤣","😃","😄","😅","😆","😉","😊","😋","😎","😍","😘","🥰","😗","😙","😚",
+            "🙂","🤗","🤩","🤔","🤨","😐","😑","😶","🙄","😏","😣","😥","😮","🤐","😯","😪","😫","🥱",
+            "😴","😌","😛","😜","😝","🤤","😒","😓","😔","😕","🙃","🫠","🤑","😲","☹️","🙁","😖","😞",
+            "😟","😤","😢","😭","😦","😧","😨","😩","🤯","😬","😰","😱","🥵","🥶","😳","🤪","😵","🥴",
+            "😠","😡","🤬","😷","🤒","🤕","🤢","🤮","🤧","😇","🤠","🥳","🥺","🤥","🤫","🤭","🧐","🤓"
+        },
+        ["El"] = new[]
+        {
+            "👍","👎","👌","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","👇","☝️","✋","🤚","🖐️","🖖","👋",
+            "🤝","🙏","✊","👊","🤛","🤜","💪","🦾","🖕","✍️","💅","🤳","👂","🦻","👃","👀","👁️","👅"
+        },
+        ["Kalp"] = new[]
+        {
+            "❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝",
+            "💟","♥️","💌","💋","💍","💎","💯","💢","💥","💫","💦","💨","🕳️","💣","💬","🗨️","🗯️","💭"
+        },
+        ["Hayvan"] = new[]
+        {
+            "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐽","🐸","🐵","🙈","🙉",
+            "🙊","🐒","🐔","🐧","🐦","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌",
+            "🐞","🐜","🪲","🪳","🦗","🕷️","🕸️","🦂","🦟","🪰","🪱","🦠","🐢","🐍","🦎","🐙","🦑","🦐"
+        },
+        ["Yemek"] = new[]
+        {
+            "🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑","🥭","🍍","🥥","🥝","🍅",
+            "🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🧄","🧅","🥔","🍠","🥐","🥯","🍞","🥖","🥨",
+            "🧀","🥚","🍳","🧈","🥞","🧇","🥓","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🥪","🥙","🧆","🌮",
+            "🌯","🫔","🥗","🥘","🫕","🥫","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🍤","🍙","🍚","🍘","🍥"
+        },
+        ["Aktivite"] = new[]
+        {
+            "⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🏑","🥍","🏏","🪃",
+            "🥅","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🎽","🛹","🛼","🛷","⛸️","🥌","🎿","⛷️","🏂","🪂",
+            "🏋️","🤸","🤺","⛹️","🤾","🏌️","🏇","🧘","🏄","🏊","🤽","🚣","🧗","🚵","🚴","🏆","🥇","🥈"
+        },
+        ["Nesne"] = new[]
+        {
+            "📱","📲","💻","⌨️","🖥️","🖨️","🖱️","🖲️","🕹️","🗜️","💽","💾","💿","📀","📼","📷","📸","📹",
+            "🎥","📽️","🎞️","📞","☎️","📟","📠","📺","📻","🎙️","🎚️","🎛️","🧭","⏱️","⏲️","⏰","🕰️","⌛",
+            "⏳","📡","🔋","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💸","💵","💴","💶","💷","🪙","💰","💳"
+        },
+        ["Sembol"] = new[]
+        {
+            "✅","❌","⭕","🛑","⛔","📛","🚫","💯","♨️","🚭","❗","❓","❕","❔","‼️","⁉️","🔅","🔆",
+            "〽️","⚠️","🚸","🔱","⚜️","🔰","♻️","✳️","❇️","✴️","🆚","🅰️","🆎","🅱️","🆑","🆘","❎","🌀",
+            "Ⓜ️","🌐","💠","🔼","🔽","⏫","⏬","➡️","⬅️","⬆️","⬇️","↗️","↘️","↙️","↖️","↕️","↔️","🔃","🔄"
+        }
+    };
+
+    // ====== ARAMA (Sesli/Görüntülü) ======
+    private CallState _call = new();
+    private DotNetObjectReference<LiveChatMessage>? _dotNetRef;
+    private System.Threading.Timer? _callDurationTimer;
+    private DateTime _callStartedAt;
+    private bool _webRtcScriptInjected;
+    private bool _hangingUp;          // HangUp reentrancy guard
+
+    // Çağrı sistem mesajı için prefix (şifrelenmeden önce content'in başına eklenir).
+    // Decrypt sonrası bu prefix'i yakalayıp özel balon render ederiz.
+    private const string CALL_MSG_PREFIX = "[CALL]";
+
+    private sealed class CallState
+    {
+        public bool IsActive;          // Çağrı kabul edildi ve UI tam ekran
+        public bool IsIncoming;        // Gelen çağrı bildirimi (kabul/red beklemede)
+        public bool IsCaller;          // Bu kullanıcı aramayı başlatan mı?
+        public bool IsVideo;
+        public bool IsConnected;       // RTC bağlantı kuruldu mu?
+        public bool MicMuted;
+        public bool CamMuted;
+        public Guid PeerId;
+        public Users? PeerUser;
+    }
+
     private IEnumerable<Users> FilteredFriends =>
         string.IsNullOrWhiteSpace(_searchQuery)
             ? _friends
@@ -473,6 +785,7 @@
 
         StateHub.OnDataChanged += HandleGlobalDataChange;
         StateHub.OnOnlineUsersChanged += HandleOnlineUsersChanged;
+        StateHub.OnCallSignal += HandleCallSignal;
 
         if (use != null)
         {
@@ -521,8 +834,25 @@
             _heartbeatTimer = null;
         }
 
+        if (_callDurationTimer != null)
+        {
+            await _callDurationTimer.DisposeAsync();
+            _callDurationTimer = null;
+        }
+
         StateHub.OnDataChanged -= HandleGlobalDataChange;
         StateHub.OnOnlineUsersChanged -= HandleOnlineUsersChanged;
+        StateHub.OnCallSignal -= HandleCallSignal;
+
+        // Aktif arama varsa JS tarafını da temizle
+        if (_call.IsActive || _call.IsIncoming)
+        {
+            try { await JS.InvokeVoidAsync("liveChatRtc.cleanup"); }
+            catch { }
+        }
+
+        _dotNetRef?.Dispose();
+        _dotNetRef = null;
 
         if (use != null)
             await StateHub.UnregisterOnlineUser(use.Id);
@@ -757,6 +1087,7 @@
             await db.SaveChangesAsync(_cts.Token);
 
             _newMessage = string.Empty;
+            _emojiPickerOpen = false;
             _messages.Add(message);
 
             StateHub.ClearCache($"ChatManager_Friends_{use.Id}");
@@ -856,5 +1187,698 @@
         if (dt.Date == now.Date) return "Bugün";
         if (dt.Date == now.Date.AddDays(-1)) return "Dün";
         return dt.ToString("dd MMMM yyyy");
+    }
+
+    // ====================================================================
+    // EMOJI PICKER
+    // ====================================================================
+
+    private void ToggleEmojiPicker()
+    {
+        _emojiPickerOpen = !_emojiPickerOpen;
+        if (_emojiPickerOpen)
+            _shouldFocusInput = false; // picker açıkken focus çalmasın
+    }
+
+    private void InsertEmoji(string emoji)
+    {
+        if (string.IsNullOrEmpty(emoji)) return;
+        if ((_newMessage?.Length ?? 0) + emoji.Length > 2000) return;
+
+        _newMessage = (_newMessage ?? string.Empty) + emoji;
+        _shouldFocusInput = true;
+        StateHasChanged();
+    }
+
+    // ====================================================================
+    // WEBRTC: SESLİ / GÖRÜNTÜLÜ ARAMA
+    // ====================================================================
+
+    /// <summary>
+    /// WebRTC client JS modülünü tarayıcıya bir kere enjekte eder.
+    /// Mevcut dosya kültürü dış JS dosyası yerine eval üzerine kurulu, biz de o pattern'i izliyoruz.
+    /// </summary>
+    private async Task EnsureWebRtcScriptAsync()
+    {
+        if (_webRtcScriptInjected) return;
+
+        const string script = @"
+(function(){
+    if (window.liveChatRtc) return;
+
+    var pc = null;
+    var localStream = null;
+    var dotNetRef = null;
+    var pendingRemoteIce = [];
+    var isCaller = false;
+    var isVideo = false;
+
+    var rtcConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    function attachStream(elId, stream){
+        var el = document.getElementById(elId);
+        if (el && stream) { try { el.srcObject = stream; } catch(e){} }
+    }
+
+    function detachStream(elId){
+        var el = document.getElementById(elId);
+        if (el) { try { el.srcObject = null; } catch(e){} }
+    }
+
+    function safeSend(type, payload){
+        if (!dotNetRef) return;
+        try { dotNetRef.invokeMethodAsync('JsSignal', type, payload || ''); } catch(e){}
+    }
+
+    async function getMedia(video){
+        var constraints = { audio: true, video: video };
+        return await navigator.mediaDevices.getUserMedia(constraints);
+    }
+
+    function createPc(){
+        if (pc) { try { pc.close(); } catch(e){} pc = null; }
+        pc = new RTCPeerConnection(rtcConfig);
+
+        pc.onicecandidate = function(ev){
+            if (ev.candidate) {
+                safeSend('ice', JSON.stringify(ev.candidate));
+            }
+        };
+        pc.ontrack = function(ev){
+            var stream = (ev.streams && ev.streams[0]) ? ev.streams[0] : null;
+            if (!stream) {
+                stream = new MediaStream();
+                stream.addTrack(ev.track);
+            }
+            attachStream('remoteVideo', stream);
+            safeSend('connected', '');
+        };
+        pc.onconnectionstatechange = function(){
+            if (!pc) return;
+            var s = pc.connectionState;
+            if (s === 'failed' || s === 'disconnected' || s === 'closed') {
+                safeSend('peer-gone', s);
+            }
+        };
+
+        if (localStream) {
+            localStream.getTracks().forEach(function(t){ pc.addTrack(t, localStream); });
+        }
+    }
+
+    async function flushRemoteIce(){
+        while (pendingRemoteIce.length && pc && pc.remoteDescription) {
+            var c = pendingRemoteIce.shift();
+            try { await pc.addIceCandidate(c); } catch(e){}
+        }
+    }
+
+    window.liveChatRtc = {
+        setRef: function(ref){ dotNetRef = ref; },
+
+        // Arayan tarafı: medya al, offer üret ve geri döndür.
+        startCaller: async function(video){
+            isCaller = true; isVideo = !!video;
+            try {
+                localStream = await getMedia(isVideo);
+            } catch (err) {
+                safeSend('media-error', String(err && err.message ? err.message : err));
+                return;
+            }
+            attachStream('localVideo', localStream);
+            createPc();
+            var offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: isVideo });
+            await pc.setLocalDescription(offer);
+            safeSend('offer', JSON.stringify(offer));
+        },
+
+        // Karşı taraf offer'ı verince çağrılır.
+        acceptCallee: async function(video, offerJson){
+            isCaller = false; isVideo = !!video;
+            try {
+                localStream = await getMedia(isVideo);
+            } catch (err) {
+                safeSend('media-error', String(err && err.message ? err.message : err));
+                return;
+            }
+            attachStream('localVideo', localStream);
+            createPc();
+            var offer = JSON.parse(offerJson);
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            await flushRemoteIce();
+            var answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            safeSend('answer', JSON.stringify(answer));
+        },
+
+        // Arayan tarafa answer geldiğinde
+        applyAnswer: async function(answerJson){
+            if (!pc) return;
+            try {
+                var a = JSON.parse(answerJson);
+                await pc.setRemoteDescription(new RTCSessionDescription(a));
+                await flushRemoteIce();
+            } catch(e){}
+        },
+
+        // Karşı taraftan ICE candidate gelince
+        addRemoteIce: async function(iceJson){
+            try {
+                var c = new RTCIceCandidate(JSON.parse(iceJson));
+                if (pc && pc.remoteDescription) {
+                    await pc.addIceCandidate(c);
+                } else {
+                    pendingRemoteIce.push(c);
+                }
+            } catch(e){}
+        },
+
+        setMicMuted: function(muted){
+            if (!localStream) return;
+            localStream.getAudioTracks().forEach(function(t){ t.enabled = !muted; });
+        },
+
+        setCamMuted: function(muted){
+            if (!localStream) return;
+            localStream.getVideoTracks().forEach(function(t){ t.enabled = !muted; });
+        },
+
+        cleanup: function(){
+            // Önce handler'ları kaldır: pc.close() sonrasında onconnectionstatechange
+            // 'closed' fırlatıp tekrar peer-gone sinyali yollamasın (loop önleme).
+            try {
+                if (pc) {
+                    pc.onicecandidate = null;
+                    pc.ontrack = null;
+                    pc.onconnectionstatechange = null;
+                    pc.oniceconnectionstatechange = null;
+                }
+            } catch(e){}
+            try {
+                if (localStream) {
+                    localStream.getTracks().forEach(function(t){ try{ t.stop(); }catch(e){} });
+                }
+            } catch(e){}
+            localStream = null;
+            try { if (pc) pc.close(); } catch(e){}
+            pc = null;
+            pendingRemoteIce = [];
+            isCaller = false;
+            isVideo = false;
+            detachStream('remoteVideo');
+            detachStream('localVideo');
+        }
+    };
+})();";
+
+        await JS.InvokeVoidAsync("eval", script);
+        _webRtcScriptInjected = true;
+
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("liveChatRtc.setRef", _dotNetRef);
+    }
+
+    /// <summary>Aramayı başlat (caller tarafı).</summary>
+    private async Task StartCall(bool video)
+    {
+        if (use == null || _selectedFriend == null) return;
+        if (_call.IsActive || _call.IsIncoming) return;
+        if (!_onlineUsers.Contains(_selectedFriend.Id))
+        {
+            await JS.InvokeVoidAsync("eval", "alert('Kullanıcı çevrimdışı, arama yapılamaz.');");
+            return;
+        }
+
+        try
+        {
+            _call = new CallState
+            {
+                IsActive = true,
+                IsIncoming = false,
+                IsCaller = true,
+                IsVideo = video,
+                IsConnected = false,
+                PeerId = _selectedFriend.Id,
+                PeerUser = _selectedFriend
+            };
+            _hangingUp = false;
+            StateHasChanged();
+
+            await EnsureWebRtcScriptAsync();
+            // Ring sinyali — karşı tarafta gelen arama bildirimi açılır.
+            // Medya/offer üretimini accept gelene kadar bekletiyoruz, böylece
+            // karşı taraf modal'ı görmeden offer kaybolmaz.
+            await StateHub.SendCallSignal(use.Id, _selectedFriend.Id, "ring", video ? "video" : "audio");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] StartCall hata: {ex.Message}");
+            await HangUp();
+        }
+    }
+
+    /// <summary>Gelen aramayı kabul et (callee tarafı).</summary>
+    private async Task AcceptCall()
+    {
+        if (use == null || !_call.IsIncoming) return;
+
+        try
+        {
+            _call.IsActive = true;
+            _call.IsIncoming = false;
+            _hangingUp = false;
+            StateHasChanged();
+
+            await EnsureWebRtcScriptAsync();
+            // Caller'a kabul edildi bilgisi → caller offer'ı gönderecek
+            await StateHub.SendCallSignal(use.Id, _call.PeerId, "accept", string.Empty);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] AcceptCall hata: {ex.Message}");
+            await HangUp();
+        }
+    }
+
+    /// <summary>Gelen aramayı reddet.</summary>
+    private async Task RejectCall()
+    {
+        if (use == null || !_call.IsIncoming) return;
+
+        var caller = _call.PeerId;
+
+        try
+        {
+            await StateHub.SendCallSignal(use.Id, caller, "reject", string.Empty);
+        }
+        catch { }
+
+        ResetCallState();
+        StateHasChanged();
+
+        // Reddedilen aramayı CALLER tarafında yazıyoruz (caller mesajı yazar).
+        // Burada callee tarafıyız; caller "reject" sinyalini alınca kendi tarafında loglayacak.
+    }
+
+    /// <summary>
+    /// Aramayı sonlandır (her iki tarafta da temizler).
+    /// remote=true ise karşı taraftan gelen sinyalle çağrılmış demektir, geri hangup yollamayız (loop önleme).
+    /// reasonHint: "rejected", "busy", "missed", "canceled", "completed", null (otomatik).
+    /// </summary>
+    private async Task HangUp(bool remote = false, string? reasonHint = null)
+    {
+        // Reentrancy koruması — birden fazla hangup çağrısı (buton spam, peer-gone + manuel vs.) tek seferde çalışır.
+        if (_hangingUp) return;
+        _hangingUp = true;
+
+        // Snapshot — ResetCallState() öncesi gerekli alanları sakla
+        var peer = _call.PeerId;
+        var wasActive = _call.IsActive;
+        var wasIncoming = _call.IsIncoming;
+        var wasConnected = _call.IsConnected;
+        var wasCaller = _call.IsCaller;
+        var isVideo = _call.IsVideo;
+        var startedAt = _callStartedAt;
+
+        // Süre sayacı timer'ını DURDUR — DisposeAsync deadlock'a yol açabilir
+        // (callback InvokeAsync ile circuit'i bekletir), bu yüzden sync Dispose kullanıyoruz.
+        // _hangingUp=true zaten callback'in early-exit yapmasını sağlar.
+        if (_callDurationTimer != null)
+        {
+            try { _callDurationTimer.Dispose(); } catch { }
+            _callDurationTimer = null;
+        }
+
+        // JS tarafını temizle (peer-connection close + medya stream stop)
+        try
+        {
+            if (_webRtcScriptInjected)
+                await JS.InvokeVoidAsync("liveChatRtc.cleanup");
+        }
+        catch { }
+
+        // Karşı tarafa hangup sinyali (sadece biz başlattıysak, loop önleme)
+        if (!remote && (wasActive || wasIncoming) && use != null && peer != Guid.Empty)
+        {
+            try { await StateHub.SendCallSignal(use.Id, peer, "hangup", string.Empty); } catch { }
+        }
+
+        // ============= CHAT'E SİSTEM MESAJI YAZ =============
+        // Sadece CALLER yazar (her iki taraf yazıp duplicate olmasın).
+        if (use != null && peer != Guid.Empty && wasCaller)
+        {
+            string status;
+            int durationSec = 0;
+
+            if (wasConnected)
+            {
+                status = "completed";
+                var span = DateTime.UtcNow - startedAt;
+                durationSec = Math.Max(0, (int)span.TotalSeconds);
+            }
+            else if (!string.IsNullOrEmpty(reasonHint))
+            {
+                status = reasonHint!;
+            }
+            else
+            {
+                // Caller'dı, bağlantı kurulmadan kapandı:
+                // - remote=true (peer-gone vb.): missed
+                // - remote=false: canceled (caller iptal etti)
+                status = remote ? "missed" : "canceled";
+            }
+
+            _ = WriteCallSystemMessageAsync(peer, isVideo, status, durationSec);
+        }
+        // ====================================================
+
+        ResetCallState();
+        StateHasChanged();
+        _hangingUp = false;
+    }
+
+    private void ResetCallState()
+    {
+        _call = new CallState();
+        _callStartedAt = default;
+    }
+
+    /// <summary>
+    /// Çağrı sonucu için chat'e otomatik sistem mesajı yazar.
+    /// Format (decrypt sonrası): "[CALL]type|status|durationSec"
+    ///   type: video | audio
+    ///   status: completed | missed | canceled | rejected | busy
+    ///   durationSec: tamamlandı ise saniye, diğer durumlarda 0
+    /// Sadece CALLER tarafı tarafından çağrılır (her iki taraf yazıp duplicate olmasın).
+    /// </summary>
+    private async Task WriteCallSystemMessageAsync(Guid peerId, bool isVideo, string status, int durationSec)
+    {
+        if (use == null || peerId == Guid.Empty) return;
+        if (_disposed) return;
+
+        try
+        {
+            await _writeLock.WaitAsync(_cts.Token);
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+                var type = isVideo ? "video" : "audio";
+                var payload = $"{CALL_MSG_PREFIX}{type}|{status}|{durationSec}";
+
+                var message = new ChatMessage
+                {
+                    Id = Guid.NewGuid(),
+                    SenderId = use.Id,
+                    ReceiverId = peerId,
+                    Content = GlobalSecurityProvider.Encrypt(payload),
+                    Timestamp = DateTime.UtcNow,
+                    IsRead = false,
+                    IsDelivered = false,
+                    IsDeletedBySender = false,
+                    IsDeletedBySenderAndReceiver = false
+                };
+
+                db.ChatMessage.Add(message);
+                await db.SaveChangesAsync(_cts.Token);
+
+                // Açık olan sohbette ise listeye de ekle (kendi tarafta anlık göster)
+                if (_selectedFriend != null && _selectedFriend.Id == peerId)
+                {
+                    _messages.Add(message);
+                    _shouldScrollToBottom = true;
+                    await InvokeAsync(StateHasChanged);
+                }
+
+                StateHub.ClearCache($"ChatManager_Friends_{use.Id}");
+                StateHub.ClearCache($"ChatManager_Friends_{peerId}");
+                // Karşı tarafa da bildir → RefreshMessages tetiklenir, sistem mesajı orada da belirir
+                await StateHub.NotifyDataChanged("ChatMessage");
+            }
+            finally
+            {
+                _writeLock.Release();
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] WriteCallSystemMessage hata: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Decrypt edilmiş mesaj içeriğini parse eder.
+    /// CALL_MSG_PREFIX ile başlıyorsa CallMessageInfo döner, değilse null.
+    /// Format: "[CALL]type|status|durationSec"
+    /// </summary>
+    private CallMessageInfo? ParseCallMessage(string? decryptedContent)
+    {
+        if (string.IsNullOrEmpty(decryptedContent)) return null;
+        if (!decryptedContent.StartsWith(CALL_MSG_PREFIX, StringComparison.Ordinal)) return null;
+
+        try
+        {
+            var body = decryptedContent.Substring(CALL_MSG_PREFIX.Length);
+            var parts = body.Split('|');
+            if (parts.Length < 2) return null;
+
+            var type = parts[0];
+            var status = parts[1];
+            var dur = 0;
+            if (parts.Length >= 3) int.TryParse(parts[2], out dur);
+
+            return new CallMessageInfo
+            {
+                IsVideo = string.Equals(type, "video", StringComparison.OrdinalIgnoreCase),
+                Status = status,
+                DurationSec = dur
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Çağrı sistem mesajı için kullanıcının göreceği metni üretir.
+    /// </summary>
+    private string BuildCallStatusText(CallMessageInfo info, bool isMine)
+    {
+        var typeLabel = info.IsVideo ? "Görüntülü arama" : "Sesli arama";
+
+        return info.Status switch
+        {
+            "completed" => $"{typeLabel} • {FormatDurationShort(info.DurationSec)}",
+            "missed" => isMine ? $"{typeLabel} cevapsız" : $"Cevapsız {typeLabel.ToLower()}",
+            "rejected" => isMine ? $"{typeLabel} reddedildi" : $"{typeLabel} reddedildi",
+            "busy" => $"{typeLabel} • Meşgul",
+            "canceled" => isMine ? $"{typeLabel} iptal edildi" : $"Cevapsız {typeLabel.ToLower()}",
+            _ => typeLabel
+        };
+    }
+
+    private string FormatDurationShort(int seconds)
+    {
+        if (seconds <= 0) return "0:00";
+        var t = TimeSpan.FromSeconds(seconds);
+        return t.TotalHours >= 1
+            ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}"
+            : $"{t.Minutes}:{t.Seconds:00}";
+    }
+
+    private sealed class CallMessageInfo
+    {
+        public bool IsVideo { get; set; }
+        public string Status { get; set; } = string.Empty; // completed | missed | rejected | canceled | busy
+        public int DurationSec { get; set; }
+    }
+
+    private async Task ToggleMic()
+    {
+        _call.MicMuted = !_call.MicMuted;
+        try { await JS.InvokeVoidAsync("liveChatRtc.setMicMuted", _call.MicMuted); } catch { }
+        StateHasChanged();
+    }
+
+    private async Task ToggleCam()
+    {
+        _call.CamMuted = !_call.CamMuted;
+        try { await JS.InvokeVoidAsync("liveChatRtc.setCamMuted", _call.CamMuted); } catch { }
+        StateHasChanged();
+    }
+
+    private string FormatCallDuration()
+    {
+        if (!_call.IsConnected) return string.Empty;
+        var span = DateTime.UtcNow - _callStartedAt;
+        if (span.TotalSeconds < 0) span = TimeSpan.Zero;
+        return span.TotalHours >= 1
+            ? span.ToString(@"h\:mm\:ss")
+            : span.ToString(@"m\:ss");
+    }
+
+    /// <summary>
+    /// GlobalStateHub'tan gelen arama sinyallerini işle.
+    /// Component sadece kendisine gelen sinyalleri (toUserId == use.Id) dikkate alır.
+    /// </summary>
+    private async Task HandleCallSignal(Guid fromUserId, Guid toUserId, string signalType, string payload)
+    {
+        if (_disposed || !_isInitialized || use == null) return;
+        if (toUserId != use.Id) return;            // bu bizim için değil
+        if (fromUserId == use.Id) return;           // kendi yankımız (multi-tab vs.)
+
+        await InvokeAsync(async () =>
+        {
+            try
+            {
+                switch (signalType)
+                {
+                    case "ring":
+                        // Zaten meşgulsek otomatik meşgul cevabı dön
+                        if (_call.IsActive || _call.IsIncoming)
+                        {
+                            await StateHub.SendCallSignal(use.Id, fromUserId, "busy", string.Empty);
+                            return;
+                        }
+                        Users? caller = _friends.FirstOrDefault(f => f.Id == fromUserId);
+                        if (caller == null)
+                        {
+                            // Arkadaş listesinde yoksa DB'den çek
+                            try
+                            {
+                                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                                caller = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == fromUserId, _cts.Token);
+                            }
+                            catch { }
+                        }
+                        _call = new CallState
+                        {
+                            IsIncoming = true,
+                            IsActive = false,
+                            IsCaller = false,
+                            IsVideo = string.Equals(payload, "video", StringComparison.OrdinalIgnoreCase),
+                            PeerId = fromUserId,
+                            PeerUser = caller
+                        };
+                        StateHasChanged();
+                        try { await JS.InvokeVoidAsync("eval", "try{new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=').play();}catch(e){}"); } catch { }
+                        break;
+
+                    case "accept":
+                        // Caller tarafıyız, karşı taraf kabul etti → medya al + offer üret
+                        if (_call.IsActive && _call.IsCaller && fromUserId == _call.PeerId)
+                        {
+                            await EnsureWebRtcScriptAsync();
+                            await JS.InvokeVoidAsync("liveChatRtc.startCaller", _call.IsVideo);
+                        }
+                        break;
+
+                    case "reject":
+                    case "busy":
+                        if (fromUserId == _call.PeerId)
+                        {
+                            await JS.InvokeVoidAsync("eval", $"alert('Arama {(signalType == "busy" ? "meşgul" : "reddedildi")}.');");
+                            await HangUp(remote: true, reasonHint: signalType == "busy" ? "busy" : "rejected");
+                        }
+                        break;
+
+                    case "hangup":
+                    case "peer-gone":
+                        if (fromUserId == _call.PeerId)
+                            await HangUp(remote: true);
+                        break;
+
+                    case "offer":
+                        // Callee tarafıyız: kabul ettikten sonra caller'dan offer geldi
+                        if (_call.IsActive && !_call.IsCaller && fromUserId == _call.PeerId)
+                        {
+                            await EnsureWebRtcScriptAsync();
+                            await JS.InvokeVoidAsync("liveChatRtc.acceptCallee", _call.IsVideo, payload);
+                        }
+                        break;
+
+                    case "answer":
+                        // Caller tarafıyız: callee'den answer geldi
+                        if (_call.IsActive && _call.IsCaller && fromUserId == _call.PeerId)
+                        {
+                            await JS.InvokeVoidAsync("liveChatRtc.applyAnswer", payload);
+                        }
+                        break;
+
+                    case "ice":
+                        if (_call.IsActive && fromUserId == _call.PeerId)
+                        {
+                            await JS.InvokeVoidAsync("liveChatRtc.addRemoteIce", payload);
+                        }
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[{PAGE}] HandleCallSignal({signalType}) hata: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>JS tarafından çağrılır: WebRTC katmanından sinyal akışı.</summary>
+    [JSInvokable]
+    public async Task JsSignal(string type, string payload)
+    {
+        if (_disposed || use == null) return;
+        if (_call.PeerId == Guid.Empty) return;
+
+        try
+        {
+            switch (type)
+            {
+                case "offer":
+                case "answer":
+                case "ice":
+                    await StateHub.SendCallSignal(use.Id, _call.PeerId, type, payload ?? string.Empty);
+                    break;
+
+                case "connected":
+                    if (!_call.IsConnected)
+                    {
+                        _call.IsConnected = true;
+                        _callStartedAt = DateTime.UtcNow;
+                        _callDurationTimer = new System.Threading.Timer(async _ =>
+                        {
+                            try
+                            {
+                                if (_disposed || !_call.IsConnected) return;
+                                await InvokeAsync(StateHasChanged);
+                            }
+                            catch { }
+                        }, null, 1000, 1000);
+                        await InvokeAsync(StateHasChanged);
+                    }
+                    break;
+
+                case "media-error":
+                    await InvokeAsync(async () =>
+                    {
+                        var safe = (payload ?? string.Empty).Replace("'", " ").Replace("\r", " ").Replace("\n", " ");
+                        await JS.InvokeVoidAsync("eval", $"alert('Mikrofon/kamera erişimi reddedildi veya bulunamadı: {safe}');");
+                        await HangUp(remote: false, reasonHint: "canceled");
+                    });
+                    break;
+
+                case "peer-gone":
+                    await InvokeAsync(() => HangUp(remote: true));
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{PAGE}] JsSignal({type}) hata: {ex.Message}");
+        }
     }
 }

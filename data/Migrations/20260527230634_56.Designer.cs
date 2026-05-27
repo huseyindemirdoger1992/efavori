@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260527230634_56")]
+    partial class _56
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1413,9 +1416,6 @@ namespace data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("DeliveryReceiverEmail")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1439,9 +1439,6 @@ namespace data.Migrations
                     b.Property<string>("FullAddress")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
 
                     b.Property<string>("State")
                         .IsRequired()
@@ -2549,30 +2546,6 @@ namespace data.Migrations
                     b.Navigation("IsDeleted");
 
                     b.Navigation("ProfileCoverGallery");
-                });
-
-            modelBuilder.Entity("data.UserAddressMethod", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("UserAddressMethodId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("UserAddressMethodId");
-
-                            b1.ToTable("UserAddressMethod");
-
-                            b1.WithOwner()
-                                .HasForeignKey("UserAddressMethodId");
-                        });
-
-                    b.Navigation("IsDeleted");
                 });
 
             modelBuilder.Entity("data.UserPaymentMethod", b =>

@@ -54,6 +54,8 @@ namespace data
         public DbSet<LoginTry> LoginTry { get; set; } = default!;
         public DbSet<UserShortcuts> UserShortcuts { get; set; } = default!;
         public DbSet<UsersRoles> UsersRoles { get; set; } = default!;
+        public DbSet<UserPaymentMethod> UserPaymentMethod { get; set; } = default!;
+        public DbSet<UserAddressMethod> UserAddressMethod { get; set; } = default!;
 
         // Languages
         public DbSet<Languages> Languages { get; set; } = default!;
@@ -79,8 +81,8 @@ namespace data
 
         // Products & Stores
         public DbSet<Store> Stores { get; set; } = default!;
-        public DbSet<Pricing> Pricing { get; set; } = default!;
         public DbSet<Product> Product { get; set; } = default!;
+        public DbSet<Pricing> Pricing { get; set; } = default!;
 
 
         //---------------- Constructor'lar ----------------//

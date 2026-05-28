@@ -1,13 +1,15 @@
 ﻿@* ============================================================
-   ThisPageIsBeingPrepared.razor
+   UserAddress.razor
    ─────────────────────────────────────────────────────────────
    ✅ GlobalStateHub — anlık broadcast, debounce, RAM cache
-   ✅ GlobalSecurityProvider — Country/State/Cities/RadioButton şifreli
+   ✅ GlobalSecurityProvider — Country/State/Cities şifreli
    ✅ TakeLogs — tüm CRUD aksiyonları loglanır
    ✅ Ayrı Ekle / Düzenle / Sil modalleri
    ✅ Seçilenleri Sil → önce onay modali (sayı + liste)
    ✅ 5'li sayfalama
-   ✅ Basit, performanslı, kötü sunucuda bile binlerce kullanıcıya cevap
+   ✅ Soft Delete (IsDeleted owned entity)
+   ✅ IsDefault tekilliği — kullanıcı başına tek varsayılan adres
+   ✅ Model: UserAddressMethod
    ============================================================ *@
 
 @using api
@@ -24,7 +26,6 @@
 @inject IJSRuntime JS
 @inject TakeLogs Logger
 
-@namespace razor._Shared
 @implements IAsyncDisposable
 
 <Notification @ref="_notificationRef" />
@@ -33,9 +34,9 @@
 @{
     var roads = new List<(string icon, string Name, string Url)>
     {
-        ("fa fa-home",     "Ana Sayfa",  "/"),
-        ("fa fa-table",    "Kayıtlar",   "javascript:void(0)"),
-        ("fa fa-list-alt", PAGE_TITLE,   "javascript:void(0)")
+        ("fa fa-home",        "Ana Sayfa",    "/"),
+        ("fa fa-map-marker",  "Adresler",     "javascript:void(0)"),
+        ("fa fa-list-alt",    PAGE_TITLE,     "javascript:void(0)")
     };
 }
 <razor._Shared.BreadCrumbLinksUrl roads="roads" />
@@ -45,7 +46,7 @@
 
     <button class="btn btn-light btn-sm" @onclick="OpenAddModal" disabled="@_isLoading">
         <i class="fa fa-plus me-sm-1"></i>
-        <span class="d-none d-sm-inline">Yeni Kayıt</span>
+        <span class="d-none d-sm-inline">Yeni Adres</span>
     </button>
 
     @if (_selectedIds.Any())
@@ -69,11 +70,11 @@
 
 @* ─── Arama ─── *@
 <div class="input-group input-group-sm mb-2">
-    <span class="input-group-text bg-transparent border-secondary text-white">
+    <span class="input-group-text bg-transparent text-white">
         <i class="fa fa-search"></i>
     </span>
     <input type="text"
-           class="form-control bg-transparent text-light border-secondary"
+           class="form-control bg-transparent text-light"
            placeholder="Ara"
            value="@_searchTerm"
            @oninput="OnSearchInput" />
@@ -112,11 +113,13 @@ else
                                @onchange="ToggleSelectAll" />
                     </th>
                     <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                                        <th class="text-center">Varsayılan</th>
+                    <th>Adres Adı</th>
+                    <th>Alıcı</th>
                     <th>Ülke</th>
-                    <th>İl</th>
-                    <th>Şehir</th>
+                    <th>İl / Şehir</th>
+                    <th class="d-none d-lg-table-cell">Tür</th>
                     <th class="d-none d-md-table-cell">Tarih</th>
-                    <th>Kontroller</th>
                     <th class="text-end">İşlemler</th>
                 </tr>
             </thead>
@@ -133,20 +136,31 @@ else
                                    checked="@isSelected"
                                    @onchange="() => ToggleRowSelection(item.Id)" />
                         </td>
-                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
-                        <td><div class="fw-semibold">@(Decrypt(item.Country))</div></td>
-                        <td><div class="fw-semibold">@(Decrypt(item.State))</div></td>
-                        <td><div class="fw-semibold">@(Decrypt(item.Cities))</div></td>
-                        <td class="d-none d-md-table-cell text-nowrap">
-                            <div class="small">@item.SelectDateTime.ToString("dd.MM.yyyy") | @item.SelectDateTime.ToString("HH:mm")</div>
+                        <td class="d-none d-md-table-cell text-light small">@(rowNo++)</td>
+                        <td class="text-center">
+                            <i class="fa @(item.IsDefault ? "fa-star text-warning" : "fa-star-o text-light")"
+                               title="@(item.IsDefault ? "Varsayılan Adres" : "")"></i>
                         </td>
                         <td>
-                            <span class="me-2" title="Kayan Kontrol">
-                                <i class="fa @(item.CheckSliding == true ? "fa-toggle-on text-success" : "fa-toggle-off text-secondary")"></i>
-                            </span>
-                            <span title="İşaretli">
-                                <i class="fa @(item.CheckMarked == true ? "fa-check-square text-info" : "fa-square-o text-secondary")"></i>
-                            </span>
+                            <div class="fw-semibold">@item.AddressName</div>
+                        </td>
+                        <td>
+                            <div class="small">@item.DeliveryReceiverFirstName @item.DeliveryReceiverLastName</div>
+                            <div class="small text-light">@item.DeliveryReceiverPhoneCountryCode @item.DeliveryReceiverPhoneNumber</div>
+                            <div class="small text-warning">@item.DeliveryReceiverEmail</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@(Decrypt(item.Country))</div>
+                        </td>
+                        <td>
+                            <div class="small">@(Decrypt(item.State))</div>
+                            <div class="small text-light">@(Decrypt(item.Cities))</div>
+                        </td>
+                        <td class="d-none d-lg-table-cell">
+                            <span class="badge bg-primary small">@item.AddressType</span>
+                        </td>
+                        <td class="d-none d-md-table-cell text-nowrap">
+                            <div class="small">@item.CreatedDate.ToString("dd.MM.yyyy") | @item.CreatedDate.ToString("HH:mm")</div>
                         </td>
                         <td class="text-end text-nowrap">
                             <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OpenEditModal(item)" title="Düzenle">
@@ -216,16 +230,14 @@ else
 
             <div class="modal-header border-bottom border-secondary py-2">
                 <h6 class="modal-title text-white mb-0">
-                    <i class="fa fa-plus me-1"></i>Yeni Kayıt
+                    <i class="fa fa-plus me-1"></i>Yeni Adres Ekle
                 </h6>
                 <div class="btn-group shadow-sm border border-secondary rounded" role="group">
-                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam     Ekran">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
                         <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
                     </button>
-
                     <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
-
-                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
                         <i class="fa fa-times" style="font-size: 0.95rem;"></i>
                     </button>
                 </div>
@@ -235,6 +247,85 @@ else
                 @if (_addModel != null)
                 {
                     <div class="row g-3">
+
+                        @* ── Adres Bilgileri ── *@
+                        <div class="col-12">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-bookmark me-1"></i>Adres Bilgileri</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Adres Adı</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Ev Adresim, İş Adresim..."
+                                   @bind="_addModel.AddressName" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>Adres Türü</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_addModel.AddressType">
+                                <option value="">Tür Seçiniz</option>
+                                <option value="Individual">Bireysel</option>
+                                <option value="Corporate">Kurumsal</option>
+                            </select>
+                        </div>
+
+                        @* ── Alıcı Bilgileri ── *@
+                        <div class="col-12 mt-2">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-user me-1"></i>Alıcı Bilgileri</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">Ad</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Alıcı adı"
+                                   @bind="_addModel.DeliveryReceiverFirstName" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">Soyad</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Alıcı soyadı"
+                                   @bind="_addModel.DeliveryReceiverLastName" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-envelope me-1"></i>E-posta</label>
+                            <input type="email"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="ornek@mail.com"
+                                   @bind="_addModel.DeliveryReceiverEmail" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-phone me-1"></i>Telefon</label>
+                            <div class="input-group input-group-sm">
+                                <select class="form-select bg-dark text-white border-secondary"
+                                        style="max-width:160px;"
+                                        @bind="_addModel.DeliveryReceiverPhoneCountryCode">
+                                    @foreach (var c in _countries)
+                                    {
+                                        <option value="@c.phonecode">@c.name @c.phonecode</option>
+                                    }
+                                </select>
+                                <input type="text"
+                                       class="form-control bg-dark text-white border-secondary"
+                                       placeholder="5XX XXX XX XX"
+                                       @bind="_addModel.DeliveryReceiverPhoneNumber" />
+                            </div>
+                        </div>
+
+                        @* ── Konum Bilgileri ── *@
+                        <div class="col-12 mt-2">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-map-marker me-1"></i>Konum Bilgileri</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
+                        </div>
+
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-flag me-1"></i>Ülke</label>
                             <select class="form-select form-select-sm bg-dark text-white border-secondary"
@@ -276,46 +367,30 @@ else
                             </select>
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-white-50 small"><i class="fa fa-calendar me-1"></i>Tarih</label>
-                            <input type="datetime-local"
-                                   class="form-control form-control-sm bg-dark text-white border-secondary"
-                                   @bind="_addModel.SelectDateTime" />
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-home me-1"></i>Açık Adres</label>
+                            <textarea class="form-control form-control-sm bg-dark text-white border-secondary"
+                                      rows="3"
+                                      placeholder="Mahalle, sokak, bina no, daire no..."
+                                      @bind="_addModel.FullAddress"></textarea>
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-white-50 small"><i class="fa fa-dot-circle-o me-1"></i>Seçenek</label>
-                            <div class="d-flex gap-4 mt-1">
-                                <div class="form-check">
-                                    <input type="radio" class="form-check-input" id="add_rb_A" name="addRadio"
-                                           checked="@(_addModel.RadioButton == "A")"
-                                           @onchange="@(() => _addModel.RadioButton = "A")" />
-                                    <label class="form-check-label text-white-50" for="add_rb_A">Seçenek A</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="radio" class="form-check-input" id="add_rb_B" name="addRadio"
-                                           checked="@(_addModel.RadioButton == "B")"
-                                           @onchange="@(() => _addModel.RadioButton = "B")" />
-                                    <label class="form-check-label text-white-50" for="add_rb_B">Seçenek B</label>
-                                </div>
-                            </div>
+                        @* ── Ayarlar ── *@
+                        <div class="col-12 mt-2">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-cog me-1"></i>Ayarlar</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
                         </div>
 
-                        <div class="col-12 col-sm-6">
+                        <div class="col-12">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch"
-                                       id="add_chkSliding" @bind="_addModel.CheckSliding" />
-                                <label class="form-check-label text-white-50" for="add_chkSliding">Kayan Kontrol</label>
+                                       id="add_chkDefault" @bind="_addModel.IsDefault" />
+                                <label class="form-check-label text-white-50" for="add_chkDefault">
+                                    <i class="fa fa-star me-1 text-warning"></i>Varsayılan adres olarak ayarla
+                                </label>
                             </div>
                         </div>
 
-                        <div class="col-12 col-sm-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       id="add_chkMarked" @bind="_addModel.CheckMarked" />
-                                <label class="form-check-label text-white-50" for="add_chkMarked">İşaretli</label>
-                            </div>
-                        </div>
                     </div>
                 }
             </div>
@@ -332,7 +407,7 @@ else
                     }
                     else
                     {
-                        <i class="fa fa-plus me-1"></i><span>Yeni Kayıt Ekle</span>
+                        <i class="fa fa-plus me-1"></i><span>Adres Ekle</span>
                     }
                 </button>
             </div>
@@ -350,16 +425,14 @@ else
 
             <div class="modal-header border-bottom border-secondary py-2">
                 <h6 class="modal-title text-white mb-0">
-                    <i class="fa fa-pencil me-1"></i>Kayıt Düzenle
+                    <i class="fa fa-pencil me-1"></i>Adres Düzenle
                 </h6>
                 <div class="btn-group shadow-sm border border-secondary rounded" role="group">
-                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam     Ekran">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
                         <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
                     </button>
-
                     <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
-
-                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
                         <i class="fa fa-times" style="font-size: 0.95rem;"></i>
                     </button>
                 </div>
@@ -369,6 +442,81 @@ else
                 @if (_editModel != null)
                 {
                     <div class="row g-3">
+
+                        @* ── Adres Bilgileri ── *@
+                        <div class="col-12">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-bookmark me-1"></i>Adres Bilgileri</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Adres Adı</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_editModel.AddressName" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>Adres Türü</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_editModel.AddressType">
+                                <option value="">Tür Seçiniz</option>
+                                <option value="Individual">Bireysel</option>
+                                <option value="Corporate">Kurumsal</option>
+                            </select>
+                        </div>
+
+                        @* ── Alıcı Bilgileri ── *@
+                        <div class="col-12 mt-2">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-user me-1"></i>Alıcı Bilgileri</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">Ad</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_editModel.DeliveryReceiverFirstName" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">Soyad</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_editModel.DeliveryReceiverLastName" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-envelope me-1"></i>E-posta</label>
+                            <input type="email"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_editModel.DeliveryReceiverEmail" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-phone me-1"></i>Telefon</label>
+                            <div class="input-group input-group-sm">
+                                <select class="form-select bg-dark text-white border-secondary"
+                                        style="max-width:160px;"
+                                        @bind="_editModel.DeliveryReceiverPhoneCountryCode">
+                                    @foreach (var c in _countries)
+                                    {
+                                        <option value="@c.phonecode">@c.name @c.phonecode</option>
+                                    }
+                                </select>
+
+                                <input type="text"
+                                       class="form-control bg-dark text-white border-secondary"
+                                       @bind="_editModel.DeliveryReceiverPhoneNumber" />
+                            </div>
+                        </div>
+
+                        @* ── Konum Bilgileri ── *@
+                        <div class="col-12 mt-2">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-map-marker me-1"></i>Konum Bilgileri</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
+                        </div>
+
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-flag me-1"></i>Ülke</label>
                             <select class="form-select form-select-sm bg-dark text-white border-secondary"
@@ -410,46 +558,29 @@ else
                             </select>
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-white-50 small"><i class="fa fa-calendar me-1"></i>Tarih</label>
-                            <input type="datetime-local"
-                                   class="form-control form-control-sm bg-dark text-white border-secondary"
-                                   @bind="_editModel.SelectDateTime" />
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-home me-1"></i>Açık Adres</label>
+                            <textarea class="form-control form-control-sm bg-dark text-white border-secondary"
+                                      rows="3"
+                                      @bind="_editModel.FullAddress"></textarea>
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <label class="form-label text-white-50 small"><i class="fa fa-dot-circle-o me-1"></i>Seçenek</label>
-                            <div class="d-flex gap-4 mt-1">
-                                <div class="form-check">
-                                    <input type="radio" class="form-check-input" id="edit_rb_A" name="editRadio"
-                                           checked="@(_editModel.RadioButton == "A")"
-                                           @onchange="@(() => _editModel.RadioButton = "A")" />
-                                    <label class="form-check-label text-white-50" for="edit_rb_A">Seçenek A</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="radio" class="form-check-input" id="edit_rb_B" name="editRadio"
-                                           checked="@(_editModel.RadioButton == "B")"
-                                           @onchange="@(() => _editModel.RadioButton = "B")" />
-                                    <label class="form-check-label text-white-50" for="edit_rb_B">Seçenek B</label>
-                                </div>
-                            </div>
+                        @* ── Ayarlar ── *@
+                        <div class="col-12 mt-2">
+                            <h6 class="text-white-50 small mb-0"><i class="fa fa-cog me-1"></i>Ayarlar</h6>
+                            <hr class="border-secondary mt-1 mb-2" />
                         </div>
 
-                        <div class="col-12 col-sm-6">
+                        <div class="col-12">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch"
-                                       id="edit_chkSliding" @bind="_editModel.CheckSliding" />
-                                <label class="form-check-label text-white-50" for="edit_chkSliding">Kayan Kontrol</label>
+                                       id="edit_chkDefault" @bind="_editModel.IsDefault" />
+                                <label class="form-check-label text-white-50" for="edit_chkDefault">
+                                    <i class="fa fa-star me-1 text-warning"></i>Varsayılan adres olarak ayarla
+                                </label>
                             </div>
                         </div>
 
-                        <div class="col-12 col-sm-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox"
-                                       id="edit_chkMarked" @bind="_editModel.CheckMarked" />
-                                <label class="form-check-label text-white-50" for="edit_chkMarked">İşaretli</label>
-                            </div>
-                        </div>
                     </div>
                 }
             </div>
@@ -487,23 +618,31 @@ else
                     <i class="fa fa-trash-o me-2"></i>Silme İşlemi
                 </h6>
                 <div class="btn-group shadow-sm border border-secondary rounded" role="group">
-                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam     Ekran">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
                         <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
                     </button>
-
                     <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
-
-                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
                         <i class="fa fa-times" style="font-size: 0.95rem;"></i>
                     </button>
                 </div>
             </div>
 
             <div class="modal-body">
-                <p class="text-white-50 small mb-3">Bu kaydı silmek istediğinizden emin misiniz?</p>
+                <p class="text-white-50 small mb-3">Bu adresi silmek istediğinizden emin misiniz?</p>
                 @if (_deleteTarget != null)
                 {
                     <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Adres Adı</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.AddressName ?? "—")" disabled />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-user me-1"></i>Alıcı</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@($"{_deleteTarget.DeliveryReceiverFirstName} {_deleteTarget.DeliveryReceiverLastName}".Trim())" disabled />
+                        </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-flag me-1"></i>Ülke</label>
                             <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
@@ -545,7 +684,6 @@ else
 
 @* ═══════════════════════════════════════════
    MODAL — Toplu Sil Onayı (Ayrı Modal)
-   Seçilen kayıtların sayısı ve listesi gösterilir
    ═══════════════════════════════════════════ *@
 <div class="modal fade" id="BulkDeleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
@@ -558,13 +696,11 @@ else
                     Toplu Silme — @_selectedIds.Count kayıt seçildi
                 </h6>
                 <div class="btn-group shadow-sm border border-secondary rounded" role="group">
-                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam     Ekran">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
                         <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
                     </button>
-
                     <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
-
-                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
                         <i class="fa fa-times" style="font-size: 0.95rem;"></i>
                     </button>
                 </div>
@@ -573,7 +709,7 @@ else
             <div class="modal-body">
                 <p class="text-warning small mb-3">
                     <i class="fa fa-exclamation-triangle me-1"></i>
-                    Aşağıdaki <strong>@_selectedIds.Count</strong> kayıt kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                    Aşağıdaki <strong>@_selectedIds.Count</strong> adres kalıcı olarak silinecek. Bu işlem geri alınamaz.
                 </p>
 
                 @if (_bulkDeletePreview.Any())
@@ -583,9 +719,10 @@ else
                             <thead>
                                 <tr>
                                     <th class="small">#</th>
+                                    <th class="small">Adres Adı</th>
+                                    <th class="small">Alıcı</th>
                                     <th class="small">Ülke</th>
-                                    <th class="small">İl</th>
-                                    <th class="small">Şehir</th>
+                                    <th class="small">İl / Şehir</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -595,10 +732,11 @@ else
                                 @foreach (var item in _bulkDeletePreview)
                                 {
                                     <tr>
-                                        <td class="small text-secondary">@(n++)</td>
+                                        <td class="small text-light">@(n++)</td>
+                                        <td class="small">@(item.AddressName ?? "—")</td>
+                                        <td class="small">@($"{item.DeliveryReceiverFirstName} {item.DeliveryReceiverLastName}".Trim())</td>
                                         <td class="small">@(Decrypt(item.Country) ?? "—")</td>
-                                        <td class="small">@(Decrypt(item.State) ?? "—")</td>
-                                        <td class="small">@(Decrypt(item.Cities) ?? "—")</td>
+                                        <td class="small">@(Decrypt(item.State) ?? "—") / @(Decrypt(item.Cities) ?? "—")</td>
                                     </tr>
                                 }
                             </tbody>
@@ -620,7 +758,7 @@ else
                     }
                     else
                     {
-                        <i class="fa fa-trash me-1"></i><span>@_selectedIds.Count Kaydı Sil</span>
+                        <i class="fa fa-trash me-1"></i><span>@_selectedIds.Count Adresi Sil</span>
                     }
                 </button>
             </div>
@@ -634,9 +772,9 @@ else
 @code {
 
     // ─── Sabitler ────────────────────────────────────────────────
-    private const string PAGE_TITLE = "Kayıt Yönetimi";
-    private const string ENTITY_NAME = "ThisPageIsBeingPrepared";
-    private const string CACHE_KEY = "ThisPageIsBeingPrepared_List";
+    private const string PAGE_TITLE = "Adres Yönetimi";
+    private const string ENTITY_NAME = "UserAddress";
+    private const string CACHE_KEY = "UserAddress_List";
     private const int SEARCH_DELAY = 500;
     private const int PAGE_SIZE = 5;
 
@@ -661,35 +799,35 @@ else
     private Notification? _notificationRef;
 
     // ─── Veriler ──────────────────────────────────────────────────
-    private List<TryTableSingle> _allItems = new();
+    private List<UserAddressMethod> _allItems = new();
     private List<Country> _countries = new();
 
     // ─── Sayfalama ────────────────────────────────────────────────
     private int _currentPage = 1;
     private int _totalPages = 1;
-    private List<TryTableSingle> _pagedItems = new();
+    private List<UserAddressMethod> _pagedItems = new();
 
     // ─── Ekle modal state ─────────────────────────────────────────
-    private TryTableSingle? _addModel;
+    private UserAddressMethod? _addModel;
     private int _addCountryId;
     private int _addStateId;
     private List<States> _addStates = new();
     private List<Cities> _addCities = new();
 
     // ─── Düzenle modal state ──────────────────────────────────────
-    private TryTableSingle? _editModel;
+    private UserAddressMethod? _editModel;
     private int _editCountryId;
     private int _editStateId;
     private List<States> _editStates = new();
     private List<Cities> _editCities = new();
 
     // ─── Sil modal state ──────────────────────────────────────────
-    private TryTableSingle? _deleteTarget;
+    private UserAddressMethod? _deleteTarget;
 
     // ─── Toplu Sil state ──────────────────────────────────────────
     private readonly HashSet<Guid> _selectedIds = new();
     private bool _allSelected;
-    private List<TryTableSingle> _bulkDeletePreview = new();
+    private List<UserAddressMethod> _bulkDeletePreview = new();
 
     // ══════════════════════════════════════════════════════════════
     // YARDIMCI: Şifre çöz (null-safe, hata durumunda orijinal döner)
@@ -713,6 +851,9 @@ else
         _isInitialized = true;
 
         StateHub.OnDataChanged += HandleDataChanged;
+
+        // use parametresi gelmeden veri çekilmesin (UserId zorunlu)
+        if (use == null) return;
 
         await Task.WhenAll(
             LoadDataAsync(_searchTerm),
@@ -755,6 +896,8 @@ else
 
     private async Task LoadDataAsync(string? search)
     {
+        if (use == null) return;
+
         _searchCts?.Cancel();
         _searchCts?.Dispose();
         _searchCts = new CancellationTokenSource();
@@ -771,14 +914,19 @@ else
             StateHasChanged();
 
             // Arama varsa cache kullanma — her sorguda taze veri
-            string cacheKey = string.IsNullOrWhiteSpace(search) ? CACHE_KEY : $"{CACHE_KEY}_{search}";
+            // Cache anahtarı kullanıcıya özel (multi-tenant güvenliği)
+            string baseKey = $"{CACHE_KEY}_{use.Id}";
+            string cacheKey = string.IsNullOrWhiteSpace(search) ? baseKey : $"{baseKey}_{search}";
             if (!string.IsNullOrWhiteSpace(search))
                 StateHub.ClearCache(cacheKey);
+
+            var userId = use.Id;
 
             var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
-                var q = db.TryTableSingle.AsNoTracking().AsQueryable();
+                var q = db.UserAddressMethod.AsNoTracking()
+                    .Where(x => x.UserId == userId); // Sadece bu kullanıcının adresleri
 
                 // Soft delete: silinmemiş kayıtları getir
                 // (IsDeleted owned entity'si hiç set edilmemiş eski kayıtlar da dahil)
@@ -789,7 +937,10 @@ else
                 // Arama: şifreli alanlar DB'de şifreli olduğundan
                 // tam liste çekilip bellek içi filtreleme yapılır.
                 // (Ülke/il/şehir şifreli — DB'de LIKE çalışmaz)
-                return await q.OrderByDescending(x => x.SelectDateTime).ToListAsync(token);
+                // Varsayılan adres önce, sonra en yeni tarih
+                return await q.OrderByDescending(x => x.IsDefault)
+                              .ThenByDescending(x => x.CreatedDate)
+                              .ToListAsync(token);
             }, token);
 
             if (token.IsCancellationRequested || result == null) return;
@@ -799,9 +950,16 @@ else
             {
                 var s = search.Trim();
                 result = result.Where(x =>
+                    Contains(x.AddressName, s) ||
+                    Contains(x.AddressType, s) ||
+                    Contains(x.DeliveryReceiverFirstName, s) ||
+                    Contains(x.DeliveryReceiverLastName, s) ||
+                    Contains(x.DeliveryReceiverEmail, s) ||
+                    Contains(x.DeliveryReceiverPhoneNumber, s) ||
                     Contains(Decrypt(x.Country), s) ||
                     Contains(Decrypt(x.State), s) ||
-                    Contains(Decrypt(x.Cities), s)
+                    Contains(Decrypt(x.Cities), s) ||
+                    Contains(x.FullAddress, s)
                 ).ToList();
             }
 
@@ -965,7 +1123,19 @@ else
 
     private async Task OpenAddModal()
     {
-        _addModel = new TryTableSingle { Id = Guid.Empty, SelectDateTime = DateTime.UtcNow, GetDateTime = DateTime.UtcNow };
+        if (use == null)
+        {
+            await Notify("warning", "Uyarı", "Kullanıcı bilgisi alınamadı.");
+            return;
+        }
+
+        _addModel = new UserAddressMethod
+        {
+            Id = Guid.Empty,
+            UserId = use.Id,
+            CreatedDate = DateTime.UtcNow,
+            IsDefault = !_allItems.Any() // İlk kayıt otomatik varsayılan
+        };
         _addCountryId = 0;
         _addStateId = 0;
         _addStates.Clear();
@@ -973,20 +1143,26 @@ else
         await ShowModal("AddModal");
     }
 
-    private async Task OpenEditModal(TryTableSingle item)
+    private async Task OpenEditModal(UserAddressMethod item)
     {
         // Şifreli alanları çözerek modele yaz
-        _editModel = new TryTableSingle
+        _editModel = new UserAddressMethod
         {
             Id = item.Id,
+            UserId = item.UserId,
+            AddressName = item.AddressName,
+            AddressType = item.AddressType,
+            DeliveryReceiverFirstName = item.DeliveryReceiverFirstName,
+            DeliveryReceiverLastName = item.DeliveryReceiverLastName,
+            DeliveryReceiverEmail = item.DeliveryReceiverEmail,
+            DeliveryReceiverPhoneCountryCode = item.DeliveryReceiverPhoneCountryCode,
+            DeliveryReceiverPhoneNumber = item.DeliveryReceiverPhoneNumber,
             Country = Decrypt(item.Country),
             State = Decrypt(item.State),
             Cities = Decrypt(item.Cities),
-            RadioButton = Decrypt(item.RadioButton),
-            CheckSliding = item.CheckSliding,
-            CheckMarked = item.CheckMarked,
-            SelectDateTime = item.SelectDateTime,
-            GetDateTime = item.GetDateTime
+            FullAddress = item.FullAddress,
+            IsDefault = item.IsDefault,
+            CreatedDate = item.CreatedDate
         };
 
         _editCountryId = 0;
@@ -1031,7 +1207,7 @@ else
         await ShowModal("EditModal");
     }
 
-    private async Task OpenDeleteModal(TryTableSingle item)
+    private async Task OpenDeleteModal(UserAddressMethod item)
     {
         _deleteTarget = item;
         await ShowModal("DeleteModal");
@@ -1051,7 +1227,14 @@ else
 
     private async Task AddAsync()
     {
-        if (_isProcessing || _addModel == null) return;
+        if (_isProcessing || _addModel == null || use == null) return;
+
+        // Minimum doğrulama
+        if (string.IsNullOrWhiteSpace(_addModel.AddressName))
+        {
+            await Notify("warning", "Eksik Bilgi", "Adres adı boş bırakılamaz.");
+            return;
+        }
 
         await _writeLock.WaitAsync(_cts.Token);
         try
@@ -1059,15 +1242,24 @@ else
             _isProcessing = true;
             StateHasChanged();
 
-            // Şifrele
+            // Metin alanlarını trim et
+            _addModel.AddressName = _addModel.AddressName?.Trim();
+            _addModel.AddressType = _addModel.AddressType?.Trim();
+            _addModel.DeliveryReceiverFirstName = _addModel.DeliveryReceiverFirstName?.Trim();
+            _addModel.DeliveryReceiverLastName = _addModel.DeliveryReceiverLastName?.Trim();
+            _addModel.DeliveryReceiverEmail = _addModel.DeliveryReceiverEmail?.Trim();
+            _addModel.DeliveryReceiverPhoneCountryCode = _addModel.DeliveryReceiverPhoneCountryCode?.Trim();
+            _addModel.DeliveryReceiverPhoneNumber = _addModel.DeliveryReceiverPhoneNumber?.Trim();
+            _addModel.FullAddress = _addModel.FullAddress?.Trim();
+
+            // Konum alanlarını şifrele
             _addModel.Country = GlobalSecurityProvider.Encrypt(_addModel.Country ?? "");
             _addModel.State = GlobalSecurityProvider.Encrypt(_addModel.State ?? "");
             _addModel.Cities = GlobalSecurityProvider.Encrypt(_addModel.Cities ?? "");
-            _addModel.RadioButton = GlobalSecurityProvider.Encrypt(_addModel.RadioButton ?? "");
 
             _addModel.Id = Guid.NewGuid();
             _addModel.UserId = use.Id;
-            _addModel.GetDateTime = DateTime.UtcNow;
+            _addModel.CreatedDate = DateTime.UtcNow;
 
             // Soft delete: yeni kayıt aktif (silinmemiş) durumda başlasın
             _addModel.IsDeleted = new IsDeleted
@@ -1077,17 +1269,27 @@ else
             };
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            db.TryTableSingle.Add(_addModel);
+
+            // IsDefault tekilliği: yeni kayıt varsayılansa, kullanıcıya ait diğer adreslerden varsayılan bayrağı kaldır
+            if (_addModel.IsDefault)
+            {
+                var userId = use.Id;
+                await db.UserAddressMethod
+                    .Where(x => x.UserId == userId && x.IsDefault)
+                    .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsDefault, false), _cts.Token);
+            }
+
+            db.UserAddressMethod.Add(_addModel);
             await db.SaveChangesAsync(_cts.Token);
 
             await HideModal("AddModal");
             _addModel = null;
             _isProcessing = false;
 
-            StateHub.ClearCache(CACHE_KEY);
+            StateHub.ClearCache($"{CACHE_KEY}_{use.Id}");
             await StateHub.NotifyDataChanged(ENTITY_NAME);
             await Logger.TakeIt(use?.Id, PAGE_TITLE, "Add");
-            await Notify("success", "Başarılı", "Kayıt eklendi.");
+            await Notify("success", "Başarılı", "Adres eklendi.");
         }
         catch (Exception ex)
         {
@@ -1107,7 +1309,14 @@ else
 
     private async Task UpdateAsync()
     {
-        if (_isProcessing || _editModel == null) return;
+        if (_isProcessing || _editModel == null || use == null) return;
+
+        // Minimum doğrulama
+        if (string.IsNullOrWhiteSpace(_editModel.AddressName))
+        {
+            await Notify("warning", "Eksik Bilgi", "Adres adı boş bırakılamaz.");
+            return;
+        }
 
         await _writeLock.WaitAsync(_cts.Token);
         try
@@ -1116,7 +1325,7 @@ else
             StateHasChanged();
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var existing = await db.TryTableSingle.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+            var existing = await db.UserAddressMethod.FindAsync(new object[] { _editModel.Id }, _cts.Token);
 
             if (existing == null)
             {
@@ -1124,14 +1333,38 @@ else
                 return;
             }
 
-            // Şifrele ve güncelle
+            // Güvenlik: başka bir kullanıcının adresi düzenlenmesin
+            if (existing.UserId != use.Id)
+            {
+                await Notify("danger", "Yetki", "Bu kayıt üzerinde işlem yapma yetkiniz yok.");
+                return;
+            }
+
+            // IsDefault tekilliği: bu kayıt varsayılan yapılıyorsa diğerlerinden bayrağı kaldır
+            if (_editModel.IsDefault && !existing.IsDefault)
+            {
+                var userId = use.Id;
+                var thisId = _editModel.Id;
+                await db.UserAddressMethod
+                    .Where(x => x.UserId == userId && x.Id != thisId && x.IsDefault)
+                    .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsDefault, false), _cts.Token);
+            }
+
+            // Düz alanlar (trim'li)
+            existing.AddressName = _editModel.AddressName?.Trim();
+            existing.AddressType = _editModel.AddressType?.Trim();
+            existing.DeliveryReceiverFirstName = _editModel.DeliveryReceiverFirstName?.Trim();
+            existing.DeliveryReceiverLastName = _editModel.DeliveryReceiverLastName?.Trim();
+            existing.DeliveryReceiverEmail = _editModel.DeliveryReceiverEmail?.Trim();
+            existing.DeliveryReceiverPhoneCountryCode = _editModel.DeliveryReceiverPhoneCountryCode?.Trim();
+            existing.DeliveryReceiverPhoneNumber = _editModel.DeliveryReceiverPhoneNumber?.Trim();
+            existing.FullAddress = _editModel.FullAddress?.Trim();
+            existing.IsDefault = _editModel.IsDefault;
+
+            // Şifreli alanlar
             existing.Country = GlobalSecurityProvider.Encrypt(_editModel.Country ?? "");
             existing.State = GlobalSecurityProvider.Encrypt(_editModel.State ?? "");
             existing.Cities = GlobalSecurityProvider.Encrypt(_editModel.Cities ?? "");
-            existing.RadioButton = GlobalSecurityProvider.Encrypt(_editModel.RadioButton ?? "");
-            existing.CheckSliding = _editModel.CheckSliding;
-            existing.CheckMarked = _editModel.CheckMarked;
-            existing.SelectDateTime = _editModel.SelectDateTime;
 
             await db.SaveChangesAsync(_cts.Token);
 
@@ -1139,10 +1372,10 @@ else
             _editModel = null;
             _isProcessing = false;
 
-            StateHub.ClearCache(CACHE_KEY);
+            StateHub.ClearCache($"{CACHE_KEY}_{use.Id}");
             await StateHub.NotifyDataChanged(ENTITY_NAME);
             await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
-            await Notify("success", "Başarılı", "Kayıt güncellendi.");
+            await Notify("success", "Başarılı", "Adres güncellendi.");
         }
         catch (Exception ex)
         {
@@ -1162,7 +1395,7 @@ else
 
     private async Task DeleteConfirmedAsync()
     {
-        if (_isProcessing || _deleteTarget == null) return;
+        if (_isProcessing || _deleteTarget == null || use == null) return;
 
         await _writeLock.WaitAsync(_cts.Token);
         try
@@ -1171,16 +1404,26 @@ else
             StateHasChanged();
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var entity = await db.TryTableSingle.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+            var entity = await db.UserAddressMethod.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
 
             if (entity != null)
             {
+                // Güvenlik: başka bir kullanıcının adresi silinmesin
+                if (entity.UserId != use.Id)
+                {
+                    await Notify("danger", "Yetki", "Bu kayıt üzerinde işlem yapma yetkiniz yok.");
+                    return;
+                }
+
                 // Soft delete: kaydı kalıcı silmek yerine işaretle
                 entity.IsDeleted = new IsDeleted
                 {
                     IsDeletedStatu = true,
                     DeletedAtDate = DateTime.UtcNow
                 };
+                // Silinen kayıt varsayılan ise bayrağı düşür (listede varsayılan olmasın)
+                if (entity.IsDefault) entity.IsDefault = false;
+
                 await db.SaveChangesAsync(_cts.Token);
             }
 
@@ -1188,10 +1431,10 @@ else
             _deleteTarget = null;
             _isProcessing = false;
 
-            StateHub.ClearCache(CACHE_KEY);
+            StateHub.ClearCache($"{CACHE_KEY}_{use.Id}");
             await StateHub.NotifyDataChanged(ENTITY_NAME);
             await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
-            await Notify("success", "Silindi", "Kayıt başarıyla silindi.");
+            await Notify("success", "Silindi", "Adres başarıyla silindi.");
         }
         catch (Exception ex)
         {
@@ -1211,7 +1454,7 @@ else
 
     private async Task BulkDeleteConfirmedAsync()
     {
-        if (_isProcessing || !_selectedIds.Any()) return;
+        if (_isProcessing || !_selectedIds.Any() || use == null) return;
 
         await _writeLock.WaitAsync(_cts.Token);
         try
@@ -1221,16 +1464,19 @@ else
 
             var ids = _selectedIds.ToList();
             var count = ids.Count;
+            var userId = use.Id;
+            var now = DateTime.UtcNow;
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
             // Soft delete: seçili kayıtları kalıcı silmek yerine işaretle
-            var now = DateTime.UtcNow;
-            await db.TryTableSingle
-                .Where(x => ids.Contains(x.Id))
+            // Güvenlik: sadece bu kullanıcının kayıtlarını etkile
+            await db.UserAddressMethod
+                .Where(x => ids.Contains(x.Id) && x.UserId == userId)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(x => x.IsDeleted!.IsDeletedStatu, true)
-                    .SetProperty(x => x.IsDeleted!.DeletedAtDate, now),
+                    .SetProperty(x => x.IsDeleted!.DeletedAtDate, now)
+                    .SetProperty(x => x.IsDefault, false),
                     _cts.Token);
 
             _selectedIds.Clear();
@@ -1240,10 +1486,10 @@ else
             await HideModal("BulkDeleteModal");
             _isProcessing = false;
 
-            StateHub.ClearCache(CACHE_KEY);
+            StateHub.ClearCache($"{CACHE_KEY}_{use.Id}");
             await StateHub.NotifyDataChanged(ENTITY_NAME);
             await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({count})");
-            await Notify("success", "Silindi", $"{count} kayıt silindi.");
+            await Notify("success", "Silindi", $"{count} adres silindi.");
         }
         catch (Exception ex)
         {

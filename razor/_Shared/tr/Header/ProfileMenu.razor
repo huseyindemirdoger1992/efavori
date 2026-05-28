@@ -16,13 +16,13 @@
 {
     <div class="user-box dropdown px-3">
         <a class="d-flex align-items-center nav-link dropdown-toggle gap-3 dropdown-toggle-nocaret"
-               href="#"
-               role="button"
-               data-bs-toggle="dropdown"
-               aria-expanded="false">
+           href="#"
+           role="button"
+           data-bs-toggle="dropdown"
+           aria-expanded="false">
             <img src="@(string.IsNullOrEmpty(_use.ProfileCoverGallery?.ProfileImagePath)
-                                                                                      ? "/assets/images/icons/UserAvatar.gif"
-                                                                                      : _use.ProfileCoverGallery.ProfileImagePath)"
+                                                                                                       ? "/assets/images/icons/UserAvatar.gif"
+                                                                                                       : _use.ProfileCoverGallery.ProfileImagePath)"
                  class="user-img bg-light"
                  alt="user avatar">
             <div class="user-info">
@@ -132,7 +132,7 @@
                         </h6>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center ps-4 py-1 text-secondary" href="#">
+                        <a class="dropdown-item d-flex align-items-center ps-4 py-1" href="/@culture/Public/Public/Privacy/">
                             <i class="fa fa-map-marker fa-fw me-2 text-secondary" style="font-size:0.8rem;"></i>
                             <span style="font-size:0.9rem;">Adres Bilgilerim</span>
                         </a>
@@ -223,9 +223,9 @@ else
 {
     <div class="user-box px-3">
         <a class="d-flex align-items-center nav-link gap-3"
-               href="javascript:void(0)"
-               data-bs-toggle="modal"
-               data-bs-target="#loginModal">
+           href="javascript:void(0)"
+           data-bs-toggle="modal"
+           data-bs-target="#loginModal">
             <img src="/assets/images/icons/UserAvatar.gif" class="user-img" alt="user avatar">
             <div class="user-info">
                 <p class="user-name mb-0">Kayıt/Giriş</p>

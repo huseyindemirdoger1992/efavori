@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace web.Areas.Customer.Controllers
+namespace web.Areas.Public.Controllers
 {
     public class Shopping : Controller
     {

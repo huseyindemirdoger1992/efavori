@@ -6,11 +6,11 @@ namespace web.Areas.Public.Controllers
     [Route("{culture}/Public/[controller]/[action]")]
     public class Home : Controller
     {
-        public IActionResult GetGitHubCommits()
+        public IActionResult Index()
         {
             return View();
         }
-        public IActionResult MediaGallery()
+        public IActionResult GetGitHubCommits()
         {
             return View();
         }

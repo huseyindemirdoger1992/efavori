@@ -361,7 +361,7 @@ try
 
     void ConfigureEndpoints(WebApplication app)
     {
-        // Area route (Admin, Customer vb.)
+        // Area route (Admin, Public vb.)
         app.MapControllerRoute(
             name: "areaRoute",
             pattern: "{culture}/{area:exists}/{controller=Home}/{action=Index}/{id?}");
@@ -386,7 +386,7 @@ try
         app.MapGet("/", context =>
         {
             var culture = GetPreferredCulture(context);
-            context.Response.Redirect($"/{culture}/Customer/Home/Index");
+            context.Response.Redirect($"/{culture}/Public/Home/Index");
             return Task.CompletedTask;
         });
 
@@ -398,7 +398,7 @@ try
             {
                 culture = GetPreferredCulture(context);
             }
-            context.Response.Redirect($"/{culture}/Customer/Home/Index");
+            context.Response.Redirect($"/{culture}/Public/Home/Index");
             return Task.CompletedTask;
         });
 

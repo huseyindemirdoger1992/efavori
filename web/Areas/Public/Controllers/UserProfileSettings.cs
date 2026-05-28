@@ -12,29 +12,17 @@ namespace web.Areas.Public.Controllers
     [Route("{culture}/Public/[controller]/[action]/{TaskId:guid}")]
     public class UserProfileSettings : Controller
     {
-        public IActionResult BasicInfo()
-        {
-            return View();
-        }
 
-        public IActionResult Social()
-        {
-            return View();
-        }
+        public IActionResult BasicInfo() => View();
+        public IActionResult Social() => View();
+        public IActionResult Privacy() => View();
+        public IActionResult Customize() => View();
+        public IActionResult Security() => View();
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
 
-        public IActionResult Customize()
-        {
-            return View();
-        }
+        public IActionResult UserAddressMethod() => View();
 
-        public IActionResult Security()
-        {
-            return View();
-        }
+        public IActionResult UserPaymentMethod() => View();
+
     }
 }

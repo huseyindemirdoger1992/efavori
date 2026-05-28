@@ -22,8 +22,8 @@
         using (var db = new _ApplicationConnectionDb())
         {
             use = await db.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
 
             if (use != null && !string.IsNullOrEmpty(use.Language) && supportedCultures.Contains(use.Language.ToLower()))
             {
@@ -67,12 +67,12 @@ else
 {
 
     @(await Html.RenderComponentAsync<razor._Shared.tr.Media.Upload>(
-                        RenderMode.ServerPrerendered,
-                        new { use = use }
-                    ))
+    RenderMode.ServerPrerendered,
+    new { use = use }
+    ))
 
     @(await Html.RenderComponentAsync<razor._Shared.tr.Media.List>(
-            RenderMode.ServerPrerendered,
-            new { use = use, IsMultiSelect = (bool?)null }
-        ))
+    RenderMode.ServerPrerendered,
+    new { use = use, IsMultiSelect = (bool?)null }
+    ))
 }

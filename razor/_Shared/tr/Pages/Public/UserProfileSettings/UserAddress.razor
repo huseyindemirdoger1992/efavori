@@ -157,7 +157,7 @@ else
                             <div class="small text-light">@(Decrypt(item.Cities))</div>
                         </td>
                         <td class="d-none d-lg-table-cell">
-                            <span class="badge bg-primary small">@item.AddressType</span>
+                            <span class="badge bg-primary small">@(string.IsNullOrEmpty(item.AddressType) ? "Boş" : item.AddressType == "Individual" ? "Bireysel" : item.AddressType == "Corporate" ? "Kurumsal" : "Boş")</span>
                         </td>
                         <td class="d-none d-md-table-cell text-nowrap">
                             <div class="small">@item.CreatedDate.ToString("dd.MM.yyyy") | @item.CreatedDate.ToString("HH:mm")</div>
@@ -460,7 +460,7 @@ else
                             <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>Adres Türü</label>
                             <select class="form-select form-select-sm bg-dark text-white border-secondary"
                                     @bind="_editModel.AddressType">
-                                <option value="">Tür Seçiniz</option>
+                                <option value="">Boş</option>
                                 <option value="Individual">Bireysel</option>
                                 <option value="Corporate">Kurumsal</option>
                             </select>

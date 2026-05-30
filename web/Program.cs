@@ -51,8 +51,9 @@ try
     builder.Services.AddScoped<api.tr.UserInfos>();
     builder.Services.AddScoped<Media>();
     builder.Services.AddScoped<FileUploadService>();
-    // BackgroundService
-    // builder.Services.AddHostedService<AllBackgroundServices>();
+    // Api Services
+    builder.Services.AddHttpClient<GeminiAiService>();
+    builder.Services.AddHostedService<AllBackgroundServices>();
 
     var app = builder.Build();
 

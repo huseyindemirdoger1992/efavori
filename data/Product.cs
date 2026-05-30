@@ -19,19 +19,23 @@ namespace data
         // Ürünün fiziksel veya sanal olarak bağlı olduğu mağazanın ID'si
         public Guid StoreId { get; set; }
 
-        [Required]
-        // Ürünün müşteriye görünen tam adı (Örn: Apple iPhone 15 Pro)
-        public string Name { get; set; } = string.Empty;
+
+        // --- SEO Özellikleri ---
+        // AI ile oluşturulan SEO uyumlu başlık, kısa açıklama ve uzun açıklamanın durumları
 
         [Required]
-        // URL yapısı için kullanılan temizlenmiş isim (Örn: apple-iphone-15-pro)
+        // Ürünün müşteriye görünen tam adı (Örn: Apple iPhone 18 Pro Max 256 GB Titanium)
+        public string Name { get; set; } = string.Empty; // Title uzunluğu → 50-60 karakter
+        public string? Description { get; set; } // Description → 140-160 karakter
+        public string? Content { get; set; } // Ürün sayfasında detaylı açıklama olarak kullanılabilir (HTML destekli)
+
+        [Required]
+        // <link rel = "canonical" href="https://efavori.com/iphone-18-pro-max-256gb-titanium">
         public string UniqueNameSlug { get; set; } = string.Empty;
 
-        // Ürün listeleme sayfalarında görünecek olan kısa tanıtım metni
-        public string? Description { get; set; }
+        public string? AiSeoKeywords { get; set; }
+        public bool? AiSeoKeywordsIsOk { get; set; }
 
-        // Ürün sayfasındaki detaylı teknik özellikler ve uzun metin (HTML destekli)
-        public string? Content { get; set; }
 
         // Stok takibi için kullanılan özel ürün barkodu veya kodu (Stock Keeping Unit)
         public string? SKU { get; set; }
@@ -48,19 +52,12 @@ namespace data
         // Ürünün ana görselinin dosya yolu veya URL adresi
         public string? ImagePath { get; set; }
 
-        // --- SEO Özellikleri ---
-        // Arama motorları için sayfa başlığı (Title Tag)
-        public string? MetaTitle { get; set; }
-        // Arama motorları için sayfa özeti (Meta Description)
-        public string? MetaDescription { get; set; }
 
-        // --- Metadata ---
         // Ürünün sisteme ilk kaydedilme tarihi (UTC formatında)
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         // Ürün bilgilerinin son güncellenme tarihi
         public DateTime? UpdatedAt { get; set; }
 
-        public Meta? Meta { get; set; } = new();
         public InteractionCounts? Interaction { get; set; } = new();
         public IsDeleted? IsDeleted { get; set; } = new();
     }

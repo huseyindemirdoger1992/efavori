@@ -1,0 +1,1903 @@
+﻿@* ============================================================
+   Edit.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ Tek bir mağaza/işletme kaydını düzenleme sayfası
+   ✅ Yalnızca [Parameter] SelectedStore üzerinden gelen kayıt düzenlenir
+   ✅ GlobalStateHub — anlık broadcast / RAM cache temizleme
+   ✅ TakeLogs — tüm aksiyonlar loglanır
+   ✅ FileUploadService — profil/kapak/evrak (tekli) + galeri (çoklu) seçimi
+   ✅ Galeri için Id bazlı seçim grid'i (farklı DbContext referans sorununu çözer)
+   ✅ Galeri güncellemesinde SOFT DELETE merge mantığı (audit izi korunur)
+   ✅ KISIT: Kullanıcı IsActiveStateAdmin alanına ASLA müdahale edemez
+            (ne UI'da düzenlenebilir, ne de kayıt sırasında DB'ye geri yazılır)
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using razor._Shared.tr.Media
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+@inject FileUploadService FileService
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-globe",    "efavori",                "/"),
+        ("fa fa-building", "Mağza/İşletme Yönetimi", "javascript:void(0)"),
+        ("fa fa-pencil",   "Düzenle",                "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@if (SelectedStore is null)
+{
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="fa fa-exclamation-triangle fa-lg me-2"></i>
+        Düzenlenecek bir kayıt seçilmedi.
+    </div>
+}
+else if (_Store is null)
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else
+{
+    @* Galeri grid render fragment'i — modallardan ÖNCE ve aynı kapsamda tanımlanır *@
+    RenderFragment<List<Data.Media>> RenderGalleryGrid = (selected) => @<text>
+        <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text bg-dark-transparent border-light-3 text-white-50"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control bg-dark-transparent border-light-3 text-white" placeholder="Ara..."
+                   value="@_gallerySearch" @oninput="OnGallerySearchInput" />
+            @if (!string.IsNullOrWhiteSpace(_gallerySearch))
+            {
+                <button class="btn btn-outline-light border-light-3" type="button" @onclick="ClearGallerySearch"><i class="fa fa-times"></i></button>
+            }
+        </div>
+
+        @if (_galleryLoading)
+        {
+            <div class="text-center py-5">
+                <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+                <p class="mt-2 text-light small">Yükleniyor...</p>
+            </div>
+        }
+        else if (!_galleryFilteredMedia.Any())
+        {
+            <div class="text-center py-5 text-white-50">
+                <i class="fa fa-folder-open fa-3x mb-3 d-block"></i>
+                <p class="mb-0">@(string.IsNullOrWhiteSpace(_gallerySearch) ? "Henüz medya yok" : "Sonuç bulunamadı")</p>
+            </div>
+        }
+        else
+        {
+            var selectedIdSet = selected.Select(g => g.Id).ToHashSet();
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+                @foreach (var m in _galleryFilteredMedia.Take(_galleryDisplayCount))
+                {
+                    var isSel = selectedIdSet.Contains(m.Id);
+                    <div class="col">
+                        <div class="card bg-dark-transparent border-light-3 h-100 overflow-hidden shadow-sm position-relative @(isSel ? "border-primary shadow" : "")"
+                             style="cursor:pointer;" @onclick="() => ToggleGalleryItem(m)">
+                            @if (isSel)
+                            {
+                                <div class="position-absolute top-0 end-0 m-2" style="z-index:10;">
+                                    <span class="badge bg-primary"><i class="fa fa-check"></i> Seçildi</span>
+                                </div>
+                            }
+                            @{
+                                var ext = m.FileExtensionType?.ToLower() ?? "";
+                                var isImg = IsGalleryImage(ext);
+                                var isVid = IsGalleryVideo(ext);
+                            }
+                            @if (isImg)
+                            {
+                                <img src="@m.FileUrl" style="height:150px;object-fit:cover;width:100%;" alt="@m.FileName" loading="lazy" />
+                            }
+                            else if (isVid)
+                            {
+                                <div class="position-relative" style="height:150px;background:#000;">
+                                    <video class="w-100 h-100" style="object-fit:cover;"><source src="@m.FileUrl" type="@m.ContentType"></video>
+                                    <div class="position-absolute top-50 start-50 translate-middle"><i class="fa fa-play-circle fa-3x text-white opacity-75"></i></div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height:150px;"><i class="fa fa-file-o fa-4x"></i></div>
+                            }
+                            <div class="card-body p-2">
+                                <div class="text-white small text-truncate fw-bold" title="@m.FileName"><i class="fa fa-file-text-o me-1 text-info"></i>@m.FileName</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            @if (_galleryDisplayCount < _galleryFilteredMedia.Count)
+            {
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-light btn-sm px-4" @onclick="() => _galleryDisplayCount += 15">
+                        <i class="fa fa-arrow-down me-1"></i>Daha Fazla Göster
+                    </button>
+                </div>
+            }
+        }
+    </text>;
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-12 col-xl-12">
+                <div class="card shadow-sm border-0 overflow-hidden">
+
+                    <!-- Kapak Fotoğrafı -->
+                    <div class="position-relative">
+                        @if (_coverMedia is not null)
+                        {
+                            <img src="@_coverMedia.FileUrl"
+                                 class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="@_coverMedia.FileName">
+                        }
+                        else
+                        {
+                            <img src="https://efavori.com/_files/main/NoImage.png"
+                                 class="img-fluid w-100 object-fit-cover" style="height: 350px; min-height: 200px;" alt="Kapak Fotoğrafı">
+                        }
+                        <div class="position-absolute bottom-0 end-0 m-3">
+                            <button type="button" class="btn btn-outline-primary btn-sm fw-bold shadow-sm border-0 text-dark"
+                                    @onclick='() => OpenMediaModal("cover")'>
+                                <i class="fa fa-camera me-2"></i>Kapak Fotoğrafını Düzenle
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Profil Fotoğrafı -->
+                    <div class="card-body px-4 pt-0">
+                        <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end" style="margin-top: -100px;">
+                            <div class="position-relative">
+                                @if (_profileMedia is not null)
+                                {
+                                    <img src="@_profileMedia.FileUrl"
+                                         class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                         width="168" height="168" style="object-fit: cover;" alt="@_profileMedia.FileName">
+                                }
+                                else
+                                {
+                                    <img src="https://efavori.com/_files/main/NoImage.png"
+                                         class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                                         width="168" height="168" style="object-fit: cover;" alt="No Image">
+                                }
+                                <button type="button"
+                                        class="btn btn-outline-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
+                                        style="width: 36px; height: 36px;"
+                                        @onclick='() => OpenMediaModal("profile")'>
+                                    <i class="fa fa-camera text-dark" style="margin-left:5px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Onay/Durum Bilgileri -->
+                        <div class="row align-items-center mt-2 mb-1">
+                            <div class="col-md-6">
+                                @* IsActiveStateAdmin → SALT OKUNUR. Kullanıcı bu alana müdahale edemez. *@
+                                <label class="form-label d-block mb-1 fw-semibold">
+                                    <i class="fa fa-shield me-1 text-secondary"></i>Yönetici Onay Durumu:
+                                </label>
+                                @if (_Store.IsActiveStateAdmin == true)
+                                {
+                                    <span class="badge bg-success"><i class="fa fa-check me-1"></i>Onaylandı</span>
+                                }
+                                else if (_Store.IsActiveStateAdmin == false)
+                                {
+                                    <span class="badge bg-danger"><i class="fa fa-times me-1"></i>Reddedildi</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark"><i class="fa fa-clock-o me-1"></i>İnceleniyor</span>
+                                }
+                                <span class="badge bg-light"><i class="fa fa-clock-o me-1"></i>Yönetici tarafından değiştirilebilir.</span>
+                            </div>
+                            <div class="col-md-6">
+                                @* IsActiveStateVendor → Satıcının kendi kontrolü, düzenlenebilir *@
+                                <label class="form-label d-block mb-1 fw-semibold">
+                                    <i class="fa fa-store me-1 text-primary"></i>Mağaza Yayın Durumu
+                                </label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="vendorActive"
+                                           @bind="_vendorActive">
+                                    <label class="form-check-label @(_vendorActive ? "text-success" : "text-danger")" for="vendorActive">
+                                        @(_vendorActive ? "Yayında (Aktif)" : "Yayında Değil (Pasif)")
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <div class="col-12" style="margin-top:5px;">
+                            <label class="form-label">İşletme/Mağza Adını Belirtiniz</label>
+                            <input class="form-control mb-3" type="text" @bind="_Store.Name">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">İşletme/Mağza Açıklaması</label>
+                            <textarea class="form-control" rows="3" @bind="_Store.Description"></textarea>
+                        </div>
+
+                        <div class="card bg-light mt-3">
+                            <div class="card-body">
+                                <ul class="nav nav-tabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link active" data-bs-toggle="tab" href="#editPrimaryHome" role="tab" aria-selected="true">
+                                            <div class="d-flex align-items-center">
+                                                <div class="tab-icon"><i class="fa fa-camera font-18 me-1"></i></div>
+                                                <div class="tab-title">İşletme Dış Çekimleri</div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#editPrimaryProfile" role="tab" aria-selected="false">
+                                            <div class="d-flex align-items-center">
+                                                <div class="tab-icon"><i class="fa fa-building-o font-18 me-1"></i></div>
+                                                <div class="tab-title">İşletme İç Çekimleri</div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item" role="presentation">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#editPrimaryContact" role="tab" aria-selected="false">
+                                            <div class="d-flex align-items-center">
+                                                <div class="tab-icon"><i class="fa fa-file-pdf-o font-18 me-1"></i></div>
+                                                <div class="tab-title">İşletme Resmi Evrakları</div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content py-3">
+                                    <!-- Dış Çekim -->
+                                    <div class="tab-pane fade show active" id="editPrimaryHome" role="tabpanel">
+                                        <div class="mb-4">
+                                            <label class="form-label text-light fw-semibold">
+                                                <i class="fa fa-tree me-1 text-success"></i>İşletme Dış Çekim Görselleri
+                                                <span class="badge bg-warning ms-2 fw-normal text-dark" style="font-size:0.7rem;">En Az 3 Görsel</span>
+                                            </label>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-md-12">
+                                                    <button type="button" class="btn btn-outline-light btn-sm w-100"
+                                                            @onclick="OpenGalleryOutModal">
+                                                        <i class="fa fa-picture-o me-1"></i>Medyadan Seç
+                                                        @if (_galleryOutSideFiles.Any())
+                                                        {
+                                                            <span class="badge bg-primary ms-1">@_galleryOutSideFiles.Count</span>
+                                                        }
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            @if (_galleryOutSideFiles.Any())
+                                            {
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    @foreach (var m in _galleryOutSideFiles.ToList())
+                                                    {
+                                                        <div class="position-relative">
+                                                            <img src="@m.FileUrl" class="rounded border border-secondary" style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
+                                                            <button type="button"
+                                                                    class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                                    style="width:20px;height:20px;font-size:0.7rem; margin-top:-5px; margin-right:-5px;"
+                                                                    @onclick="() => { _galleryOutSideFiles.Remove(m); }">
+                                                                <i class="fa fa-times text-white" style="margin-left:5px"></i>
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <!-- İç Çekim -->
+                                    <div class="tab-pane fade" id="editPrimaryProfile" role="tabpanel">
+                                        <div class="mb-4">
+                                            <label class="form-label text-light fw-semibold">
+                                                <i class="fa fa-search-plus me-1 text-success"></i>İşletme İç Çekim Görselleri
+                                                <span class="badge bg-warning ms-2 fw-normal text-dark" style="font-size:0.7rem;">En Az 3 Görsel</span>
+                                            </label>
+                                            <div class="row g-2 mb-3">
+                                                <div class="col-md-12">
+                                                    <button type="button" class="btn btn-outline-light btn-sm w-100"
+                                                            @onclick="OpenGalleryInModal">
+                                                        <i class="fa fa-image me-1"></i>Medyadan Seç
+                                                        @if (_galleryInSideFiles.Any())
+                                                        {
+                                                            <span class="badge bg-primary ms-1">@_galleryInSideFiles.Count</span>
+                                                        }
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            @if (_galleryInSideFiles.Any())
+                                            {
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    @foreach (var m in _galleryInSideFiles.ToList())
+                                                    {
+                                                        <div class="position-relative">
+                                                            <img src="@m.FileUrl" class="rounded border border-secondary" style="width:65px;height:65px;object-fit:cover;" alt="@m.FileName" />
+                                                            <button type="button"
+                                                                    class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                                    style="width:20px;height:20px;font-size:0.7rem; margin-top:-5px; margin-right:-5px;"
+                                                                    @onclick="() => { _galleryInSideFiles.Remove(m); }">
+                                                                <i class="fa fa-trash-o text-white" style="margin-left:5px;"></i>
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <!-- Resmi Evraklar -->
+                                    <div class="tab-pane fade" id="editPrimaryContact" role="tabpanel">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover align-middle mb-0 bg-light">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th style="width:40px;" class="text-center">#</th>
+                                                        <th>Belge Adı</th>
+                                                        <th>Açıklama</th>
+                                                        <th style="width:180px;">Yüklenen Dosya</th>
+                                                        <th style="width:110px;" class="text-center">Durum</th>
+                                                        <th style="width:90px;" class="text-center">İşlem</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var doc in _documentRows)
+                                                    {
+                                                        var media = doc.Getter();
+                                                        <tr>
+                                                            <td class="text-center text-muted"><i class="fa @doc.Icon"></i></td>
+                                                            <td class="fw-semibold">
+                                                                @doc.Title
+                                                                @if (doc.Required)
+                                                                {
+                                                                    <span class="text-danger">*</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-muted small">@doc.Description</td>
+                                                            <td class="small">
+                                                                @if (media is not null)
+                                                                {
+                                                                    <span class="text-truncate d-inline-block" style="max-width:140px;" title="@media.FileName">@media.FileName</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-muted fst-italic">—</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-center">
+                                                                @if (media is not null)
+                                                                {
+                                                                    <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                                }
+                                                                else if (doc.Required)
+                                                                {
+                                                                    <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-outline-dark"
+                                                                        @onclick="() => OpenDocumentModal(doc.Slot)">
+                                                                    <i class="fa fa-upload me-1"></i>Yükle
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <!-- Temel Bilgiler -->
+                        <h6 class="text-uppercase text-light fw-bold mb-3">
+                            <i class="fa fa-user me-2"></i> İşlem Yapan Kullanıcı
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Adınız</label>
+                                <input class="form-control" type="text" value="@use?.FirstName" readonly>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Soyadınız</label>
+                                <input class="form-control" type="text" value="@use?.LastName" readonly>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Kayıt Tarihi</label>
+                                <input class="form-control" type="text" value="@_Store.CreatedAt?.ToLocalTime()" readonly>
+                            </div>
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <!-- İletişim Bilgileri -->
+                        <h6 class="text-uppercase text-light fw-bold mb-3">
+                            <i class="fa fa-envelope me-2"></i>İletişim Bilgileri
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">E-Posta</label>
+                                <div class="input-group">
+                                    <input class="form-control" type="email" placeholder="ornek@email.com"
+                                           @bind="_Store.ContactInformation!.Email">
+                                    <div class="input-group-text">
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input" type="checkbox" id="isActiveEmail"
+                                                   @bind="_Store.ContactInformation!.IsActiveEmail">
+                                            <label class="form-check-label small" for="isActiveEmail">Göster</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Telefon Numarası</label>
+                                <div class="input-group">
+                                    <select class="form-select" style="max-width: 160px;"
+                                            @bind="_Store.ContactInformation!.CountryPhoneCode">
+                                        <option value="">Kod</option>
+                                        @foreach (Country item in _Countries)
+                                        {
+                                            <option value="@item.phonecode">@item.phonecode @item.name</option>
+                                        }
+                                    </select>
+                                    <input class="form-control" type="tel" placeholder="5XX XXX XX XX"
+                                           @bind="_Store.ContactInformation!.PhoneNumber">
+                                    <div class="input-group-text">
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input" type="checkbox" id="isActivePhone"
+                                                   @bind="_Store.ContactInformation!.IsActivePhoneNumber">
+                                            <label class="form-check-label small" for="isActivePhone">Göster</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <!-- Adres Bilgileri -->
+                        <h6 class="text-uppercase text-light fw-bold mb-3">
+                            <i class="fa fa-map-marker me-2"></i>Adres Bilgileri
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Ülke</label>
+                                <select class="form-select" value="@_countryId" @onchange="OnCountrySelected">
+                                    <option value="0">Ülke Seçiniz</option>
+                                    @foreach (var country in _Countries)
+                                    {
+                                        <option value="@country.id">@country.name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Eyalet/İl</label>
+                                <select class="form-select" value="@_stateId" @onchange="OnStateSelected" disabled="@(!_States.Any())">
+                                    <option value="0">@(_States.Any() ? "İl Seçiniz" : "---")</option>
+                                    @foreach (var state in _States)
+                                    {
+                                        <option value="@state.id">@state.name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Şehir</label>
+                                <select class="form-select" @onchange="OnCitySelected" disabled="@(!_Cities.Any())">
+                                    <option value="0">@(_Cities.Any() ? "Şehir Seçiniz" : "---")</option>
+                                    @foreach (var city in _Cities)
+                                    {
+                                        <option value="@city.id" selected="@(string.Equals(city.name, _Store.AddressInfo!.City, StringComparison.OrdinalIgnoreCase))">@city.name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Posta Kodu</label>
+                                <input class="form-control" type="text" placeholder="Posta Kodu"
+                                       @bind="_Store.AddressInfo!.ZipCode">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Açık Adres</label>
+                                <textarea class="form-control" rows="3"
+                                          @bind="_Store.AddressInfo!.Address"></textarea>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Google My Business Linki</label>
+                                <input class="form-control" type="url" placeholder="https://business.google.com/..."
+                                       @bind="_Store.AddressInfo!.GoogleMyBusinessAccountLink">
+                            </div>
+
+                            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Enlem (Latitude)</label>
+                                <input id="edit_lat" class="form-control shadow-sm border bg-light" type="number" step="any"
+                                       @bind="_Store.AddressInfo!.Latitude" placeholder="Bekleniyor...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Boylam (Longitude)</label>
+                                <input id="edit_lng" class="form-control shadow-sm border bg-light" type="number" step="any"
+                                       @bind="_Store.AddressInfo!.Longitude" placeholder="Bekleniyor...">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <button type="button" id="btnEditGetLocation" class="btn btn-primary shadow-sm d-flex align-items-center justify-content-center">
+                                    <i class="fa fa-crosshairs me-2"></i> Konumumu Otomatik Bul
+                                </button>
+                            </div>
+                            <div class="col-12 mb-2">
+                                <div id="edit_map" class="rounded-3 shadow-sm border" style="height: 400px; width: 100%;"></div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <!-- Çalışma Saatleri -->
+                        <h6 class="text-uppercase text-light fw-bold mb-3">
+                            <i class="fa fa-clock-o me-2"></i>Çalışma Saatleri
+                        </h6>
+                        <div class="row">
+                            @foreach (var day in _dayRows)
+                            {
+                                <div class="col-md-12 mb-2">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="@($"edit_{day.Key}")"
+                                                       checked="@(day.GetActive() == true)"
+                                                       @onchange="(e) => day.SetActive((bool)(e.Value ?? false))">
+                                                <label class="form-check-label fw-semibold" for="@($"edit_{day.Key}")">@day.Label</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-play"></i></span>
+                                                <input type="time" class="form-control"
+                                                       value="@day.GetStart()?.ToString("HH:mm")"
+                                                       @onchange="(e) => day.SetStart(ParseTime(e.Value?.ToString()))">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fa fa-stop"></i></span>
+                                                <input type="time" class="form-control"
+                                                       value="@day.GetFinish()?.ToString("HH:mm")"
+                                                       @onchange="(e) => day.SetFinish(ParseTime(e.Value?.ToString()))">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <!-- Sosyal Medya -->
+                        <h6 class="text-uppercase text-light fw-bold mb-3">
+                            <i class="fa fa-share-alt me-2"></i>Sosyal Medya & İletişim Kanalları
+                        </h6>
+
+                        <!-- Global Platformlar -->
+                        <p class="text-light small fw-semibold mb-2">Global Platformlar</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-facebook-square text-primary me-1"></i>Facebook</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveFacebook"></span>
+                                    <input class="form-control" type="url" placeholder="https://facebook.com/..." @bind="_Store.ContactInformation!.Facebook">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-instagram text-danger me-1"></i>Instagram</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveInstagram"></span>
+                                    <input class="form-control" type="url" placeholder="https://instagram.com/..." @bind="_Store.ContactInformation!.Instagram">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-twitter text-info me-1"></i>X (Twitter)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveX"></span>
+                                    <input class="form-control" type="url" placeholder="https://x.com/..." @bind="_Store.ContactInformation!.X">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-music text-dark me-1"></i>TikTok</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveTikTok"></span>
+                                    <input class="form-control" type="url" placeholder="https://tiktok.com/" @bind="_Store.ContactInformation!.TikTok">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-youtube-play text-danger me-1"></i>YouTube</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveYouTube"></span>
+                                    <input class="form-control" type="url" placeholder="https://youtube.com/..." @bind="_Store.ContactInformation!.YouTube">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-linkedin-square text-primary me-1"></i>LinkedIn</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveLinkedin"></span>
+                                    <input class="form-control" type="url" placeholder="https://linkedin.com/in/..." @bind="_Store.ContactInformation!.Linkedin">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-whatsapp text-success me-1"></i>WhatsApp</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveWhatsApp"></span>
+                                    <input class="form-control" type="url" placeholder="https://wa.me/..." @bind="_Store.ContactInformation!.WhatsApp">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-paper-plane text-info me-1"></i>Telegram</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveTelegram"></span>
+                                    <input class="form-control" type="url" placeholder="https://t.me/..." @bind="_Store.ContactInformation!.Telegram">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bölgesel Platformlar -->
+                        <p class="text-light small fw-semibold mb-2 mt-1">Bölgesel Popüler Platformlar</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-commenting text-success me-1"></i>WeChat</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveWeChat"></span>
+                                    <input class="form-control" type="text" placeholder="WeChat ID" @bind="_Store.ContactInformation!.WeChat">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-cloud text-danger me-1"></i>Weibo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveWeibo"></span>
+                                    <input class="form-control" type="url" placeholder="https://weibo.com/..." @bind="_Store.ContactInformation!.Weibo">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-comments text-success me-1"></i>Line</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveLine"></span>
+                                    <input class="form-control" type="text" placeholder="Line ID" @bind="_Store.ContactInformation!.Line">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-comment text-warning me-1"></i>KakaoTalk</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveKakaoTalk"></span>
+                                    <input class="form-control" type="text" placeholder="KakaoTalk ID" @bind="_Store.ContactInformation!.KakaoTalk">
+                                </div>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label"><i class="fa fa-vk text-primary me-1"></i>VKontakte</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveVKontakte"></span>
+                                    <input class="form-control" type="url" placeholder="https://vk.com/..." @bind="_Store.ContactInformation!.VKontakte">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profesyonel / Niş Platformlar -->
+                        <p class="text-light small fw-semibold mb-2 mt-1">Profesyonel / Niş Platformlar</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-pinterest text-danger me-1"></i>Pinterest</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActivePinterest"></span>
+                                    <input class="form-control" type="url" placeholder="https://pinterest.com/..." @bind="_Store.ContactInformation!.Pinterest">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-github text-dark me-1"></i>GitHub</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveGitHub"></span>
+                                    <input class="form-control" type="url" placeholder="https://github.com/..." @bind="_Store.ContactInformation!.GitHub">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-behance text-primary me-1"></i>Behance</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveBehance"></span>
+                                    <input class="form-control" type="url" placeholder="https://behance.net/..." @bind="_Store.ContactInformation!.Behance">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-gamepad text-primary me-1"></i>Discord</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveDiscord"></span>
+                                    <input class="form-control" type="text" placeholder="Kullanıcı Adı#0000" @bind="_Store.ContactInformation!.Discord">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-reddit text-danger me-1"></i>Reddit</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveReddit"></span>
+                                    <input class="form-control" type="url" placeholder="https://reddit.com/user/..." @bind="_Store.ContactInformation!.Reddit">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label"><i class="fa fa-globe text-secondary me-1"></i>Web Sitesi</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><input class="form-check-input mt-0" type="checkbox" title="Göster" @bind="_Store.ContactInformation!.IsActiveUserWebSite"></span>
+                                    <input class="form-control" type="url" placeholder="https://..." @bind="_Store.ContactInformation!.UserWebSite">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-3 opacity-10">
+
+                        <!-- Kaydet Butonu -->
+                        <div class="d-flex justify-content-end gap-2 mb-2">
+                            <button type="button" class="btn btn-primary px-4" @onclick="UpdateStore" disabled="@_isProcessing">
+                                @if (_isProcessing)
+                                {
+                                    <i class="fa fa-spinner fa-spin me-2"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-save me-2"></i>
+                                }
+                                Değişiklikleri Kaydet
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ═══════════════════════════════════════════
+       MEDYA MODALLARI
+       ═══════════════════════════════════════════ *@
+
+    <!-- [1] Profil Görseli Modal -->
+    <div class="modal fade" id="modalEditProfileList" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false" style="z-index: 1080;">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-dark border border-light-3">
+                <div class="modal-header border-light-3">
+                    <h6 class="modal-title text-white"><i class="fa fa-user-circle me-2 text-info"></i>Profil Görseli Seç</h6>
+                    <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                                onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+                        <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                        <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                                @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                            <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <Upload use="use" />
+                    <hr class="border-light-3 my-3" />
+                    @if (_activeMediaSlot == "profile")
+                    {
+                        <razor._Shared.tr.Media.List use="use" IsMultiSelect="false" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [2] Kapak Görseli Modal -->
+    <div class="modal fade" id="modalEditCoverList" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false" style="z-index: 1080;">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-dark border border-light-3">
+                <div class="modal-header border-light-3">
+                    <h6 class="modal-title text-white"><i class="fa fa-image me-2 text-warning"></i>Kapak Görseli Seç</h6>
+                    <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                                onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+                        <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                        <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                                @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                            <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <Upload use="use" />
+                    <hr class="border-light-3 my-3" />
+                    @if (_activeMediaSlot == "cover")
+                    {
+                        <razor._Shared.tr.Media.List use="use" IsMultiSelect="false" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [3] Resmi Evrak (Tekli) Modal -->
+    <div class="modal fade" id="modalEditBusinessDocumentList" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false" style="z-index: 1080;">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-dark border border-light-3">
+                <div class="modal-header border-light-3">
+                    <h6 class="modal-title text-white"><i class="fa fa-file-text me-2 text-success"></i>Resmi Evrak Seç</h6>
+                    <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                                onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+                        <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                        <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                                @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                            <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <Upload use="use" />
+                    <hr class="border-light-3 my-3" />
+                    @if (_documentSlots.Contains(_activeMediaSlot))
+                    {
+                        <razor._Shared.tr.Media.List use="use" IsMultiSelect="false" />
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [4] Dış Çekim Galerisi (Çoklu - Id bazlı grid) -->
+    <div class="modal fade" id="modalEditGalleryOutSide" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false" style="z-index: 1080;">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-dark border border-light-3">
+                <div class="modal-header border-light-3">
+                    <h6 class="modal-title text-white"><i class="fa fa-external-link me-2 text-success"></i>Dış Çekim Görseli Seç</h6>
+                    <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                                onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+                        <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                        <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                                @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                            <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <Upload use="use" />
+                    <hr class="border-light-3 my-3" />
+                    @if (_activeMediaSlot == "galleryOutSide")
+                    {
+                        @RenderGalleryGrid(_galleryOutSideFiles)
+                    }
+                </div>
+                <div class="modal-footer border-light-3">
+                    <span class="text-white-50 small me-auto">@_galleryOutSideFiles.Count görsel seçildi</span>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="CloseMediaModal">
+                        <i class="fa fa-check me-1"></i>Seçimi Onayla
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [5] İç Çekim Galerisi (Çoklu - Id bazlı grid) -->
+    <div class="modal fade" id="modalEditGalleryInSide" tabindex="-1" data-bs-backdrop="false" data-bs-keyboard="false" style="z-index: 1080;">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-dark border border-light-3">
+                <div class="modal-header border-light-3">
+                    <h6 class="modal-title text-white"><i class="fa fa-home me-2 text-success"></i>İç Çekim Görseli Seç</h6>
+                    <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                                onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+                        <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                        <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                                @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                            <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <Upload use="use" />
+                    <hr class="border-light-3 my-3" />
+                    @if (_activeMediaSlot == "galleryInSide")
+                    {
+                        @RenderGalleryGrid(_galleryInSideFiles)
+                    }
+                </div>
+                <div class="modal-footer border-light-3">
+                    <span class="text-white-50 small me-auto">@_galleryInSideFiles.Count görsel seçildi</span>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="CloseMediaModal">
+                        <i class="fa fa-check me-1"></i>Seçimi Onayla
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ─── Leaflet harita: mevcut koordinatlarla başlatılır ─── *@
+    <script>
+        window.storeEditMap = (function () {
+        let map = null, marker = null, dotnet = null;
+
+        function place(lat, lng, zoom) {
+        if (!map) return;
+        const coords = [lat, lng];
+        map.setView(coords, zoom || 15);
+        if (marker) { marker.setLatLng(coords); }
+        else { marker = L.marker(coords).addTo(map); }
+        }
+
+        return {
+        init: function (dotNetRef, lat, lng) {
+        try {
+        dotnet = dotNetRef;
+        const el = document.getElementById('edit_map');
+        if (!el || typeof L === 'undefined') return;
+        if (map) { map.remove(); map = null; marker = null; }
+
+        const hasCoords = (lat !== null && lat !== undefined && lng !== null && lng !== undefined);
+        const startLat = hasCoords ? lat : 38.9637;
+        const startLng = hasCoords ? lng : 35.2433;
+
+        map = L.map('edit_map').setView([startLat, startLng], hasCoords ? 14 : 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        if (hasCoords) { place(lat, lng, 14); }
+
+        const btn = document.getElementById('btnEditGetLocation');
+        if (btn) {
+        btn.addEventListener('click', function () {
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Konum Alınıyor...';
+        if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+        function (pos) {
+        const la = pos.coords.latitude, lo = pos.coords.longitude;
+        place(la, lo, 15);
+        if (dotnet) { dotnet.invokeMethodAsync('SetLatLng', la, lo); }
+        btn.disabled = false; btn.innerHTML = original;
+        },
+        function (err) {
+        alert('Hata: ' + err.message);
+        btn.disabled = false; btn.innerHTML = original;
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+        );
+        } else {
+        alert('Tarayıcınız konumu desteklemiyor.');
+        btn.disabled = false; btn.innerHTML = original;
+        }
+        });
+        }
+        } catch (e) { console.error('storeEditMap.init', e); }
+        }
+        };
+        })();
+    </script>
+}
+
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE = "DataManager";
+    private const string ENTITY_NAME = "Store";
+
+    // ─── Parametreler ─────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public Store? SelectedStore { get; set; }
+
+    // ─── Çalışma modeli (parametre asla doğrudan mutasyona uğramaz) ─
+    private Store? _Store;
+
+    // ─── Satıcı yayın durumu (nullable bool? → bool köprüsü) ───────
+    private bool _vendorActive;
+
+    // ─── Lokasyon listeleri ───────────────────────────────────────
+    private List<Country> _Countries = new();
+    private List<States> _States = new();
+    private List<Cities> _Cities = new();
+    private int _countryId;
+    private int _stateId;
+
+    // ─── Tekli medya seçimleri ────────────────────────────────────
+    private Data.Media? _profileMedia;
+    private Data.Media? _coverMedia;
+    private string _activeMediaSlot = string.Empty;
+
+    private Data.Media? _certificateOfIncorporation;
+    private Data.Media? _activityCertificate;
+    private Data.Media? _taxRegistration;
+    private Data.Media? _tradeRegistryGazette;
+    private Data.Media? _signatureCircular;
+    private Data.Media? _authorizedPersonId;
+    private Data.Media? _proofOfBusinessAddress;
+    private Data.Media? _bankStatement;
+    private Data.Media? _bankAccountConfirmation;
+    private Data.Media? _trademarkCertificate;
+    private Data.Media? _letterOfAuthorization;
+    private Data.Media? _qualityCertificates;
+    private Data.Media? _customsRegistration;
+    private Data.Media? _socialSecurityRegistration;
+    private Data.Media? _proofOfOwnership;
+
+    // ─── Çoklu medya (galeri) seçimleri ───────────────────────────
+    private List<Data.Media> _galleryOutSideFiles = new();
+    private List<Data.Media> _galleryInSideFiles = new();
+
+    // ─── Galeri grid (Id bazlı) state ─────────────────────────────
+    private List<Data.Media> _galleryAllMedia = new();
+    private List<Data.Media> _galleryFilteredMedia = new();
+    private string _gallerySearch = string.Empty;
+    private int _galleryDisplayCount = 15;
+    private bool _galleryLoading;
+
+    // ─── Yaşam döngüsü / kilit ────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _disposed;
+    private bool _isInitialized;
+    private bool _isProcessing;
+    private Notification? _notificationRef;
+    private DotNetObjectReference<Edit>? _objRef;
+    private bool _mapInitialized;
+
+    // ─── Geçerli evrak slot adları ────────────────────────────────
+    private static readonly HashSet<string> _documentSlots = new()
+    {
+        "certificateOfIncorporation","activityCertificate","taxRegistration","tradeRegistryGazette",
+        "signatureCircular","authorizedPersonId","proofOfBusinessAddress","bankStatement",
+        "bankAccountConfirmation","trademarkCertificate","letterOfAuthorization","qualityCertificates",
+        "customsRegistration","socialSecurityRegistration","proofOfOwnership"
+    };
+
+    // ─── Evrak tablosu satır tanımı (UI tekrarını azaltır) ────────
+    private record DocRow(string Slot, string Icon, string Title, string Description, bool Required, Func<Data.Media?> Getter);
+    private List<DocRow> _documentRows = new();
+
+    // ─── Çalışma günü satır tanımı ────────────────────────────────
+    private record DayRow(string Key, string Label, Func<bool?> GetActive, Action<bool> SetActive,
+        Func<TimeOnly?> GetStart, Action<TimeOnly?> SetStart, Func<TimeOnly?> GetFinish, Action<TimeOnly?> SetFinish);
+    private List<DayRow> _dayRows = new();
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+        FileService.OnFileSelected += HandleSingleFileSelected;
+        FileService.OnFileUploaded += HandleGalleryFileUploaded;
+
+        await LoadCountriesAsync();
+
+        if (SelectedStore != null)
+            await BuildWorkingModelAsync(SelectedStore);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Harita yalnızca model hazır olduğunda ve bir kez kurulur.
+        if (!_mapInitialized && _Store?.AddressInfo != null && SelectedStore != null)
+        {
+            _mapInitialized = true;
+            try
+            {
+                _objRef ??= DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("storeEditMap.init", _objRef,
+                    _Store.AddressInfo.Latitude, _Store.AddressInfo.Longitude);
+            }
+            catch (Exception ex) { await LogError("MapInit", ex); }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        FileService.OnFileSelected -= HandleSingleFileSelected;
+        FileService.OnFileUploaded -= HandleGalleryFileUploaded;
+
+        _objRef?.Dispose();
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        // Düzenlenen kayıt dışarıdan değişirse sadece bilgilendir; aktif düzenleme ezilmez.
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ÇALIŞMA MODELİ KURULUMU (parametreden kopya + medya geri yükleme)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BuildWorkingModelAsync(Store src)
+    {
+        // Owned entity'ler için referans paylaşmamak adına yeni instance'lar oluşturulur.
+        _Store = new Store
+        {
+            Id = src.Id,
+            UserId = src.UserId,
+            Name = src.Name,
+            Description = src.Description,
+            IsActiveStateAdmin = src.IsActiveStateAdmin,     // SALT OKUNUR — yalnızca gösterilir
+            IsActiveDateAdmin = src.IsActiveDateAdmin,
+            IsActiveStateVendor = src.IsActiveStateVendor,
+            IsActiveDateVendor = src.IsActiveDateVendor,
+            CreatedAt = src.CreatedAt,
+
+            CertificateOfIncorporation = src.CertificateOfIncorporation,
+            ActivityCertificate = src.ActivityCertificate,
+            TaxRegistration = src.TaxRegistration,
+            TradeRegistryGazette = src.TradeRegistryGazette,
+            SignatureCircular = src.SignatureCircular,
+            AuthorizedPersonId = src.AuthorizedPersonId,
+            ProofOfBusinessAddress = src.ProofOfBusinessAddress,
+            BankStatement = src.BankStatement,
+            BankAccountConfirmation = src.BankAccountConfirmation,
+            TrademarkCertificate = src.TrademarkCertificate,
+            LetterOfAuthorization = src.LetterOfAuthorization,
+            QualityCertificates = src.QualityCertificates,
+            CustomsRegistration = src.CustomsRegistration,
+            SocialSecurityRegistration = src.SocialSecurityRegistration,
+            ProofOfOwnership = src.ProofOfOwnership,
+
+            ContactInformation = CloneContact(src.ContactInformation),
+            ProfileCoverGallery = new ProfileCoverGallery
+            {
+                ProfileImagePath = src.ProfileCoverGallery?.ProfileImagePath,
+                CoverImagePath = src.ProfileCoverGallery?.CoverImagePath
+            },
+            AddressInfo = CloneAddress(src.AddressInfo),
+            WorkingHours = CloneWorkingHours(src.WorkingHours),
+            Meta = src.Meta,
+            Interaction = src.Interaction,
+            IsDeleted = src.IsDeleted
+        };
+
+        _vendorActive = _Store.IsActiveStateVendor ?? false;
+
+        // UI yardımcı satırlarını kur
+        BuildDocumentRows();
+        BuildDayRows();
+
+        // Profil / Kapak görsellerini geri yükle
+        _profileMedia = string.IsNullOrWhiteSpace(_Store.ProfileCoverGallery?.ProfileImagePath)
+            ? null
+            : new Data.Media { FileUrl = _Store.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
+
+        _coverMedia = string.IsNullOrWhiteSpace(_Store.ProfileCoverGallery?.CoverImagePath)
+            ? null
+            : new Data.Media { FileUrl = _Store.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
+
+        // Evrak medyalarını ve galerileri DB'den yükle
+        await LoadDocumentMediaAsync();
+        _galleryOutSideFiles = await LoadGalleryAsync(_Store.Id, "OutShooting");
+        _galleryInSideFiles = await LoadGalleryAsync(_Store.Id, "InShooting");
+
+        // Adres cascade ön-yükleme
+        await PreloadCascadeAsync();
+
+        StateHasChanged();
+    }
+
+    private static ContactInformation CloneContact(ContactInformation? c) => c == null ? new ContactInformation() : new ContactInformation
+    {
+        IsActiveEmail = c.IsActiveEmail,
+        Email = c.Email,
+        PhoneEmailConfirmed = c.PhoneEmailConfirmed,
+        IsActivePhoneNumber = c.IsActivePhoneNumber,
+        CountryPhoneCode = c.CountryPhoneCode,
+        PhoneNumber = c.PhoneNumber,
+        FullPhoneNumber = c.FullPhoneNumber,
+        PhoneNumberConfirmed = c.PhoneNumberConfirmed,
+        IsActiveFacebook = c.IsActiveFacebook,
+        Facebook = c.Facebook,
+        IsActiveInstagram = c.IsActiveInstagram,
+        Instagram = c.Instagram,
+        IsActiveX = c.IsActiveX,
+        X = c.X,
+        IsActiveTikTok = c.IsActiveTikTok,
+        TikTok = c.TikTok,
+        IsActiveYouTube = c.IsActiveYouTube,
+        YouTube = c.YouTube,
+        IsActiveLinkedin = c.IsActiveLinkedin,
+        Linkedin = c.Linkedin,
+        IsActiveWhatsApp = c.IsActiveWhatsApp,
+        WhatsApp = c.WhatsApp,
+        IsActiveTelegram = c.IsActiveTelegram,
+        Telegram = c.Telegram,
+        IsActiveWeChat = c.IsActiveWeChat,
+        WeChat = c.WeChat,
+        IsActiveWeibo = c.IsActiveWeibo,
+        Weibo = c.Weibo,
+        IsActiveVKontakte = c.IsActiveVKontakte,
+        VKontakte = c.VKontakte,
+        IsActiveLine = c.IsActiveLine,
+        Line = c.Line,
+        IsActiveKakaoTalk = c.IsActiveKakaoTalk,
+        KakaoTalk = c.KakaoTalk,
+        IsActivePinterest = c.IsActivePinterest,
+        Pinterest = c.Pinterest,
+        IsActiveGitHub = c.IsActiveGitHub,
+        GitHub = c.GitHub,
+        IsActiveBehance = c.IsActiveBehance,
+        Behance = c.Behance,
+        IsActiveDiscord = c.IsActiveDiscord,
+        Discord = c.Discord,
+        IsActiveReddit = c.IsActiveReddit,
+        Reddit = c.Reddit,
+        IsActiveUserWebSite = c.IsActiveUserWebSite,
+        UserWebSite = c.UserWebSite
+    };
+
+    private static AddressInfo CloneAddress(AddressInfo? a) => a == null ? new AddressInfo() : new AddressInfo
+    {
+        MapTitle = a.MapTitle,
+        Country = a.Country,
+        State = a.State,
+        City = a.City,
+        ZipCode = a.ZipCode,
+        Address = a.Address,
+        Latitude = a.Latitude,
+        Longitude = a.Longitude,
+        GoogleMyBusinessAccountLink = a.GoogleMyBusinessAccountLink
+    };
+
+    private static WorkingHours CloneWorkingHours(WorkingHours? w) => w == null ? new WorkingHours() : new WorkingHours
+    {
+        IsActiveMonday = w.IsActiveMonday,
+        StartTimeMonday = w.StartTimeMonday,
+        FinishTimeMonday = w.FinishTimeMonday,
+        IsActiveTuesday = w.IsActiveTuesday,
+        StartTimeTuesday = w.StartTimeTuesday,
+        FinishTimeTuesday = w.FinishTimeTuesday,
+        IsActiveWednesday = w.IsActiveWednesday,
+        StartTimeWednesday = w.StartTimeWednesday,
+        FinishTimeWednesday = w.FinishTimeWednesday,
+        IsActiveThursday = w.IsActiveThursday,
+        StartTimeThursday = w.StartTimeThursday,
+        FinishTimeThursday = w.FinishTimeThursday,
+        IsActiveFriday = w.IsActiveFriday,
+        StartTimeFriday = w.StartTimeFriday,
+        FinishTimeFriday = w.FinishTimeFriday,
+        IsActiveSaturday = w.IsActiveSaturday,
+        StartTimeSaturday = w.StartTimeSaturday,
+        FinishTimeSaturday = w.FinishTimeSaturday,
+        IsActiveSunday = w.IsActiveSunday,
+        StartTimeSunday = w.StartTimeSunday,
+        FinishTimeSunday = w.FinishTimeSunday
+    };
+
+    // ── Evrak satırlarını kur ──
+    private void BuildDocumentRows()
+    {
+        _documentRows = new List<DocRow>
+        {
+            new("certificateOfIncorporation","fa-file-pdf-o","Kuruluş Belgesi","Şirket Kuruluş Belgesi (Certificate of Incorporation)",true,() => _certificateOfIncorporation),
+            new("activityCertificate","fa-file-text-o","Faaliyet Belgesi","Güncel Faaliyet Belgesi (Son 3 Aylık - Activity Certificate)",true,() => _activityCertificate),
+            new("taxRegistration","fa-university","Vergi Levhası / VAT","Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration)",true,() => _taxRegistration),
+            new("tradeRegistryGazette","fa-newspaper-o","Sicil Gazetesi","Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)",false,() => _tradeRegistryGazette),
+            new("signatureCircular","fa-pencil-square-o","İmza Sirküleri","İmza Sirküleri veya Yetki Belgesi (Signature Circular / POA)",true,() => _signatureCircular),
+            new("authorizedPersonId","fa-id-card-o","Yetkili Kimlik","Şirket Yetkilisi Pasaport / Kimlik Görseli (Authorized Person ID)",true,() => _authorizedPersonId),
+            new("proofOfBusinessAddress","fa-map-signs","İşyeri Adres Kanıtı","Şirket Adres Kanıtı - Fatura/Resmi Belge (Proof of Business Address)",true,() => _proofOfBusinessAddress),
+            new("bankStatement","fa-bank","Banka Ekstresi","Son 3 Aya Ait Banka Hesap Dökümü (Bank Statement)",false,() => _bankStatement),
+            new("bankAccountConfirmation","fa-credit-card","Banka Hesap Doğrulama","IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation)",true,() => _bankAccountConfirmation),
+            new("trademarkCertificate","fa-trademark","Marka Tescil Belgesi","Marka Tescil Belgesi (Trademark Certificate)",false,() => _trademarkCertificate),
+            new("letterOfAuthorization","fa-handshake-o","Yetkili Satıcı Onayı","Yetkili Satıcı Onay Belgesi (Letter of Authorization - LOA)",false,() => _letterOfAuthorization),
+            new("qualityCertificates","fa-certificate","Kalite Sertifikaları","Ürün Kalite ve Sağlık Sertifikaları (CE, ISO, FDA vb.)",false,() => _qualityCertificates),
+            new("customsRegistration","fa-ship","Gümrük Kayıt Belgesi","Gümrük Kayıt Belgesi (EORI veya Gümrük No - Customs Registration)",false,() => _customsRegistration),
+            new("socialSecurityRegistration","fa-shield","SGK / İşveren Kayıt","Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security / Employer ID)",false,() => _socialSecurityRegistration),
+            new("proofOfOwnership","fa-sitemap","Ortaklık Yapısı / UBO","Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership / UBO)",true,() => _proofOfOwnership),
+        };
+    }
+
+    // ── Çalışma günü satırlarını kur ──
+    private void BuildDayRows()
+    {
+        var w = _Store!.WorkingHours!;
+        _dayRows = new List<DayRow>
+        {
+            new("monday","Pazartesi",() => w.IsActiveMonday, v => w.IsActiveMonday = v, () => w.StartTimeMonday, v => w.StartTimeMonday = v, () => w.FinishTimeMonday, v => w.FinishTimeMonday = v),
+            new("tuesday","Salı",() => w.IsActiveTuesday, v => w.IsActiveTuesday = v, () => w.StartTimeTuesday, v => w.StartTimeTuesday = v, () => w.FinishTimeTuesday, v => w.FinishTimeTuesday = v),
+            new("wednesday","Çarşamba",() => w.IsActiveWednesday, v => w.IsActiveWednesday = v, () => w.StartTimeWednesday, v => w.StartTimeWednesday = v, () => w.FinishTimeWednesday, v => w.FinishTimeWednesday = v),
+            new("thursday","Perşembe",() => w.IsActiveThursday, v => w.IsActiveThursday = v, () => w.StartTimeThursday, v => w.StartTimeThursday = v, () => w.FinishTimeThursday, v => w.FinishTimeThursday = v),
+            new("friday","Cuma",() => w.IsActiveFriday, v => w.IsActiveFriday = v, () => w.StartTimeFriday, v => w.StartTimeFriday = v, () => w.FinishTimeFriday, v => w.FinishTimeFriday = v),
+            new("saturday","Cumartesi",() => w.IsActiveSaturday, v => w.IsActiveSaturday = v, () => w.StartTimeSaturday, v => w.StartTimeSaturday = v, () => w.FinishTimeSaturday, v => w.FinishTimeSaturday = v),
+            new("sunday","Pazar",() => w.IsActiveSunday, v => w.IsActiveSunday = v, () => w.StartTimeSunday, v => w.StartTimeSunday = v, () => w.FinishTimeSunday, v => w.FinishTimeSunday = v),
+        };
+    }
+
+    private static TimeOnly? ParseTime(string? value)
+        => TimeOnly.TryParse(value, out var t) ? t : (TimeOnly?)null;
+
+    // ── Evrak GUID'lerini Media kayıtlarına çöz ──
+    private async Task LoadDocumentMediaAsync()
+    {
+        if (_Store == null) return;
+
+        var idMap = new Dictionary<Guid, Action<Data.Media>>();
+        void Add(Guid? id, Action<Data.Media> set) { if (id.HasValue && id.Value != Guid.Empty) idMap[id.Value] = set; }
+
+        Add(_Store.CertificateOfIncorporation, m => _certificateOfIncorporation = m);
+        Add(_Store.ActivityCertificate, m => _activityCertificate = m);
+        Add(_Store.TaxRegistration, m => _taxRegistration = m);
+        Add(_Store.TradeRegistryGazette, m => _tradeRegistryGazette = m);
+        Add(_Store.SignatureCircular, m => _signatureCircular = m);
+        Add(_Store.AuthorizedPersonId, m => _authorizedPersonId = m);
+        Add(_Store.ProofOfBusinessAddress, m => _proofOfBusinessAddress = m);
+        Add(_Store.BankStatement, m => _bankStatement = m);
+        Add(_Store.BankAccountConfirmation, m => _bankAccountConfirmation = m);
+        Add(_Store.TrademarkCertificate, m => _trademarkCertificate = m);
+        Add(_Store.LetterOfAuthorization, m => _letterOfAuthorization = m);
+        Add(_Store.QualityCertificates, m => _qualityCertificates = m);
+        Add(_Store.CustomsRegistration, m => _customsRegistration = m);
+        Add(_Store.SocialSecurityRegistration, m => _socialSecurityRegistration = m);
+        Add(_Store.ProofOfOwnership, m => _proofOfOwnership = m);
+
+        if (!idMap.Any()) return;
+
+        try
+        {
+            var ids = idMap.Keys.ToList();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var medias = await db.Media.AsNoTracking()
+                .Where(m => ids.Contains(m.Id))
+                .ToListAsync(_cts.Token);
+
+            foreach (var media in medias)
+                if (idMap.TryGetValue(media.Id, out var setter))
+                    setter(media);
+        }
+        catch (Exception ex) { await LogError("LoadDocumentMedia", ex); }
+    }
+
+    // ── Mevcut galeri kayıtlarını DB'den yükle (ItemGallery → Media) ──
+    private async Task<List<Data.Media>> LoadGalleryAsync(Guid itemId, string itemType)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var mediaIds = await db.ItemGallery
+                .Where(g => g.ItemId == itemId && g.ItemType == itemType && g.IsDelete != true)
+                .Select(g => g.MediaId)
+                .ToListAsync(_cts.Token);
+
+            if (!mediaIds.Any()) return new();
+
+            return await db.Media.AsNoTracking()
+                .Where(m => mediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                .ToListAsync(_cts.Token);
+        }
+        catch (Exception ex)
+        {
+            await LogError("LoadGallery", ex);
+            return new();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // LOKASYON
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadCountriesAsync()
+    {
+        try
+        {
+            _Countries = await StateHub.GetOrLoadAsync("Countries_All", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                return await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync(_cts.Token);
+            }, _cts.Token) ?? new();
+        }
+        catch (Exception ex) { await LogError("LoadCountries", ex); }
+    }
+
+    private async Task PreloadCascadeAsync()
+    {
+        if (_Store?.AddressInfo == null) return;
+
+        if (!string.IsNullOrWhiteSpace(_Store.AddressInfo.Country))
+        {
+            var country = _Countries.FirstOrDefault(c =>
+                string.Equals(c.name, _Store.AddressInfo.Country, StringComparison.OrdinalIgnoreCase));
+
+            if (country != null)
+            {
+                _countryId = country.id;
+                try
+                {
+                    await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                    _States = await db.States.AsNoTracking()
+                        .Where(s => s.country_id == _countryId)
+                        .OrderBy(s => s.name).ToListAsync(_cts.Token);
+
+                    if (!string.IsNullOrWhiteSpace(_Store.AddressInfo.State))
+                    {
+                        var state = _States.FirstOrDefault(s =>
+                            string.Equals(s.name, _Store.AddressInfo.State, StringComparison.OrdinalIgnoreCase));
+
+                        if (state != null)
+                        {
+                            _stateId = state.id;
+                            _Cities = await db.Cities.AsNoTracking()
+                                .Where(c => c.state_id == _stateId)
+                                .OrderBy(c => c.name).ToListAsync(_cts.Token);
+                        }
+                    }
+                }
+                catch (Exception ex) { await LogError("PreloadCascade", ex); }
+            }
+        }
+    }
+
+    private async Task OnCountrySelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out _countryId);
+        _stateId = 0;
+        _States.Clear();
+        _Cities.Clear();
+
+        var name = _Countries.FirstOrDefault(c => c.id == _countryId)?.name;
+        _Store!.AddressInfo!.Country = name;
+        _Store.AddressInfo.State = null;
+        _Store.AddressInfo.City = null;
+
+        if (_countryId > 0)
+        {
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                _States = await db.States.AsNoTracking()
+                    .Where(s => s.country_id == _countryId)
+                    .OrderBy(s => s.name).ToListAsync(_cts.Token);
+            }
+            catch (Exception ex) { await LogError("OnCountrySelected", ex); }
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnStateSelected(ChangeEventArgs e)
+    {
+        int.TryParse(e.Value?.ToString(), out _stateId);
+        _Cities.Clear();
+
+        var name = _States.FirstOrDefault(s => s.id == _stateId)?.name;
+        _Store!.AddressInfo!.State = name;
+        _Store.AddressInfo.City = null;
+
+        if (_stateId > 0)
+        {
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                _Cities = await db.Cities.AsNoTracking()
+                    .Where(c => c.state_id == _stateId)
+                    .OrderBy(c => c.name).ToListAsync(_cts.Token);
+            }
+            catch (Exception ex) { await LogError("OnStateSelected", ex); }
+        }
+        StateHasChanged();
+    }
+
+    private void OnCitySelected(ChangeEventArgs e)
+    {
+        _Store!.AddressInfo!.City = _Cities
+            .FirstOrDefault(c => c.id.ToString() == e.Value?.ToString())?.name;
+    }
+
+    [JSInvokable]
+    public Task SetLatLng(double lat, double lng)
+    {
+        if (_Store?.AddressInfo != null)
+        {
+            _Store.AddressInfo.Latitude = (decimal)lat;
+            _Store.AddressInfo.Longitude = (decimal)lng;
+        }
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MEDYA MODAL AÇMA / KAPATMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval", $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval", $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task OpenMediaModal(string slot)
+    {
+        _activeMediaSlot = slot;
+        var modalId = slot == "cover" ? "modalEditCoverList" : "modalEditProfileList";
+        await ShowModal(modalId);
+    }
+
+    private async Task OpenDocumentModal(string slot)
+    {
+        _activeMediaSlot = slot;
+        await ShowModal("modalEditBusinessDocumentList");
+    }
+
+    private async Task OpenGalleryOutModal()
+    {
+        _activeMediaSlot = "galleryOutSide";
+        _gallerySearch = string.Empty;
+        _galleryDisplayCount = 15;
+        await LoadGalleryAllMediaAsync();
+        await ShowModal("modalEditGalleryOutSide");
+    }
+
+    private async Task OpenGalleryInModal()
+    {
+        _activeMediaSlot = "galleryInSide";
+        _gallerySearch = string.Empty;
+        _galleryDisplayCount = 15;
+        await LoadGalleryAllMediaAsync();
+        await ShowModal("modalEditGalleryInSide");
+    }
+
+    private async Task CloseMediaModal()
+    {
+        var modalId = _activeMediaSlot switch
+        {
+            "cover" => "modalEditCoverList",
+            "profile" => "modalEditProfileList",
+            "galleryOutSide" => "modalEditGalleryOutSide",
+            "galleryInSide" => "modalEditGalleryInSide",
+            _ when _documentSlots.Contains(_activeMediaSlot) => "modalEditBusinessDocumentList",
+            _ => "modalEditProfileList"
+        };
+        await HideModal(modalId);
+        _activeMediaSlot = string.Empty;
+    }
+
+    // ── Tekli seçim handler (profil/kapak/evrak) ──
+    private void HandleSingleFileSelected(Data.Media media)
+    {
+        switch (_activeMediaSlot)
+        {
+            case "profile": _profileMedia = media; break;
+            case "cover": _coverMedia = media; break;
+            case "certificateOfIncorporation": _certificateOfIncorporation = media; break;
+            case "activityCertificate": _activityCertificate = media; break;
+            case "taxRegistration": _taxRegistration = media; break;
+            case "tradeRegistryGazette": _tradeRegistryGazette = media; break;
+            case "signatureCircular": _signatureCircular = media; break;
+            case "authorizedPersonId": _authorizedPersonId = media; break;
+            case "proofOfBusinessAddress": _proofOfBusinessAddress = media; break;
+            case "bankStatement": _bankStatement = media; break;
+            case "bankAccountConfirmation": _bankAccountConfirmation = media; break;
+            case "trademarkCertificate": _trademarkCertificate = media; break;
+            case "letterOfAuthorization": _letterOfAuthorization = media; break;
+            case "qualityCertificates": _qualityCertificates = media; break;
+            case "customsRegistration": _customsRegistration = media; break;
+            case "socialSecurityRegistration": _socialSecurityRegistration = media; break;
+            case "proofOfOwnership": _proofOfOwnership = media; break;
+            default: return;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ── Galeri modali açıkken yeni dosya yüklenirse grid'i tazele ──
+    private void HandleGalleryFileUploaded()
+    {
+        if (_activeMediaSlot != "galleryOutSide" && _activeMediaSlot != "galleryInSide") return;
+        InvokeAsync(async () => await LoadGalleryAllMediaAsync());
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GALERİ GRID (Id bazlı)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadGalleryAllMediaAsync()
+    {
+        if (use == null) return;
+        _galleryLoading = true;
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _galleryAllMedia = await db.Media.AsNoTracking()
+                .Where(m => m.IsDeletedStatu != true && m.UserId == use.Id)
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync(_cts.Token);
+            ApplyGalleryFilter();
+        }
+        catch (Exception ex) { await LogError("LoadGalleryAllMedia", ex); }
+        finally
+        {
+            _galleryLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnGallerySearchInput(ChangeEventArgs e)
+    {
+        _gallerySearch = e.Value?.ToString() ?? string.Empty;
+        _galleryDisplayCount = 15;
+        ApplyGalleryFilter();
+    }
+
+    private void ClearGallerySearch()
+    {
+        _gallerySearch = string.Empty;
+        _galleryDisplayCount = 15;
+        ApplyGalleryFilter();
+    }
+
+    private void ApplyGalleryFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_gallerySearch))
+        {
+            _galleryFilteredMedia = _galleryAllMedia.ToList();
+        }
+        else
+        {
+            var s = _gallerySearch.Trim();
+            _galleryFilteredMedia = _galleryAllMedia
+                .Where(m => m.FileName != null && m.FileName.Contains(s, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void ToggleGalleryItem(Data.Media m)
+    {
+        var target = _activeMediaSlot == "galleryInSide" ? _galleryInSideFiles : _galleryOutSideFiles;
+        var existing = target.FirstOrDefault(x => x.Id == m.Id);
+        if (existing != null) target.Remove(existing);
+        else target.Add(m);
+    }
+
+    private static readonly string[] _galleryImageExt =
+        { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".heic", ".heif", ".svg", ".ico", ".avif" };
+    private static readonly string[] _galleryVideoExt =
+        { ".mp4", ".mov", ".avi", ".mkv", ".wmv", ".flv", ".webm", ".mpeg", ".mpg" };
+
+    private static bool IsGalleryImage(string ext) => _galleryImageExt.Contains(ext);
+    private static bool IsGalleryVideo(string ext) => _galleryVideoExt.Contains(ext);
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — GÜNCELLE
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task UpdateStore()
+    {
+        if (_isProcessing || _Store == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            // ── 1. VALIDATION (zorunlu alanlar) ──
+            var errors = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(_Store.Name))
+                errors.Add("İşletme/Mağaza adı boş bırakılamaz.");
+            if (string.IsNullOrWhiteSpace(_Store.Description))
+                errors.Add("İşletme/Mağaza açıklaması boş bırakılamaz.");
+
+            if (_Store.ContactInformation == null)
+            {
+                errors.Add("İletişim bilgileri boş bırakılamaz.");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(_Store.ContactInformation.Email))
+                    errors.Add("E-posta adresi boş bırakılamaz.");
+                if (string.IsNullOrWhiteSpace(_Store.ContactInformation.CountryPhoneCode))
+                    errors.Add("Ülke telefon kodu seçilmedi.");
+                if (string.IsNullOrWhiteSpace(_Store.ContactInformation.PhoneNumber))
+                    errors.Add("Telefon numarası boş bırakılamaz.");
+            }
+
+            if (_profileMedia == null) errors.Add("Profil görseli yüklenmedi.");
+            if (_coverMedia == null) errors.Add("Kapak görseli yüklenmedi.");
+
+            if (_galleryOutSideFiles.Count < 3)
+                errors.Add($"Dış çekim görseli en az 3 adet olmalıdır. (Şu an: {_galleryOutSideFiles.Count})");
+            if (_galleryInSideFiles.Count < 3)
+                errors.Add($"İç çekim görseli en az 3 adet olmalıdır. (Şu an: {_galleryInSideFiles.Count})");
+
+            // Zorunlu belgeler
+            foreach (var doc in _documentRows.Where(d => d.Required))
+                if (doc.Getter() == null)
+                    errors.Add($"{doc.Title} yüklenmedi.");
+
+            if (errors.Any())
+            {
+                var errorMessage = string.Join("<br/>• ", errors.Prepend("Lütfen aşağıdaki alanları doldurun:"));
+                await Notify("danger", "Eksik Bilgiler", $"• {errorMessage}");
+                return;
+            }
+
+            // ── 2. MEVCUT KAYDI YÜKLE (blanket Update YOK; alan bazlı yazılır) ──
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.Stores.FindAsync(new object[] { _Store.Id }, _cts.Token);
+
+            if (existing == null)
+            {
+                await Notify("warning", "Uyarı", "Kayıt artık mevcut değil.");
+                return;
+            }
+
+            // ── 3. DÜZENLENEBİLİR ALANLARI YAZ ──
+            existing.Name = _Store.Name;
+            existing.Description = _Store.Description;
+
+            // KISIT: IsActiveStateAdmin / IsActiveDateAdmin alanlarına DOKUNULMAZ.
+            //        (Kullanıcı müdahale edemez; mevcut DB değerleri korunur.)
+
+            // Satıcının kendi yayın kontrolü
+            existing.IsActiveStateVendor = _vendorActive;
+            existing.IsActiveDateVendor = DateTime.UtcNow;
+
+            // Telefon birleştir
+            if (_Store.ContactInformation != null &&
+                !string.IsNullOrWhiteSpace(_Store.ContactInformation.CountryPhoneCode) &&
+                !string.IsNullOrWhiteSpace(_Store.ContactInformation.PhoneNumber))
+            {
+                var tf = new TextualFunctions();
+                _Store.ContactInformation.FullPhoneNumber =
+                    _Store.ContactInformation.CountryPhoneCode.Trim() +
+                    tf.NormalizePhoneNumberEditor(_Store.ContactInformation.PhoneNumber.Trim());
+            }
+
+            // Owned entity'leri yeniden ata (EF Core sütunları günceller)
+            existing.ContactInformation = CloneContact(_Store.ContactInformation);
+            existing.AddressInfo = CloneAddress(_Store.AddressInfo);
+            existing.WorkingHours = CloneWorkingHours(_Store.WorkingHours);
+            existing.ProfileCoverGallery = new ProfileCoverGallery
+            {
+                ProfileImagePath = _profileMedia?.FileUrl,
+                CoverImagePath = _coverMedia?.FileUrl
+            };
+
+            // Belge GUID atamaları (değiştirilmeyenler aynı Id ile korunur)
+            existing.CertificateOfIncorporation = _certificateOfIncorporation?.Id;
+            existing.ActivityCertificate = _activityCertificate?.Id;
+            existing.TaxRegistration = _taxRegistration?.Id;
+            existing.TradeRegistryGazette = _tradeRegistryGazette?.Id;
+            existing.SignatureCircular = _signatureCircular?.Id;
+            existing.AuthorizedPersonId = _authorizedPersonId?.Id;
+            existing.ProofOfBusinessAddress = _proofOfBusinessAddress?.Id;
+            existing.BankStatement = _bankStatement?.Id;
+            existing.BankAccountConfirmation = _bankAccountConfirmation?.Id;
+            existing.TrademarkCertificate = _trademarkCertificate?.Id;
+            existing.LetterOfAuthorization = _letterOfAuthorization?.Id;
+            existing.QualityCertificates = _qualityCertificates?.Id;
+            existing.CustomsRegistration = _customsRegistration?.Id;
+            existing.SocialSecurityRegistration = _socialSecurityRegistration?.Id;
+            existing.ProofOfOwnership = _proofOfOwnership?.Id;
+
+            // ── 4. GALERİ SOFT-DELETE MERGE ──
+            await SyncGalleryAsync(db, existing.Id, _galleryOutSideFiles, "OutShooting");
+            await SyncGalleryAsync(db, existing.Id, _galleryInSideFiles, "InShooting");
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            // ── 5. SON ──
+            StateHub.ClearCache("DataManager_Main");
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE, "UpdateStore");
+            await Notify("success", "Başarılı", "İşletme/Mağaza başarıyla güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("UpdateStore", ex);
+            await Notify("danger", "Hata", "İşletme/Mağaza güncellenirken bir sorun oluştu.");
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    // Galeri merge: artık seçili olmayanlar soft-delete, tekrar seçilenler reaktive,
+    // hiç kaydı olmayan yeniler eklenir. (audit izi korunur, tablo şişmez)
+    private async Task SyncGalleryAsync(_ApplicationConnectionDb db, Guid storeId, List<Data.Media> selectedFiles, string itemType)
+    {
+        var oldGallery = await db.ItemGallery
+            .Where(g => g.ItemId == storeId && g.ItemType == itemType)
+            .ToListAsync(_cts.Token);
+
+        var selectedMediaIds = selectedFiles.Select(m => m.Id).ToHashSet();
+
+        foreach (var g in oldGallery)
+        {
+            var stillSelected = g.MediaId.HasValue && selectedMediaIds.Contains(g.MediaId.Value);
+
+            if (!stillSelected && g.IsDelete != true)
+            {
+                g.IsDelete = true;
+            }
+            else if (stillSelected && g.IsDelete == true)
+            {
+                g.IsDelete = false;
+                g.ItemAddDate = DateTime.UtcNow;
+            }
+        }
+
+        var existingMediaIds = oldGallery
+            .Where(g => g.MediaId.HasValue)
+            .Select(g => g.MediaId!.Value)
+            .ToHashSet();
+
+        var trulyNew = selectedFiles.Where(m => !existingMediaIds.Contains(m.Id)).ToList();
+
+        if (trulyNew.Any())
+        {
+            var newGallery = trulyNew.Select(m => new ItemGallery
+            {
+                UserId = use!.Id,
+                ItemId = storeId,
+                ItemType = itemType,
+                MediaId = m.Id,
+                ItemAddDate = DateTime.UtcNow,
+                IsDelete = false
+            }).ToList();
+
+            await db.ItemGallery.AddRangeAsync(newGallery, _cts.Token);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://efavori.com/_files/main/logo/logo.png");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

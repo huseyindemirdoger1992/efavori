@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260531232816_59")]
+    partial class _59
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1683,11 +1686,11 @@ namespace data.Migrations
                             b1.Property<string>("GoogleMyBusinessAccountLink")
                                 .HasColumnType("nvarchar(max)");
 
-                            b1.Property<decimal?>("Latitude")
-                                .HasColumnType("decimal(18,15)");
+                            b1.Property<double?>("Latitude")
+                                .HasColumnType("float");
 
-                            b1.Property<decimal?>("Longitude")
-                                .HasColumnType("decimal(18,15)");
+                            b1.Property<double?>("Longitude")
+                                .HasColumnType("float");
 
                             b1.Property<string>("MapTitle")
                                 .HasColumnType("nvarchar(max)");
@@ -2008,11 +2011,11 @@ namespace data.Migrations
                             b1.Property<string>("GoogleMyBusinessAccountLink")
                                 .HasColumnType("nvarchar(max)");
 
-                            b1.Property<decimal?>("Latitude")
-                                .HasColumnType("decimal(18,15)");
+                            b1.Property<double?>("Latitude")
+                                .HasColumnType("float");
 
-                            b1.Property<decimal?>("Longitude")
-                                .HasColumnType("decimal(18,15)");
+                            b1.Property<double?>("Longitude")
+                                .HasColumnType("float");
 
                             b1.Property<string>("MapTitle")
                                 .HasColumnType("nvarchar(max)");
@@ -2913,11 +2916,11 @@ namespace data.Migrations
                             b1.Property<string>("GoogleMyBusinessAccountLink")
                                 .HasColumnType("nvarchar(max)");
 
-                            b1.Property<decimal?>("Latitude")
-                                .HasColumnType("decimal(18,15)");
+                            b1.Property<double?>("Latitude")
+                                .HasColumnType("float");
 
-                            b1.Property<decimal?>("Longitude")
-                                .HasColumnType("decimal(18,15)");
+                            b1.Property<double?>("Longitude")
+                                .HasColumnType("float");
 
                             b1.Property<string>("MapTitle")
                                 .HasColumnType("nvarchar(max)");

@@ -19,7 +19,6 @@ namespace data
         public string? Description { get; set; } = string.Empty; //
 
         // Admin Kontrolleri
-        public bool? AdminPermissionPending { get; set; } = true; //
         public bool? IsActiveStateAdmin { get; set; } = false; //
         public DateTime? IsActiveDateAdmin { get; set; } = new DateTime(); //
 

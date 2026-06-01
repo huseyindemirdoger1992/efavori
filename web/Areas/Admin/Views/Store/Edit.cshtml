@@ -15,6 +15,7 @@
     // Oturum kontrolü
     var userEmail = User.FindFirstValue(ClaimTypes.Email);
     Users? use = null;
+    Store? store = ViewBag.StoreData;
 
     if (!string.IsNullOrEmpty(userEmail))
     {
@@ -66,63 +67,63 @@
         switch (currentLang)
         {
             case "tr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "az":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "de":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "es":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "fr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "hi":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "pt":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "ru":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "zh":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             default:
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
         }
@@ -135,63 +136,63 @@ else
         switch (currentLang)
         {
             case "tr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "az":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "de":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "es":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "fr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "hi":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "pt":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "ru":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             case "zh":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
             default:
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Add>(
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null) }))
+                                                new { use = (use != null ? use : null), SelectedStore = (store != null ? store : null) }))
                 ;
                 break;
         }

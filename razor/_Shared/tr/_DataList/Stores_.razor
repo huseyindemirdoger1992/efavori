@@ -34,20 +34,6 @@ else
         <div class="col-12 col-sm-4 col-lg-3 col-xl-3">
             <div class="card border-0 shadow-sm h-100 overflow-hidden position-relative"
                  style="background: linear-gradient(rgba(32, 32, 32, 0.9), rgba(32, 32, 32, 0.9)), url('@(item.ProfileCoverGallery?.CoverImagePath ?? "https://efavori.com/_files/main/NoImage.png")') center/cover no-repeat; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
-                <div class="position-absolute top-0 end-0 m-3" style="z-index: 1;">
-                    @if (item.IsActiveStateAdmin == true && item.AdminPermissionPending == false)
-                    {
-                        <span class="badge bg-success text-light px-3 py-2 shadow-sm" style="margin-top:8px;">
-                            <i class="fa fa-check-circle me-1"></i>Onaylı Mağaza
-                        </span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-warning text-dark px-3 py-2 shadow-sm" style="margin-top:8px;">
-                            <i class="fa fa-clock-o me-1"></i>Onay Bekliyor
-                        </span>
-                    }
-                </div>
 
                 <div class="card-body p-4">
                     <div class="d-flex align-items-start gap-3 mb-4">

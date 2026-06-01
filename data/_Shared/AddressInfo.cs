@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace data._Shared
 {
@@ -14,8 +15,11 @@ namespace data._Shared
         public string? ZipCode { get; set; }
         public string? Address { get; set; }
 
-        public double? Latitude { get; set; }
-        public double? Longitude { get; set; }
+        [Column(TypeName = "decimal(18,15)")]
+        public decimal? Latitude { get; set; }
+
+        [Column(TypeName = "decimal(18,15)")]
+        public decimal? Longitude { get; set; }
         public string? GoogleMyBusinessAccountLink { get; set; } // Google Benim İşletmem Hesabı Linki 
     }
 }

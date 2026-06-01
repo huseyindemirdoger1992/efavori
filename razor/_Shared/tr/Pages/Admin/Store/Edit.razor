@@ -43,6 +43,16 @@
 }
 <razor._Shared.BreadCrumbLinksUrl roads="roads" />
 
+@* ─────────────────────────────────────────────────────────────
+   NOT: Leaflet varlıkları ve harita motoru artık MARKUP <script>
+   ile DEĞİL, OnAfterRenderAsync içinden JS.InvokeVoidAsync("eval", ...)
+   ile enjekte ediliyor. Sebep: Blazor interaktif render modunda
+   bileşen markup'ındaki <script> etiketleri ÇALIŞTIRILMAZ; bu yüzden
+   `window.storeEditMap` hiç tanımlanmıyor ve harita açılmıyordu.
+   `eval` her render modunda güvenle çalışır.
+   ───────────────────────────────────────────────────────────── *@
+
+
 @if (SelectedStore is null)
 {
     <div class="alert alert-warning d-flex align-items-center" role="alert">
@@ -139,7 +149,7 @@ else
         }
     </text>;
 
-    <div class="container">
+    <div class="container-fluid">
         <div class="row justify-content-center">
             <div class="col-lg-12 col-xl-12">
                 <div class="card shadow-sm border-0 overflow-hidden">
@@ -191,26 +201,7 @@ else
 
                         <!-- Onay/Durum Bilgileri -->
                         <div class="row align-items-center mt-2 mb-1">
-                            <div class="col-md-6">
-                                @* IsActiveStateAdmin → SALT OKUNUR. Kullanıcı bu alana müdahale edemez. *@
-                                <label class="form-label d-block mb-1 fw-semibold">
-                                    <i class="fa fa-shield me-1 text-secondary"></i>Yönetici Onay Durumu:
-                                </label>
-                                @if (_Store.IsActiveStateAdmin == true)
-                                {
-                                    <span class="badge bg-success"><i class="fa fa-check me-1"></i>Onaylandı</span>
-                                }
-                                else if (_Store.IsActiveStateAdmin == false)
-                                {
-                                    <span class="badge bg-danger"><i class="fa fa-times me-1"></i>Reddedildi</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-warning text-dark"><i class="fa fa-clock-o me-1"></i>İnceleniyor</span>
-                                }
-                                <span class="badge bg-light"><i class="fa fa-clock-o me-1"></i>Yönetici tarafından değiştirilebilir.</span>
-                            </div>
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 @* IsActiveStateVendor → Satıcının kendi kontrolü, düzenlenebilir *@
                                 <label class="form-label d-block mb-1 fw-semibold">
                                     <i class="fa fa-store me-1 text-primary"></i>Mağaza Yayın Durumu
@@ -356,6 +347,7 @@ else
                                                         <th>Açıklama</th>
                                                         <th style="width:180px;">Yüklenen Dosya</th>
                                                         <th style="width:110px;" class="text-center">Durum</th>
+                                                        <th style="width:90px;" class="text-center">Dosyalar</th>
                                                         <th style="width:90px;" class="text-center">İşlem</th>
                                                     </tr>
                                                 </thead>
@@ -364,7 +356,7 @@ else
                                                     {
                                                         var media = doc.Getter();
                                                         <tr>
-                                                            <td class="text-center text-muted"><i class="fa @doc.Icon"></i></td>
+                                                            <td class="text-center text-light"><i class="fa @doc.Icon"></i></td>
                                                             <td class="fw-semibold">
                                                                 @doc.Title
                                                                 @if (doc.Required)
@@ -372,7 +364,7 @@ else
                                                                     <span class="text-danger">*</span>
                                                                 }
                                                             </td>
-                                                            <td class="text-muted small">@doc.Description</td>
+                                                            <td class="text-light small">@doc.Description</td>
                                                             <td class="small">
                                                                 @if (media is not null)
                                                                 {
@@ -380,7 +372,7 @@ else
                                                                 }
                                                                 else
                                                                 {
-                                                                    <span class="text-muted fst-italic">—</span>
+                                                                    <span class="text-light fst-italic">—</span>
                                                                 }
                                                             </td>
                                                             <td class="text-center">
@@ -398,6 +390,19 @@ else
                                                                 }
                                                             </td>
                                                             <td class="text-center">
+                                                                @if (media is not null && !string.IsNullOrWhiteSpace(media.FileUrl))
+                                                                {
+                                                                    <a href="@media.FileUrl" target="_blank" rel="noopener noreferrer"
+                                                                           class="btn btn-sm btn-outline-primary" title="@media.FileName">
+                                                                        <i class="fa fa-external-link me-1"></i>Aç
+                                                                    </a>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="text-light fst-italic small">—</span>
+                                                                }
+                                                            </td>
+                                                            <td class="text-center">
                                                                 <button type="button" class="btn btn-sm btn-outline-dark"
                                                                         @onclick="() => OpenDocumentModal(doc.Slot)">
                                                                     <i class="fa fa-upload me-1"></i>Yükle
@@ -408,6 +413,27 @@ else
                                                 </tbody>
                                             </table>
                                         </div>
+
+                                        @if (_otherDocumentFiles.Any())
+                                        {
+                                            <div class="mt-3">
+                                                <label class="form-label text-light fw-semibold">
+                                                    <i class="fa fa-folder-open me-1 text-info"></i>Diğer Yüklü Dosyalar
+                                                </label>
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    @foreach (var f in _otherDocumentFiles)
+                                                    {
+                                                        <a href="@f.FileUrl" target="_blank" rel="noopener noreferrer"
+                                                               class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
+                                                               title="@f.FileName">
+                                                            <i class="fa fa-file-o me-1"></i>
+                                                            <span class="text-truncate d-inline-block" style="max-width:160px;">@(string.IsNullOrWhiteSpace(f.FileName) ? "Dosya" : f.FileName)</span>
+                                                            <i class="fa fa-external-link ms-2"></i>
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -531,9 +557,6 @@ else
                                 <input class="form-control" type="url" placeholder="https://business.google.com/..."
                                        @bind="_Store.AddressInfo!.GoogleMyBusinessAccountLink">
                             </div>
-
-                            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-bold">Enlem (Latitude)</label>
@@ -938,70 +961,6 @@ else
             </div>
         </div>
     </div>
-
-    @* ─── Leaflet harita: mevcut koordinatlarla başlatılır ─── *@
-    <script>
-        window.storeEditMap = (function () {
-        let map = null, marker = null, dotnet = null;
-
-        function place(lat, lng, zoom) {
-        if (!map) return;
-        const coords = [lat, lng];
-        map.setView(coords, zoom || 15);
-        if (marker) { marker.setLatLng(coords); }
-        else { marker = L.marker(coords).addTo(map); }
-        }
-
-        return {
-        init: function (dotNetRef, lat, lng) {
-        try {
-        dotnet = dotNetRef;
-        const el = document.getElementById('edit_map');
-        if (!el || typeof L === 'undefined') return;
-        if (map) { map.remove(); map = null; marker = null; }
-
-        const hasCoords = (lat !== null && lat !== undefined && lng !== null && lng !== undefined);
-        const startLat = hasCoords ? lat : 38.9637;
-        const startLng = hasCoords ? lng : 35.2433;
-
-        map = L.map('edit_map').setView([startLat, startLng], hasCoords ? 14 : 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        if (hasCoords) { place(lat, lng, 14); }
-
-        const btn = document.getElementById('btnEditGetLocation');
-        if (btn) {
-        btn.addEventListener('click', function () {
-        const original = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Konum Alınıyor...';
-        if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-        function (pos) {
-        const la = pos.coords.latitude, lo = pos.coords.longitude;
-        place(la, lo, 15);
-        if (dotnet) { dotnet.invokeMethodAsync('SetLatLng', la, lo); }
-        btn.disabled = false; btn.innerHTML = original;
-        },
-        function (err) {
-        alert('Hata: ' + err.message);
-        btn.disabled = false; btn.innerHTML = original;
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-        );
-        } else {
-        alert('Tarayıcınız konumu desteklemiyor.');
-        btn.disabled = false; btn.innerHTML = original;
-        }
-        });
-        }
-        } catch (e) { console.error('storeEditMap.init', e); }
-        }
-        };
-        })();
-    </script>
 }
 
 @code {
@@ -1052,6 +1011,9 @@ else
     private List<Data.Media> _galleryOutSideFiles = new();
     private List<Data.Media> _galleryInSideFiles = new();
 
+    // ─── Slot'a bağlanamayan (genel "Document" tipli) evrak dosyaları ──
+    private List<Data.Media> _otherDocumentFiles = new();
+
     // ─── Galeri grid (Id bazlı) state ─────────────────────────────
     private List<Data.Media> _galleryAllMedia = new();
     private List<Data.Media> _galleryFilteredMedia = new();
@@ -1068,6 +1030,7 @@ else
     private Notification? _notificationRef;
     private DotNetObjectReference<Edit>? _objRef;
     private bool _mapInitialized;
+    private Guid? _builtForId;
 
     // ─── Geçerli evrak slot adları ────────────────────────────────
     private static readonly HashSet<string> _documentSlots = new()
@@ -1101,26 +1064,124 @@ else
         FileService.OnFileUploaded += HandleGalleryFileUploaded;
 
         await LoadCountriesAsync();
+    }
 
-        if (SelectedStore != null)
-            await BuildWorkingModelAsync(SelectedStore);
+    // Parametre (SelectedStore) ilk geldiğinde veya başka bir kayda değiştiğinde
+    // çalışma modelini (yeniden) kur. Bu, kaydın OnInitialized'den SONRA atanması
+    // ya da bileşen yeniden kullanılması durumlarında da yüklemeyi garanti eder.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_disposed) return;
+
+        var incomingId = SelectedStore?.Id;
+        if (incomingId == null) return;
+        if (_builtForId == incomingId) return; // aynı kayıt için tekrar kurma
+
+        _builtForId = incomingId;
+        _mapInitialized = false; // yeni kayıt → harita yeniden kurulsun
+        await BuildWorkingModelAsync(SelectedStore!);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Harita yalnızca model hazır olduğunda ve bir kez kurulur.
-        if (!_mapInitialized && _Store?.AddressInfo != null && SelectedStore != null)
+        // Harita yalnızca model hazır olduğunda kurulur.
+        if (_mapInitialized || _Store?.AddressInfo == null || SelectedStore == null)
+            return;
+
+        try
         {
+            // 1) Harita motorunu eval ile tanımla (markup <script> interaktif modda
+            //    çalışmadığı için tek güvenilir yol budur). İçinde Leaflet'i de
+            //    otomatik yükler ve hazır olana kadar bekler.
+            await JS.InvokeVoidAsync("eval", MapEngineScript);
+
+            // 2) Bu kayda ait koordinatlarla başlat (DotNet referansı geolocation içindir)
+            _objRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("storeEditMap.init", _objRef,
+                _Store.AddressInfo.Latitude, _Store.AddressInfo.Longitude);
+
             _mapInitialized = true;
-            try
-            {
-                _objRef ??= DotNetObjectReference.Create(this);
-                await JS.InvokeVoidAsync("storeEditMap.init", _objRef,
-                    _Store.AddressInfo.Latitude, _Store.AddressInfo.Longitude);
-            }
-            catch (Exception ex) { await LogError("MapInit", ex); }
         }
+        catch (Exception ex) { await LogError("MapInit", ex); }
     }
+
+    // Harita motoru (Leaflet yükleyici + init). eval ile çalıştırılır → her render modunda güvenli.
+    private const string MapEngineScript = @"
+        if (!window.storeEditMap) {
+            window.storeEditMap = (function () {
+                var map = null, marker = null, dotnet = null;
+
+                function injectAssets() {
+                    if (!document.getElementById('leaflet-css')) {
+                        var l = document.createElement('link');
+                        l.id = 'leaflet-css'; l.rel = 'stylesheet';
+                        l.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                        document.head.appendChild(l);
+                    }
+                    if (typeof L === 'undefined' && !document.getElementById('leaflet-js')) {
+                        var s = document.createElement('script');
+                        s.id = 'leaflet-js';
+                        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                        document.head.appendChild(s);
+                    }
+                }
+
+                function place(lat, lng, zoom) {
+                    if (!map) return;
+                    var c = [lat, lng];
+                    map.setView(c, zoom || 15);
+                    if (marker) { marker.setLatLng(c); } else { marker = L.marker(c).addTo(map); }
+                }
+
+                function build(lat, lng) {
+                    var el = document.getElementById('edit_map');
+                    if (!el) return;
+                    if (map) { map.remove(); map = null; marker = null; }
+
+                    var has = (lat !== null && lat !== undefined && lng !== null && lng !== undefined);
+                    map = L.map(el).setView([has ? lat : 38.9637, has ? lng : 35.2433], has ? 14 : 6);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+                    if (has) { place(lat, lng, 14); }
+                    setTimeout(function () { if (map) map.invalidateSize(); }, 300);
+
+                    var btn = document.getElementById('btnEditGetLocation');
+                    if (btn && !btn.dataset.bound) {
+                        btn.dataset.bound = '1';
+                        btn.addEventListener('click', function () {
+                            var o = btn.innerHTML; btn.disabled = true;
+                            btn.innerHTML = '<i class=""fa fa-spinner fa-spin me-2""></i> Konum Alınıyor...';
+                            if ('geolocation' in navigator) {
+                                navigator.geolocation.getCurrentPosition(
+                                    function (p) {
+                                        var la = p.coords.latitude, lo = p.coords.longitude;
+                                        place(la, lo, 15);
+                                        if (dotnet) { dotnet.invokeMethodAsync('SetLatLng', la, lo); }
+                                        btn.disabled = false; btn.innerHTML = o;
+                                    },
+                                    function (e) { alert('Hata: ' + e.message); btn.disabled = false; btn.innerHTML = o; },
+                                    { enableHighAccuracy: true, timeout: 5000 }
+                                );
+                            } else { alert('Tarayıcınız konumu desteklemiyor.'); btn.disabled = false; btn.innerHTML = o; }
+                        });
+                    }
+                }
+
+                return {
+                    init: function (ref, lat, lng) {
+                        dotnet = ref;
+                        injectAssets();
+                        var a = 0;
+                        (function t() {
+                            var el = document.getElementById('edit_map');
+                            var ok = el && (typeof L !== 'undefined');
+                            if (!ok) { if (a++ < 80) { setTimeout(t, 150); } return; }
+                            try { build(lat, lng); } catch (e) { console.error('storeEditMap.build', e); }
+                        })();
+                    }
+                };
+            })();
+        }
+    ";
 
     public async ValueTask DisposeAsync()
     {
@@ -1152,6 +1213,27 @@ else
 
     private async Task BuildWorkingModelAsync(Store src)
     {
+        // ──────────────────────────────────────────────────────────────
+        // KÖK SORUN ÇÖZÜMÜ:
+        // Parametreyle gelen SelectedStore, üst listedeki sorgudan/RAM
+        // cache'ten kısmî (projeksiyon) gelebiliyordu. Bu durumda belge
+        // GUID sütunları ve owned AddressInfo (Latitude/Longitude) BOŞ
+        // geliyordu → evraklar "hiç yüklenmemiş" görünüyor, harita ve
+        // koordinatlar gelmiyordu.
+        // Çözüm: düzenlenecek kaydın TAM halini DB'den taze çekiyoruz.
+        // (Add.razor kültürüyle uyumlu: veri her zaman DB'den okunur.)
+        // ──────────────────────────────────────────────────────────────
+        try
+        {
+            await using var loadDb = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var fresh = await loadDb.Stores.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == src.Id, _cts.Token);
+
+            if (fresh != null)
+                src = fresh; // owned tipler (AddressInfo/ContactInformation/WorkingHours) ve tüm sütunlar dolu gelir
+        }
+        catch (Exception ex) { await LogError("BuildWorkingModel.Fetch", ex); }
+
         // Owned entity'ler için referans paylaşmamak adına yeni instance'lar oluşturulur.
         _Store = new Store
         {
@@ -1351,42 +1433,136 @@ else
         => TimeOnly.TryParse(value, out var t) ? t : (TimeOnly?)null;
 
     // ── Evrak GUID'lerini Media kayıtlarına çöz ──
+    // Önce Store üzerindeki skaler GUID sütunlarından (Add.razor bu şekilde kaydeder),
+    // ardından eksik kalan slotlar için ItemGallery (ItemType = slot adı) üzerinden çözülür.
     private async Task LoadDocumentMediaAsync()
     {
         if (_Store == null) return;
 
-        var idMap = new Dictionary<Guid, Action<Data.Media>>();
-        void Add(Guid? id, Action<Data.Media> set) { if (id.HasValue && id.Value != Guid.Empty) idMap[id.Value] = set; }
+        // slot → (getter, setter) eşlemesi
+        var slotGet = new Dictionary<string, Func<Data.Media?>>(StringComparer.OrdinalIgnoreCase);
+        var slotSet = new Dictionary<string, Action<Data.Media>>(StringComparer.OrdinalIgnoreCase);
+        var slotGuid = new Dictionary<string, Guid?>(StringComparer.OrdinalIgnoreCase);
 
-        Add(_Store.CertificateOfIncorporation, m => _certificateOfIncorporation = m);
-        Add(_Store.ActivityCertificate, m => _activityCertificate = m);
-        Add(_Store.TaxRegistration, m => _taxRegistration = m);
-        Add(_Store.TradeRegistryGazette, m => _tradeRegistryGazette = m);
-        Add(_Store.SignatureCircular, m => _signatureCircular = m);
-        Add(_Store.AuthorizedPersonId, m => _authorizedPersonId = m);
-        Add(_Store.ProofOfBusinessAddress, m => _proofOfBusinessAddress = m);
-        Add(_Store.BankStatement, m => _bankStatement = m);
-        Add(_Store.BankAccountConfirmation, m => _bankAccountConfirmation = m);
-        Add(_Store.TrademarkCertificate, m => _trademarkCertificate = m);
-        Add(_Store.LetterOfAuthorization, m => _letterOfAuthorization = m);
-        Add(_Store.QualityCertificates, m => _qualityCertificates = m);
-        Add(_Store.CustomsRegistration, m => _customsRegistration = m);
-        Add(_Store.SocialSecurityRegistration, m => _socialSecurityRegistration = m);
-        Add(_Store.ProofOfOwnership, m => _proofOfOwnership = m);
+        void Map(string slot, Guid? id, Func<Data.Media?> get, Action<Data.Media> set)
+        {
+            slotGet[slot] = get; slotSet[slot] = set; slotGuid[slot] = id;
+        }
 
-        if (!idMap.Any()) return;
+        Map("certificateOfIncorporation", _Store.CertificateOfIncorporation, () => _certificateOfIncorporation, m => _certificateOfIncorporation = m);
+        Map("activityCertificate", _Store.ActivityCertificate, () => _activityCertificate, m => _activityCertificate = m);
+        Map("taxRegistration", _Store.TaxRegistration, () => _taxRegistration, m => _taxRegistration = m);
+        Map("tradeRegistryGazette", _Store.TradeRegistryGazette, () => _tradeRegistryGazette, m => _tradeRegistryGazette = m);
+        Map("signatureCircular", _Store.SignatureCircular, () => _signatureCircular, m => _signatureCircular = m);
+        Map("authorizedPersonId", _Store.AuthorizedPersonId, () => _authorizedPersonId, m => _authorizedPersonId = m);
+        Map("proofOfBusinessAddress", _Store.ProofOfBusinessAddress, () => _proofOfBusinessAddress, m => _proofOfBusinessAddress = m);
+        Map("bankStatement", _Store.BankStatement, () => _bankStatement, m => _bankStatement = m);
+        Map("bankAccountConfirmation", _Store.BankAccountConfirmation, () => _bankAccountConfirmation, m => _bankAccountConfirmation = m);
+        Map("trademarkCertificate", _Store.TrademarkCertificate, () => _trademarkCertificate, m => _trademarkCertificate = m);
+        Map("letterOfAuthorization", _Store.LetterOfAuthorization, () => _letterOfAuthorization, m => _letterOfAuthorization = m);
+        Map("qualityCertificates", _Store.QualityCertificates, () => _qualityCertificates, m => _qualityCertificates = m);
+        Map("customsRegistration", _Store.CustomsRegistration, () => _customsRegistration, m => _customsRegistration = m);
+        Map("socialSecurityRegistration", _Store.SocialSecurityRegistration, () => _socialSecurityRegistration, m => _socialSecurityRegistration = m);
+        Map("proofOfOwnership", _Store.ProofOfOwnership, () => _proofOfOwnership, m => _proofOfOwnership = m);
 
         try
         {
-            var ids = idMap.Keys.ToList();
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var medias = await db.Media.AsNoTracking()
-                .Where(m => ids.Contains(m.Id))
+
+            // ── 1) Skaler GUID sütunlarından çöz ──
+            // ÖNEMLİ: Aynı medya birden çok slota atanmış olabilir. Bu yüzden
+            // medya->slot (tekil) eşleme YAPILMAZ; tüm medyalar tek seferde çekilip
+            // HER slot kendi GUID'iyle ayrı ayrı doldurulur. (Önceki sürümde
+            // Dictionary<Guid,string> aynı dosyayı tek slota indiriyor, diğer
+            // slotlar boş kalıyordu → "aynı dosya seçilince göstermiyor" hatası.)
+            var scalarIds = slotGuid.Values
+                .Where(v => v.HasValue && v.Value != Guid.Empty)
+                .Select(v => v!.Value)
+                .Distinct()
+                .ToList();
+
+            if (scalarIds.Any())
+            {
+                var medias = await db.Media.AsNoTracking()
+                    .Where(m => scalarIds.Contains(m.Id))
+                    .ToListAsync(_cts.Token);
+
+                var mediaById = medias.ToDictionary(m => m.Id);
+
+                foreach (var kv in slotGuid)
+                {
+                    if (kv.Value.HasValue && kv.Value.Value != Guid.Empty
+                        && mediaById.TryGetValue(kv.Value.Value, out var media)
+                        && slotSet.TryGetValue(kv.Key, out var set))
+                    {
+                        set(media); // aynı medya birden çok slota atanabilir
+                    }
+                }
+            }
+
+            // ── 2) Hâlâ boş kalan slotları ItemGallery üzerinden çöz ──
+            //     (Bazı kayıtlar evrakı ItemGallery'ye ItemType = slot adı ile yazmış olabilir.)
+            var emptySlots = slotGet.Where(kv => kv.Value() == null).Select(kv => kv.Key).ToList();
+            if (emptySlots.Any())
+            {
+                var rows = await db.ItemGallery.AsNoTracking()
+                    .Where(g => g.ItemId == _Store.Id
+                                && g.IsDelete != true
+                                && g.MediaId != null
+                                && g.ItemType != null
+                                && emptySlots.Contains(g.ItemType))
+                    .OrderByDescending(g => g.ItemAddDate)
+                    .ToListAsync(_cts.Token);
+
+                if (rows.Any())
+                {
+                    var galleryMediaIds = rows.Select(r => r.MediaId!.Value).Distinct().ToList();
+                    var galleryMedias = await db.Media.AsNoTracking()
+                        .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                        .ToListAsync(_cts.Token);
+
+                    var byId = galleryMedias.ToDictionary(m => m.Id);
+
+                    // Her slot için en güncel (ilk) eşleşen satırı kullan
+                    foreach (var slot in emptySlots)
+                    {
+                        var row = rows.FirstOrDefault(r => string.Equals(r.ItemType, slot, StringComparison.OrdinalIgnoreCase));
+                        if (row?.MediaId != null && byId.TryGetValue(row.MediaId.Value, out var media) && slotSet.TryGetValue(slot, out var set))
+                            set(media);
+                    }
+                }
+            }
+
+            // ── 3) Hiçbir slota bağlanamayan, "Document" gibi genel tipli evrak
+            //       satırları varsa bunları da topla (depolama şemasından bağımsız
+            //       olarak yüklü dosyaların görünmesini garanti eder). ──
+            var slotMediaIds = slotGet.Values
+                .Select(g => g())
+                .Where(m => m != null)
+                .Select(m => m!.Id)
+                .ToHashSet();
+
+            var otherRows = await db.ItemGallery.AsNoTracking()
+                .Where(g => g.ItemId == _Store.Id
+                            && g.IsDelete != true
+                            && g.MediaId != null
+                            && g.ItemType != "InShooting"
+                            && g.ItemType != "OutShooting")
+                .OrderByDescending(g => g.ItemAddDate)
                 .ToListAsync(_cts.Token);
 
-            foreach (var media in medias)
-                if (idMap.TryGetValue(media.Id, out var setter))
-                    setter(media);
+            var otherMediaIds = otherRows
+                .Select(r => r.MediaId!.Value)
+                .Where(id => !slotMediaIds.Contains(id))
+                .Distinct()
+                .ToList();
+
+            if (otherMediaIds.Any())
+            {
+                _otherDocumentFiles = await db.Media.AsNoTracking()
+                    .Where(m => otherMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                    .ToListAsync(_cts.Token);
+            }
         }
         catch (Exception ex) { await LogError("LoadDocumentMedia", ex); }
     }

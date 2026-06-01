@@ -109,12 +109,12 @@ else
                     </th>
                     <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
                     <th style="width:3rem;">Profil</th>
-                    <th style="width:5rem;">Kapak</th>
                     <th>Mağaza Adı</th>
                     <th class="d-none d-lg-table-cell">Ülke</th>
                     <th class="d-none d-lg-table-cell">İl</th>
                     <th class="d-none d-xl-table-cell">İlçe</th>
                     <th>Onay Durumu</th>
+                    <th>Yayın Durumu</th>
                     <th class="text-end">İşlemler</th>
                 </tr>
             </thead>
@@ -146,16 +146,6 @@ else
                                  class="rounded-circle border border-secondary"
                                  style="width:42px;height:42px;object-fit:cover;"
                                  alt="Profil" />
-                        </td>
-
-                        @* ── Kapak Resmi ── *@
-                        <td>
-                            <img src="@(string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.CoverImagePath)
-                                                                                                           ? "https://efavori.com/_files/main/NoImage.png"
-                                                                                                           : item.ProfileCoverGallery!.CoverImagePath)"
-                                 class="rounded border border-secondary"
-                                 style="width:72px;height:42px;object-fit:cover;"
-                                 alt="Kapak" />
                         </td>
 
                         @* ── Mağaza Adı ── *@
@@ -196,6 +186,28 @@ else
                                     <span class="badge @(activeOk == true ? "bg-primary" : "bg-danger")" style="font-size:0.7rem;">
                                         <i class="fa @(activeOk == true ? "fa-toggle-on" : "fa-toggle-off") me-1"></i>
                                         @(activeOk == true ? "Onaylandı" : "Başarısız")
+                                    </span>
+                                }
+                            </div>
+                        </td>
+                        @* ── Yayın Durumu ── *@
+                        <td>
+                            @{
+                                // null durumu, true durumu ve false durumunu ayırt ediyoruz
+                                bool? ShowIsOk = item.IsActiveStateVendor;
+                            }
+                            <div class="d-flex flex-column gap-1">
+                                @if (ShowIsOk == null)
+                                {
+                                    <span class="badge bg-warning text-dark" style="font-size:0.7rem;">
+                                        <i class="fa fa-hourglass-half me-1"></i> Değerlendirmede
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge @(ShowIsOk == true ? "bg-info" : "bg-warning")" style="font-size:0.7rem;">
+                                        <i class="fa @(ShowIsOk == true ? "fa-toggle-on" : "fa-toggle-off") me-1"></i>
+                                        @(ShowIsOk == true ? "Yayında" : "Gizlenmiş")
                                     </span>
                                 }
                             </div>

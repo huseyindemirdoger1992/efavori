@@ -35,7 +35,7 @@
 
 }
 
-<div class="container">
+<div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-12 col-xl-12">
             <div class="card shadow-sm border-0 overflow-hidden">
@@ -835,11 +835,11 @@
                             <div class="row gx-3 align-items-end">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label fw-bold">Enlem (Latitude)</label>
-                                    <input id="lat" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor...">
+                                    <input id="lat" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor..." @bind="_Store.AddressInfo!.Latitude">
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label fw-bold">Boylam (Longitude)</label>
-                                    <input id="lng" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor...">
+                                    <input id="lng" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor..." @bind="_Store.AddressInfo!.Longitude">
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <button id="btnGetLocation" class="btn btn-primary w-100 shadow-sm d-flex align-items-center justify-content-center">

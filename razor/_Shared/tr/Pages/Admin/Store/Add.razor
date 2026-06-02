@@ -828,89 +828,26 @@
                                    @bind="_Store.AddressInfo!.GoogleMyBusinessAccountLink">
                         </div>
 
-                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
                         <div class="container">
                             <div class="row gx-3 align-items-end">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label fw-bold">Enlem (Latitude)</label>
-                                    <input id="lat" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor..." @bind="_Store.AddressInfo!.Latitude">
+                                    <input class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor..." @bind="_Store.AddressInfo!.Latitude">
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label fw-bold">Boylam (Longitude)</label>
-                                    <input id="lng" class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor..." @bind="_Store.AddressInfo!.Longitude">
+                                    <input class="form-control shadow-sm border-0 bg-light" type="number" step="any" readonly placeholder="Bekleniyor..." @bind="_Store.AddressInfo!.Longitude">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <button id="btnGetLocation" class="btn btn-primary w-100 shadow-sm d-flex align-items-center justify-content-center">
+                                    <button id="btnAddGetLocation" type="button" class="btn btn-primary w-100 shadow-sm d-flex align-items-center justify-content-center">
                                         <i class="fa fa-crosshairs me-2"></i> Konumumu Otomatik Bul
                                     </button>
                                 </div>
                                 <div class="col-12 mt-2">
-                                    <div id="map" class="rounded-3 shadow-sm border" style="height: 400px; width: 100%;"></div>
+                                    <div id="add_map" class="rounded-3 shadow-sm border" style="height: 400px; width: 100%;"></div>
                                 </div>
                             </div>
                         </div>
-
-                        <script>
-                            let map = null;
-                            let marker = null;
-
-                            function initMap() {
-                            const mapDiv = document.getElementById('map');
-                            if (!mapDiv || map) return;
-                            map = L.map('map').setView([38.9637, 35.2433], 6);
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '© OpenStreetMap'
-                            }).addTo(map);
-                            }
-
-                            document.addEventListener('DOMContentLoaded', initMap);
-
-                            document.getElementById('btnGetLocation').addEventListener('click', function () {
-                            const btn = this;
-                            const latInput = document.getElementById('lat');
-                            const lngInput = document.getElementById('lng');
-                            if (!map) initMap();
-                            btn.disabled = true;
-                            const originalText = btn.innerHTML;
-                            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i> Konum Alınıyor...';
-                            if ("geolocation" in navigator) {
-                            navigator.geolocation.getCurrentPosition(
-                            (position) => {
-                            const lat = position.coords.latitude;
-                            const lng = position.coords.longitude;
-                            latInput.value = lat.toFixed(6);
-                            lngInput.value = lng.toFixed(6);
-                            updateMap(lat, lng);
-                            DotNet.invokeMethodAsync('YourAssemblyName', 'SetLatLng', lat, lng);
-                            btn.disabled = false;
-                            btn.innerHTML = originalText;
-                            },
-                            (error) => {
-                            alert("Hata: " + error.message);
-                            btn.disabled = false;
-                            btn.innerHTML = originalText;
-                            },
-                            { enableHighAccuracy: true, timeout: 5000 }
-                            );
-                            } else {
-                            alert("Tarayıcınız konumu desteklemiyor.");
-                            btn.disabled = false;
-                            btn.innerHTML = originalText;
-                            }
-                            });
-
-                            function updateMap(lat, lng) {
-                            if (map) {
-                            const coords = [lat, lng];
-                            map.setView(coords, 15);
-                            if (marker) { marker.setLatLng(coords); }
-                            else { marker = L.marker(coords).addTo(map); }
-                            marker.bindPopup("Bulunduğunuz Yer").openPopup();
-                            }
-                            }
-                        </script>
                     </div>
 
                     <hr class="my-3 opacity-10">
@@ -1552,6 +1489,9 @@
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private bool _isProcessing;
 
+    private DotNetObjectReference<Add>? _objRef;
+    private bool _mapInitialized;
+
     private List<Users>? Users { get; set; } = new();
 
     private List<Country> _Countries = new();
@@ -1713,13 +1653,16 @@
             .FirstOrDefault(c => c.id.ToString() == e.Value?.ToString())?.name;
     }
 
-    // JS'den Lat/Lng almak için
+    // JS'den Lat/Lng almak için (DotNetObjectReference ile instance çağrısı)
     [JSInvokable]
-    public void SetLatLng(double lat, double lng)
+    public Task SetLatLng(double lat, double lng)
     {
-        _Store.AddressInfo!.Latitude = (decimal)lat;
-        _Store.AddressInfo!.Longitude = (decimal)lng;
-        InvokeAsync(StateHasChanged);
+        if (_Store?.AddressInfo != null)
+        {
+            _Store.AddressInfo.Latitude = (decimal)lat;
+            _Store.AddressInfo.Longitude = (decimal)lng;
+        }
+        return InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnInitializedAsync()
@@ -1736,6 +1679,110 @@
         await LoadData(null);
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Harita yalnızca model hazır olduğunda kurulur.
+        if (_mapInitialized || _Store?.AddressInfo == null)
+            return;
+
+        try
+        {
+            // 1) Harita motorunu eval ile tanımla (inline <script> interactive modda çalışmaz)
+            await JS.InvokeVoidAsync("eval", AddMapEngineScript);
+
+            // 2) DotNet referansı ile başlat (koordinatlar JS → C# iletimi için gerekli)
+            _objRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("storeAddMap.init", _objRef,
+                _Store.AddressInfo.Latitude, _Store.AddressInfo.Longitude);
+
+            _mapInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "MapInit",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+        }
+    }
+
+    // Harita motoru (Leaflet yükleyici + init). eval ile çalıştırılır → her render modunda güvenli.
+    private const string AddMapEngineScript = @"
+        if (!window.storeAddMap) {
+            window.storeAddMap = (function () {
+                var map = null, marker = null, dotnet = null;
+
+                function injectAssets() {
+                    if (!document.getElementById('leaflet-css')) {
+                        var l = document.createElement('link');
+                        l.id = 'leaflet-css'; l.rel = 'stylesheet';
+                        l.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                        document.head.appendChild(l);
+                    }
+                    if (typeof L === 'undefined' && !document.getElementById('leaflet-js')) {
+                        var s = document.createElement('script');
+                        s.id = 'leaflet-js';
+                        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                        document.head.appendChild(s);
+                    }
+                }
+
+                function place(lat, lng, zoom) {
+                    if (!map) return;
+                    var c = [lat, lng];
+                    map.setView(c, zoom || 15);
+                    if (marker) { marker.setLatLng(c); } else { marker = L.marker(c).addTo(map); }
+                    marker.bindPopup('Bulunduğunuz Yer').openPopup();
+                }
+
+                function build(lat, lng) {
+                    var el = document.getElementById('add_map');
+                    if (!el) return;
+                    if (map) { map.remove(); map = null; marker = null; }
+
+                    var has = (lat !== null && lat !== undefined && lng !== null && lng !== undefined && lat !== 0 && lng !== 0);
+                    map = L.map(el).setView([has ? lat : 38.9637, has ? lng : 35.2433], has ? 14 : 6);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+                    if (has) { place(lat, lng, 14); }
+                    setTimeout(function () { if (map) map.invalidateSize(); }, 300);
+
+                    var btn = document.getElementById('btnAddGetLocation');
+                    if (btn && !btn.dataset.bound) {
+                        btn.dataset.bound = '1';
+                        btn.addEventListener('click', function () {
+                            var o = btn.innerHTML; btn.disabled = true;
+                            btn.innerHTML = '<i class=""fa fa-spinner fa-spin me-2""></i> Konum Alınıyor...';
+                            if ('geolocation' in navigator) {
+                                navigator.geolocation.getCurrentPosition(
+                                    function (p) {
+                                        var la = p.coords.latitude, lo = p.coords.longitude;
+                                        place(la, lo, 15);
+                                        if (dotnet) { dotnet.invokeMethodAsync('SetLatLng', la, lo); }
+                                        btn.disabled = false; btn.innerHTML = o;
+                                    },
+                                    function (e) { alert('Hata: ' + e.message); btn.disabled = false; btn.innerHTML = o; },
+                                    { enableHighAccuracy: true, timeout: 5000 }
+                                );
+                            } else { alert('Tarayıcınız konumu desteklemiyor.'); btn.disabled = false; btn.innerHTML = o; }
+                        });
+                    }
+                }
+
+                return {
+                    init: function (ref, lat, lng) {
+                        dotnet = ref;
+                        injectAssets();
+                        var a = 0;
+                        (function t() {
+                            var el = document.getElementById('add_map');
+                            var ok = el && (typeof L !== 'undefined');
+                            if (!ok) { if (a++ < 80) { setTimeout(t, 150); } return; }
+                            try { build(lat, lng); } catch (e) { console.error('storeAddMap.build', e); }
+                        })();
+                    }
+                };
+            })();
+        }
+    ";
+
     public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
@@ -1744,6 +1791,8 @@
         StateHub.OnDataChanged -= HandleGlobalDataChange;
         FileService.OnFileSelected -= HandleSingleFileSelected;
         FileService.OnSelectionChanged -= HandleMultiSelectionChanged;
+
+        _objRef?.Dispose();
 
         await _cts.CancelAsync();
         _cts.Dispose();

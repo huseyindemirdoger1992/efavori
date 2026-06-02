@@ -59,6 +59,7 @@ namespace data
         public DateTime? UpdatedAt { get; set; }
 
         public InteractionCounts? Interaction { get; set; } = new();
+        public bool? ProductIsVariant { get; set; } // true ise bu ürünün varyantları var demektir. false ise tek başına bir ürün demektir.Eğer varyant true ise Stok ve ürün ana görseli gibi bilgileri bu ürünün varyantında tutar. false ise bu ürünün kendisinde tutar.
         public IsDeleted? IsDeleted { get; set; } = new();
     }
 }

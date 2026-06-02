@@ -131,7 +131,7 @@ namespace web.Account.Controllers
                 });
 
                 // 9. Başarılı Yanıt - Culture ile birlikte yönlendir
-                var redirectUrl = $"/{culture}/Customer/Home/Index";
+                var redirectUrl = $"/{culture}/Public/Home/Index";
                 _logger.LogInformation("Redirecting to: {Url}", redirectUrl);
 
                 return Redirect(redirectUrl);
@@ -198,7 +198,7 @@ namespace web.Account.Controllers
                 }
 
                 // Culture cookie'yi koru (logout sonrası da dil tercihi korunsun)
-                var redirectUrl = $"/{userCulture}/Customer/Home/Index";
+                var redirectUrl = $"/{userCulture}/Public/Home/Index";
                 _logger.LogInformation("Logout successful, redirecting to: {Url}", redirectUrl);
 
                 return Redirect(redirectUrl);
@@ -214,7 +214,7 @@ namespace web.Account.Controllers
                 }
                 catch { }
 
-                return Redirect($"/{culture}/Customer/Home/Index");
+                return Redirect($"/{culture}/Public/Home/Index");
             }
         }
 

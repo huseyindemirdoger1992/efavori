@@ -84,6 +84,7 @@ namespace data
         public DbSet<Product> Product { get; set; } = default!;
         public DbSet<Pricing> Pricing { get; set; } = default!;
         public DbSet<StockQuantityForProduct> StockQuantityForProduct { get; set; } = default!;
+        public DbSet<StoreBlockingInfos> StoreBlockingInfos { get; set; } = default!;
 
 
         //---------------- Constructor'lar ----------------//

@@ -55,6 +55,44 @@
 
         <div class="vr mx-1"></div>
 
+        @* ── Role bazlı toplu işlemler ── *@
+        @if (IsSuperAdmin)
+        {
+            @* SuperAdmin: Admin onay/blok (IsActiveStateAdmin) *@
+            <button class="btn btn-outline-primary btn-sm border-0"
+                    @onclick="BulkApproveAdminAsync"
+                    disabled="@_isProcessing"
+                    title="Seçilenleri Onayla">
+                <i class="fa fa-check-circle"></i> Toplu Onayla
+            </button>
+
+            <button class="btn btn-outline-warning btn-sm border-0"
+                    @onclick="BulkBlockAdminAsync"
+                    disabled="@_isProcessing"
+                    title="Seçilenleri Blokla">
+                <i class="fa fa-ban"></i> Toplu Blokla
+            </button>
+        }
+        else
+        {
+            @* Satıcı: Yayın durumu (IsActiveStateVendor) *@
+            <button class="btn btn-outline-info btn-sm border-0"
+                    @onclick="BulkPublishVendorAsync"
+                    disabled="@_isProcessing"
+                    title="Seçilenleri Yayına Al">
+                <i class="fa fa-eye"></i> Yayına Al
+            </button>
+
+            <button class="btn btn-outline-warning btn-sm border-0"
+                    @onclick="BulkUnpublishVendorAsync"
+                    disabled="@_isProcessing"
+                    title="Seçilenleri Yayından Kaldır">
+                <i class="fa fa-eye-slash"></i> Yayından Kaldır
+            </button>
+        }
+
+        <div class="vr mx-1"></div>
+
         <button class="btn btn-outline-danger btn-sm border-0"
                 @onclick="OpenBulkDeleteModal"
                 disabled="@_isProcessing">
@@ -141,8 +179,8 @@ else
                         @* ── Profil Resmi ── *@
                         <td>
                             <img src="@(string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.ProfileImagePath)
-                                                                                                           ? "https://efavori.com/_files/main/NoImage.png"
-                                                                                                           : item.ProfileCoverGallery!.ProfileImagePath)"
+                                                                                                                                                                             ? "https://efavori.com/_files/main/NoImage.png"
+                                                                                                                                                                             : item.ProfileCoverGallery!.ProfileImagePath)"
                                  class="rounded-circle border border-secondary"
                                  style="width:42px;height:42px;object-fit:cover;"
                                  alt="Profil" />
@@ -193,11 +231,11 @@ else
                         @* ── Yayın Durumu ── *@
                         <td>
                             @{
-                                // null durumu, true durumu ve false durumunu ayırt ediyoruz
-                                bool? ShowIsOk = item.IsActiveStateVendor;
+                                // Eğer Admin onayı yoksa ShowIsOk otomatik olarak false kabul edilir
+                                bool ShowIsOk = (item.IsActiveStateAdmin == true) && (item.IsActiveStateVendor ?? false);
                             }
                             <div class="d-flex flex-column gap-1">
-                                @if (ShowIsOk == null)
+                                @if (item.IsActiveStateAdmin != true && item.IsActiveStateVendor == null)
                                 {
                                     <span class="badge bg-warning text-dark" style="font-size:0.7rem;">
                                         <i class="fa fa-hourglass-half me-1"></i> Değerlendirmede
@@ -205,9 +243,9 @@ else
                                 }
                                 else
                                 {
-                                    <span class="badge @(ShowIsOk == true ? "bg-info" : "bg-warning")" style="font-size:0.7rem;">
-                                        <i class="fa @(ShowIsOk == true ? "fa-toggle-on" : "fa-toggle-off") me-1"></i>
-                                        @(ShowIsOk == true ? "Yayında" : "Gizlenmiş")
+                                    <span class="badge @(ShowIsOk ? "bg-info" : "bg-warning")" style="font-size:0.7rem;">
+                                        <i class="fa @(ShowIsOk ? "fa-toggle-on" : "fa-toggle-off") me-1"></i>
+                                        @(ShowIsOk ? "Yayında" : "Gizlenmiş")
                                     </span>
                                 }
                             </div>
@@ -309,8 +347,8 @@ else
                 {
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <img src="@(string.IsNullOrWhiteSpace(_deleteTarget.ProfileCoverGallery?.ProfileImagePath)
-                                                                                               ? "https://efavori.com/_files/main/NoImage.png"
-                                                                                               : _deleteTarget.ProfileCoverGallery!.ProfileImagePath)"
+                                                                                                                                                         ? "https://efavori.com/_files/main/NoImage.png"
+                                                                                                                                                         : _deleteTarget.ProfileCoverGallery!.ProfileImagePath)"
                              class="rounded-circle border border-secondary"
                              style="width:52px;height:52px;object-fit:cover;" alt="Profil" />
                         <div>
@@ -448,6 +486,20 @@ else
     // ─── Parametre ────────────────────────────────────────────────
     [Parameter] public Users? use { get; set; }
 
+    // ─── Yetki ────────────────────────────────────────────────────
+    // SuperAdmin: tüm mağazaları görür + Admin onay/blok yetkisi
+    // Diğer kullanıcı: sadece kendi mağazalarını görür + yayın yetkisi
+    private bool IsSuperAdmin => use?.UsersType == "SuperAdmin";
+
+    // ─── Cache kapsamı ────────────────────────────────────────────
+    // KRİTİK: GlobalStateHub süreç genelinde paylaşılan bir RAM cache'tir.
+    // Tek bir global anahtar (CACHE_KEY) kullanılırsa SuperAdmin'in tüm-mağaza
+    // listesi ile bir satıcının kendi listesi AYNI anahtara yazılır ve
+    // kullanıcılar arası veri sızması olur. Bu yüzden anahtar role/kullanıcıya
+    // göre ayrıştırılır: SuperAdmin → "all", diğerleri → kendi UserId'si.
+    private string CacheScope => IsSuperAdmin ? "all" : (use?.Id.ToString() ?? "anonymous");
+    private string ScopedCacheKey => $"{CACHE_KEY}_{CacheScope}";
+
     // ─── Yaşam döngüsü ────────────────────────────────────────────
     private bool _disposed;
     private bool _isInitialized;
@@ -556,15 +608,27 @@ else
             _isLoading = true;
             StateHasChanged();
 
-            string cacheKey = string.IsNullOrWhiteSpace(search) ? CACHE_KEY : $"{CACHE_KEY}_{search}";
+            // Role/kullanıcı bazlı cache anahtarı — kullanıcılar arası sızmayı önler.
+            string baseKey = ScopedCacheKey;
+            string cacheKey = string.IsNullOrWhiteSpace(search) ? baseKey : $"{baseKey}_{search}";
             if (!string.IsNullOrWhiteSpace(search))
                 StateHub.ClearCache(cacheKey);
 
             var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
             {
+                IQueryable<Store> q;
                 await using var db = await DbFactory.CreateDbContextAsync(token);
-                var q = db.Stores.AsNoTracking().AsQueryable();
-
+                if (IsSuperAdmin)
+                {
+                    // SuperAdmin tüm mağazaları görür
+                    q = db.Stores.AsNoTracking();
+                }
+                else
+                {
+                    // Diğer kullanıcı yalnızca kendi mağazalarını görür
+                    var uid = use?.Id;
+                    q = db.Stores.Where(x => x.UserId == uid).AsNoTracking();
+                }
                 // Soft Delete filtresi
                 q = q.Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true);
 
@@ -572,6 +636,17 @@ else
             }, token);
 
             if (token.IsCancellationRequested || result == null) return;
+
+            // ── GÜVENLİK: Bellek içi sahiplik filtresi (defense-in-depth) ──
+            // Cache role bazlı ayrıştırılmış olsa bile, olası herhangi bir cache
+            // karışmasına karşı son bir güvence: SuperAdmin OLMAYAN kullanıcı
+            // KESİNLİKLE yalnızca kendi UserId'siyle eşleşen mağazaları görür.
+            // (Cache referansını bozmamak için yeni liste üretilir.)
+            if (!IsSuperAdmin)
+            {
+                var uid = use?.Id;
+                result = result.Where(x => x.UserId == uid).ToList();
+            }
 
             // Bellek içi arama (şifreli alanlar + mağaza adı)
             if (!string.IsNullOrWhiteSpace(search))
@@ -687,7 +762,7 @@ else
             _deleteTarget = null;
             _isProcessing = false;
 
-            StateHub.ClearCache(CACHE_KEY);
+            StateHub.ClearCache(ScopedCacheKey);
             await StateHub.NotifyDataChanged(ENTITY_NAME);
             await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
             await Notify("success", "Silindi", "Mağaza başarıyla silindi.");
@@ -701,6 +776,7 @@ else
         {
             if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
             _writeLock.Release();
+            await LoadDataAsync(null);
         }
     }
 
@@ -747,7 +823,7 @@ else
             await HideModal("BulkDeleteModal");
             _isProcessing = false;
 
-            StateHub.ClearCache(CACHE_KEY);
+            StateHub.ClearCache(ScopedCacheKey);
             await StateHub.NotifyDataChanged(ENTITY_NAME);
             await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({count})");
             await Notify("success", "Silindi", $"{count} mağaza silindi.");
@@ -761,6 +837,98 @@ else
         {
             if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
             _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Toplu Durum Güncelleme (Onay / Blok / Yayın)
+    // ══════════════════════════════════════════════════════════════
+
+    // SuperAdmin → IsActiveStateAdmin = true
+    private Task BulkApproveAdminAsync() =>
+        BulkUpdateStateAsync(adminState: true, action: "BulkApprove", successText: "onaylandı");
+
+    // SuperAdmin → IsActiveStateAdmin = false
+    private Task BulkBlockAdminAsync() =>
+        BulkUpdateStateAsync(adminState: false, action: "BulkBlock", successText: "bloklandı");
+
+    // Satıcı → IsActiveStateVendor = true
+    private Task BulkPublishVendorAsync() =>
+        BulkUpdateStateAsync(vendorState: true, action: "BulkPublish", successText: "yayına alındı");
+
+    // Satıcı → IsActiveStateVendor = false
+    private Task BulkUnpublishVendorAsync() =>
+        BulkUpdateStateAsync(vendorState: false, action: "BulkUnpublish", successText: "yayından kaldırıldı");
+
+    private async Task BulkUpdateStateAsync(
+        bool? adminState = null,
+        bool? vendorState = null,
+        string action = "",
+        string successText = "")
+    {
+        if (_isProcessing || !_selectedIds.Any() || use is null) return;
+
+        // ── Yetki guard ──
+        // Admin onay/blok yalnızca SuperAdmin; yayın işlemleri yalnızca SuperAdmin olmayan kullanıcı
+        if (adminState.HasValue && !IsSuperAdmin) return;
+        if (vendorState.HasValue && IsSuperAdmin) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var query = db.Stores.Where(x => ids.Contains(x.Id));
+
+            // SuperAdmin olmayan kullanıcı sadece kendi mağazalarını güncelleyebilir
+            if (!IsSuperAdmin)
+                query = query.Where(x => x.UserId == use.Id);
+
+            var entities = await query.ToListAsync(_cts.Token);
+
+            var now = DateTime.Now;
+            foreach (var entity in entities)
+            {
+                if (adminState.HasValue)
+                {
+                    entity.IsActiveStateAdmin = adminState.Value;
+                    entity.IsActiveDateAdmin = now;
+                }
+                if (vendorState.HasValue)
+                {
+                    entity.IsActiveStateVendor = vendorState.Value;
+                    entity.IsActiveDateVendor = now;
+                }
+            }
+
+            var affected = entities.Count;
+            if (affected > 0)
+                await db.SaveChangesAsync(_cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+            _isProcessing = false;
+
+            StateHub.ClearCache(ScopedCacheKey);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"{action} ({affected})");
+            await Notify("success", "İşlem Tamamlandı", $"{affected} mağaza {successText}.");
+        }
+        catch (Exception ex)
+        {
+            await LogError(action, ex);
+            await Notify("danger", "Hata", "Toplu işlem sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+            await LoadDataAsync(null);
         }
     }
 

@@ -1,18 +1,4 @@
-﻿@* ============================================================
-   Edit.razor
-   ─────────────────────────────────────────────────────────────
-   ✅ Tek bir mağaza/işletme kaydını düzenleme sayfası
-   ✅ Yalnızca [Parameter] SelectedStore üzerinden gelen kayıt düzenlenir
-   ✅ GlobalStateHub — anlık broadcast / RAM cache temizleme
-   ✅ TakeLogs — tüm aksiyonlar loglanır
-   ✅ FileUploadService — profil/kapak/evrak (tekli) + galeri (çoklu) seçimi
-   ✅ Galeri için Id bazlı seçim grid'i (farklı DbContext referans sorununu çözer)
-   ✅ Galeri güncellemesinde SOFT DELETE merge mantığı (audit izi korunur)
-   ✅ KISIT: Kullanıcı IsActiveStateAdmin alanına ASLA müdahale edemez
-            (ne UI'da düzenlenebilir, ne de kayıt sırasında DB'ye geri yazılır)
-   ============================================================ *@
-
-@using api
+﻿@using api
 @using api.tr
 @using data
 @using data._Shared
@@ -43,14 +29,6 @@
 }
 <razor._Shared.BreadCrumbLinksUrl roads="roads" />
 
-@* ─────────────────────────────────────────────────────────────
-   NOT: Leaflet varlıkları ve harita motoru artık MARKUP <script>
-   ile DEĞİL, OnAfterRenderAsync içinden JS.InvokeVoidAsync("eval", ...)
-   ile enjekte ediliyor. Sebep: Blazor interaktif render modunda
-   bileşen markup'ındaki <script> etiketleri ÇALIŞTIRILMAZ; bu yüzden
-   `window.storeEditMap` hiç tanımlanmıyor ve harita açılmıyordu.
-   `eval` her render modunda güvenle çalışır.
-   ───────────────────────────────────────────────────────────── *@
 
 
 @if (SelectedStore is null)
@@ -69,6 +47,8 @@ else if (_Store is null)
 }
 else
 {
+
+
     @* Galeri grid render fragment'i — modallardan ÖNCE ve aynı kapsamda tanımlanır *@
     RenderFragment<List<Data.Media>> RenderGalleryGrid = (selected) => @<text>
         <div class="input-group input-group-sm mb-3">
@@ -150,6 +130,172 @@ else
     </text>;
 
     <div class="container-fluid">
+
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-dark-transparent border-light-3 d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 text-light fw-bold">
+                    <i class="fa fa-clipboard me-2 text-warning"></i>Mağaza Değerlendirme Notları
+                </h6>
+                <span class="badge @AdminStatusBadgeClass">
+                    <i class="fa fa-circle me-1" style="font-size:0.6rem;"></i>@AdminStatusText
+                </span>
+            </div>
+            <div class="card-body">
+
+                @if (IsSuperAdmin)
+                {
+                    @* ── SuperAdmin: yeni not ekle ── *@
+                    <div class="d-flex justify-content-end mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                @onclick="OpenCreateBlockInfo" disabled="@(_editingBlockInfo != null)">
+                            <i class="fa fa-plus me-1"></i>Yeni Not Ekle
+                        </button>
+                    </div>
+
+                    @* ── SuperAdmin: inline oluştur/düzenle formu ── *@
+                    @if (_editingBlockInfo != null)
+                    {
+                        <div class="border border-light-3 rounded p-3 mb-3 bg-dark-transparent">
+                            <h6 class="text-light small fw-bold mb-2">
+                                <i class="fa fa-pencil me-1"></i>@(_isEditingExisting ? "Notu Düzenle" : "Yeni Not")
+                            </h6>
+                            <div class="mb-2">
+                                <label class="form-label">Açıklama (Eksik Bilgi / Engelleme Nedeni)</label>
+                                <textarea class="form-control" rows="3"
+                                          placeholder="Örn: Vergi levhası okunaksız, lütfen yeniden yükleyiniz."
+                                          @bind="_editingBlockInfo.BlockInfoDescription"></textarea>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="blkSucces" @bind="_editingBlockInfo.IsSucces">
+                                <label class="form-check-label" for="blkSucces">Giderildi / Çözüldü olarak işaretle</label>
+                            </div>
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button type="button" class="btn btn-sm btn-secondary"
+                                        @onclick="CancelBlockInfoEdit" disabled="@_isBlockProcessing">
+                                    Vazgeç
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary"
+                                        @onclick="SaveBlockInfo" disabled="@_isBlockProcessing">
+                                    @if (_isBlockProcessing)
+                                    {
+                                        <i class="fa fa-spinner fa-spin me-1"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa fa-save me-1"></i>
+                                    }
+                                    Kaydet
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-light small mb-3">
+                        <i class="fa fa-info-circle me-1 text-info"></i>
+                        Yönetici tarafından belirtilen eksikleri giderdikten sonra ilgili maddeyi
+                        <span class="fw-semibold">"Giderildi"</span> olarak işaretleyip kaydedin.
+                        Mağazanız yeniden değerlendirmeye alınacaktır.
+                    </p>
+                }
+
+                @if (!_blockingInfos.Any())
+                {
+                    <div class="text-center py-4 text-white-50">
+                        <i class="fa fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                        <p class="mb-0">Bekleyen bir değerlendirme notu yok.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Açıklama</th>
+                                    <th style="width:160px;">Tarih</th>
+                                    <th style="width:140px;" class="text-center">Durum</th>
+                                    @if (IsSuperAdmin)
+                                    {
+                                        <th style="width:110px;" class="text-center">İşlem</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var info in _blockingInfos)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="text-truncate d-inline-block" style="max-width:420px;"
+                                                  title="@info.BlockInfoDescription">@info.BlockInfoDescription</span>
+                                        </td>
+                                        <td class="small text-white-50">@info.AtDateTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td class="text-center">
+                                            @if (IsSuperAdmin)
+                                            {
+                                                <span class="badge @(info.IsSucces ? "bg-success" : "bg-warning text-dark")">
+                                                    @(info.IsSucces ? "Giderildi" : "Bekliyor")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <div class="form-check form-switch d-flex justify-content-center mb-0">
+                                                    <input class="form-check-input" type="checkbox" role="switch"
+                                                           checked="@info.IsSucces"
+                                                           @onchange="(e) => OnVendorSuccesChanged(info, (bool)(e.Value ?? false))">
+                                                </div>
+                                            }
+                                        </td>
+                                        @if (IsSuperAdmin)
+                                        {
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-outline-light me-1"
+                                                        title="Düzenle" @onclick="() => OpenEditBlockInfo(info)"
+                                                        disabled="@(_editingBlockInfo != null)">
+                                                    <i class="fa fa-pencil"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        title="Sil" @onclick="() => DeleteBlockInfo(info)"
+                                                        disabled="@(_editingBlockInfo != null || _isBlockProcessing)">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (!IsSuperAdmin)
+                    {
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="button" class="btn btn-success btn-sm px-4"
+                                    @onclick="SaveVendorBlockResolution"
+                                    disabled="@(_isBlockProcessing || !_vendorBlockChanged)">
+                                @if (_isBlockProcessing)
+                                {
+                                    <i class="fa fa-spinner fa-spin me-2"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-paper-plane me-2"></i>
+                                }
+                                Değerlendirmeye Gönder
+                            </button>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+
+
+
+
+
         <div class="row justify-content-center">
             <div class="col-lg-12 col-xl-12">
                 <div class="card shadow-sm border-0 overflow-hidden">
@@ -201,7 +347,23 @@ else
 
                         <!-- Onay/Durum Bilgileri -->
                         <div class="row align-items-center mt-2 mb-1">
-                            <div class="col-md-12">
+                            @if (IsSuperAdmin)
+                            {
+                                <div class="col-md-6">
+                                    @* IsActiveStateVendor → Satıcının kendi kontrolü, düzenlenebilir *@
+                                    <label class="form-label d-block mb-1 fw-semibold">
+                                        <i class="fa fa-store me-1 text-primary"></i>Admin Onay Durumu
+                                    </label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="_adminActive"
+                                               @bind="_adminActive">
+                                        <label class="form-check-label @(_adminActive ? "text-success" : "text-danger")" for="_adminActive">
+                                            @(_adminActive ? "Onaylandı" : "Reddedildi")
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-md-6">
                                 @* IsActiveStateVendor → Satıcının kendi kontrolü, düzenlenebilir *@
                                 <label class="form-label d-block mb-1 fw-semibold">
                                     <i class="fa fa-store me-1 text-primary"></i>Mağaza Yayın Durumu
@@ -227,6 +389,7 @@ else
                             <label class="form-label">İşletme/Mağza Açıklaması</label>
                             <textarea class="form-control" rows="3" @bind="_Store.Description"></textarea>
                         </div>
+
 
                         <div class="card bg-light mt-3">
                             <div class="card-body">
@@ -393,7 +556,7 @@ else
                                                                 @if (media is not null && !string.IsNullOrWhiteSpace(media.FileUrl))
                                                                 {
                                                                     <a href="@media.FileUrl" target="_blank" rel="noopener noreferrer"
-                                                                           class="btn btn-sm btn-outline-primary" title="@media.FileName">
+                                                                       class="btn btn-sm btn-outline-primary" title="@media.FileName">
                                                                         <i class="fa fa-external-link me-1"></i>Aç
                                                                     </a>
                                                                 }
@@ -424,8 +587,8 @@ else
                                                     @foreach (var f in _otherDocumentFiles)
                                                     {
                                                         <a href="@f.FileUrl" target="_blank" rel="noopener noreferrer"
-                                                               class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
-                                                               title="@f.FileName">
+                                                           class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
+                                                           title="@f.FileName">
                                                             <i class="fa fa-file-o me-1"></i>
                                                             <span class="text-truncate d-inline-block" style="max-width:160px;">@(string.IsNullOrWhiteSpace(f.FileName) ? "Dosya" : f.FileName)</span>
                                                             <i class="fa fa-external-link ms-2"></i>
@@ -978,6 +1141,7 @@ else
 
     // ─── Satıcı yayın durumu (nullable bool? → bool köprüsü) ───────
     private bool _vendorActive;
+    private bool _adminActive;
 
     // ─── Lokasyon listeleri ───────────────────────────────────────
     private List<Country> _Countries = new();
@@ -1049,6 +1213,31 @@ else
     private record DayRow(string Key, string Label, Func<bool?> GetActive, Action<bool> SetActive,
         Func<TimeOnly?> GetStart, Action<TimeOnly?> SetStart, Func<TimeOnly?> GetFinish, Action<TimeOnly?> SetFinish);
     private List<DayRow> _dayRows = new();
+
+    // ─── Mağaza Değerlendirme / Eksik Bilgi Notları (StoreBlockingInfos) ───
+    private List<StoreBlockingInfos> _blockingInfos = new();
+    private StoreBlockingInfos? _editingBlockInfo;   // SuperAdmin'in oluşturduğu/düzenlediği kopya
+    private bool _isEditingExisting;                 // form mevcut kaydı mı düzenliyor
+    private bool _isBlockProcessing;                 // not kaydet/sil işlemi sürüyor mu
+    private bool _vendorBlockChanged;                // satıcı IsSucces değerini değiştirdi mi
+
+    // Kullanıcı SuperAdmin mi? (yetki ayrımı buradan yapılır)
+    private bool IsSuperAdmin => string.Equals(use?.UsersType, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+
+    // Store.IsActiveStateAdmin → görsel durum metni/rozeti
+    // true  = Onaylı, false = Onaylanmadı, null = Yeniden Değerlendiriliyor
+    private string AdminStatusText => _Store?.IsActiveStateAdmin switch
+    {
+        true => "Onaylı",
+        false => "Onaylanmadı",
+        _ => "Yeniden Değerlendiriliyor"
+    };
+    private string AdminStatusBadgeClass => _Store?.IsActiveStateAdmin switch
+    {
+        true => "bg-success",
+        false => "bg-danger",
+        _ => "bg-info text-dark"
+    };
 
     // ══════════════════════════════════════════════════════════════
     // YAŞAM DÖNGÜSÜ
@@ -1277,6 +1466,7 @@ else
         };
 
         _vendorActive = _Store.IsActiveStateVendor ?? false;
+        _adminActive = _Store.IsActiveStateAdmin ?? false;
 
         // UI yardımcı satırlarını kur
         BuildDocumentRows();
@@ -1295,6 +1485,9 @@ else
         await LoadDocumentMediaAsync();
         _galleryOutSideFiles = await LoadGalleryAsync(_Store.Id, "OutShooting");
         _galleryInSideFiles = await LoadGalleryAsync(_Store.Id, "InShooting");
+
+        // Değerlendirme / eksik bilgi notlarını yükle
+        await LoadBlockingInfosAsync();
 
         // Adres cascade ön-yükleme
         await PreloadCascadeAsync();
@@ -1588,6 +1781,249 @@ else
         {
             await LogError("LoadGallery", ex);
             return new();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MAĞAZA DEĞERLENDİRME / EKSİK BİLGİ NOTLARI (StoreBlockingInfos)
+    // ══════════════════════════════════════════════════════════════
+    //
+    // NOT: Aşağıda DbContext üzerinde "db.StoreBlockingInfos" DbSet'i
+    //      olduğu varsayılmıştır (Store → Stores kuralıyla uyumlu).
+    //      DbSet adınız farklıysa (ör. db.StoreBlockingInfo) yalnızca
+    //      bu bölümdeki erişim adını güncellemeniz yeterlidir.
+
+    // ── Bu mağazaya ait, silinmemiş notları yükle ──
+    private async Task LoadBlockingInfosAsync()
+    {
+        if (_Store == null) return;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _blockingInfos = await db.StoreBlockingInfos.AsNoTracking()
+                .Where(b => b.StoreId == _Store.Id
+                            && (b.IsDeleted == null || b.IsDeleted.IsDeletedStatu != true))
+                .OrderByDescending(b => b.AtDateTime)
+                .ToListAsync(_cts.Token);
+
+            _vendorBlockChanged = false; // taze yükleme → satıcı değişikliği sıfırlanır
+        }
+        catch (Exception ex) { await LogError("LoadBlockingInfos", ex); }
+    }
+
+    // ── SuperAdmin: yeni not oluşturma formunu aç ──
+    private void OpenCreateBlockInfo()
+    {
+        if (!IsSuperAdmin || _Store == null) return;
+
+        _isEditingExisting = false;
+        _editingBlockInfo = new StoreBlockingInfos
+        {
+            StoreId = _Store.Id,
+            UserId = _Store.UserId,   // mağazayı açan satıcı
+            AdminId = use?.Id,        // işlemi yürüten yönetici
+            BlockInfoDescription = string.Empty,
+            IsSucces = false,
+            AtDateTime = DateTime.UtcNow
+        };
+    }
+
+    // ── SuperAdmin: mevcut notu düzenleme formunu aç (kopya üzerinde) ──
+    private void OpenEditBlockInfo(StoreBlockingInfos info)
+    {
+        if (!IsSuperAdmin) return;
+
+        _isEditingExisting = true;
+        _editingBlockInfo = new StoreBlockingInfos
+        {
+            Id = info.Id,
+            StoreId = info.StoreId,
+            UserId = info.UserId,
+            AdminId = info.AdminId,
+            BlockInfoDescription = info.BlockInfoDescription,
+            IsSucces = info.IsSucces,
+            AtDateTime = info.AtDateTime,
+            IsDeleted = info.IsDeleted
+        };
+    }
+
+    private void CancelBlockInfoEdit()
+    {
+        _editingBlockInfo = null;
+        _isEditingExisting = false;
+    }
+
+    // ── SuperAdmin: not oluştur veya güncelle ──
+    private async Task SaveBlockInfo()
+    {
+        if (_editingBlockInfo == null || _Store == null) return;
+        if (!IsSuperAdmin) { await Notify("warning", "Yetki", "Bu işlem için yetkiniz yok."); return; }
+        if (string.IsNullOrWhiteSpace(_editingBlockInfo.BlockInfoDescription))
+        { await Notify("danger", "Eksik Bilgi", "Açıklama boş bırakılamaz."); return; }
+
+        _isBlockProcessing = true;
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.StoreBlockingInfos
+                .FirstOrDefaultAsync(b => b.Id == _editingBlockInfo.Id, _cts.Token);
+
+            string action;
+            if (existing == null)
+            {
+                // YENİ kayıt
+                _editingBlockInfo.AdminId = use?.Id;
+                _editingBlockInfo.AtDateTime = DateTime.UtcNow;
+                await db.StoreBlockingInfos.AddAsync(_editingBlockInfo, _cts.Token);
+                action = "CreateBlockInfo";
+            }
+            else
+            {
+                // GÜNCELLE (alan bazlı; soft-delete alanına dokunulmaz)
+                existing.BlockInfoDescription = _editingBlockInfo.BlockInfoDescription;
+                existing.IsSucces = _editingBlockInfo.IsSucces;
+                existing.AdminId = use?.Id;
+                existing.AtDateTime = DateTime.UtcNow;
+                action = "UpdateBlockInfo";
+            }
+
+            await db.SaveChangesAsync(_cts.Token);
+            await Logger.TakeIt(use?.Id, PAGE, action);
+
+            _editingBlockInfo = null;
+            _isEditingExisting = false;
+            await LoadBlockingInfosAsync();
+            await Notify("success", "Başarılı", "Değerlendirme notu kaydedildi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("SaveBlockInfo", ex);
+            await Notify("danger", "Hata", "Not kaydedilirken bir sorun oluştu.");
+        }
+        finally
+        {
+            _isBlockProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── SuperAdmin: notu SİL (soft delete — audit izi korunur) ──
+    private async Task DeleteBlockInfo(StoreBlockingInfos info)
+    {
+        if (!IsSuperAdmin) return;
+
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Bu değerlendirme notunu silmek istediğinize emin misiniz?");
+        if (!confirmed) return;
+
+        _isBlockProcessing = true;
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.StoreBlockingInfos
+                .FirstOrDefaultAsync(b => b.Id == info.Id, _cts.Token);
+
+            if (existing != null)
+            {
+                existing.IsDeleted ??= new IsDeleted();
+                existing.IsDeleted.IsDeletedStatu = true;
+                existing.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+
+                await db.SaveChangesAsync(_cts.Token);
+                await Logger.TakeIt(use?.Id, PAGE, "DeleteBlockInfo");
+            }
+
+            await LoadBlockingInfosAsync();
+            await Notify("success", "Silindi", "Değerlendirme notu silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteBlockInfo", ex);
+            await Notify("danger", "Hata", "Not silinirken bir sorun oluştu.");
+        }
+        finally
+        {
+            _isBlockProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Satıcı (SuperAdmin olmayan): IsSucces değerini bellek üzerinde değiştir ──
+    private void OnVendorSuccesChanged(StoreBlockingInfos info, bool value)
+    {
+        if (IsSuperAdmin) return; // güvenlik: yalnızca satıcı bu yolu kullanır
+        info.IsSucces = value;
+        _vendorBlockChanged = true;
+    }
+
+    // ── Satıcı (SuperAdmin olmayan): yalnızca IsSucces değişikliklerini kaydet ──
+    //    KURAL: En az bir madde "Giderildi" (true) olarak işaretlenip kaydedilirse
+    //           Store.IsActiveStateAdmin = NULL yapılır → mağaza yeniden
+    //           değerlendirmeye alınır.
+    private async Task SaveVendorBlockResolution()
+    {
+        if (IsSuperAdmin || _Store == null) return;
+        if (!_vendorBlockChanged) return;
+
+        _isBlockProcessing = true;
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var ids = _blockingInfos.Select(b => b.Id).ToList();
+            var dbRows = await db.StoreBlockingInfos
+                .Where(b => ids.Contains(b.Id))
+                .ToListAsync(_cts.Token);
+
+            var successMap = _blockingInfos.ToDictionary(b => b.Id, b => b.IsSucces);
+            bool anyMarkedSucces = false;
+
+            foreach (var row in dbRows)
+            {
+                if (successMap.TryGetValue(row.Id, out var newVal) && row.IsSucces != newVal)
+                {
+                    // Satıcı YALNIZCA IsSucces alanını değiştirebilir; başka alana dokunulmaz.
+                    row.IsSucces = newVal;
+                    if (newVal) anyMarkedSucces = true; // "onaylanıp" → giderildi işareti
+                }
+            }
+
+            // Eksik(ler) giderildi olarak onaylandıysa mağaza yeniden değerlendirmeye alınır.
+            if (anyMarkedSucces)
+            {
+                var store = await db.Stores.FirstOrDefaultAsync(s => s.Id == _Store.Id, _cts.Token);
+                if (store != null)
+                {
+                    store.IsActiveStateAdmin = null;   // → "Yeniden Değerlendiriliyor"
+                    store.IsActiveDateAdmin = null;     // önceki onay tarihi temizlenir
+
+                    // Çalışma modelini de senkron tut (UI rozeti güncellensin)
+                    _Store.IsActiveStateAdmin = null;
+                    _Store.IsActiveDateAdmin = null;
+                }
+            }
+
+            await db.SaveChangesAsync(_cts.Token);
+            await Logger.TakeIt(use?.Id, PAGE, "VendorBlockResolution");
+
+            _vendorBlockChanged = false;
+            await LoadBlockingInfosAsync();
+
+            await Notify("success", "Gönderildi", anyMarkedSucces
+                ? "Eksikler giderildi olarak işaretlendi. Mağazanız yeniden değerlendirmeye alındı."
+                : "Değişiklikler kaydedildi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("VendorBlockResolution", ex);
+            await Notify("danger", "Hata", "İşlem kaydedilirken bir sorun oluştu.");
+        }
+        finally
+        {
+            _isBlockProcessing = false;
+            StateHasChanged();
         }
     }
 
@@ -1947,6 +2383,8 @@ else
             //        (Kullanıcı müdahale edemez; mevcut DB değerleri korunur.)
 
             // Satıcının kendi yayın kontrolü
+            existing.IsActiveStateAdmin = _adminActive;
+            existing.IsActiveDateAdmin = DateTime.UtcNow;
             existing.IsActiveStateVendor = _vendorActive;
             existing.IsActiveDateVendor = DateTime.UtcNow;
 

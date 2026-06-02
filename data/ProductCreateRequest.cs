@@ -1,4 +1,5 @@
-﻿using System;
+﻿using data._Shared;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -16,7 +17,7 @@ namespace data
         public Guid Id { get; set; } = Guid.NewGuid();
         public Guid UserId { get; set; } // Ürünü ekleyen kullanıcının/satıcının ID bilgisi
         public Guid StoreId { get; set; } // Ürünün bağlı olduğu mağazanın ID bilgisi
-        public Guid? CategoryId { get; set; } // Ürünün ait olduğu yerel kategori ID'si (opsiyonel)
+        public int? CategoryId { get; set; } // Ürünün ait olduğu yerel kategori ID'si (opsiyonel)
 
         public string Name { get; set; } = string.Empty; // Ürünün müşteriye görünen tam adı (SEO başlığı, 50-60 karakter)
         public string? Description { get; set; } // Kısa SEO açıklaması (meta description, 140-160 karakter)
@@ -37,5 +38,6 @@ namespace data
         public string? Barcode { get; set; } // Basit ürünün GTIN/EAN/UPC barkodu
         public int StockQuantity { get; set; } // Basit ürünün güncel stok adedi
         public string? ImagePath { get; set; } // Basit ürünün ana görsel yolu/URL'si
+        public IsDeleted? IsDeleted { get; set; } = new(); // silinme durumu (soft delete için)
     }
 }

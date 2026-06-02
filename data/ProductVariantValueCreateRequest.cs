@@ -1,4 +1,5 @@
-﻿using System;
+﻿using data._Shared;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -14,8 +15,12 @@ namespace data
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid UserId { get; set; } // Ürünü ekleyen kullanıcının/satıcının ID bilgisi
+        public Guid StoreId { get; set; } // Ürünün bağlı olduğu mağazanın ID bilgisi
         public Guid VariantId { get; set; } // Bağlanacak varyantın ID'si
         public Guid AttributeId { get; set; } // İlgili özelliğin ID'si (denormalize, sorgu kolaylığı için)
         public Guid AttributeValueId { get; set; } // Atanan değerin ID'si
+        public IsDeleted? IsDeleted { get; set; } = new(); // silinme durumu (soft delete için)
+
     }
 }

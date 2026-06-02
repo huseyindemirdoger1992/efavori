@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260602060900_66")]
+    partial class _66
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2082,150 +2085,6 @@ namespace data.Migrations
                     b.Navigation("IsDeleted");
 
                     b.Navigation("Meta");
-                });
-
-            modelBuilder.Entity("data.ProductAttributeCreateRequest", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ProductAttributeCreateRequestId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ProductAttributeCreateRequestId");
-
-                            b1.ToTable("ProductAttributeCreateRequest");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductAttributeCreateRequestId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data.ProductAttributeValueCreateRequest", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ProductAttributeValueCreateRequestId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ProductAttributeValueCreateRequestId");
-
-                            b1.ToTable("ProductAttributeValueCreateRequest");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductAttributeValueCreateRequestId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data.ProductCreateRequest", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ProductCreateRequestId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ProductCreateRequestId");
-
-                            b1.ToTable("ProductCreateRequest");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductCreateRequestId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data.ProductPricingCreateRequest", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ProductPricingCreateRequestId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ProductPricingCreateRequestId");
-
-                            b1.ToTable("ProductPricingCreateRequest");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductPricingCreateRequestId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data.ProductVariantCreateRequest", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ProductVariantCreateRequestId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ProductVariantCreateRequestId");
-
-                            b1.ToTable("ProductVariantCreateRequest");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductVariantCreateRequestId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data.ProductVariantValueCreateRequest", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("ProductVariantValueCreateRequestId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("ProductVariantValueCreateRequestId");
-
-                            b1.ToTable("ProductVariantValueCreateRequest");
-
-                            b1.WithOwner()
-                                .HasForeignKey("ProductVariantValueCreateRequestId");
-                        });
-
-                    b.Navigation("IsDeleted");
                 });
 
             modelBuilder.Entity("data.Store", b =>

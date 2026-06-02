@@ -1,4 +1,5 @@
-﻿using System;
+﻿using data._Shared;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -14,6 +15,8 @@ namespace data
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid UserId { get; set; } // Ürünü ekleyen kullanıcının/satıcının ID bilgisi
+        public Guid StoreId { get; set; } // Ürünün bağlı olduğu mağazanın ID bilgisi
         public Guid ProductId { get; set; } // Fiyatın ait olduğu ana ürünün ID'si (her zaman dolu)
         public Guid? VariantId { get; set; } // Fiyatın ait olduğu varyantın ID'si (basit/taban fiyatta null)
 
@@ -25,5 +28,7 @@ namespace data
         public decimal? DiscountPriceEUR { get; set; } // Euro indirimli fiyatı
         public decimal PriceAZN { get; set; } // Azerbaycan Manatı normal satış fiyatı
         public decimal? DiscountPriceAZN { get; set; } // Azerbaycan Manatı indirimli fiyatı
+        public IsDeleted? IsDeleted { get; set; } = new(); // silinme durumu (soft delete için)
+
     }
 }

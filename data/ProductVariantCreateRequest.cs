@@ -1,4 +1,5 @@
-﻿using System;
+﻿using data._Shared;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -15,6 +16,8 @@ namespace data
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid UserId { get; set; } // Ürünü ekleyen kullanıcının/satıcının ID bilgisi
+        public Guid StoreId { get; set; } // Ürünün bağlı olduğu mağazanın ID bilgisi
         public Guid ProductId { get; set; } // Varyantın bağlı olduğu ana ürünün ID'si
         public string? SKU { get; set; } // Varyanta özel stok kodu
         public string? Barcode { get; set; } // Varyanta özel GTIN/EAN/UPC barkodu (pazaryeri eşleştirme anahtarı)
@@ -24,5 +27,7 @@ namespace data
         public bool IsDefault { get; set; } // Bu varyant varsayılan/öne çıkan kombinasyon mu
         public int DisplayOrder { get; set; } = 0; // Varyantların listelenme sırası
         public string? VariantTitle { get; set; } // İnsan okunabilir kombinasyon adı (Örn: "Kırmızı / XL")
+        public IsDeleted? IsDeleted { get; set; } = new(); // silinme durumu (soft delete için)
+
     }
 }

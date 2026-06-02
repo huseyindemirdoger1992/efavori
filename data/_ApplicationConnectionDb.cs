@@ -79,12 +79,16 @@ namespace data
         public DbSet<CategoriesTr> CategoriesTr { get; set; } = default!;
         public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
 
-        // Products & Stores
+        // Stores & Products
         public DbSet<Store> Stores { get; set; } = default!;
-        public DbSet<Product> Product { get; set; } = default!;
-        public DbSet<Pricing> Pricing { get; set; } = default!;
-        public DbSet<StockQuantityForProduct> StockQuantityForProduct { get; set; } = default!;
         public DbSet<StoreBlockingInfos> StoreBlockingInfos { get; set; } = default!;
+
+        public DbSet<ProductCreateRequest> ProductCreateRequest { get; set; } = default!;
+        public DbSet<ProductAttributeCreateRequest> ProductAttributeCreateRequest { get; set; } = default!;
+        public DbSet<ProductAttributeValueCreateRequest> ProductAttributeValueCreateRequest { get; set; } = default!;
+        public DbSet<ProductVariantCreateRequest> ProductVariantCreateRequest { get; set; } = default!;
+        public DbSet<ProductVariantValueCreateRequest> ProductVariantValueCreateRequest { get; set; } = default!;
+        public DbSet<ProductPricingCreateRequest> ProductPricingCreateRequest { get; set; } = default!;
 
 
         //---------------- Constructor'lar ----------------//

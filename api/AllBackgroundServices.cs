@@ -61,7 +61,7 @@ namespace api
             {
                 try
                 {
-                    await ProcessSingleProductAsync(durdurmaSinyali);
+                    // await ProcessSingleProductAsync(durdurmaSinyali);
                 }
                 catch (OperationCanceledException) when (durdurmaSinyali.IsCancellationRequested)
                 {
@@ -79,58 +79,6 @@ namespace api
             _logger.LogInformation("AllBackgroundServices durduruldu.");
         }
 
-        /// <summary>
-        /// İşlenmemiş TEK bir ürünü alır, anahtar kelime üretir ve kaydeder.
-        /// Tur başına yalnızca 1 API isteği atılır.
-        /// </summary>
-        private async Task ProcessSingleProductAsync(CancellationToken token)
-        {
-            await using var db = await _dbFactory.CreateDbContextAsync(token);
-
-            // GeminiAiService transient (typed HttpClient) olduğundan scope içinden çözülür
-            using var scope = _scopeFactory.CreateScope();
-            var gemini = scope.ServiceProvider.GetRequiredService<GeminiAiService>();
-
-            // İşlenmemiş ve adı dolu olan EN ESKİ ürünü, takip (tracking) açık olarak çek.
-            // .AsTracking() => Production'daki global NoTracking ayarını bu sorgu için geçersiz kılar.
-            var item = await db.Product
-                .AsTracking()
-                .Where(p => p.AiSeoKeywordsIsOk != true && p.Name != null && p.Name != "")
-                .OrderBy(p => p.CreatedAt)
-                .FirstOrDefaultAsync(token);
-
-            // İşlenecek ürün yoksa bu turu boş geç (API isteği harcanmaz)
-            if (item is null)
-            {
-                _logger.LogDebug("İşlenecek ürün bulunamadı; tur boş geçildi.");
-                return;
-            }
-
-            // Ürün ADI gönderilir (metot string bekliyor, nesne değil)
-            var keywords = await gemini.GenerateKeywordsAsync(item.Name);
-
-            // API hatası / kota dolumu durumunda GeminiAiService boş liste döner.
-            // Bu durumda ürünü "tamam" olarak İŞARETLEME ki sonraki turda yeniden denensin.
-            if (keywords is null || keywords.Count == 0)
-            {
-                _logger.LogWarning("Ürün {ProductId} için anahtar kelime üretilemedi (boş yanıt). Sonraki turda tekrar denenecek.", item.Id);
-                return;
-            }
-
-            // Üretilen kelimeleri istenen formatta birleştir: Metin1, Metin2, Metin3, ...
-            var temizKelimeler = keywords
-                .Where(k => !string.IsNullOrWhiteSpace(k))
-                .Select(k => k.Trim());
-
-            item.AiSeoKeywords = string.Join(", ", temizKelimeler);
-            item.AiSeoKeywordsIsOk = true;
-            item.UpdatedAt = DateTime.UtcNow;
-
-            // Tracking açık olduğundan yalnızca değişen alanlar Modified işaretlenir; db.Update() gereksiz.
-            await db.SaveChangesAsync(token);
-
-            _logger.LogInformation("Ürün {ProductId} için {Count} anahtar kelime kaydedildi.", item.Id, keywords.Count);
-        }
 
         /// <summary>
         /// Logs tablosuna doğrudan hata kaydı yazar.

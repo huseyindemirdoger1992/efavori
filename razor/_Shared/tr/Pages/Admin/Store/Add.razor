@@ -13,6 +13,12 @@
 @inject TakeLogs Logger
 @inject FileUploadService FileService
 
+@code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
+}
+
 <Notification @ref="notificationRef" />
 
 @{
@@ -222,14 +228,15 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
+
                                                 <tr>
-                                                    <td class="text-center text-light"><i class="fa fa-file-pdf-o"></i></td>
-                                                    <td class="fw-semibold">Kuruluş Belgesi <span class="text-danger">*</span></td>
-                                                    <td class="text-light small">Şirket Kuruluş Belgesi (Certificate of Incorporation)</td>
+                                                    <td class="text-center text-light"><i class="fa fa-university"></i></td>
+                                                    <td class="fw-semibold">Vergi Levhası / VAT <span class="text-danger">*</span></td>
+                                                    <td class="text-light small">Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration)</td>
                                                     <td class="small">
-                                                        @if (_certificateOfIncorporation is not null)
+                                                        @if (_taxRegistration is not null)
                                                         {
-                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_certificateOfIncorporation.FileName">@_certificateOfIncorporation.FileName</span>
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_taxRegistration.FileName">@_taxRegistration.FileName</span>
                                                         }
                                                         else
                                                         {
@@ -238,7 +245,7 @@
                                                         }
                                                     </td>
                                                     <td class="text-center">
-                                                        @if (_certificateOfIncorporation is not null)
+                                                        @if (_taxRegistration is not null)
                                                         {
                                                             <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
                                                         }
@@ -249,7 +256,7 @@
                                                         }
                                                     </td>
                                                     <td class="text-center">
-                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "certificateOfIncorporation"'>
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "taxRegistration"'>
                                                             <i class="fa fa-upload me-1"></i>Yükle
                                                         </button>
                                                     </td>
@@ -287,70 +294,6 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="text-center text-light"><i class="fa fa-university"></i></td>
-                                                    <td class="fw-semibold">Vergi Levhası / VAT <span class="text-danger">*</span></td>
-                                                    <td class="text-light small">Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration)</td>
-                                                    <td class="small">
-                                                        @if (_taxRegistration is not null)
-                                                        {
-                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_taxRegistration.FileName">@_taxRegistration.FileName</span>
-                                                        }
-                                                        else
-                                                        {
-
-                                                            <span class="text-light fst-italic">—</span>
-                                                        }
-                                                    </td>
-                                                    <td class="text-center">
-                                                        @if (_taxRegistration is not null)
-                                                        {
-                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
-                                                        }
-                                                        else
-                                                        {
-
-                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
-                                                        }
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "taxRegistration"'>
-                                                            <i class="fa fa-upload me-1"></i>Yükle
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-center text-light"><i class="fa fa-newspaper-o"></i></td>
-                                                    <td class="fw-semibold">Sicil Gazetesi</td>
-                                                    <td class="text-light small">Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)</td>
-                                                    <td class="small">
-                                                        @if (_tradeRegistryGazette is not null)
-                                                        {
-                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_tradeRegistryGazette.FileName">@_tradeRegistryGazette.FileName</span>
-                                                        }
-                                                        else
-                                                        {
-
-                                                            <span class="text-light fst-italic">—</span>
-                                                        }
-                                                    </td>
-                                                    <td class="text-center">
-                                                        @if (_tradeRegistryGazette is not null)
-                                                        {
-                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
-                                                        }
-                                                        else
-                                                        {
-
-                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
-                                                        }
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "tradeRegistryGazette"'>
-                                                            <i class="fa fa-upload me-1"></i>Yükle
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                <tr>
                                                     <td class="text-center text-light"><i class="fa fa-pencil-square-o"></i></td>
                                                     <td class="fw-semibold">İmza Sirküleri <span class="text-danger">*</span></td>
                                                     <td class="text-light small">İmza Sirküleri veya Yetki Belgesi (Signature Circular / POA)</td>
@@ -383,8 +326,76 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
+                                                    <td class="text-center text-light"><i class="fa fa-newspaper-o"></i></td>
+                                                    <td class="fw-semibold">Sicil Gazetesi <span class="text-danger">*</span></td>
+                                                    <td class="text-light small">Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)</td>
+                                                    <td class="small">
+                                                        @if (_tradeRegistryGazette is not null)
+                                                        {
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_tradeRegistryGazette.FileName">@_tradeRegistryGazette.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="text-light fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_tradeRegistryGazette is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "tradeRegistryGazette"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+
+
+                                                <tr>
+                                                    <td class="text-center text-light"><i class="fa fa-file-pdf-o"></i></td>
+                                                    <td class="fw-semibold">Kuruluş Belgesi</td>
+                                                    <td class="text-light small">Şirket Kuruluş Belgesi (Certificate of Incorporation)</td>
+                                                    <td class="small">
+                                                        @if (_certificateOfIncorporation is not null)
+                                                        {
+                                                            <span class="text-truncate d-inline-block" style="max-width:140px;" title="@_certificateOfIncorporation.FileName">@_certificateOfIncorporation.FileName</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="text-light fst-italic">—</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (_certificateOfIncorporation is not null)
+                                                        {
+                                                            <span class="badge bg-success"><i class="fa fa-check me-1"></i>Yüklendi</span>
+                                                        }
+                                                        else
+                                                        {
+
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modalBusinessDocumentList" @onclick='() => _activeMediaSlot = "certificateOfIncorporation"'>
+                                                            <i class="fa fa-upload me-1"></i>Yükle
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <tr>
                                                     <td class="text-center text-light"><i class="fa fa-id-card-o"></i></td>
-                                                    <td class="fw-semibold">Yetkili Kimlik Belgesi <span class="text-danger">*</span></td>
+                                                    <td class="fw-semibold">Yetkili Kimlik Belgesi</td>
                                                     <td class="text-light small">Şirket Yetkilisi Pasaport veya Kimlik Görseli (Authorized Person ID)</td>
                                                     <td class="small">
                                                         @if (_authorizedPersonId is not null)
@@ -405,7 +416,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -416,7 +427,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td class="text-center text-light"><i class="fa fa-map-marker"></i></td>
-                                                    <td class="fw-semibold">İşyeri Adres Kanıtı <span class="text-danger">*</span></td>
+                                                    <td class="fw-semibold">İşyeri Adres Kanıtı</td>
                                                     <td class="text-light small">Şirket Adres Kanıtı - Fatura / Resmi Belge (Proof of Business Address)</td>
                                                     <td class="small">
                                                         @if (_proofOfBusinessAddress is not null)
@@ -437,7 +448,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -469,7 +480,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -480,7 +491,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td class="text-center text-light"><i class="fa fa-credit-card"></i></td>
-                                                    <td class="fw-semibold">Banka Hesap Onayı <span class="text-danger">*</span></td>
+                                                    <td class="fw-semibold">Banka Hesap Onayı</td>
                                                     <td class="text-light small">IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation)</td>
                                                     <td class="small">
                                                         @if (_bankAccountConfirmation is not null)
@@ -501,7 +512,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -533,7 +544,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -565,7 +576,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -597,7 +608,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -629,7 +640,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -661,7 +672,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-secondary">İsteğe Bağlı</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -672,7 +683,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td class="text-center text-light"><i class="fa fa-sitemap"></i></td>
-                                                    <td class="fw-semibold">Ortaklık Yapısı / UBO <span class="text-danger">*</span></td>
+                                                    <td class="fw-semibold">Ortaklık Yapısı / UBO</td>
                                                     <td class="text-light small">Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership / UBO)</td>
                                                     <td class="small">
                                                         @if (_proofOfOwnership is not null)
@@ -693,7 +704,7 @@
                                                         else
                                                         {
 
-                                                            <span class="badge bg-danger text-light">Bekleniyor</span>
+                                                            <span class="badge bg-light">İsteğe Bağlı</span>
                                                         }
                                                     </td>
                                                     <td class="text-center">
@@ -1931,33 +1942,19 @@
             if (_galleryInSideFiles.Count < 3)
                 errors.Add($"İç çekim görseli en az 3 adet olmalıdır. (Şu an: {_galleryInSideFiles.Count})");
 
-            // Zorunlu Belgeler
-            if (_certificateOfIncorporation == null)
-                errors.Add("Kuruluş belgesi (Certificate of Incorporation) yüklenmedi.");
+            // Sadece gerekli olan 4 belge için kontrol
+            if (_taxRegistration == null)
+                errors.Add("Vergi kaydı belgesi yüklenmedi.");
 
             if (_activityCertificate == null)
                 errors.Add("Faaliyet belgesi yüklenmedi.");
 
-            if (_taxRegistration == null)
-                errors.Add("Vergi kaydı belgesi yüklenmedi.");
+            if (_signatureCircular == null)
+                errors.Add("İmza sirküleri yüklenmedi.");
 
             if (_tradeRegistryGazette == null)
                 errors.Add("Ticaret sicil gazetesi yüklenmedi.");
 
-            if (_signatureCircular == null)
-                errors.Add("İmza sirküleri yüklenmedi.");
-
-            if (_authorizedPersonId == null)
-                errors.Add("Yetkili kişi kimlik belgesi yüklenmedi.");
-
-            if (_proofOfBusinessAddress == null)
-                errors.Add("İşyeri adres belgesi yüklenmedi.");
-
-            if (_bankStatement == null)
-                errors.Add("Banka ekstresi yüklenmedi.");
-
-            if (_bankAccountConfirmation == null)
-                errors.Add("Banka hesap doğrulama belgesi yüklenmedi.");
 
             // Hata varsa toplu göster ve çık
             if (errors.Any())
@@ -2071,6 +2068,7 @@
             _writeLock.Release();
             StateHasChanged();
         }
+        NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true);
     }
 
     protected async Task UpdateUser(Users updatedUser)

@@ -108,7 +108,7 @@
     </span>
     <input type="text"
            class="form-control bg-transparent text-light border-secondary"
-           placeholder="Mağaza adı veya konum ara..."
+           placeholder="Mağaza adı, konum, sahip veya sponsor ara..."
            value="@_searchTerm"
            @oninput="OnSearchInput" />
     @if (!string.IsNullOrWhiteSpace(_searchTerm))
@@ -136,24 +136,29 @@ else if (!_isLoading && !_allItems.Any())
 }
 else
 {
-    <div class="table-responsive rounded-3 overflow-hidden border">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="bg-light">
-                <tr>
-                    <th style="width:2rem;">
+    <div class="table-responsive rounded-3 overflow-hidden" style="border:1px solid rgba(255,255,255,0.1);">
+        <table class="table table-hover align-middle mb-0" style="border-collapse:separate;border-spacing:0;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.06);">
+                    <th class="border-0 py-2 ps-3" style="width:2rem;">
                         <input type="checkbox" class="form-check-input"
                                checked="@_allSelected"
                                @onchange="ToggleSelectAll" />
                     </th>
-                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
-                    <th style="width:3rem;">Profil</th>
-                    <th>Mağaza Adı</th>
-                    <th class="d-none d-lg-table-cell">Ülke</th>
-                    <th class="d-none d-lg-table-cell">İl</th>
-                    <th class="d-none d-xl-table-cell">İlçe</th>
-                    <th>Onay Durumu</th>
-                    <th>Yayın Durumu</th>
-                    <th class="text-end">İşlemler</th>
+                    <th class="border-0 py-2 d-none d-md-table-cell small text-uppercase" style="width:2.5rem;letter-spacing:.04em;font-weight:600;">#</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Sponsor</th>
+                    <th class="border-0 py-2 small text-uppercase" style="width:3rem;letter-spacing:.04em;font-weight:600;">Profil</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Sahibi</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Mağaza Adı</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-lg-table-cell" style="letter-spacing:.04em;font-weight:600;">Ülke</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-lg-table-cell" style="letter-spacing:.04em;font-weight:600;">İl</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-xl-table-cell" style="letter-spacing:.04em;font-weight:600;">İlçe</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Onay</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Yayın</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-lg-table-cell text-center cell-total" style="letter-spacing:.04em;font-weight:600;">Toplam Revizyon</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-lg-table-cell text-center cell-pending" style="letter-spacing:.04em;font-weight:600;">Bekleyen</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-lg-table-cell text-center cell-completed" style="letter-spacing:.04em;font-weight:600;">Tamamlanan</th>
+                    <th class="border-0 py-2 small text-uppercase text-end pe-3" style="letter-spacing:.04em;font-weight:600;">İşlemler</th>
                 </tr>
             </thead>
             <tbody>
@@ -162,105 +167,234 @@ else
                 }
                 @foreach (var item in _pagedItems)
                 {
+
                     var isSelected = _selectedIds.Contains(item.Id);
 
-                    <tr class="@(isSelected ? "table-active" : "")">
+                    <tr class="@(isSelected ? "table-active" : "")" style="border-bottom:1px solid rgba(255,255,255,0.07);transition:background .15s ease;">
+                        @{
+                            // Kullanıcı kontrolü ve atama
+                            var ownerInfo = (item.UserId.HasValue && _userLookup.ContainsKey(item.UserId.Value))
+                                ? _userLookup[item.UserId.Value]
+                                : (OwnerName: "—", SponsorName: (string?)null);
+
+                            // Sponsor var mı kontrolü — em-dash (—) ve hyphen (-) her ikisini de kontrol et
+                            bool hasSponsor = !string.IsNullOrWhiteSpace(ownerInfo.SponsorName)
+                                              && ownerInfo.SponsorName != "—"
+                                              && ownerInfo.SponsorName != "-";
+                        }
 
                         @* ── Checkbox ── *@
-                        <td>
+                        <td class="border-0 ps-3">
                             <input type="checkbox" class="form-check-input"
                                    checked="@isSelected"
                                    @onchange="() => ToggleRowSelection(item.Id)" />
                         </td>
 
                         @* ── Sıra No ── *@
-                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
+                        <td class="border-0 d-none d-md-table-cell small">@(rowNo++)</td>
+
+                        @* ── Sponsor ── *@
+                        <td class="border-0">
+                            @if (hasSponsor)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(25,135,84,0.2);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-link" aria-hidden="true" style="font-size:0.65rem;"></i>
+                                    @ownerInfo.SponsorName
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,255,255,0.08);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-minus-circle" aria-hidden="true" style="font-size:0.65rem;"></i>
+                                    Yok
+                                </span>
+                            }
+                        </td>
 
                         @* ── Profil Resmi ── *@
-                        <td>
+                        <td class="border-0">
                             <img src="@(string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.ProfileImagePath)
-                                                                                                                                                                             ? "https://efavori.com/_files/main/NoImage.png"
-                                                                                                                                                                             : item.ProfileCoverGallery!.ProfileImagePath)"
-                                 class="rounded-circle border border-secondary"
-                                 style="width:42px;height:42px;object-fit:cover;"
+                                                                                                                                                                                                                                                                                                                                                                                                                                      ? "https://efavori.com/_files/main/NoImage.png"
+                                                                                                                                                                                                                                                                                                                                                                                                                                      : item.ProfileCoverGallery!.ProfileImagePath)"
+                                 class="rounded-circle"
+                                 style="width:38px;height:38px;object-fit:cover;border:2px solid rgba(255,255,255,0.15);"
                                  alt="Profil" />
                         </td>
 
+                        @* ── Mağaza Sahibi ── *@
+                        <td class="border-0">
+                            <span class="small text-light">
+                                <i class="fa fa-user-circle-o me-1" aria-hidden="true"></i>@ownerInfo.OwnerName
+                            </span>
+                        </td>
+
                         @* ── Mağaza Adı ── *@
-                        <td>
-                            <div class="fw-semibold text-light">@(item.Name ?? "—")</div>
+                        <td class="border-0">
+                            <span class="fw-semibold text-light">@(item.Name ?? "—")</span>
                         </td>
 
                         @* ── Ülke ── *@
-                        <td class="d-none d-lg-table-cell">
-                            <div class="small">@(Decrypt(item.AddressInfo?.Country) ?? "—")</div>
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small">@(Decrypt(item.AddressInfo?.Country) ?? "—")</span>
                         </td>
 
                         @* ── İl ── *@
-                        <td class="d-none d-lg-table-cell">
-                            <div class="small">@(Decrypt(item.AddressInfo?.State) ?? "—")</div>
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small">@(Decrypt(item.AddressInfo?.State) ?? "—")</span>
                         </td>
 
                         @* ── İlçe ── *@
-                        <td class="d-none d-xl-table-cell">
-                            <div class="small">@(Decrypt(item.AddressInfo?.City) ?? "—")</div>
+                        <td class="border-0 d-none d-xl-table-cell">
+                            <span class="small">@(Decrypt(item.AddressInfo?.City) ?? "—")</span>
                         </td>
 
                         @* ── Onay Durumu ── *@
-                        <td>
+                        <td class="border-0">
                             @{
-                                // null durumu, true durumu ve false durumunu ayırt ediyoruz
                                 bool? activeOk = item.IsActiveStateAdmin;
                             }
-                            <div class="d-flex flex-column gap-1">
-                                @if (activeOk == null)
-                                {
-                                    <span class="badge bg-warning text-dark" style="font-size:0.7rem;">
-                                        <i class="fa fa-hourglass-half me-1"></i> Değerlendirmede
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="badge @(activeOk == true ? "bg-primary" : "bg-danger")" style="font-size:0.7rem;">
-                                        <i class="fa @(activeOk == true ? "fa-toggle-on" : "fa-toggle-off") me-1"></i>
-                                        @(activeOk == true ? "Onaylandı" : "Başarısız")
-                                    </span>
-                                }
-                            </div>
+                            @if (activeOk == null)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,193,7,0.18);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-hourglass-half" style="font-size:0.65rem;"></i>
+                                    Beklemede
+                                </span>
+                            }
+                            else if (activeOk == true)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(13,110,253,0.18);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-check-circle" style="font-size:0.65rem;"></i>
+                                    Onaylı
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(220,53,69,0.18);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-times-circle" style="font-size:0.65rem;"></i>
+                                    Reddedildi
+                                </span>
+                            }
                         </td>
                         @* ── Yayın Durumu ── *@
-                        <td>
+                        <td class="border-0">
                             @{
-                                // Eğer Admin onayı yoksa ShowIsOk otomatik olarak false kabul edilir
                                 bool ShowIsOk = (item.IsActiveStateAdmin == true) && (item.IsActiveStateVendor ?? false);
                             }
-                            <div class="d-flex flex-column gap-1">
-                                @if (item.IsActiveStateAdmin != true && item.IsActiveStateVendor == null)
-                                {
-                                    <span class="badge bg-warning text-dark" style="font-size:0.7rem;">
-                                        <i class="fa fa-hourglass-half me-1"></i> Değerlendirmede
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="badge @(ShowIsOk ? "bg-info" : "bg-warning")" style="font-size:0.7rem;">
-                                        <i class="fa @(ShowIsOk ? "fa-toggle-on" : "fa-toggle-off") me-1"></i>
-                                        @(ShowIsOk ? "Yayında" : "Gizlenmiş")
-                                    </span>
-                                }
-                            </div>
+                            @if (item.IsActiveStateAdmin != true && item.IsActiveStateVendor == null)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,193,7,0.18);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-hourglass-half" style="font-size:0.65rem;"></i>
+                                    Beklemede
+                                </span>
+                            }
+                            else if (ShowIsOk)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(13,202,240,0.18);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-eye" style="font-size:0.65rem;"></i>
+                                    Yayında
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,255,255,0.08);font-size:0.75rem;font-weight:500; width:100%;">
+                                    <i class="fa fa-eye-slash" style="font-size:0.65rem;"></i>
+                                    Gizli
+                                </span>
+                            }
                         </td>
 
+                        @* ── Engelleme Bilgileri ── *@
+                        @{
+                            var blocking = _blockingLookup.ContainsKey(item.Id)
+                                ? _blockingLookup[item.Id]
+                                : (Total: 0, Pending: 0, Completed: 0);
+                        }
+
+                        @* Stil tanımlarını tek bir yerde yönetmek için yardımcı bir yöntem (opsiyonel) *@
+                        <style>
+                                            /* !important ekleyerek diğer Bootstrap stillerini geçersiz kılalım */
+                                            .cell-total {
+                                                background-color: rgba(108, 117, 125, 0.2) !important;
+                                            }
+
+                                            .cell-pending {
+                                                background-color: rgba(108, 117, 125, 0.2) !important;
+                                            }
+
+                                            .cell-completed {
+                                                background-color: rgba(108, 117, 125, 0.2) !important;
+                                            }
+
+                                            /* TD içindeki boşluğu yönetmek için */
+                                            .table td.cell-total,
+                                            .table td.cell-pending,
+                                            .table td.cell-completed {
+                                                padding: 0.5rem !important; /* Hücrenin içindeki dolguyu artırarak arka planın görünürlüğünü garanti eder */
+                                            }
+                        </style>
+
+                        @* ── Toplam Revizyon ── *@
+                        <td class="border-0 d-none d-lg-table-cell text-center cell-total">
+                            @if (blocking.Total > 0)
+                            {
+                                <span class="d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(108,117,125,0.18);font-size:0.75rem;font-weight:500;min-width:2rem;">
+                                    <i class="fa fa-exclamation-circle" style="font-size:0.65rem;"></i> @blocking.Total
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="small text-light">YOK</span>
+                            }
+                        </td>
+
+                        @* ── Bekleyen ── *@
+                        <td class="border-0 d-none d-lg-table-cell text-center cell-pending">
+                            @if (blocking.Pending > 0)
+                            {
+                                <span class="d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,193,7,0.18);font-size:0.75rem;font-weight:500;min-width:2rem;">
+                                    <i class="fa fa-hourglass-half" style="font-size:0.65rem;"></i> @blocking.Pending
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="small text-light">YOK</span>
+                            }
+                        </td>
+
+                        @* ── Tamamlanan ── *@
+                        <td class="border-0 d-none d-lg-table-cell text-center cell-completed">
+                            @if (blocking.Completed > 0)
+                            {
+                                <span class="d-inline-flex align-items-center justify-content-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(25,135,84,0.18);font-size:0.75rem;font-weight:500;min-width:2rem;">
+                                    <i class="fa fa-check-circle" style="font-size:0.65rem;"></i> @blocking.Completed
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="small text-light">YOK</span>
+                            }
+                        </td>
                         @* ── İşlemler ── *@
-                        <td class="text-end text-nowrap">
-                            @* Düzenle → modal yok, doğrudan sayfaya yönlendir *@
-                            <a class="btn btn-outline-warning btn-sm me-1"
+                        <td class="border-0 text-end text-nowrap pe-3">
+                            <a class="btn btn-sm me-1 px-2 py-1 btn-outline-warning"
+                               style="background:rgba(255,193,7,0.1);border:none;"
                                href="/@culture/Admin/Store/Edit/@(item.Id)"
                                title="Düzenle">
                                 <i class="fa fa-edit"></i>
                             </a>
-                            @* Sil butonu her zaman görünür *@
-                            <button class="btn btn-outline-danger btn-sm"
+                            <button class="btn btn-sm px-2 py-1 btn-outline-danger"
+                                    style="background:rgba(220,53,69,0.1);border:none;"
                                     @onclick="() => OpenDeleteModal(item)"
                                     title="Sil">
                                 <i class="fa fa-trash"></i>
@@ -333,7 +467,7 @@ else
                             onclick="toggleModalFullscreen(this)" title="Tam Ekran">
                         <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
                     </button>
-                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <div class="border-start border-secondary my-1" style="width: 1px;"></div>
                     <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2"
                             data-bs-dismiss="modal" aria-label="Close" title="Kapat">
                         <i class="fa fa-times" style="font-size: 0.95rem;"></i>
@@ -347,8 +481,8 @@ else
                 {
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <img src="@(string.IsNullOrWhiteSpace(_deleteTarget.ProfileCoverGallery?.ProfileImagePath)
-                                                                                                                                                         ? "https://efavori.com/_files/main/NoImage.png"
-                                                                                                                                                         : _deleteTarget.ProfileCoverGallery!.ProfileImagePath)"
+                                                                                                                                                                                                                                                                                                                                                                                  ? "https://efavori.com/_files/main/NoImage.png"
+                                                                                                                                                                                                                                                                                                                                                                                  : _deleteTarget.ProfileCoverGallery!.ProfileImagePath)"
                              class="rounded-circle border border-secondary"
                              style="width:52px;height:52px;object-fit:cover;" alt="Profil" />
                         <div>
@@ -401,7 +535,7 @@ else
                             onclick="toggleModalFullscreen(this)" title="Tam Ekran">
                         <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
                     </button>
-                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <div class="border-start border-secondary my-1" style="width: 1px;"></div>
                     <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2"
                             data-bs-dismiss="modal" aria-label="Close" title="Kapat">
                         <i class="fa fa-times" style="font-size: 0.95rem;"></i>
@@ -520,6 +654,14 @@ else
     // ─── Veriler ──────────────────────────────────────────────────
     private List<Store> _allItems = new();
 
+    // ─── Kullanıcı Bilgileri (Sahip + Sponsor) ─────────────────────
+    // Key: Store.UserId → (OwnerFullName, SponsorFullName)
+    private Dictionary<Guid, (string OwnerName, string? SponsorName)> _userLookup = new();
+
+    // ─── Engelleme Bilgileri ────────────────────────────────────────
+    // Key: Store.Id → (Toplam, Bekleyen, Tamamlanan)
+    private Dictionary<Guid, (int Total, int Pending, int Completed)> _blockingLookup = new();
+
     // ─── Sayfalama ────────────────────────────────────────────────
     private int _currentPage = 1;
     private int _totalPages = 1;
@@ -542,6 +684,116 @@ else
         if (string.IsNullOrEmpty(value)) return value;
         var result = GlobalSecurityProvider.Decrypt(value);
         return result?.StartsWith("Hata:") == true ? value : result;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI: Kullanıcı Sahip + Sponsor bilgilerini yükle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadUserLookupAsync(List<Store> stores, CancellationToken token)
+    {
+        _userLookup.Clear();
+
+        // 1. Mağaza sahiplerinin UserId'lerini topla
+        var ownerIds = stores
+            .Where(s => s.UserId.HasValue)
+            .Select(s => s.UserId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (!ownerIds.Any()) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync(token);
+
+        // 2. Sahip kullanıcıları çek
+        var owners = await db.Users
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FirstName, u.LastName, u.UserSponsorEmail })
+            .AsNoTracking()
+            .ToListAsync(token);
+
+        // 3. Sponsor email'lerini topla ve sponsorları çek
+        var sponsorEmails = owners
+            .Where(o => !string.IsNullOrEmpty(o.UserSponsorEmail))
+            .Select(o => o.UserSponsorEmail!)
+            .Distinct()
+            .ToList();
+
+        // Sponsor email şifreli olabilir, ContactInformation.Email üzerinden eşleştir
+        var allUsers = await db.Users
+            .Where(u => u.ContactInformation != null && u.ContactInformation.Email != null)
+            .Select(u => new { u.Id, u.FirstName, u.LastName, Email = u.ContactInformation!.Email })
+            .AsNoTracking()
+            .ToListAsync(token);
+
+        // Email → FullName dictionary (decrypt ederek karşılaştır)
+        var emailToName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var u in allUsers)
+        {
+            var decryptedEmail = Decrypt(u.Email);
+            if (!string.IsNullOrEmpty(decryptedEmail) && !emailToName.ContainsKey(decryptedEmail))
+            {
+                var fn = Decrypt(u.FirstName) ?? "";
+                var ln = Decrypt(u.LastName) ?? "";
+                emailToName[decryptedEmail] = $"{fn} {ln}".Trim();
+            }
+        }
+
+        // 4. Lookup dictionary'yi oluştur
+        foreach (var owner in owners)
+        {
+            var ownerFirstName = Decrypt(owner.FirstName) ?? "";
+            var ownerLastName = Decrypt(owner.LastName) ?? "";
+            var ownerFullName = $"{ownerFirstName} {ownerLastName}".Trim();
+            if (string.IsNullOrEmpty(ownerFullName)) ownerFullName = "—";
+
+            var sponsorFullName = (string?)null;
+            if (!string.IsNullOrEmpty(owner.UserSponsorEmail))
+            {
+                var decryptedSponsorEmail = Decrypt(owner.UserSponsorEmail);
+                if (!string.IsNullOrEmpty(decryptedSponsorEmail) &&
+                    emailToName.TryGetValue(decryptedSponsorEmail, out var sName) &&
+                    !string.IsNullOrEmpty(sName))
+                {
+                    sponsorFullName = sName;
+                }
+            }
+
+            _userLookup[owner.Id] = (ownerFullName, sponsorFullName);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI: Mağaza Engelleme Bilgilerini Yükle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadBlockingLookupAsync(List<Store> stores, CancellationToken token)
+    {
+        _blockingLookup.Clear();
+
+        var storeIds = stores.Select(s => s.Id).Distinct().ToList();
+        if (!storeIds.Any()) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync(token);
+
+        var blockingData = await db.StoreBlockingInfos
+            .Where(b => storeIds.Contains(b.StoreId)
+                        && (b.IsDeleted == null || b.IsDeleted.IsDeletedStatu != true))
+            .GroupBy(b => b.StoreId)
+            .Select(g => new
+            {
+                StoreId = g.Key,
+                Total = g.Count(),
+                Completed = g.Count(b => b.IsSucces),
+                Pending = g.Count(b => !b.IsSucces)
+            })
+            .AsNoTracking()
+            .ToListAsync(token);
+
+        foreach (var item in blockingData)
+        {
+            _blockingLookup[item.StoreId] = (item.Total, item.Pending, item.Completed);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -648,7 +900,13 @@ else
                 result = result.Where(x => x.UserId == uid).ToList();
             }
 
-            // Bellek içi arama (şifreli alanlar + mağaza adı)
+            // Sahip + Sponsor bilgilerini yükle (arama öncesi gerekli)
+            await LoadUserLookupAsync(result, token);
+
+            // Engelleme bilgilerini yükle
+            await LoadBlockingLookupAsync(result, token);
+
+            // Bellek içi arama (şifreli alanlar + mağaza adı + sahip/sponsor)
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.Trim();
@@ -656,7 +914,9 @@ else
                     Contains(x.Name, s) ||
                     Contains(Decrypt(x.AddressInfo?.Country), s) ||
                     Contains(Decrypt(x.AddressInfo?.State), s) ||
-                    Contains(Decrypt(x.AddressInfo?.City), s)
+                    Contains(Decrypt(x.AddressInfo?.City), s) ||
+                    (x.UserId.HasValue && _userLookup.TryGetValue(x.UserId.Value, out var ui) &&
+                        (Contains(ui.OwnerName, s) || Contains(ui.SponsorName, s)))
                 ).ToList();
             }
 

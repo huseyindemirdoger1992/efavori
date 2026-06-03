@@ -14,6 +14,12 @@
 @inject TakeLogs Logger
 @inject FileUploadService FileService
 
+@code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
+}
+
 @implements IAsyncDisposable
 
 <Notification @ref="_notificationRef" />
@@ -146,7 +152,7 @@ else
                 {
                     @* ── SuperAdmin: yeni not ekle ── *@
                     <div class="d-flex justify-content-end mb-3">
-                        <button type="button" class="btn btn-sm btn-outline-primary"
+                        <button type="button" class="btn btn-sm btn-primary"
                                 @onclick="OpenCreateBlockInfo" disabled="@(_editingBlockInfo != null)">
                             <i class="fa fa-plus me-1"></i>Yeni Not Ekle
                         </button>
@@ -228,8 +234,10 @@ else
                                 {
                                     <tr>
                                         <td>
-                                            <span class="text-truncate d-inline-block" style="max-width:420px;"
-                                                  title="@info.BlockInfoDescription">@info.BlockInfoDescription</span>
+                                            <div class="bg-light text-light border p-2 rounded"
+                                                 style="word-wrap: break-word; overflow-wrap: break-word;">
+                                                @info.BlockInfoDescription
+                                            </div>
                                         </td>
                                         <td class="small text-white-50">@info.AtDateTime.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                                         <td class="text-center">
@@ -510,7 +518,6 @@ else
                                                         <th>Açıklama</th>
                                                         <th style="width:180px;">Yüklenen Dosya</th>
                                                         <th style="width:110px;" class="text-center">Durum</th>
-                                                        <th style="width:90px;" class="text-center">Dosyalar</th>
                                                         <th style="width:90px;" class="text-center">İşlem</th>
                                                     </tr>
                                                 </thead>
@@ -549,20 +556,7 @@ else
                                                                 }
                                                                 else
                                                                 {
-                                                                    <span class="badge bg-secondary">İsteğe Bağlı</span>
-                                                                }
-                                                            </td>
-                                                            <td class="text-center">
-                                                                @if (media is not null && !string.IsNullOrWhiteSpace(media.FileUrl))
-                                                                {
-                                                                    <a href="@media.FileUrl" target="_blank" rel="noopener noreferrer"
-                                                                       class="btn btn-sm btn-outline-primary" title="@media.FileName">
-                                                                        <i class="fa fa-external-link me-1"></i>Aç
-                                                                    </a>
-                                                                }
-                                                                else
-                                                                {
-                                                                    <span class="text-light fst-italic small">—</span>
+                                                                    <span class="badge bg-light">İsteğe Bağlı</span>
                                                                 }
                                                             </td>
                                                             <td class="text-center">
@@ -587,8 +581,8 @@ else
                                                     @foreach (var f in _otherDocumentFiles)
                                                     {
                                                         <a href="@f.FileUrl" target="_blank" rel="noopener noreferrer"
-                                                           class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
-                                                           title="@f.FileName">
+                                                               class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
+                                                               title="@f.FileName">
                                                             <i class="fa fa-file-o me-1"></i>
                                                             <span class="text-truncate d-inline-block" style="max-width:160px;">@(string.IsNullOrWhiteSpace(f.FileName) ? "Dosya" : f.FileName)</span>
                                                             <i class="fa fa-external-link ms-2"></i>
@@ -1586,23 +1580,25 @@ else
     // ── Evrak satırlarını kur ──
     private void BuildDocumentRows()
     {
+        // Add.razor "İşletme Resmi Evrakları" ile birebir aynı sıra, başlık, açıklama, ikon ve zorunluluk yapısı.
+        // Zorunlu (Required=true) yalnızca: Vergi Levhası, Faaliyet Belgesi, İmza Sirküleri, Sicil Gazetesi.
         _documentRows = new List<DocRow>
         {
-            new("certificateOfIncorporation","fa-file-pdf-o","Kuruluş Belgesi","Şirket Kuruluş Belgesi (Certificate of Incorporation)",true,() => _certificateOfIncorporation),
-            new("activityCertificate","fa-file-text-o","Faaliyet Belgesi","Güncel Faaliyet Belgesi (Son 3 Aylık - Activity Certificate)",true,() => _activityCertificate),
             new("taxRegistration","fa-university","Vergi Levhası / VAT","Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration)",true,() => _taxRegistration),
-            new("tradeRegistryGazette","fa-newspaper-o","Sicil Gazetesi","Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)",false,() => _tradeRegistryGazette),
+            new("activityCertificate","fa-file-text-o","Faaliyet Belgesi","Güncel Faaliyet Belgesi (Son 3 Aylık - Activity Certificate)",true,() => _activityCertificate),
             new("signatureCircular","fa-pencil-square-o","İmza Sirküleri","İmza Sirküleri veya Yetki Belgesi (Signature Circular / POA)",true,() => _signatureCircular),
-            new("authorizedPersonId","fa-id-card-o","Yetkili Kimlik","Şirket Yetkilisi Pasaport / Kimlik Görseli (Authorized Person ID)",true,() => _authorizedPersonId),
-            new("proofOfBusinessAddress","fa-map-signs","İşyeri Adres Kanıtı","Şirket Adres Kanıtı - Fatura/Resmi Belge (Proof of Business Address)",true,() => _proofOfBusinessAddress),
-            new("bankStatement","fa-bank","Banka Ekstresi","Son 3 Aya Ait Banka Hesap Dökümü (Bank Statement)",false,() => _bankStatement),
-            new("bankAccountConfirmation","fa-credit-card","Banka Hesap Doğrulama","IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation)",true,() => _bankAccountConfirmation),
-            new("trademarkCertificate","fa-trademark","Marka Tescil Belgesi","Marka Tescil Belgesi (Trademark Certificate)",false,() => _trademarkCertificate),
-            new("letterOfAuthorization","fa-handshake-o","Yetkili Satıcı Onayı","Yetkili Satıcı Onay Belgesi (Letter of Authorization - LOA)",false,() => _letterOfAuthorization),
-            new("qualityCertificates","fa-certificate","Kalite Sertifikaları","Ürün Kalite ve Sağlık Sertifikaları (CE, ISO, FDA vb.)",false,() => _qualityCertificates),
+            new("tradeRegistryGazette","fa-newspaper-o","Sicil Gazetesi","Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)",true,() => _tradeRegistryGazette),
+            new("certificateOfIncorporation","fa-file-pdf-o","Kuruluş Belgesi","Şirket Kuruluş Belgesi (Certificate of Incorporation)",false,() => _certificateOfIncorporation),
+            new("authorizedPersonId","fa-id-card-o","Yetkili Kimlik Belgesi","Şirket Yetkilisi Pasaport veya Kimlik Görseli (Authorized Person ID)",false,() => _authorizedPersonId),
+            new("proofOfBusinessAddress","fa-map-marker","İşyeri Adres Kanıtı","Şirket Adres Kanıtı - Fatura / Resmi Belge (Proof of Business Address)",false,() => _proofOfBusinessAddress),
+            new("bankStatement","fa-bank","Banka Hesap Dökümü","Son 3 Aya Ait Banka Hesap Dökümü (Bank Statement)",false,() => _bankStatement),
+            new("bankAccountConfirmation","fa-credit-card","Banka Hesap Onayı","IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation)",false,() => _bankAccountConfirmation),
+            new("trademarkCertificate","fa-certificate","Marka Tescil Belgesi","Marka Tescil Belgesi (Trademark Certificate)",false,() => _trademarkCertificate),
+            new("letterOfAuthorization","fa-file-o","Yetkili Satıcı Onay Belgesi","Yetkili Satıcı Onay Belgesi (Letter of Authorization - LOA)",false,() => _letterOfAuthorization),
+            new("qualityCertificates","fa-star-o","Kalite Sertifikaları","Ürün Kalite ve Sağlık Sertifikaları (CE, ISO, FDA vb.)",false,() => _qualityCertificates),
             new("customsRegistration","fa-ship","Gümrük Kayıt Belgesi","Gümrük Kayıt Belgesi (EORI veya Gümrük No - Customs Registration)",false,() => _customsRegistration),
-            new("socialSecurityRegistration","fa-shield","SGK / İşveren Kayıt","Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security / Employer ID)",false,() => _socialSecurityRegistration),
-            new("proofOfOwnership","fa-sitemap","Ortaklık Yapısı / UBO","Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership / UBO)",true,() => _proofOfOwnership),
+            new("socialSecurityRegistration","fa-shield","SGK / İşveren Kayıt Belgesi","Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security / Employer ID)",false,() => _socialSecurityRegistration),
+            new("proofOfOwnership","fa-sitemap","Ortaklık Yapısı / UBO","Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership / UBO)",false,() => _proofOfOwnership),
         };
     }
 
@@ -2429,7 +2425,10 @@ else
             // ── 4. GALERİ SOFT-DELETE MERGE ──
             await SyncGalleryAsync(db, existing.Id, _galleryOutSideFiles, "OutShooting");
             await SyncGalleryAsync(db, existing.Id, _galleryInSideFiles, "InShooting");
-
+            if (!IsSuperAdmin)
+            {
+                existing.IsActiveStateAdmin = null; // satıcı değişikliği → mağaza yeniden değerlendirmeye alınır
+            }
             await db.SaveChangesAsync(_cts.Token);
 
             // ── 5. SON ──
@@ -2449,6 +2448,7 @@ else
             _writeLock.Release();
             StateHasChanged();
         }
+        NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true);
     }
 
     // Galeri merge: artık seçili olmayanlar soft-delete, tekrar seçilenler reaktive,

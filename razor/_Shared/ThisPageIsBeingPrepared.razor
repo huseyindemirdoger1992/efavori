@@ -24,6 +24,13 @@
 @inject IJSRuntime JS
 @inject TakeLogs Logger
 
+@code {
+    // Bu alanı kesinlikle SİLME. Kullanılsın veya kullanılmasın, global state'den dil bilgisini almak ve yönlendirme yapmak için gereklidir.
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
+}
+
 @implements IAsyncDisposable
 
 <Notification @ref="_notificationRef" />

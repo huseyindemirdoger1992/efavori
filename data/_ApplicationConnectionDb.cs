@@ -1,4 +1,5 @@
-﻿using data._Shared;
+﻿using data._Product;
+using data._Shared;
 using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -79,16 +80,28 @@ namespace data
         public DbSet<CategoriesTr> CategoriesTr { get; set; } = default!;
         public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
 
-        // Stores & Products
+        // Stores
         public DbSet<Store> Stores { get; set; } = default!;
         public DbSet<StoreBlockingInfos> StoreBlockingInfos { get; set; } = default!;
 
-        public DbSet<ProductCreateRequest> ProductCreateRequest { get; set; } = default!;
-        public DbSet<ProductAttributeCreateRequest> ProductAttributeCreateRequest { get; set; } = default!;
-        public DbSet<ProductAttributeValueCreateRequest> ProductAttributeValueCreateRequest { get; set; } = default!;
-        public DbSet<ProductVariantCreateRequest> ProductVariantCreateRequest { get; set; } = default!;
-        public DbSet<ProductVariantValueCreateRequest> ProductVariantValueCreateRequest { get; set; } = default!;
-        public DbSet<ProductPricingCreateRequest> ProductPricingCreateRequest { get; set; } = default!;
+
+        // Products
+        public DbSet<CategoryAttribute> CategoryAttribute { get; set; } = default!;
+        public DbSet<Marketplace> Marketplace { get; set; } = default!;
+        public DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMapping { get; set; } = default!;
+        public DbSet<MarketplaceAttributeValueMapping> MarketplaceAttributeValueMapping { get; set; } = default!;
+        public DbSet<Product> Product { get; set; } = default!;
+        public DbSet<ProductAttribute> ProductAttribute { get; set; } = default!;
+        public DbSet<ProductAttributeValue> ProductAttributeValue { get; set; } = default!;
+        public DbSet<ProductImage> ProductImage { get; set; } = default!;
+        public DbSet<ProductMarketplaceMapping> ProductMarketplaceMapping { get; set; } = default!;
+        public DbSet<ProductPricing> ProductPricing { get; set; } = default!;
+        public DbSet<ProductShipping> ProductShipping { get; set; } = default!;
+        public DbSet<ProductStock> ProductStock { get; set; } = default!;
+        public DbSet<ProductVariant> ProductVariant { get; set; } = default!;
+        public DbSet<ProductVariantValue> ProductVariantValue { get; set; } = default!;
+        public DbSet<Warehouse> Warehouse { get; set; } = default!;
+
 
 
         //---------------- Constructor'lar ----------------//

@@ -7,7 +7,7 @@ namespace data._Shared
     [Owned]
     public class AddressInfo
     {
-        public string? MapTitle { get; set; } // Örn: "Evim", "Merkez Ofis"
+        public string? MapTitle { get; set; } // Örn: "Evim", "Merkez Ofis", "Depo", "Mağaza" gibi harita üzerinde gösterilecek başlık
 
         public string? Country { get; set; }
         public string? State { get; set; }

@@ -310,7 +310,6 @@ namespace razor._Shared.tr.Modals.Account
                         Email = _UserEmail.Trim().ToLower()
                     };
 
-                    _user.HeaderMenuType = _user.UsersType;
                     _user.IsActive = true;
                     _user.RegistrationDate = DateTime.UtcNow;
                     _user.AccountActivationMailDeadline = DateTime.UtcNow.AddDays(3);

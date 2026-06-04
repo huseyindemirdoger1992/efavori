@@ -1,2 +1,1178 @@
-﻿<Crud/>
-<List/>
+﻿@* ============================================================
+   UsersList.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ Kapsamlı Kullanıcı Yönetimi
+   ✅ Sunucu tarafı sayfalama (her sayfada 10 kayıt)
+   ✅ Arama TÜM tabloda (ad/soyad şifreli → çözülmüş indeks üzerinden)
+   ✅ Silinenleri göster/gizle (soft delete)
+   ✅ Sekmeli "Düzenle" modalı — TÜM alanlar + owned tablolar:
+        • Temel kimlik / tarihler
+        • Tercihler & durum & roller
+        • İletişim (e-posta / telefon)
+        • Sosyal medya (~20 platform)
+        • Gizlilik ayarları (IsPrivateOrPublic)
+        • Profil / medya yolları
+   ✅ Şifreli alanlar yüklemede çözülür, kaydederken yeniden şifrelenir
+   ✅ Password bu panelde gösterilmez / değiştirilmez (güvenlik)
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    // Bu alanı kesinlikle SİLME. Global state'den dil bilgisini alıp yönlendirme için gereklidir.
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Users/List/", true);
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",  "Ana Sayfa",  "/"),
+        ("fa fa-users", "Yönetim",    "javascript:void(0)"),
+        ("fa fa-user",  PAGE_TITLE,   "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <button class="btn btn-light btn-sm" @onclick="RefreshAsync" disabled="@_isLoading">
+        <i class="fa fa-refresh me-sm-1 @(_isLoading ? "fa-spin" : "")"></i>
+        <span class="d-none d-sm-inline">Yenile</span>
+    </button>
+
+    <div class="vr mx-1"></div>
+    <span class="badge bg-light text-light">
+        <i class="fa fa-users me-1"></i>@_totalCount kullanıcı
+    </span>
+
+    <div class="vr mx-1"></div>
+    <div class="form-check form-switch text-light small mb-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="showDeleted"
+               checked="@_includeDeleted" @onchange="ToggleIncludeDeleted" />
+        <label class="form-check-label" for="showDeleted">Silinenleri göster</label>
+    </div>
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Ad, soyad, e-posta, telefon veya sponsor e-posta ara"
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && _totalCount == 0)
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">Kullanıcı bulunmuyor.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Ad Soyad</th>
+                    <th class="d-none d-lg-table-cell">E-posta</th>
+                    <th class="d-none d-md-table-cell">Tip</th>
+                    <th class="text-center">Durum</th>
+                    <th class="d-none d-md-table-cell">Kayıt</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var row in _pagedItems)
+                {
+                    var u = row.User;
+                    var isDeleted = u.IsDeleted?.IsDeletedStatu == true;
+                    <tr class="@(isDeleted ? "table-secondary opacity-75" : "")">
+                        <td class="d-none d-md-table-cell text-light small">@(rowNo++)</td>
+                        <td>
+                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(row.FullName) ? "—" : row.FullName)</div>
+                            <div class="small text-light text-truncate" style="max-width:12rem;">@u.Id</div>
+                        </td>
+                        <td class="d-none d-lg-table-cell small text-truncate" style="max-width:16rem;">
+                            @(string.IsNullOrWhiteSpace(row.Email) ? "—" : row.Email)
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <span class="badge @(row.UsersType == "SuperAdmin" ? "bg-primary" : "bg-light")">@(row.UsersType ?? "—")</span>
+                        </td>
+                        <td class="text-center">
+                            @if (isDeleted)
+                            {
+                                <span class="badge bg-dark border border-secondary text-light" title="Silinmiş">
+                                    <i class="fa fa-trash"></i> Silinmiş
+                                </span>
+                            }
+                            else if (u.IsActive == true)
+                            {
+                                <span class="badge bg-success-subtle text-success"><i class="fa fa-check"></i> Aktif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning-subtle text-warning"><i class="fa fa-pause"></i> Pasif</span>
+                            }
+                        </td>
+                        <td class="d-none d-md-table-cell text-nowrap small">
+                            @(u.RegistrationDate?.ToString("dd.MM.yyyy") ?? "—")
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-outline-warning btn-sm me-1"
+                                    @onclick="() => OpenEditModal(u.Id)" title="Düzenle">
+                                <i class="fa fa-cog"></i>
+                                <span class="d-none d-xl-inline ms-1">Ayarlar</span>
+                            </button>
+                            @if (isDeleted)
+                            {
+                                <button class="btn btn-outline-success btn-sm"
+                                        @onclick="() => OpenDeleteModal(row, restore: true)" title="Geri Al">
+                                    <i class="fa fa-undo"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-danger btn-sm"
+                                        @onclick="() => OpenDeleteModal(row, restore: false)" title="Sil">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama (pencereli) ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_totalCount kayıt
+            <span class="text-light"> · Sayfa @_currentPage / @_totalPages</span>
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 flex-nowrap">
+                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(1)" title="İlk sayfa">
+                                <i class="fa fa-angle-double-left"></i>
+                            </button>
+                        </li>
+                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_currentPage - 1)" title="Önceki">
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                        </li>
+
+                        @if (_pageWindow.First() > 1)
+                        {
+                            <li class="page-item disabled d-none d-sm-block">
+                                <span class="page-link bg-dark text-light border-secondary">…</span>
+                            </li>
+                        }
+
+                        @foreach (var pg in _pageWindow)
+                        {
+                            <li class="page-item @(_currentPage == pg ? "active" : "")">
+                                <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary"
+                                        @onclick="() => GoToPage(pg)">
+                                    @pg
+                                </button>
+                            </li>
+                        }
+
+                        @if (_pageWindow.Last() < _totalPages)
+                        {
+                            <li class="page-item disabled d-none d-sm-block">
+                                <span class="page-link bg-dark text-light border-secondary">…</span>
+                            </li>
+                        }
+
+                        <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_currentPage + 1)" title="Sonraki">
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </li>
+                        <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_totalPages)" title="Son sayfa">
+                                <i class="fa fa-angle-double-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+
+                <div class="input-group input-group-sm" style="width:9.5rem;">
+                    <input type="number" min="1" max="@_totalPages"
+                           class="form-control bg-dark text-light border-secondary text-center"
+                           placeholder="Sayfa"
+                           value="@_jumpToPage"
+                           @oninput="OnJumpInput"
+                           @onkeydown="OnJumpKeyDown" />
+                    <button class="btn btn-outline-light border-secondary" @onclick="JumpToPage" title="Git">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Kapsamlı Düzenleme (Sekmeli)
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="EditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content bg-dark border border-warning"
+             style="box-shadow:0 0 8px rgba(255,193,7,0.35);">
+
+            <div class="modal-header border-bottom border-warning py-2">
+                <h6 class="modal-title text-warning mb-0">
+                    <i class="fa fa-cog me-1"></i>Kullanıcı Ayarları
+                    @if (_editModel != null && !string.IsNullOrWhiteSpace(_editModel.FirstName))
+                    {
+                        <span class="text-white-50 small ms-2">— @_editModel.FirstName @_editModel.LastName</span>
+                    }
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_editModel != null)
+                {
+                    var m = _editModel;
+                    var contact = m.ContactInformation!;
+                    var priv = m.IsPrivateOrPublic!;
+                    var gallery = m.ProfileCoverGallery!;
+                    var roles = m.UserRolesAccessPermissions!;
+
+                    @* ─── Sekme başlıkları ─── *@
+                    <ul class="nav nav-pills nav-fill mb-3 small flex-nowrap overflow-auto">
+                        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-basic" type="button"><i class="fa fa-id-card me-1"></i>Temel</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-prefs" type="button"><i class="fa fa-sliders me-1"></i>Tercih & Durum</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-contact" type="button"><i class="fa fa-address-book me-1"></i>İletişim</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-social" type="button"><i class="fa fa-share-alt me-1"></i>Sosyal</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-privacy" type="button"><i class="fa fa-lock me-1"></i>Gizlilik</button></li>
+                        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-media" type="button"><i class="fa fa-image me-1"></i>Medya</button></li>
+                    </ul>
+
+                    <div class="tab-content">
+
+                        @* ═══ TEMEL ═══ *@
+                        <div class="tab-pane fade show active" id="tab-basic">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">Ad</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.FirstName" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">Soyad</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.LastName" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">Sponsor E-posta</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.UserSponsorEmail" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">Doğum Tarihi</label>
+                                    <input type="date" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.DateOfBirth" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">İş İstasyonu / Grup Id</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary"
+                                           value="@m.WorkstationEmployeeGroupId" @oninput="OnWorkstationInput" placeholder="GUID" />
+                                </div>
+                                <div class="col-12 col-md-6 d-flex align-items-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="chkEmployee"
+                                               checked="@(m.UserIsEmployee ?? false)" @onchange="e => m.UserIsEmployee = Cb(e)" />
+                                        <label class="form-check-label text-white-50" for="chkEmployee">Çalışan mı?</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="alert alert-secondary bg-transparent border-secondary text-white-50 small mb-0 py-2">
+                                        <i class="fa fa-shield me-1"></i>Güvenlik: Parola bu panelden görüntülenemez ve değiştirilemez.
+                                        Parola sıfırlama, kullanıcının kendi akışı üzerinden yapılır.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ═══ TERCİH & DURUM ═══ *@
+                        <div class="tab-pane fade" id="tab-prefs">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label text-white-50 small">Dil</label>
+                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="m.Language">
+                                        @foreach (var l in Languages)
+                                        {
+                                            <option value="@l">@l</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label text-white-50 small">Para Birimi</label>
+                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="m.Currency">
+                                        @foreach (var c in Currencies)
+                                        {
+                                            <option value="@c">@c</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label text-white-50 small">Kullanıcı Tipi</label>
+                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="m.UsersType">
+                                        @foreach (var t in UserTypes)
+                                        {
+                                            <option value="@t">@t</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-12"><hr class="border-secondary my-1" /></div>
+
+                                @{
+                                    var statusFields = StatusFields(m, roles);
+                                }
+                                @foreach (var f in statusFields)
+                                {
+                                    <div class="col-12 col-sm-6 col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                   checked="@(f.Get() ?? false)" @onchange="e => f.Set(Cb(e))" />
+                                            <label class="form-check-label text-white-50">@f.Label</label>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="col-12"><hr class="border-secondary my-1" /></div>
+
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label text-white-50 small">Aktivasyon Kodu</label>
+                                    <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.AccountActivationMailCode" />
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label text-white-50 small">Parola Sıfırlama Kodu</label>
+                                    <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.AccountPasswordResetMailCode" />
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label text-white-50 small">Aktivasyon Son Tarihi</label>
+                                    <input type="datetime-local" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.AccountActivationMailDeadline" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">Kayıt Tarihi</label>
+                                    <input type="datetime-local" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.RegistrationDate" />
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ═══ İLETİŞİM ═══ *@
+                        <div class="tab-pane fade" id="tab-contact">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-8">
+                                    <label class="form-label text-white-50 small">E-posta</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="contact.Email" />
+                                </div>
+                                <div class="col-6 col-md-2 d-flex align-items-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               checked="@(contact.IsActiveEmail ?? false)" @onchange="e => contact.IsActiveEmail = Cb(e)" />
+                                        <label class="form-check-label text-white-50">Aktif</label>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2 d-flex align-items-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               checked="@contact.PhoneEmailConfirmed" @onchange="e => contact.PhoneEmailConfirmed = Cb(e)" />
+                                        <label class="form-check-label text-white-50">Onaylı</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label text-white-50 small">Ülke Kodu</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="contact.CountryPhoneCode" placeholder="+90" />
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label class="form-label text-white-50 small">Telefon</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="contact.PhoneNumber" />
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <label class="form-label text-white-50 small">Tam Telefon</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="contact.FullPhoneNumber" />
+                                </div>
+                                <div class="col-6 col-md-3 d-flex align-items-end gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               checked="@(contact.IsActivePhoneNumber ?? false)" @onchange="e => contact.IsActivePhoneNumber = Cb(e)" />
+                                        <label class="form-check-label text-white-50">Aktif</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               checked="@contact.PhoneNumberConfirmed" @onchange="e => contact.PhoneNumberConfirmed = Cb(e)" />
+                                        <label class="form-check-label text-white-50">Onaylı</label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-white-50 small">Web Sitesi</label>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-dark border-secondary">
+                                            <input type="checkbox" checked="@(contact.IsActiveUserWebSite ?? false)" @onchange="e => contact.IsActiveUserWebSite = Cb(e)" />
+                                        </span>
+                                        <input class="form-control bg-dark text-white border-secondary" @bind="contact.UserWebSite" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ═══ SOSYAL MEDYA ═══ *@
+                        <div class="tab-pane fade" id="tab-social">
+                            <p class="text-white-50 small mb-2">Soldaki anahtar platformun aktif olup olmadığını, kutu ise hesap/bağlantı bilgisini belirtir.</p>
+                            <div class="row g-2">
+                                @foreach (var f in SocialFields(contact))
+                                {
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label text-white-50 small mb-1">@f.Label</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-dark border-secondary" title="Aktif mi?">
+                                                <input type="checkbox" checked="@(f.GetActive() ?? false)" @onchange="e => f.SetActive(Cb(e))" />
+                                            </span>
+                                            <input class="form-control bg-dark text-white border-secondary"
+                                                   value="@f.GetValue()" @oninput="e => f.SetValue(e.Value?.ToString())" />
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        @* ═══ GİZLİLİK ═══ *@
+                        <div class="tab-pane fade" id="tab-privacy">
+                            <div class="row g-2">
+                                @foreach (var f in PrivacyFields(priv))
+                                {
+                                    <div class="col-12 col-sm-6 col-md-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                   checked="@(f.Get() ?? false)" @onchange="e => f.Set(Cb(e))" />
+                                            <label class="form-check-label text-white-50 small">@f.Label</label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        @* ═══ MEDYA / PROFİL ═══ *@
+                        <div class="tab-pane fade" id="tab-media">
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">Profil Resmi Yolu</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="gallery.ProfileImagePath" />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label text-white-50 small">Kapak Resmi Yolu</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="gallery.CoverImagePath" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-white-50 small">Arka Plan Resmi Yolu</label>
+                                    <input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="m.BackgroundImagePath" />
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-warning py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-warning btn-sm" @onclick="SaveAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-1"></i><span>Tüm Ayarları Kaydet</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Sil / Geri Al
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border @(_restoreMode ? "border-success" : "border-danger")">
+            <div class="modal-header border-bottom @(_restoreMode ? "border-success" : "border-danger") py-2">
+                <h6 class="modal-title @(_restoreMode ? "text-success" : "text-danger") mb-0">
+                    <i class="fa @(_restoreMode ? "fa-undo" : "fa-trash-o") me-2"></i>@(_restoreMode ? "Geri Alma" : "Silme") İşlemi
+                </h6>
+                <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" title="Kapat">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body text-light">
+                @if (_deleteTarget != null)
+                {
+                    <p class="mb-1">
+                        <strong>@(_deleteTarget.FullName ?? _deleteTarget.Email ?? _deleteTarget.User.Id.ToString())</strong>
+                        kullanıcısı @(_restoreMode ? "geri alınacak (aktifleştirilecek)" : "silinmiş olarak işaretlenecek (soft delete)").
+                    </p>
+                    <p class="small text-light mb-0">Bu işlem veritabanından kalıcı silme yapmaz.</p>
+                }
+            </div>
+            <div class="modal-footer border-top @(_restoreMode ? "border-success" : "border-danger") py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn @(_restoreMode ? "btn-success" : "btn-danger") btn-sm"
+                        @onclick="DeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>İşleniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa @(_restoreMode ? "fa-undo" : "fa-trash") me-1"></i><span>@(_restoreMode ? "Geri Al" : "Sil")</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Kullanıcı Yönetimi";
+    private const string ENTITY_NAME = "Users";
+    private const string USER_INDEX_KEY = "Users_SearchIndex"; // çözülmüş arama indeksi
+    private const int SEARCH_DELAY = 500;
+    private const int PAGE_SIZE = 10;
+    private const int PAGE_WINDOW = 5;
+
+    // Seçenek listeleri (Users.cs yorumlarındaki değerler)
+    private static readonly string[] Languages = { "en", "tr", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
+    private static readonly string[] Currencies = { "USD", "EUR", "TRY", "AZN" };
+    private static readonly string[] UserTypes = { "Customer", "SuperAdmin" };
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isProcessing;
+    private bool _includeDeleted;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    private int _totalCount;
+    private List<UserRow> _pagedItems = new();
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private List<int> _pageWindow = new() { 1 };
+    private int? _jumpToPage;
+
+    // ─── Düzenleme modal state ────────────────────────────────────
+    private Users? _editModel;       // şifresi çözülmüş çalışma kopyası
+
+    // ─── Sil/Geri al state ────────────────────────────────────────
+    private UserRow? _deleteTarget;
+    private bool _restoreMode;
+
+    // ─── Görünüm modeli ───────────────────────────────────────────
+    private sealed class UserRow
+    {
+        public Users User { get; init; } = default!;
+        public string? FullName { get; init; }   // çözülmüş
+        public string? Email { get; init; }       // düz metin
+        public string? UsersType { get; init; }   // çözülmüş
+    }
+
+    private sealed class UserIndexEntry
+    {
+        public Guid Id { get; init; }
+        public string? Haystack { get; init; }    // çözülmüş ad+soyad+sponsor+email+telefon
+    }
+
+    // alanlar için hafif tanımlar
+    private sealed record BoolField(string Label, Func<bool?> Get, Action<bool?> Set);
+    private sealed record SocialField(string Label, Func<bool?> GetActive, Action<bool?> SetActive, Func<string?> GetValue, Action<string?> SetValue);
+
+    // ══════════════════════════════════════════════════════════════
+    // ŞİFRELEME YARDIMCILARI
+    // ══════════════════════════════════════════════════════════════
+
+    private static string? Decrypt(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        var result = GlobalSecurityProvider.Decrypt(value);
+        return result?.StartsWith("Hata:") == true ? value : result;
+    }
+
+    private static string? Enc(string? value) =>
+        string.IsNullOrEmpty(value) ? value : GlobalSecurityProvider.Encrypt(value);
+
+    // Checkbox onchange → bool
+    private static bool Cb(ChangeEventArgs e) => e.Value is bool b && b;
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+        await LoadPageAsync(1);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+
+        await InvokeAsync(async () =>
+        {
+            StateHub.ClearCache(USER_INDEX_KEY);
+            await LoadPageAsync(_currentPage);
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME — sunucu tarafı sayfalama + tüm tabloda arama
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadPageAsync(int page, bool debounce = false)
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        var search = string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm.Trim();
+
+        try
+        {
+            if (debounce)
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            var query = db.Users.AsNoTracking().AsQueryable();
+
+            // Soft delete filtresi
+            if (!_includeDeleted)
+            {
+                query = query.Where(u => u.IsDeleted == null
+                                      || u.IsDeleted.IsDeletedStatu == null
+                                      || u.IsDeleted.IsDeletedStatu == false);
+            }
+
+            // Arama: ad/soyad/sponsor şifreli olduğundan çözülmüş indeks üzerinden
+            // eşleşen id'ler bulunur; e-posta/telefon zaten indekste yer alır.
+            if (search != null)
+            {
+                var matchedIds = await GetMatchingUserIdsAsync(search, token);
+                query = query.Where(u => matchedIds.Contains(u.Id));
+            }
+
+            _totalCount = await query.CountAsync(token);
+            _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PAGE_SIZE));
+            _currentPage = Math.Clamp(page, 1, _totalPages);
+            BuildPageWindow();
+
+            var users = await query
+                .OrderByDescending(u => u.RegistrationDate)
+                .Skip((_currentPage - 1) * PAGE_SIZE)
+                .Take(PAGE_SIZE)
+                .ToListAsync(token);
+
+            if (token.IsCancellationRequested) return;
+
+            _pagedItems = users.Select(u =>
+            {
+                var name = $"{Decrypt(u.FirstName)} {Decrypt(u.LastName)}".Trim();
+                return new UserRow
+                {
+                    User = u,
+                    FullName = string.IsNullOrWhiteSpace(name) ? null : name,
+                    Email = u.ContactInformation?.Email,
+                    UsersType = Decrypt(u.UsersType)
+                };
+            }).ToList();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadPage", ex);
+                await Notify("danger", "Hata", "Kullanıcılar yüklenirken sorun oluştu.");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // Çözülmüş arama indeksi (bir kez kurulur, önbelleğe alınır)
+    private async Task<List<Guid>> GetMatchingUserIdsAsync(string search, CancellationToken token)
+    {
+        var index = await StateHub.GetOrLoadAsync(USER_INDEX_KEY, async () =>
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            var raw = await db.Users.AsNoTracking()
+                .Select(u => new
+                {
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    u.UserSponsorEmail,
+                    Email = u.ContactInformation.Email,
+                    Phone = u.ContactInformation.FullPhoneNumber
+                })
+                .ToListAsync(token);
+
+            return raw.Select(u =>
+            {
+                var hay = string.Join(" ",
+                    Decrypt(u.FirstName), Decrypt(u.LastName),
+                    Decrypt(u.UserSponsorEmail), u.Email, u.Phone);
+                return new UserIndexEntry { Id = u.Id, Haystack = hay };
+            }).ToList();
+        }, token) ?? new List<UserIndexEntry>();
+
+        return index
+            .Where(e => e.Haystack?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
+            .Select(e => e.Id)
+            .ToList();
+    }
+
+    private void BuildPageWindow()
+    {
+        int start = Math.Max(1, _currentPage - PAGE_WINDOW / 2);
+        int end = Math.Min(_totalPages, start + PAGE_WINDOW - 1);
+        start = Math.Max(1, end - PAGE_WINDOW + 1);
+        _pageWindow = Enumerable.Range(start, end - start + 1).ToList();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        _jumpToPage = null;
+        await LoadPageAsync(page);
+    }
+
+    private void OnJumpInput(ChangeEventArgs e) =>
+        _jumpToPage = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+
+    private async Task JumpToPage()
+    {
+        if (_jumpToPage is int p) await GoToPage(p);
+    }
+
+    private async Task OnJumpKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "NumpadEnter") await JumpToPage();
+    }
+
+    private async Task RefreshAsync()
+    {
+        StateHub.ClearCache(USER_INDEX_KEY);
+        await LoadPageAsync(_currentPage);
+    }
+
+    private async Task ToggleIncludeDeleted(ChangeEventArgs e)
+    {
+        _includeDeleted = Cb(e);
+        await LoadPageAsync(1);
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        await LoadPageAsync(1, debounce: true);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        await LoadPageAsync(1);
+    }
+
+    private void OnWorkstationInput(ChangeEventArgs e)
+    {
+        if (_editModel == null) return;
+        var s = e.Value?.ToString();
+        _editModel.WorkstationEmployeeGroupId = Guid.TryParse(s, out var g) ? g : null;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ALAN TANIMLARI (döngüyle render edilenler)
+    // ══════════════════════════════════════════════════════════════
+
+    private IEnumerable<BoolField> StatusFields(Users m, UserRolesAccessPermissions roles) => new[]
+    {
+        new BoolField("Hesap Aktif", () => m.IsActive, v => m.IsActive = v),
+        new BoolField("Mağaza/Satıcı Yetkisi", () => m.IsActiveVendorStatu, v => m.IsActiveVendorStatu = v),
+        new BoolField("Kullanım Koşulları Kabul", () => m.TermsOfUse, v => m.TermsOfUse = v),
+        new BoolField("Aktivasyon Maili Durumu", () => m.AccountActivationMailStatu, v => m.AccountActivationMailStatu = v ?? false),
+        new BoolField("IT Personeli", () => roles.IsItStaff, v => roles.IsItStaff = v),
+    };
+
+    private IEnumerable<SocialField> SocialFields(ContactInformation c) => new[]
+    {
+        new SocialField("Facebook",  () => c.IsActiveFacebook,  v => c.IsActiveFacebook = v,  () => c.Facebook,  v => c.Facebook = v),
+        new SocialField("Instagram", () => c.IsActiveInstagram, v => c.IsActiveInstagram = v, () => c.Instagram, v => c.Instagram = v),
+        new SocialField("X (Twitter)", () => c.IsActiveX,       v => c.IsActiveX = v,         () => c.X,         v => c.X = v),
+        new SocialField("TikTok",    () => c.IsActiveTikTok,    v => c.IsActiveTikTok = v,    () => c.TikTok,    v => c.TikTok = v),
+        new SocialField("YouTube",   () => c.IsActiveYouTube,   v => c.IsActiveYouTube = v,   () => c.YouTube,   v => c.YouTube = v),
+        new SocialField("LinkedIn",  () => c.IsActiveLinkedin,  v => c.IsActiveLinkedin = v,  () => c.Linkedin,  v => c.Linkedin = v),
+        new SocialField("WhatsApp",  () => c.IsActiveWhatsApp,  v => c.IsActiveWhatsApp = v,  () => c.WhatsApp,  v => c.WhatsApp = v),
+        new SocialField("Telegram",  () => c.IsActiveTelegram,  v => c.IsActiveTelegram = v,  () => c.Telegram,  v => c.Telegram = v),
+        new SocialField("WeChat",    () => c.IsActiveWeChat,    v => c.IsActiveWeChat = v,    () => c.WeChat,    v => c.WeChat = v),
+        new SocialField("Weibo",     () => c.IsActiveWeibo,     v => c.IsActiveWeibo = v,     () => c.Weibo,     v => c.Weibo = v),
+        new SocialField("VKontakte", () => c.IsActiveVKontakte, v => c.IsActiveVKontakte = v, () => c.VKontakte, v => c.VKontakte = v),
+        new SocialField("Line",      () => c.IsActiveLine,      v => c.IsActiveLine = v,      () => c.Line,      v => c.Line = v),
+        new SocialField("KakaoTalk", () => c.IsActiveKakaoTalk, v => c.IsActiveKakaoTalk = v, () => c.KakaoTalk, v => c.KakaoTalk = v),
+        new SocialField("Pinterest", () => c.IsActivePinterest, v => c.IsActivePinterest = v, () => c.Pinterest, v => c.Pinterest = v),
+        new SocialField("GitHub",    () => c.IsActiveGitHub,    v => c.IsActiveGitHub = v,    () => c.GitHub,    v => c.GitHub = v),
+        new SocialField("Behance",   () => c.IsActiveBehance,   v => c.IsActiveBehance = v,   () => c.Behance,   v => c.Behance = v),
+        new SocialField("Discord",   () => c.IsActiveDiscord,   v => c.IsActiveDiscord = v,   () => c.Discord,   v => c.Discord = v),
+        new SocialField("Reddit",    () => c.IsActiveReddit,    v => c.IsActiveReddit = v,    () => c.Reddit,    v => c.Reddit = v),
+    };
+
+    private IEnumerable<BoolField> PrivacyFields(IsPrivateOrPublic p) => new[]
+    {
+        new BoolField("Profil herkese açık", () => p.IsProfilePublic, v => p.IsProfilePublic = v),
+        new BoolField("Paylaşımlar görünür", () => p.IsAllowPostsView, v => p.IsAllowPostsView = v),
+        new BoolField("Son görülme", () => p.IsShowLastSeen, v => p.IsShowLastSeen = v),
+        new BoolField("Çevrimiçi durumu", () => p.IsShowOnlineStatus, v => p.IsShowOnlineStatus = v),
+        new BoolField("Arama motoru indeksleme", () => p.IsSearchEngineIndexingAllowed, v => p.IsSearchEngineIndexingAllowed = v),
+        new BoolField("Arkadaşlık isteği", () => p.IsAllowFriendRequest, v => p.IsAllowFriendRequest = v),
+        new BoolField("Direkt mesaj (DM)", () => p.IsAllowDirectMessages, v => p.IsAllowDirectMessages = v),
+        new BoolField("Sesli arama", () => p.IsAllowVoiceCalls, v => p.IsAllowVoiceCalls = v),
+        new BoolField("Görüntülü arama", () => p.IsAllowVideoCalls, v => p.IsAllowVideoCalls = v),
+        new BoolField("Okundu bilgisi", () => p.IsReadReceiptsEnabled, v => p.IsReadReceiptsEnabled = v),
+        new BoolField("Konum görünür", () => p.IsLocationVisible, v => p.IsLocationVisible = v),
+        new BoolField("Takipçi sayısı göster", () => p.IsShowFollowerCount, v => p.IsShowFollowerCount = v),
+        new BoolField("Takip edilenler listesi", () => p.IsShowFollowingList, v => p.IsShowFollowingList = v),
+        new BoolField("Takipçi listesi", () => p.IsShowFollowerList, v => p.IsShowFollowerList = v),
+        new BoolField("Yorumlara izin", () => p.IsAllowComments, v => p.IsAllowComments = v),
+        new BoolField("Etiketlenmeye izin", () => p.IsAllowTagging, v => p.IsAllowTagging = v),
+        new BoolField("Hikaye paylaşımı", () => p.IsAllowStorySharing, v => p.IsAllowStorySharing = v),
+        new BoolField("İçerik indirme", () => p.IsAllowPostDownloading, v => p.IsAllowPostDownloading = v),
+        new BoolField("E-posta bildirimleri", () => p.IsEmailNotificationEnabled, v => p.IsEmailNotificationEnabled = v),
+        new BoolField("Push bildirimleri", () => p.IsPushNotificationEnabled, v => p.IsPushNotificationEnabled = v),
+        new BoolField("SMS bildirimleri", () => p.IsSmsNotificationEnabled, v => p.IsSmsNotificationEnabled = v),
+        new BoolField("İki faktörlü doğrulama", () => p.IsTwoFactorAuthEnabled, v => p.IsTwoFactorAuthEnabled = v),
+        new BoolField("Kişiselleştirilmiş reklam", () => p.IsPersonalizedAdsEnabled, v => p.IsPersonalizedAdsEnabled = v),
+        new BoolField("Anonim veri toplama", () => p.IsDataCollectionAllowed, v => p.IsDataCollectionAllowed = v),
+        new BoolField("Yapay zeka eğitim izni", () => p.IsAiTrainingAllowed, v => p.IsAiTrainingAllowed = v),
+    };
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL AÇMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenEditModal(Guid id)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var u = await db.Users.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id, _cts.Token);
+
+            if (u == null)
+            {
+                await Notify("warning", "Uyarı", "Kullanıcı bulunamadı.");
+                return;
+            }
+
+            // Şifreli alanları çöz, owned tabloları null ise oluştur
+            u.FirstName = Decrypt(u.FirstName);
+            u.LastName = Decrypt(u.LastName);
+            u.UserSponsorEmail = Decrypt(u.UserSponsorEmail);
+            u.Language = Decrypt(u.Language);
+            u.Currency = Decrypt(u.Currency);
+            u.UsersType = Decrypt(u.UsersType);
+            u.BackgroundImagePath = Decrypt(u.BackgroundImagePath);
+
+            u.ContactInformation ??= new ContactInformation();
+            u.IsPrivateOrPublic ??= new IsPrivateOrPublic();
+            u.ProfileCoverGallery ??= new ProfileCoverGallery();
+            u.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
+            u.IsDeleted ??= new IsDeleted { IsDeletedStatu = false };
+
+            _editModel = u;
+            await ShowModal("EditModal");
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "OpenEdit");
+        }
+        catch (Exception ex)
+        {
+            await LogError("OpenEditModal", ex);
+            await Notify("danger", "Hata", "Kullanıcı açılırken sorun oluştu.");
+        }
+    }
+
+    private async Task OpenDeleteModal(UserRow row, bool restore)
+    {
+        _deleteTarget = row;
+        _restoreMode = restore;
+        await ShowModal("DeleteModal");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // KAYDET — tüm ayarları yeniden şifreleyerek
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task SaveAsync()
+    {
+        if (_isProcessing || _editModel == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.Users.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+
+            if (existing == null)
+            {
+                await Notify("warning", "Uyarı", "Kullanıcı artık mevcut değil.");
+                return;
+            }
+
+            var m = _editModel;
+
+            // ── Şifreli skaler alanlar (Password'e DOKUNULMAZ) ──
+            existing.FirstName = Enc(m.FirstName);
+            existing.LastName = Enc(m.LastName);
+            existing.UserSponsorEmail = Enc(m.UserSponsorEmail);
+            existing.Language = Enc(m.Language);
+            existing.Currency = Enc(m.Currency);
+            existing.UsersType = Enc(m.UsersType);
+            existing.BackgroundImagePath = Enc(m.BackgroundImagePath);
+
+            // ── Düz metin / değer alanları ──
+            existing.WorkstationEmployeeGroupId = m.WorkstationEmployeeGroupId;
+            existing.UserIsEmployee = m.UserIsEmployee;
+            existing.DateOfBirth = m.DateOfBirth;
+            existing.RegistrationDate = m.RegistrationDate;
+            existing.AccountActivationMailStatu = m.AccountActivationMailStatu;
+            existing.AccountActivationMailCode = m.AccountActivationMailCode;
+            existing.AccountPasswordResetMailCode = m.AccountPasswordResetMailCode;
+            existing.AccountActivationMailDeadline = m.AccountActivationMailDeadline;
+            existing.IsActive = m.IsActive;
+            existing.IsActiveVendorStatu = m.IsActiveVendorStatu;
+            existing.TermsOfUse = m.TermsOfUse;
+
+            // ── Owned tablolar (düz metin) — tüm değerleri ata ──
+            existing.ContactInformation = m.ContactInformation;
+            existing.IsPrivateOrPublic = m.IsPrivateOrPublic;
+            existing.ProfileCoverGallery = m.ProfileCoverGallery;
+            existing.UserRolesAccessPermissions = m.UserRolesAccessPermissions;
+            // IsDeleted durumunu bu modalda değiştirmiyoruz (silme ayrı akış)
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("EditModal");
+            _editModel = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(USER_INDEX_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
+            await Notify("success", "Başarılı", "Tüm ayarlar kaydedildi.");
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("SaveAsync", ex);
+            await Notify("danger", "Hata", "Kaydetme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // SİL / GERİ AL (soft delete)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task DeleteConfirmedAsync()
+    {
+        if (_isProcessing || _deleteTarget == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.Users.FindAsync(new object[] { _deleteTarget.User.Id }, _cts.Token);
+
+            if (existing != null)
+            {
+                existing.IsDeleted = new IsDeleted
+                {
+                    IsDeletedStatu = !_restoreMode,
+                    DeletedAtDate = _restoreMode ? null : DateTime.UtcNow
+                };
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await HideModal("DeleteModal");
+            _deleteTarget = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(USER_INDEX_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, _restoreMode ? "Restore" : "SoftDelete");
+            await Notify("success", _restoreMode ? "Geri Alındı" : "Silindi",
+                _restoreMode ? "Kullanıcı geri alındı." : "Kullanıcı silindi olarak işaretlendi.");
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteConfirmed", ex);
+            await Notify("danger", "Hata", "İşlem sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

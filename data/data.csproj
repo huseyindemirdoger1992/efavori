@@ -23,4 +23,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.8" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="_Product\" />
+  </ItemGroup>
+
 </Project>

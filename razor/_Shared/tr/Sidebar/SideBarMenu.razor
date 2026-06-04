@@ -267,6 +267,8 @@
 
         @if (_use?.UsersType == "SuperAdmin")
         {
+            <li class="menu-label">Yönetici Modülleri</li>
+
             <li>
                 <a class="has-arrow" href="javascript:;">
                     <div class="parent-icon">
@@ -348,23 +350,27 @@
                         </ul>
                     </li>
                     <li>
-                        <a href="/@culture/Admin/DraftPage/ThisPageIsBeingPreparedProfileMedia/">
+                        <a href="/@culture/Admin/SystemEmailHistory/List/">
+                            <i class="fa fa-envelope-square" aria-hidden="true"></i>
+                            Sistem Mail Geçmişi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/LogManagement/List/">
                             <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
-                            Hata Yönetimi
+                            Hata Geçmişi
                         </a>
                     </li>
                 </ul>
             </li>
         }
-
-
-
+        <li class="menu-label">İşletme Yönetimi</li>
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
                     <i class="fa fa-industry" aria-hidden="true"></i>
                 </div>
-                <div class="menu-title">İşletme Yönetimi</div>
+                <div class="menu-title">Mağaza Yönetimi</div>
             </a>
             <ul>
                 <li>
@@ -381,6 +387,30 @@
                 </li>
             </ul>
         </li>
+
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-archive" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Depo Yönetimi</div>
+            </a>
+            <ul>
+                <li>
+                    <a href="/@culture/Admin/Warehouse/Add/">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                        Yeni Ekle
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Admin/Warehouse/List/">
+                        <i class="fa fa-list-ul" aria-hidden="true"></i>
+                        Listele
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
@@ -403,6 +433,44 @@
                 </li>
             </ul>
         </li>
+
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Sipariş Yönetimi</div>
+            </a>
+            <ul>
+                <li>
+                    <a href="/@culture/Admin/Product/AddProduct/">
+                        <i class="fa fa-list" aria-hidden="true"></i>
+                        Tüm Siparişler
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Admin/Product/AddProduct/">
+                        <i class="fa fa-bell" aria-hidden="true"></i>
+                        Yeni Gelenler
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Admin/Product/ListProduct/">
+                        <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                        Teslim Edilenler
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Admin/Product/ListProduct/">
+                        <i class="fa fa-times-circle" aria-hidden="true"></i>
+                        İptal Edilenler
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <li class="menu-label">İletişim Araçları</li>
+
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
@@ -419,6 +487,9 @@
                 </li>
             </ul>
         </li>
+
+        <li class="menu-label">Görevlendirme Yönetimi</li>
+
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
@@ -524,10 +595,12 @@
 
             </ul>
         </li>
+
+        <li class="menu-label">Medya Yönetimi</li>
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
-                    <i class="fa fa-photo" aria-hidden="true"></i>
+                    <i class="fa fa-picture-o" aria-hidden="true"></i>
                 </div>
                 <div class="menu-title">Medya Yönetimi</div>
             </a>
@@ -540,6 +613,7 @@
                 </li>
             </ul>
         </li>
+        <li class="menu-label">Bilgilendirme & Destek</li>
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
@@ -556,5 +630,68 @@
                 </li>
             </ul>
         </li>
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-question-circle" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Nasıl Yapılır</div>
+            </a>
+            <ul>
+                <li>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-home" aria-hidden="true"></i>
+                        Mağaza Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-archive" aria-hidden="true"></i>
+                        Depo Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-cube" aria-hidden="true"></i>
+                        Ürün Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                        Sipariş Yönetimi
+                    </a>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-life-ring" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Destek Talepleri</div>
+            </a>
+            <ul>
+                <li>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                        Yeni Oluştur
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-folder-open" aria-hidden="true"></i>
+                        Açık Talepler
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Home/GetGitHubCommits/">
+                        <i class="fa fa-check-circle" aria-hidden="true"></i>
+                        Tamamlanmış Talepler
+                    </a>
+                </li>
+            </ul>
+        </li>
+
     </ul>
 </div>

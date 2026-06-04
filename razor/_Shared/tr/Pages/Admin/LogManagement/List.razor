@@ -1,0 +1,836 @@
+﻿@* ============================================================
+   List.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ Sadece Logs.cs yapısını listeler (salt-okunur)
+   ✅ Logs.UserId → Users tablosundan Ad / Soyad / Email çekilir
+   ✅ Users.FirstName / LastName şifreli → Decrypt edilir
+   ✅ Sağda 2 "Detaylar" butonu:
+        1) Hata detayları modalı (Exception, StackTrace, HTTP bilgileri)
+        2) Kullanıcı detayları modalı (Ad, Soyad, Email, telefon vb.)
+   ✅ GlobalStateHub — RAM cache, anlık broadcast
+   ✅ Arama + debounce + 10'lu sayfalama
+   ✅ TakeLogs — görüntüleme aksiyonları loglanır
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    // Bu alanı kesinlikle SİLME. Global state'den dil bilgisini alıp yönlendirme için gereklidir.
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Logs/List/", true);
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",     "Ana Sayfa",  "/"),
+        ("fa fa-table",    "Kayıtlar",   "javascript:void(0)"),
+        ("fa fa-list-alt", PAGE_TITLE,   "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <button class="btn btn-light btn-sm" @onclick="RefreshAsync" disabled="@_isLoading">
+        <i class="fa fa-refresh me-sm-1 @(_isLoading ? "fa-spin" : "")"></i>
+        <span class="d-none d-sm-inline">Yenile</span>
+    </button>
+
+    <div class="vr mx-1"></div>
+    <span class="badge bg-light text-dark">
+        <i class="fa fa-database me-1"></i>@_totalCount log
+    </span>
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Servis, işlem, IP, kullanıcı veya e-posta ara"
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && _totalCount == 0)
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">Log kaydı bulunmuyor.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Servis / Modül</th>
+                    <th>İşlem</th>
+                    <th>Kullanıcı + ID</th>
+                    <th class="d-none d-lg-table-cell">E-posta</th>
+                    <th class="d-none d-md-table-cell">IP</th>
+                    <th class="d-none d-md-table-cell">Tarih</th>
+                    <th class="text-center">Durum</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var row in _pagedItems)
+                {
+                    var hasError = !string.IsNullOrWhiteSpace(row.Log.Exception)
+                                || !string.IsNullOrWhiteSpace(row.Log.StackTrace);
+                    <tr class="@(hasError ? "table-light" : "")">
+                        <td class="d-none d-md-table-cell text-light small">@(rowNo++)</td>
+                        <td><div class="fw-semibold">@(row.Log.PageNameSpaceTitle ?? "—")</div></td>
+                        <td><span class="badge bg-light">@(row.Log.Action ?? "—")</span></td>
+                        <td>
+                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(row.FullName) ? "—" : row.FullName)</div>
+                            @if (row.Log.UserId.HasValue)
+                            {
+                                <div class="small text-light text-truncate" style="max-width:12rem;">
+                                    @row.Log.UserId
+                                </div>
+                            }
+                        </td>
+                        <td class="d-none d-lg-table-cell small text-truncate" style="max-width:14rem;">
+                            @(string.IsNullOrWhiteSpace(row.Email) ? "—" : row.Email)
+                        </td>
+                        <td class="d-none d-md-table-cell small text-nowrap">@(row.Log.IpAddress ?? "—")</td>
+                        <td class="d-none d-md-table-cell text-nowrap">
+                            <div class="small">
+                                @(row.Log.Date?.ToString("dd.MM.yyyy") ?? "—")
+                                @if (row.Log.Date.HasValue)
+                                {
+                                    <span class="text-light"> | @row.Log.Date.Value.ToString("HH:mm")</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            @if (hasError)
+                            {
+                                <span class="badge bg-danger" title="Hata içeriyor"><i class="fa fa-exclamation-triangle"></i> Hata</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success-subtle text-success" title="Hata yok"><i class="fa fa-check"></i> OK</span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            @* 1. Buton — Hata Detayları *@
+                            <button class="btn btn-outline-info btn-sm me-1"
+                                    @onclick="() => OpenErrorModal(row)" title="Hata Detayları">
+                                <i class="fa fa-bug"></i>
+                                <span class="d-none d-xl-inline ms-1">Hata</span>
+                            </button>
+                            @* 2. Buton — Kullanıcı Detayları *@
+                            <button class="btn btn-outline-light btn-sm"
+                                    @onclick="() => OpenUserModal(row)" title="Kullanıcı Detayları">
+                                <i class="fa fa-user"></i>
+                                <span class="d-none d-xl-inline ms-1">Kullanıcı</span>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama (pencereli — binlerce sayfada bile taşmaz) ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_totalCount kayıt
+            <span class="text-light"> · Sayfa @_currentPage / @_totalPages</span>
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 flex-nowrap">
+                        @* İlk sayfa *@
+                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(1)" title="İlk sayfa">
+                                <i class="fa fa-angle-double-left"></i>
+                            </button>
+                        </li>
+                        @* Önceki *@
+                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_currentPage - 1)" title="Önceki">
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                        </li>
+
+                        @* Baştaki "…" *@
+                        @if (_pageWindow.First() > 1)
+                        {
+                            <li class="page-item disabled d-none d-sm-block">
+                                <span class="page-link bg-dark text-light border-secondary">…</span>
+                            </li>
+                        }
+
+                        @* Pencere içindeki sayfalar *@
+                        @foreach (var pg in _pageWindow)
+                        {
+                            <li class="page-item @(_currentPage == pg ? "active" : "")">
+                                <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary"
+                                        @onclick="() => GoToPage(pg)">
+                                    @pg
+                                </button>
+                            </li>
+                        }
+
+                        @* Sondaki "…" *@
+                        @if (_pageWindow.Last() < _totalPages)
+                        {
+                            <li class="page-item disabled d-none d-sm-block">
+                                <span class="page-link bg-dark text-light border-secondary">…</span>
+                            </li>
+                        }
+
+                        @* Sonraki *@
+                        <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_currentPage + 1)" title="Sonraki">
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </li>
+                        @* Son sayfa *@
+                        <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_totalPages)" title="Son sayfa">
+                                <i class="fa fa-angle-double-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+
+                @* Sayfaya git *@
+                <div class="input-group input-group-sm" style="width:9.5rem;">
+                    <input type="number" min="1" max="@_totalPages"
+                           class="form-control bg-dark text-light border-secondary text-center"
+                           placeholder="Sayfa"
+                           value="@_jumpToPage"
+                           @oninput="OnJumpInput"
+                           @onkeydown="OnJumpKeyDown" />
+                    <button class="btn btn-outline-light border-secondary" @onclick="JumpToPage" title="Git">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL 1 — Hata Detayları
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="ErrorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-info"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-info mb-0">
+                    <i class="fa fa-bug me-1"></i>Hata / İşlem Detayları
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_detailTarget?.Log != null)
+                {
+                    var log = _detailTarget.Log;
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-cube me-1"></i>Servis / Modül</label>
+                            <div class="text-light">@(log.PageNameSpaceTitle ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-bolt me-1"></i>İşlem (Action)</label>
+                            <div class="text-light">@(log.Action ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-globe me-1"></i>IP Adresi</label>
+                            <div class="text-light">@(log.IpAddress ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-calendar me-1"></i>Tarih (UTC)</label>
+                            <div class="text-light">@(log.Date?.ToString("dd.MM.yyyy HH:mm:ss") ?? "—")</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-link me-1"></i>İstek Yolu (RequestPath)</label>
+                            <div class="text-light text-break">@(log.RequestPath ?? "—")</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-desktop me-1"></i>User Agent</label>
+                            <div class="text-light small text-break">@(log.UserAgent ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-language me-1"></i>Diller</label>
+                            <div class="text-light">@(log.Languages ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-key me-1"></i>Log Id</label>
+                            <div class="text-light small text-break">@log.Id</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-danger small mb-1"><i class="fa fa-exclamation-circle me-1"></i>Exception (Hata Mesajı)</label>
+                            @if (!string.IsNullOrWhiteSpace(log.Exception))
+                            {
+                                <pre class="bg-black text-danger p-2 rounded border border-danger small mb-0" style="white-space:pre-wrap;">@log.Exception</pre>
+                            }
+                            else
+                            {
+                                <div class="text-success small"><i class="fa fa-check me-1"></i>Hata mesajı yok.</div>
+                            }
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-warning small mb-1"><i class="fa fa-code me-1"></i>Stack Trace</label>
+                            @if (!string.IsNullOrWhiteSpace(log.StackTrace))
+                            {
+                                <pre class="bg-black text-warning p-2 rounded border border-secondary small mb-0" style="white-space:pre-wrap; max-height:18rem; overflow:auto;">@log.StackTrace</pre>
+                            }
+                            else
+                            {
+                                <div class="text-light small">Stack trace yok.</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-info py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL 2 — Kullanıcı Detayları
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="UserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(255,255,255,0.20);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-user me-1"></i>Kullanıcı Detayları
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_detailTarget?.User != null)
+                {
+                    var u = _detailTarget.User;
+                    var c = u.ContactInformation;
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-id-badge me-1"></i>Ad</label>
+                            <div class="text-light">@(Decrypt(u.FirstName) ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-id-badge me-1"></i>Soyad</label>
+                            <div class="text-light">@(Decrypt(u.LastName) ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-envelope me-1"></i>E-posta</label>
+                            <div class="text-light text-break">@(c?.Email ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-phone me-1"></i>Telefon</label>
+                            <div class="text-light">@(c?.FullPhoneNumber ?? c?.PhoneNumber ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-user-circle me-1"></i>Kullanıcı Tipi</label>
+                            <div class="text-light">@(Decrypt(u.UsersType) ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-handshake-o me-1"></i>Sponsor E-posta</label>
+                            <div class="text-light text-break">@(Decrypt(u.UserSponsorEmail) ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-language me-1"></i>Dil</label>
+                            <div class="text-light">@(Decrypt(u.Language) ?? "—")</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-toggle-on me-1"></i>Aktif mi?</label>
+                            <div class="text-light">@(u.IsActive == true ? "Evet" : "Hayır")</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-calendar me-1"></i>Kayıt Tarihi</label>
+                            <div class="text-light">@(u.RegistrationDate?.ToString("dd.MM.yyyy HH:mm") ?? "—")</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-key me-1"></i>Kullanıcı Id</label>
+                            <div class="text-light small text-break">@u.Id</div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 text-light">
+                        <i class="fa fa-user-times fa-2x mb-2 d-block text-light"></i>
+                        @if (_detailTarget?.Log?.UserId == null)
+                        {
+                            <p class="mb-0">Bu log kaydına bağlı bir kullanıcı (UserId) yok.</p>
+                        }
+                        else
+                        {
+                            <p class="mb-1">Kullanıcı bulunamadı.</p>
+                            <p class="small text-light mb-0">UserId: @_detailTarget?.Log?.UserId</p>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Log Kayıtları";
+    private const string ENTITY_NAME = "Logs";
+    private const string USER_INDEX_KEY = "Logs_UserIndex"; // çözülmüş kullanıcı arama indeksi
+    private const int SEARCH_DELAY = 500;
+    private const int PAGE_SIZE = 10;
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    private int _totalCount;                         // Filtreye uyan toplam kayıt
+    private List<LogRow> _pagedItems = new();        // Sadece o anki 10 satır
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+
+    // Görünür sayfa düğmesi sayısı (current'in iki yanında ~2'şer)
+    private const int PAGE_WINDOW = 5;
+    private List<int> _pageWindow = new() { 1 };
+
+    // "Sayfaya git" alanı
+    private int? _jumpToPage;
+
+    // ─── Detay modal hedefi ───────────────────────────────────────
+    private LogRow? _detailTarget;
+
+    // ─── Görünüm modeli: Log + çözülmüş kullanıcı bilgisi ─────────
+    private sealed class LogRow
+    {
+        public Logs Log { get; init; } = default!;
+        public Users? User { get; init; }
+        public string? FullName { get; init; }
+        public string? Email { get; init; }
+    }
+
+    // ─── Kullanıcı arama indeksi (şifreli ad/soyad bir kez çözülür) ─
+    // Users tablosu loglardan çok daha küçük olduğundan tamamı bir kez
+    // çözülüp önbelleğe alınır; ada göre arama bunun üzerinden yapılır.
+    private sealed class UserIndexEntry
+    {
+        public Guid Id { get; init; }
+        public string? FullName { get; init; } // çözülmüş ad + soyad
+        public string? Email { get; init; }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI: Şifre çöz (null-safe, hata durumunda orijinal döner)
+    // ══════════════════════════════════════════════════════════════
+
+    private static string? Decrypt(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        var result = GlobalSecurityProvider.Decrypt(value);
+        // Şifrelenmemiş eski veri de okunabilsin diye hata durumunda orijinali döndür
+        return result?.StartsWith("Hata:") == true ? value : result;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+        await LoadPageAsync(1);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GLOBAL OLAY
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+
+        await InvokeAsync(async () =>
+        {
+            // Veri değişti → önbellekleri (sayfa + sayım + kullanıcı indeksi) temizle
+            StateHub.ClearCache(USER_INDEX_KEY);
+            await LoadPageAsync(_currentPage);
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadPageAsync(int page, bool debounce = false)
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        var search = string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm.Trim();
+
+        try
+        {
+            // Yazarken her tuşta sorgu atmamak için debounce
+            if (debounce)
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            // ── Temel sorgu (DB tarafında, hiç tüm tabloyu çekmeden) ──
+            var query = db.Logs.AsNoTracking().AsQueryable();
+
+            if (search != null)
+            {
+                // Ada göre arama için: küçük Users tablosunu bir kez çözüp
+                // eşleşen kullanıcı id'lerini bul (şifreli alan DB'de aranamaz).
+                var matchedUserIds = await GetMatchingUserIdsAsync(search, token);
+
+                // Logs alanları DB'de düz metin → doğrudan LIKE ile aranır.
+                query = query.Where(l =>
+                    (l.PageNameSpaceTitle != null && l.PageNameSpaceTitle.Contains(search)) ||
+                    (l.Action != null && l.Action.Contains(search)) ||
+                    (l.IpAddress != null && l.IpAddress.Contains(search)) ||
+                    (l.RequestPath != null && l.RequestPath.Contains(search)) ||
+                    (l.UserAgent != null && l.UserAgent.Contains(search)) ||
+                    (l.Exception != null && l.Exception.Contains(search)) ||
+                    (l.UserId != null && matchedUserIds.Contains(l.UserId.Value)));
+            }
+
+            // ── Toplam sayım + sayfa sınırlama ──
+            _totalCount = await query.CountAsync(token);
+            _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PAGE_SIZE));
+            _currentPage = Math.Clamp(page, 1, _totalPages);
+            BuildPageWindow();
+
+            // ── Sadece o anki 10 kaydı çek (Skip/Take DB tarafında) ──
+            var pageLogs = await query
+                .OrderByDescending(x => x.Date)
+                .Skip((_currentPage - 1) * PAGE_SIZE)
+                .Take(PAGE_SIZE)
+                .ToListAsync(token);
+
+            if (token.IsCancellationRequested) return;
+
+            // ── Görünen satırlar için kullanıcıları çöz (tam entity → modal için) ──
+            _pagedItems = await ResolvePageUsersAsync(db, pageLogs, token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadPage", ex);
+                await Notify("danger", "Hata", "Loglar yüklenirken sorun oluştu.");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // Görünen sayfadaki loglara ait kullanıcıları tek sorguda çözer
+    private async Task<List<LogRow>> ResolvePageUsersAsync(
+        _ApplicationConnectionDb db, List<Logs> pageLogs, CancellationToken token)
+    {
+        var ids = pageLogs.Where(l => l.UserId.HasValue)
+                          .Select(l => l.UserId!.Value)
+                          .Distinct().ToList();
+
+        var userMap = ids.Count == 0
+            ? new Dictionary<Guid, Users>()
+            : (await db.Users.AsNoTracking()
+                .Where(u => ids.Contains(u.Id))
+                .ToListAsync(token))
+              .ToDictionary(u => u.Id);
+
+        return pageLogs.Select(l =>
+        {
+            Users? u = (l.UserId.HasValue && userMap.TryGetValue(l.UserId.Value, out var found))
+                ? found : null;
+
+            string? fullName = null;
+            if (u != null)
+            {
+                var name = $"{Decrypt(u.FirstName)} {Decrypt(u.LastName)}".Trim();
+                fullName = string.IsNullOrWhiteSpace(name) ? null : name;
+            }
+
+            return new LogRow
+            {
+                Log = l,
+                User = u,
+                FullName = fullName,
+                Email = u?.ContactInformation?.Email
+            };
+        }).ToList();
+    }
+
+    // Şifreli ad/soyad + e-posta üzerinden eşleşen kullanıcı id'leri.
+    // Users indeksi bir kez çözülüp önbelleğe alınır (loglardan çok daha küçük).
+    private async Task<List<Guid>> GetMatchingUserIdsAsync(string search, CancellationToken token)
+    {
+        var index = await StateHub.GetOrLoadAsync(USER_INDEX_KEY, async () =>
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            var raw = await db.Users.AsNoTracking()
+                .Select(u => new
+                {
+                    u.Id,
+                    u.FirstName,
+                    u.LastName,
+                    Email = u.ContactInformation.Email
+                })
+                .ToListAsync(token);
+
+            return raw.Select(u =>
+            {
+                var name = $"{Decrypt(u.FirstName)} {Decrypt(u.LastName)}".Trim();
+                return new UserIndexEntry
+                {
+                    Id = u.Id,
+                    FullName = string.IsNullOrWhiteSpace(name) ? null : name,
+                    Email = u.Email
+                };
+            }).ToList();
+        }, token) ?? new List<UserIndexEntry>();
+
+        return index
+            .Where(e => Contains(e.FullName, search) || Contains(e.Email, search))
+            .Select(e => e.Id)
+            .ToList();
+    }
+
+    private static bool Contains(string? value, string search) =>
+        value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
+
+    // Sadece current'in etrafındaki PAGE_WINDOW kadar sayfa numarasını üretir
+    private void BuildPageWindow()
+    {
+        int start = Math.Max(1, _currentPage - PAGE_WINDOW / 2);
+        int end = Math.Min(_totalPages, start + PAGE_WINDOW - 1);
+        // Sona yaklaşıldıysa pencereyi geriye doğru tamamla
+        start = Math.Max(1, end - PAGE_WINDOW + 1);
+
+        _pageWindow = Enumerable.Range(start, end - start + 1).ToList();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        _jumpToPage = null;
+        await LoadPageAsync(page);
+    }
+
+    // ─── "Sayfaya git" alanı ───
+    private void OnJumpInput(ChangeEventArgs e) =>
+        _jumpToPage = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+
+    private async Task JumpToPage()
+    {
+        if (_jumpToPage is int p) await GoToPage(p);
+    }
+
+    private async Task OnJumpKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "NumpadEnter") await JumpToPage();
+    }
+
+    private async Task RefreshAsync()
+    {
+        StateHub.ClearCache(USER_INDEX_KEY);
+        await LoadPageAsync(_currentPage);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ARAMA — tüm tabloda arar, sonucu 1. sayfadan gösterir
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        await LoadPageAsync(1, debounce: true);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        await LoadPageAsync(1);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL AÇMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenErrorModal(LogRow row)
+    {
+        _detailTarget = row;
+        await ShowModal("ErrorModal");
+        await Logger.TakeIt(use?.Id, PAGE_TITLE, "ViewErrorDetail");
+    }
+
+    private async Task OpenUserModal(LogRow row)
+    {
+        _detailTarget = row;
+        await ShowModal("UserModal");
+        await Logger.TakeIt(use?.Id, PAGE_TITLE, "ViewUserDetail");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

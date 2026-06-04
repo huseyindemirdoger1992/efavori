@@ -13,9 +13,9 @@ namespace data
         // Şifrele ***-***-***
         public string? UserSponsorEmail { get; set; } // Kullanıcının Sponsor Email Adresi + 
         // Şifrele ***-***-***
-        public string? FirstName { get; set; } // Kullanıcının adı (Zorunlu, max 50 karakter) + 
+        public string? FirstName { get; set; } // Kullanıcının adı + 
         // Şifrele ***-***-***
-        public string? LastName { get; set; } // Kullanıcının soyadı (Zorunlu, max 50 karakter) + 
+        public string? LastName { get; set; } // Kullanıcının soyadı + 
         // Şifrele ***-***-***
         public string? Password { get; set; } // Şifrenin hashlenmiş (şifrelenmiş) hali + 
 
@@ -29,13 +29,12 @@ namespace data
 
         // === Kullanıcı Tercihleri ===
         // Şifrele ***-***-***
-        public string? Language { get; set; } = "en"; // Arayüz dili tercihi (Varsayılan: İngilizce) + 
+        public string? Language { get; set; } = "en"; // Arayüz dili tercihi (Varsayılan: İngilizce) (en,tr,az,de,es,fr,hi,pt,ru,zh seçenekleri olabilir) + 
         // Şifrele ***-***-***
-        public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi + 
+        public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi (USD, EUR, TRY, AZN seçenekleri olabilir) + 
         // Şifrele ***-***-***
-        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi + 
+        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi (Customer, SuperAdmin seçenekleri olabilir) + 
         // Şifrele ***-***-***
-        public string? HeaderMenuType { get; set; } = "Customer"; // Kullanıcı Tipi Header Menüsü + 
 
         // === Durum ve Yetki Bilgileri ===
         public bool? IsActive { get; set; } = true; // Kullanıcı hesabı aktif mi dondurulmuş mu?
@@ -45,7 +44,7 @@ namespace data
 
         // === Profil Bilgileri ===
         // Şifrele ***-***-***
-        public string? BackgroundImagePath { get; set; } // Profil arka plan resmi
+        public string? BackgroundImagePath { get; set; } // Web site arka plan resmi +
 
         // === İlişkili Tablolar ===
         public ContactInformation? ContactInformation { get; set; }

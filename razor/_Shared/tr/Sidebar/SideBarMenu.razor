@@ -262,7 +262,7 @@
     <!--navigation-->
     <ul class="metismenu" id="menu">
         <li>
-            <input class="form-control mb-3" type="text" placeholder="MenüdeAra..." aria-label="default input example">
+            <input class="form-control mb-3" type="text" placeholder="Menüde Ara..." aria-label="default input example">
         </li>
 
         @if (_use?.UsersType == "SuperAdmin")
@@ -465,6 +465,33 @@
                         <i class="fa fa-times-circle" aria-hidden="true"></i>
                         İptal Edilenler
                     </a>
+                </li>
+            </ul>
+        </li>
+
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-cogs" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Ayarlar</div>
+            </a>
+            <ul>
+                <li>
+                    <a href="javascript:;" class="has-arrow">
+                        <div class="parent-icon">
+                            <i class="fa fa-android" aria-hidden="true"></i>
+                        </div>
+                        <div class="menu-title">Api Tanımlamaları</div>
+                    </a>
+                    <ul>
+                        <li>
+                            <a href="/@culture/Admin/StoreIntegration/Index/">
+                                <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                                E-Fatura Entegratör
+                            </a>
+                        </li>
+                    </ul>
                 </li>
             </ul>
         </li>

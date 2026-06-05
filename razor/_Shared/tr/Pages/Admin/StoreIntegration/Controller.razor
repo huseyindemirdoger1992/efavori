@@ -1,0 +1,1721 @@
+﻿@* ============================================================
+   Controller.razor — e-Fatura Entegrasyon Yönetimi
+   ─────────────────────────────────────────────────────────────
+   ✅ GlobalStateHub — anlık broadcast, debounce, RAM cache
+   ✅ TakeLogs — tüm CRUD aksiyonları loglanır
+   ✅ Ayrı Ekle / Düzenle / Sil modalleri
+   ✅ Seçilenleri Sil → önce onay modali (sayı + liste)
+   ✅ 5'li sayfalama
+   ✅ Provider seçimi (Parasut, Logo, Uyumsoft)
+   ✅ Admin onaylı işletme listesi
+   ✅ Kayıt öncesi sandbox e-fatura doğrulaması
+   ✅ Şifrelenmiş API credential saklama
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using System.Net.Http
+@using System.Text
+@using System.Text.Json
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+@inject NavigationManager NavigationManager
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",        "Ana Sayfa",              "/"),
+        ("fa fa-plug",        "Entegrasyonlar",         "javascript:void(0)"),
+        ("fa fa-file-text-o", PAGE_TITLE,               "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    <button class="btn btn-light btn-sm" @onclick="OpenAddModal" disabled="@_isLoading">
+        <i class="fa fa-plus me-sm-1"></i>
+        <span class="d-none d-sm-inline">Yeni Entegrasyon</span>
+    </button>
+
+    @if (_selectedIds.Any())
+    {
+        <div class="vr mx-1"></div>
+        <span class="badge bg-light">@_selectedIds.Count seçili</span>
+
+        <button class="btn btn-outline-light btn-sm border-0" @onclick="ClearSelection" title="Seçimi Temizle">
+            <i class="fa fa-times"></i> Seçimi Temizle
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-danger btn-sm border-0"
+                @onclick="OpenBulkDeleteModal"
+                disabled="@_isProcessing">
+            <i class="fa fa-trash"></i> Seçilenleri Sil
+        </button>
+    }
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Servis sağlayıcı veya işletme adına göre ara..."
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && !_allItems.Any())
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-plug fa-3x mb-3 d-block"></i>
+        <p class="mb-0">Henüz entegrasyon kaydı bulunmuyor.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width:2rem;">
+                        <input type="checkbox" class="form-check-input"
+                               checked="@_allSelected"
+                               @onchange="ToggleSelectAll" />
+                    </th>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>İşletme</th>
+                    <th>Servis Sağlayıcı</th>
+                    <th class="d-none d-md-table-cell">Firma Kodu</th>
+                    <th class="d-none d-lg-table-cell">Varsayılan</th>
+                    <th class="d-none d-md-table-cell">Kayıt Tarihi</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var item in _pagedItems)
+                {
+                    var isSelected = _selectedIds.Contains(item.Id);
+                    var storeName = _approvedStores.FirstOrDefault(s => s.Id == item.StoreId)?.Name ?? "—";
+                    <tr class="@(isSelected ? "table-active" : "")">
+                        <td>
+                            <input type="checkbox" class="form-check-input"
+                                   checked="@isSelected"
+                                   @onchange="() => ToggleRowSelection(item.Id)" />
+                        </td>
+                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
+                        <td>
+                            <div class="fw-semibold">@storeName</div>
+                        </td>
+                        <td>
+                            <span class="badge @GetProviderBadgeClass(item.Provider)">
+                                <i class="fa @GetProviderIcon(item.Provider) me-1"></i>@item.Provider
+                            </span>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <span class="small text-light">@(item.CompanyCode ?? "—")</span>
+                        </td>
+                        <td class="d-none d-lg-table-cell">
+                            <i class="fa @(item.IsDefault ? "fa-check-circle text-success" : "fa-circle-o text-secondary")"></i>
+                        </td>
+                        <td class="d-none d-md-table-cell text-nowrap">
+                            <div class="small">@item.CreatedAt.ToString("dd.MM.yyyy") | @item.CreatedAt.ToString("HH:mm")</div>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-outline-info btn-sm me-1" @onclick="() => TestConnectionAsync(item)" title="Bağlantı Testi"
+                                    disabled="@_isProcessing">
+                                <i class="fa fa-plug"></i>
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OpenEditModal(item)" title="Düzenle">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => OpenDeleteModal(item)" title="Sil">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_allItems.Count kayıt
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage - 1)">
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                    </li>
+
+                    @for (int p = 1; p <= _totalPages; p++)
+                    {
+                        var pg = p;
+                        <li class="page-item @(_currentPage == pg ? "active" : "")">
+                            <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary"
+                                    @onclick="() => GoToPage(pg)">
+                                @pg
+                            </button>
+                        </li>
+                    }
+
+                    <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage + 1)">
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Ekle
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="AddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-plus me-1"></i>Yeni Entegrasyon
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_addModel != null)
+                {
+                    @* ── Sandbox sonucu ── *@
+                    @if (_sandboxResult != null)
+                    {
+                        <div class="alert alert-@(_sandboxResult.Value ? "success" : "danger") alert-dismissible fade show py-2 small" role="alert">
+                            <i class="fa @(_sandboxResult.Value ? "fa-check-circle" : "fa-times-circle") me-1"></i>
+                            @_sandboxMessage
+                            <button type="button" class="btn-close btn-close-white" @onclick="() => { _sandboxResult = null; _sandboxMessage = null; }"></button>
+                        </div>
+                    }
+
+                    <div class="row g-3">
+                        @* İşletme Seçimi *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>İşletme</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_addModel.StoreId">
+                                <option value="@Guid.Empty">İşletme Seçiniz</option>
+                                @foreach (var store in _approvedStores)
+                                {
+                                    <option value="@store.Id">@store.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* Provider Seçimi *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-cogs me-1"></i>Servis Sağlayıcı</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_addModel.Provider">
+                                <option value="">Seçiniz</option>
+                                @foreach (var p in PROVIDERS)
+                                {
+                                    <option value="@p">@p</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* API Key *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-key me-1"></i>API Key</label>
+                            <input type="password"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="API anahtarınızı girin"
+                                   @bind="_formApiKey" />
+                        </div>
+
+                        @* API Secret *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-lock me-1"></i>API Secret</label>
+                            <input type="password"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="API secret girin"
+                                   @bind="_formApiSecret" />
+                        </div>
+
+                        @* Kullanıcı Adı *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-user me-1"></i>Kullanıcı Adı</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Entegratör kullanıcı adı"
+                                   @bind="_formUserName" />
+                        </div>
+
+                        @* Şifre *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-asterisk me-1"></i>Şifre</label>
+                            <input type="password"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Entegratör şifresi"
+                                   @bind="_formPassword" />
+                        </div>
+
+                        @* Firma Kodu *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-id-card me-1"></i>Firma / Şube Kodu</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Firma kodu veya şube ID"
+                                   @bind="_addModel.CompanyCode" />
+                        </div>
+
+                        @* Varsayılan *@
+                        <div class="col-12 col-md-6 d-flex align-items-end">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="add_chkDefault" @bind="_addModel.IsDefault" />
+                                <label class="form-check-label text-white-50" for="add_chkDefault">Varsayılan Entegrasyon</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Provider bilgi notu *@
+                    @if (!string.IsNullOrEmpty(_addModel.Provider))
+                    {
+                        <div class="mt-3 p-2 border border-info rounded small text-info">
+                            <i class="fa fa-info-circle me-1"></i>
+                            @GetProviderHelpText(_addModel.Provider)
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-info btn-sm me-1"
+                        @onclick="() => RunSandboxTestAsync(true)" disabled="@_isProcessing">
+                    @if (_isTesting)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Test Ediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-plug me-1"></i><span>Bağlantı Testi</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-primary btn-sm"
+                        @onclick="AddAsync" disabled="@_isProcessing">
+                    @if (_isProcessing && !_isTesting)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Doğrulanıyor & Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-plus me-1"></i><span>Test Et & Kaydet</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Düzenle
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="EditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(255,193,7,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-edit me-1"></i>Entegrasyon Düzenle
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_editModel != null)
+                {
+                    @* ── Sandbox sonucu ── *@
+                    @if (_sandboxResult != null)
+                    {
+                        <div class="alert alert-@(_sandboxResult.Value ? "success" : "danger") alert-dismissible fade show py-2 small" role="alert">
+                            <i class="fa @(_sandboxResult.Value ? "fa-check-circle" : "fa-times-circle") me-1"></i>
+                            @_sandboxMessage
+                            <button type="button" class="btn-close btn-close-white" @onclick="() => { _sandboxResult = null; _sandboxMessage = null; }"></button>
+                        </div>
+                    }
+
+                    <div class="row g-3">
+                        @* İşletme Seçimi *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>İşletme</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_editModel.StoreId">
+                                <option value="@Guid.Empty">İşletme Seçiniz</option>
+                                @foreach (var store in _approvedStores)
+                                {
+                                    <option value="@store.Id">@store.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* Provider Seçimi *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-cogs me-1"></i>Servis Sağlayıcı</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_editModel.Provider">
+                                <option value="">Seçiniz</option>
+                                @foreach (var p in PROVIDERS)
+                                {
+                                    <option value="@p">@p</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* API Key *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-key me-1"></i>API Key</label>
+                            <input type="password"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                                   @bind="_formApiKey" />
+                            <small class="text-white-50">Boş bırakırsanız mevcut değer korunur.</small>
+                        </div>
+
+                        @* API Secret *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-lock me-1"></i>API Secret</label>
+                            <input type="password"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                                   @bind="_formApiSecret" />
+                            <small class="text-white-50">Boş bırakırsanız mevcut değer korunur.</small>
+                        </div>
+
+                        @* Kullanıcı Adı *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-user me-1"></i>Kullanıcı Adı</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                                   @bind="_formUserName" />
+                            <small class="text-white-50">Boş bırakırsanız mevcut değer korunur.</small>
+                        </div>
+
+                        @* Şifre *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-asterisk me-1"></i>Şifre</label>
+                            <input type="password"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                                   @bind="_formPassword" />
+                            <small class="text-white-50">Boş bırakırsanız mevcut değer korunur.</small>
+                        </div>
+
+                        @* Firma Kodu *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-id-card me-1"></i>Firma / Şube Kodu</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Firma kodu veya şube ID"
+                                   @bind="_editModel.CompanyCode" />
+                        </div>
+
+                        @* Varsayılan *@
+                        <div class="col-12 col-md-6 d-flex align-items-end">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="edit_chkDefault" @bind="_editModel.IsDefault" />
+                                <label class="form-check-label text-white-50" for="edit_chkDefault">Varsayılan Entegrasyon</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_editModel.Provider))
+                    {
+                        <div class="mt-3 p-2 border border-info rounded small text-info">
+                            <i class="fa fa-info-circle me-1"></i>
+                            @GetProviderHelpText(_editModel.Provider)
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-info btn-sm me-1"
+                        @onclick="() => RunSandboxTestAsync(false)" disabled="@_isProcessing">
+                    @if (_isTesting)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Test Ediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-plug me-1"></i><span>Bağlantı Testi</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-warning btn-sm"
+                        @onclick="UpdateAsync" disabled="@_isProcessing">
+                    @if (_isProcessing && !_isTesting)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Doğrulanıyor & Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-1"></i><span>Test Et & Kaydet</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Tekli Sil
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>Silme İşlemi
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-white-50 small mb-3">Bu entegrasyon kaydını silmek istediğinizden emin misiniz?</p>
+                @if (_deleteTarget != null)
+                {
+                    var delStoreName = _approvedStores.FirstOrDefault(s => s.Id == _deleteTarget.StoreId)?.Name ?? "—";
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>İşletme</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@delStoreName" disabled />
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small"><i class="fa fa-cogs me-1"></i>Servis Sağlayıcı</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.Provider ?? "—")" disabled />
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small"><i class="fa fa-id-card me-1"></i>Firma Kodu</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.CompanyCode ?? "—")" disabled />
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="DeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>Evet, Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Toplu Sil Onayı
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="BulkDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>
+                    Toplu Silme — @_selectedIds.Count kayıt seçildi
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-warning small mb-3">
+                    <i class="fa fa-exclamation-triangle me-1"></i>
+                    Aşağıdaki <strong>@_selectedIds.Count</strong> kayıt kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                </p>
+
+                @if (_bulkDeletePreview.Any())
+                {
+                    <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
+                        <table class="table table-sm table-dark table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="small">#</th>
+                                    <th class="small">İşletme</th>
+                                    <th class="small">Sağlayıcı</th>
+                                    <th class="small">Firma Kodu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int n = 1;
+                                }
+                                @foreach (var item in _bulkDeletePreview)
+                                {
+                                    var bStoreName = _approvedStores.FirstOrDefault(s => s.Id == item.StoreId)?.Name ?? "—";
+                                    <tr>
+                                        <td class="small text-secondary">@(n++)</td>
+                                        <td class="small">@bStoreName</td>
+                                        <td class="small">@(item.Provider ?? "—")</td>
+                                        <td class="small">@(item.CompanyCode ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"
+                        @onclick="() => _bulkDeletePreview.Clear()">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="BulkDeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>@_selectedIds.Count Kaydı Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "e-Fatura Entegrasyon Yönetimi";
+    private const string ENTITY_NAME = "StoreIntegration";
+    private const string CACHE_KEY_PREFIX = "StoreIntegration_List";
+    private const int SEARCH_DELAY = 500;
+    private const int PAGE_SIZE = 5;
+
+    // Kullanıcı bazlı scope'lanmış cache key'ler (farklı kullanıcıların verileri karışmaz)
+    private string UserCacheKey => $"{CACHE_KEY_PREFIX}_{use?.Id}";
+    private string UserStoreCacheKey => $"Stores_UserApproved_{use?.Id}";
+
+    private static readonly string[] PROVIDERS = { "Parasut", "Logo", "Uyumsoft" };
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+
+    // ─── Yazma kilidi ─────────────────────────────────────────────
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isProcessing;
+    private bool _isTesting;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+
+    // ─── Sandbox test sonucu ──────────────────────────────────────
+    private bool? _sandboxResult;
+    private string? _sandboxMessage;
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    private List<StoreIntegration> _allItems = new();
+    private List<Store> _approvedStores = new();
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private List<StoreIntegration> _pagedItems = new();
+
+    // ─── Form alanları (şifreli alanlar için düz metin) ───────────
+    private string _formApiKey = string.Empty;
+    private string _formApiSecret = string.Empty;
+    private string _formUserName = string.Empty;
+    private string _formPassword = string.Empty;
+
+    // ─── Ekle modal state ─────────────────────────────────────────
+    private StoreIntegration? _addModel;
+
+    // ─── Düzenle modal state ──────────────────────────────────────
+    private StoreIntegration? _editModel;
+
+    // ─── Sil modal state ──────────────────────────────────────────
+    private StoreIntegration? _deleteTarget;
+
+    // ─── Toplu Sil state ──────────────────────────────────────────
+    private readonly HashSet<Guid> _selectedIds = new();
+    private bool _allSelected;
+    private List<StoreIntegration> _bulkDeletePreview = new();
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+
+        await Task.WhenAll(
+            LoadDataAsync(_searchTerm),
+            LoadApprovedStoresAsync()
+        );
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GLOBAL OLAY
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadDataAsync(_searchTerm);
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadDataAsync(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            string cacheKey = string.IsNullOrWhiteSpace(search) ? UserCacheKey : $"{UserCacheKey}_{search}";
+            if (!string.IsNullOrWhiteSpace(search))
+                StateHub.ClearCache(cacheKey);
+
+            var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+                var q = db.StoreIntegration.AsNoTracking().AsQueryable();
+
+                // ★ Kullanıcı izolasyonu: her kullanıcı yalnızca kendi kayıtlarını görür
+                if (use != null)
+                    q = q.Where(x => x.UserId == use.Id);
+
+                // Soft delete filtresi
+                q = q.Where(x => x.IsDeleted == null
+                              || x.IsDeleted.IsDeletedStatu == null
+                              || x.IsDeleted.IsDeletedStatu == false);
+
+                return await q.OrderByDescending(x => x.CreatedAt).ToListAsync(token);
+            }, token);
+
+            if (token.IsCancellationRequested || result == null) return;
+
+            // ★ Defense-in-depth: cache'den gelen veriyi bellekte de filtrele
+            if (use != null)
+                result = result.Where(x => x.UserId == use.Id).ToList();
+
+            // Bellek içi arama
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                result = result.Where(x =>
+                    Contains(x.Provider, s) ||
+                    Contains(x.CompanyCode, s) ||
+                    Contains(_approvedStores.FirstOrDefault(st => st.Id == x.StoreId)?.Name, s)
+                ).ToList();
+            }
+
+            _allItems = result;
+            ApplyPaging(1);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadData", ex);
+                await Notify("danger", "Hata", "Veriler yüklenirken sorun oluştu.");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static bool Contains(string? value, string search) =>
+        value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
+
+    private void ApplyPaging(int page)
+    {
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_allItems.Count / (double)PAGE_SIZE));
+        _currentPage = Math.Clamp(page, 1, _totalPages);
+        _pagedItems = _allItems.Skip((_currentPage - 1) * PAGE_SIZE).Take(PAGE_SIZE).ToList();
+    }
+
+    private void GoToPage(int page)
+    {
+        ApplyPaging(page);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Kullanıcıya ait ve admin tarafından onaylanmış işletmeleri yükler.
+    /// DB sorgusu: UserId == use.Id AND IsActiveStateAdmin == true
+    /// Defense-in-depth: cache'den gelen veri bellekte de UserId ile filtrelenir.
+    /// </summary>
+    private async Task LoadApprovedStoresAsync()
+    {
+        try
+        {
+            var allStores = await StateHub.GetOrLoadAsync(UserStoreCacheKey, async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                return await db.Stores.AsNoTracking()
+                    // ★ Kullanıcı izolasyonu: yalnızca kendi işletmeleri
+                    .Where(s => use != null && s.UserId == use.Id)
+                    // ★ Sadece admin onaylı işletmeler
+                    .Where(s => s.IsActiveStateAdmin == true)
+                    .Where(s => s.IsDeleted == null
+                             || s.IsDeleted.IsDeletedStatu == null
+                             || s.IsDeleted.IsDeletedStatu == false)
+                    .OrderBy(s => s.Name)
+                    .ToListAsync(_cts.Token);
+            }, _cts.Token) ?? new();
+
+            // ★ Defense-in-depth: cache'den gelen veriyi bellekte de filtrele
+            _approvedStores = use != null
+                ? allStores.Where(s => s.UserId == use.Id).ToList()
+                : new();
+        }
+        catch (Exception ex) { await LogError("LoadApprovedStores", ex); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ARAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        await LoadDataAsync(_searchTerm);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        await LoadDataAsync(null);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL AÇMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenAddModal()
+    {
+        _addModel = new StoreIntegration
+        {
+            Id = Guid.Empty,
+            IsDefault = true
+        };
+        ClearFormFields();
+        ClearSandboxState();
+        await ShowModal("AddModal");
+    }
+
+    private async Task OpenEditModal(StoreIntegration item)
+    {
+        _editModel = new StoreIntegration
+        {
+            Id = item.Id,
+            StoreId = item.StoreId,
+            UserId = item.UserId,
+            Provider = item.Provider,
+            CompanyCode = item.CompanyCode,
+            IsDefault = item.IsDefault,
+            CreatedAt = item.CreatedAt,
+            UpdatedAt = item.UpdatedAt
+        };
+
+        // Şifreli alanlar boş başlatılır — kullanıcı değiştirmek isterse yazar
+        ClearFormFields();
+        ClearSandboxState();
+        await ShowModal("EditModal");
+    }
+
+    private async Task OpenDeleteModal(StoreIntegration item)
+    {
+        _deleteTarget = item;
+        await ShowModal("DeleteModal");
+    }
+
+    private async Task OpenBulkDeleteModal()
+    {
+        if (!_selectedIds.Any()) return;
+        _bulkDeletePreview = _allItems.Where(x => _selectedIds.Contains(x.Id)).ToList();
+        await ShowModal("BulkDeleteModal");
+    }
+
+    private void ClearFormFields()
+    {
+        _formApiKey = string.Empty;
+        _formApiSecret = string.Empty;
+        _formUserName = string.Empty;
+        _formPassword = string.Empty;
+    }
+
+    private void ClearSandboxState()
+    {
+        _sandboxResult = null;
+        _sandboxMessage = null;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // e-FATURA SANDBOX SERVİSLERİ
+    // ══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Bağlantı testi — modal dışından (tablodaki plug butonu)
+    /// Mevcut kayıtlı credential'ları DB'den çözerek test eder.
+    /// </summary>
+    private async Task TestConnectionAsync(StoreIntegration item)
+    {
+        if (_isProcessing) return;
+        _isProcessing = true;
+        _isTesting = true;
+        StateHasChanged();
+
+        try
+        {
+            // DB'den şifreli değerleri çöz
+            var apiKey = GlobalSecurityProvider.Decrypt(item.EncryptedApiKey ?? "");
+            var apiSecret = GlobalSecurityProvider.Decrypt(item.EncryptedApiSecret ?? "");
+            var userName = GlobalSecurityProvider.Decrypt(item.EncryptedUserName ?? "");
+            var password = GlobalSecurityProvider.Decrypt(item.EncryptedPassword ?? "");
+
+            var (success, message) = await ExecuteSandboxTestAsync(
+                item.Provider, apiKey, apiSecret, userName, password, item.CompanyCode);
+
+            if (success)
+                await Notify("success", "Bağlantı Başarılı", $"{item.Provider} sandbox doğrulaması geçti.");
+            else
+                await Notify("warning", "Bağlantı Başarısız", message);
+        }
+        catch (Exception ex)
+        {
+            await LogError("TestConnection", ex);
+            await Notify("danger", "Hata", "Bağlantı testi sırasında sorun oluştu.");
+        }
+        finally
+        {
+            _isProcessing = false;
+            _isTesting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Modal içi sandbox testi (kaydetmeden sadece test)
+    /// </summary>
+    private async Task RunSandboxTestAsync(bool isAdd)
+    {
+        var model = isAdd ? _addModel : _editModel;
+        if (_isProcessing || model == null) return;
+
+        if (string.IsNullOrWhiteSpace(model.Provider))
+        {
+            _sandboxResult = false;
+            _sandboxMessage = "Lütfen bir servis sağlayıcı seçin.";
+            StateHasChanged();
+            return;
+        }
+
+        _isTesting = true;
+        _isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var (success, message) = await ExecuteSandboxTestAsync(
+                model.Provider, _formApiKey, _formApiSecret, _formUserName, _formPassword, model.CompanyCode);
+
+            _sandboxResult = success;
+            _sandboxMessage = message;
+        }
+        catch (Exception ex)
+        {
+            _sandboxResult = false;
+            _sandboxMessage = $"Test hatası: {ex.Message}";
+            await LogError("RunSandboxTest", ex);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _isTesting = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Provider'a göre sandbox API çağrısı yapar.
+    /// Her provider'ın kendine özel endpoint ve auth formatı vardır.
+    /// </summary>
+    private async Task<(bool Success, string Message)> ExecuteSandboxTestAsync(
+        string provider, string? apiKey, string? apiSecret,
+        string? userName, string? password, string? companyCode)
+    {
+        return provider switch
+        {
+            "Parasut" => await TestParasutSandboxAsync(apiKey, apiSecret, userName, password, companyCode),
+            "Logo" => await TestLogoSandboxAsync(apiKey, apiSecret, userName, password, companyCode),
+            "Uyumsoft" => await TestUyumsoftSandboxAsync(apiKey, apiSecret, userName, password, companyCode),
+            _ => (false, "Bilinmeyen servis sağlayıcı.")
+        };
+    }
+
+    // ─── Parasut Sandbox ──────────────────────────────────────────
+    /// <summary>
+    /// Paraşüt e-Fatura API sandbox doğrulaması.
+    /// OAuth2 client_credentials flow ile token alır.
+    /// Sandbox: api.heroku.parasut.com | Prod: api.parasut.com
+    /// </summary>
+    private async Task<(bool, string)> TestParasutSandboxAsync(
+        string? clientId, string? clientSecret, string? userName, string? password, string? companyId)
+    {
+        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+            return (false, "Paraşüt: Client ID ve Client Secret zorunludur.");
+
+        if (string.IsNullOrWhiteSpace(companyId))
+            return (false, "Paraşüt: Firma ID (Company Code) zorunludur.");
+
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+
+            // OAuth2 token endpoint (sandbox)
+            var tokenRequest = new Dictionary<string, string>
+            {
+                ["grant_type"] = "client_credentials",
+                ["client_id"] = clientId,
+                ["client_secret"] = clientSecret
+            };
+
+            // Parasut kullanıcı bilgisi opsiyonel olarak resource owner flow'da kullanılır
+            if (!string.IsNullOrWhiteSpace(userName) && !string.IsNullOrWhiteSpace(password))
+            {
+                tokenRequest["grant_type"] = "password";
+                tokenRequest["username"] = userName;
+                tokenRequest["password"] = password;
+            }
+
+            var tokenResponse = await http.PostAsync(
+                "https://api.heroku.parasut.com/oauth/token",
+                new FormUrlEncodedContent(tokenRequest));
+
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                var errorBody = await tokenResponse.Content.ReadAsStringAsync();
+                return (false, $"Paraşüt token alınamadı (HTTP {(int)tokenResponse.StatusCode}). Kimlik bilgilerini kontrol edin.");
+            }
+
+            var tokenJson = await tokenResponse.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(tokenJson);
+            var accessToken = doc.RootElement.GetProperty("access_token").GetString();
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+                return (false, "Paraşüt: Token yanıtı geçersiz.");
+
+            // Firma bilgisi ile basit bir API çağrısı yap (company endpoint)
+            http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+            var companyResponse = await http.GetAsync(
+                $"https://api.heroku.parasut.com/v4/{companyId}/company");
+
+            if (companyResponse.IsSuccessStatusCode)
+                return (true, "Paraşüt sandbox doğrulaması başarılı. Kimlik bilgileri geçerli.");
+
+            return (false, $"Paraşüt firma doğrulaması başarısız (HTTP {(int)companyResponse.StatusCode}). Firma ID'yi kontrol edin.");
+        }
+        catch (TaskCanceledException)
+        {
+            return (false, "Paraşüt: Bağlantı zaman aşımına uğradı. Lütfen tekrar deneyin.");
+        }
+        catch (HttpRequestException ex)
+        {
+            return (false, $"Paraşüt: Ağ hatası — {ex.Message}");
+        }
+    }
+
+    // ─── Logo Sandbox ─────────────────────────────────────────────
+    /// <summary>
+    /// Logo e-Fatura API sandbox doğrulaması.
+    /// SOAP veya REST tabanlı auth — token ile oturum açma testi.
+    /// </summary>
+    private async Task<(bool, string)> TestLogoSandboxAsync(
+        string? apiKey, string? apiSecret, string? userName, string? password, string? companyCode)
+    {
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+            return (false, "Logo: Kullanıcı adı ve şifre zorunludur.");
+
+        if (string.IsNullOrWhiteSpace(companyCode))
+            return (false, "Logo: Firma kodu zorunludur.");
+
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+
+            // Logo e-Fatura sandbox login endpoint
+            var loginPayload = new
+            {
+                UserName = userName,
+                Password = password,
+                FirmaKodu = companyCode,
+                ApiKey = apiKey ?? "",
+                ApiSecret = apiSecret ?? ""
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(loginPayload),
+                Encoding.UTF8, "application/json");
+
+            var response = await http.PostAsync(
+                "https://sandbox-api.logo.com.tr/api/v1/auth/login",
+                content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(body);
+
+                // Token veya session ID dönüyorsa başarılı
+                if (doc.RootElement.TryGetProperty("token", out _) ||
+                    doc.RootElement.TryGetProperty("sessionId", out _) ||
+                    doc.RootElement.TryGetProperty("Token", out _))
+                {
+                    return (true, "Logo sandbox doğrulaması başarılı. Kimlik bilgileri geçerli.");
+                }
+
+                return (false, "Logo: Beklenmeyen yanıt formatı. API yapılandırmasını kontrol edin.");
+            }
+
+            return (false, $"Logo giriş başarısız (HTTP {(int)response.StatusCode}). Kimlik bilgilerini kontrol edin.");
+        }
+        catch (TaskCanceledException)
+        {
+            return (false, "Logo: Bağlantı zaman aşımına uğradı. Lütfen tekrar deneyin.");
+        }
+        catch (HttpRequestException ex)
+        {
+            return (false, $"Logo: Ağ hatası — {ex.Message}");
+        }
+    }
+
+    // ─── Uyumsoft Sandbox ─────────────────────────────────────────
+    /// <summary>
+    /// Uyumsoft e-Fatura API sandbox doğrulaması.
+    /// SOAP tabanlı — Login servisi ile oturum testi.
+    /// </summary>
+    private async Task<(bool, string)> TestUyumsoftSandboxAsync(
+        string? apiKey, string? apiSecret, string? userName, string? password, string? companyCode)
+    {
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+            return (false, "Uyumsoft: Kullanıcı adı ve şifre zorunludur.");
+
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+
+            // Uyumsoft SOAP Login request
+            var soapEnvelope = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+<soap:Envelope xmlns:soap=""http://schemas.xmlsoap.org/soap/envelope/""
+               xmlns:uyum=""http://www.intinvoice.com/services"">
+    <soap:Body>
+        <uyum:Login>
+            <uyum:UserName>{EscapeXml(userName!)}</uyum:UserName>
+            <uyum:Password>{EscapeXml(password!)}</uyum:Password>
+            {(string.IsNullOrWhiteSpace(companyCode) ? "" : $"<uyum:CompanyCode>{EscapeXml(companyCode)}</uyum:CompanyCode>")}
+        </uyum:Login>
+    </soap:Body>
+</soap:Envelope>";
+
+            var content = new StringContent(soapEnvelope, Encoding.UTF8, "text/xml");
+            content.Headers.Add("SOAPAction", "http://www.intinvoice.com/services/Login");
+
+            var response = await http.PostAsync(
+                "https://efatura-test.uyumsoft.com.tr/Services/Integration",
+                content);
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                // SOAP yanıtında SessionID veya success kontrolü
+                if (responseBody.Contains("<SessionID>", StringComparison.OrdinalIgnoreCase) ||
+                    responseBody.Contains("<IsSuccessful>true</IsSuccessful>", StringComparison.OrdinalIgnoreCase) ||
+                    responseBody.Contains("<LoginResult>", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (true, "Uyumsoft sandbox doğrulaması başarılı. Kimlik bilgileri geçerli.");
+                }
+
+                // Hata mesajı içeriyorsa
+                if (responseBody.Contains("<Fault>", StringComparison.OrdinalIgnoreCase) ||
+                    responseBody.Contains("<IsSuccessful>false</IsSuccessful>", StringComparison.OrdinalIgnoreCase))
+                {
+                    return (false, "Uyumsoft: Kimlik bilgileri reddedildi. Kullanıcı adı ve şifreyi kontrol edin.");
+                }
+
+                return (false, "Uyumsoft: Beklenmeyen yanıt formatı. API yapılandırmasını kontrol edin.");
+            }
+
+            return (false, $"Uyumsoft giriş başarısız (HTTP {(int)response.StatusCode}). Kimlik bilgilerini kontrol edin.");
+        }
+        catch (TaskCanceledException)
+        {
+            return (false, "Uyumsoft: Bağlantı zaman aşımına uğradı. Lütfen tekrar deneyin.");
+        }
+        catch (HttpRequestException ex)
+        {
+            return (false, $"Uyumsoft: Ağ hatası — {ex.Message}");
+        }
+    }
+
+    private static string EscapeXml(string value) =>
+        value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
+             .Replace("\"", "&quot;").Replace("'", "&apos;");
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Ekle (Sandbox test → başarılıysa kaydet)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task AddAsync()
+    {
+        if (_isProcessing || _addModel == null) return;
+
+        // ─ Validasyon ─
+        if (_addModel.StoreId == Guid.Empty)
+        {
+            await Notify("warning", "Uyarı", "Lütfen bir işletme seçin.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_addModel.Provider))
+        {
+            await Notify("warning", "Uyarı", "Lütfen bir servis sağlayıcı seçin.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_formApiKey) && string.IsNullOrWhiteSpace(_formUserName))
+        {
+            await Notify("warning", "Uyarı", "En az API Key veya Kullanıcı Adı girilmelidir.");
+            return;
+        }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            // ── Önce sandbox testi ──
+            var (success, message) = await ExecuteSandboxTestAsync(
+                _addModel.Provider, _formApiKey, _formApiSecret, _formUserName, _formPassword, _addModel.CompanyCode);
+
+            if (!success)
+            {
+                _sandboxResult = false;
+                _sandboxMessage = message;
+                await Notify("danger", "Doğrulama Başarısız", message);
+                return;
+            }
+
+            _sandboxResult = true;
+            _sandboxMessage = message;
+
+            // ── Doğrulama geçti — kaydet ──
+            _addModel.Id = Guid.NewGuid();
+            _addModel.UserId = use!.Id;
+            _addModel.CreatedAt = DateTime.UtcNow;
+            _addModel.UpdatedAt = DateTime.UtcNow;
+
+            // Şifrele
+            _addModel.EncryptedApiKey = GlobalSecurityProvider.Encrypt(_formApiKey ?? "");
+            _addModel.EncryptedApiSecret = GlobalSecurityProvider.Encrypt(_formApiSecret ?? "");
+            _addModel.EncryptedUserName = GlobalSecurityProvider.Encrypt(_formUserName ?? "");
+            _addModel.EncryptedPassword = GlobalSecurityProvider.Encrypt(_formPassword ?? "");
+
+            _addModel.IsDeleted = new IsDeleted
+            {
+                IsDeletedStatu = false,
+                DeletedAtDate = null
+            };
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // Varsayılan olarak işaretlendiyse diğerlerini kaldır
+            if (_addModel.IsDefault)
+            {
+                await db.StoreIntegration
+                    .Where(x => x.StoreId == _addModel.StoreId && x.UserId == use!.Id && x.IsDefault)
+                    .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsDefault, false), _cts.Token);
+            }
+
+            db.StoreIntegration.Add(_addModel);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("AddModal");
+            _addModel = null;
+            ClearFormFields();
+            _isProcessing = false;
+
+            StateHub.ClearCache(UserCacheKey);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Add");
+            await Notify("success", "Başarılı", "Entegrasyon eklendi ve sandbox doğrulaması geçti.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("AddAsync", ex);
+            await Notify("danger", "Hata", "Kayıt sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Güncelle (Sandbox test → başarılıysa kaydet)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task UpdateAsync()
+    {
+        if (_isProcessing || _editModel == null) return;
+
+        if (_editModel.StoreId == Guid.Empty)
+        {
+            await Notify("warning", "Uyarı", "Lütfen bir işletme seçin.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_editModel.Provider))
+        {
+            await Notify("warning", "Uyarı", "Lütfen bir servis sağlayıcı seçin.");
+            return;
+        }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.StoreIntegration.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+
+            if (existing == null)
+            {
+                await Notify("warning", "Uyarı", "Kayıt artık mevcut değil.");
+                return;
+            }
+
+            // Test edilecek credential'ları belirle (boşsa mevcutu kullan)
+            var testApiKey = !string.IsNullOrWhiteSpace(_formApiKey) ? _formApiKey : GlobalSecurityProvider.Decrypt(existing.EncryptedApiKey ?? "");
+            var testApiSecret = !string.IsNullOrWhiteSpace(_formApiSecret) ? _formApiSecret : GlobalSecurityProvider.Decrypt(existing.EncryptedApiSecret ?? "");
+            var testUserName = !string.IsNullOrWhiteSpace(_formUserName) ? _formUserName : GlobalSecurityProvider.Decrypt(existing.EncryptedUserName ?? "");
+            var testPassword = !string.IsNullOrWhiteSpace(_formPassword) ? _formPassword : GlobalSecurityProvider.Decrypt(existing.EncryptedPassword ?? "");
+
+            // ── Sandbox testi ──
+            var (success, message) = await ExecuteSandboxTestAsync(
+                _editModel.Provider, testApiKey, testApiSecret, testUserName, testPassword, _editModel.CompanyCode);
+
+            if (!success)
+            {
+                _sandboxResult = false;
+                _sandboxMessage = message;
+                await Notify("danger", "Doğrulama Başarısız", message);
+                return;
+            }
+
+            _sandboxResult = true;
+            _sandboxMessage = message;
+
+            // ── Güncelle ──
+            existing.StoreId = _editModel.StoreId;
+            existing.Provider = _editModel.Provider;
+            existing.CompanyCode = _editModel.CompanyCode;
+            existing.IsDefault = _editModel.IsDefault;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            // Şifreli alanlar: sadece doluysa güncelle
+            if (!string.IsNullOrWhiteSpace(_formApiKey))
+                existing.EncryptedApiKey = GlobalSecurityProvider.Encrypt(_formApiKey);
+            if (!string.IsNullOrWhiteSpace(_formApiSecret))
+                existing.EncryptedApiSecret = GlobalSecurityProvider.Encrypt(_formApiSecret);
+            if (!string.IsNullOrWhiteSpace(_formUserName))
+                existing.EncryptedUserName = GlobalSecurityProvider.Encrypt(_formUserName);
+            if (!string.IsNullOrWhiteSpace(_formPassword))
+                existing.EncryptedPassword = GlobalSecurityProvider.Encrypt(_formPassword);
+
+            // Varsayılan olarak işaretlendiyse diğerlerini kaldır
+            if (existing.IsDefault)
+            {
+                await db.StoreIntegration
+                    .Where(x => x.StoreId == existing.StoreId && x.UserId == existing.UserId
+                             && x.Id != existing.Id && x.IsDefault)
+                    .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsDefault, false), _cts.Token);
+            }
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("EditModal");
+            _editModel = null;
+            ClearFormFields();
+            _isProcessing = false;
+
+            StateHub.ClearCache(UserCacheKey);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
+            await Notify("success", "Başarılı", "Entegrasyon güncellendi ve sandbox doğrulaması geçti.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("UpdateAsync", ex);
+            await Notify("danger", "Hata", "Güncelleme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Tekli Sil
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task DeleteConfirmedAsync()
+    {
+        if (_isProcessing || _deleteTarget == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var entity = await db.StoreIntegration.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+
+            if (entity != null)
+            {
+                entity.IsDeleted = new IsDeleted
+                {
+                    IsDeletedStatu = true,
+                    DeletedAtDate = DateTime.UtcNow
+                };
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await HideModal("DeleteModal");
+            _deleteTarget = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(UserCacheKey);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
+            await Notify("success", "Silindi", "Entegrasyon kaydı başarıyla silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteAsync", ex);
+            await Notify("danger", "Hata", "Silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Toplu Sil
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkDeleteConfirmedAsync()
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+            var count = ids.Count;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var now = DateTime.UtcNow;
+            await db.StoreIntegration
+                .Where(x => ids.Contains(x.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.IsDeleted!.IsDeletedStatu, true)
+                    .SetProperty(x => x.IsDeleted!.DeletedAtDate, now),
+                    _cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+            _bulkDeletePreview.Clear();
+
+            await HideModal("BulkDeleteModal");
+            _isProcessing = false;
+
+            StateHub.ClearCache(UserCacheKey);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({count})");
+            await Notify("success", "Silindi", $"{count} entegrasyon kaydı silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkDelete", ex);
+            await Notify("danger", "Hata", "Toplu silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU SEÇİM
+    // ══════════════════════════════════════════════════════════════
+
+    private void ToggleRowSelection(Guid id)
+    {
+        if (!_selectedIds.Remove(id)) _selectedIds.Add(id);
+        _allSelected = _allItems.Count > 0 && _allItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (_allSelected)
+            _selectedIds.Clear();
+        else
+            foreach (var item in _allItems)
+                _selectedIds.Add(item.Id);
+
+        _allSelected = _allItems.Count > 0 && _allItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedIds.Clear();
+        _allSelected = false;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+
+    // ─── Provider UI yardımcıları ─────────────────────────────────
+
+    private static string GetProviderBadgeClass(string? provider) => provider switch
+    {
+        "Parasut" => "bg-primary",
+        "Logo" => "bg-success",
+        "Uyumsoft" => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    private static string GetProviderIcon(string? provider) => provider switch
+    {
+        "Parasut" => "fa-cloud",
+        "Logo" => "fa-database",
+        "Uyumsoft" => "fa-server",
+        _ => "fa-plug"
+    };
+
+    private static string GetProviderHelpText(string provider) => provider switch
+    {
+        "Parasut" => "Paraşüt entegrasyonu için Client ID, Client Secret ve Firma ID gereklidir. "
+                   + "Sandbox ortamı: api.heroku.parasut.com — OAuth2 ile kimlik doğrulama yapılır.",
+        "Logo" => "Logo entegrasyonu için Kullanıcı Adı, Şifre ve Firma Kodu zorunludur. "
+                   + "API Key / Secret opsiyoneldir. Sandbox ortamı: sandbox-api.logo.com.tr",
+        "Uyumsoft" => "Uyumsoft entegrasyonu için Kullanıcı Adı ve Şifre zorunludur. "
+                    + "SOAP tabanlı bağlantı — Sandbox: efatura-test.uyumsoft.com.tr",
+        _ => ""
+    };
+}

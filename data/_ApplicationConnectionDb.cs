@@ -24,8 +24,6 @@ namespace data
 
         // Arkadaşlıklar / Takipleşmeler
         public DbSet<FriendShip> FriendShip { get; set; } = default!;
-        public DbSet<StoreShip> StoreShip { get; set; } = default!;
-
         public DbSet<WorkstationEmployeeGroup> WorkstationEmployeeGroup { get; set; } = default!;
 
         // Shared
@@ -41,6 +39,7 @@ namespace data
         public DbSet<TaskCategories> TaskCategories { get; set; } = default!;
         public DbSet<TaskStatus> TaskStatus { get; set; } = default!;
         public DbSet<TaskNotes> TaskNotes { get; set; } = default!;
+        public DbSet<TaskKeeperJoint> TaskKeeperJoint { get; set; } = default!;
 
         // Media
         public DbSet<Media> Media { get; set; } = default!;
@@ -82,25 +81,28 @@ namespace data
 
         // Stores
         public DbSet<Store> Stores { get; set; } = default!;
+        public DbSet<StoreShip> StoreShip { get; set; } = default!;
         public DbSet<StoreBlockingInfos> StoreBlockingInfos { get; set; } = default!;
+        public DbSet<StoreIntegration> StoreIntegration { get; set; } = default!;
+
 
 
         // Products
-        public DbSet<CategoryAttribute> CategoryAttribute { get; set; } = default!;
-        public DbSet<Marketplace> Marketplace { get; set; } = default!;
-        public DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMapping { get; set; } = default!;
-        public DbSet<MarketplaceAttributeValueMapping> MarketplaceAttributeValueMapping { get; set; } = default!;
-        public DbSet<Product> Product { get; set; } = default!;
-        public DbSet<ProductAttribute> ProductAttribute { get; set; } = default!;
-        public DbSet<ProductAttributeValue> ProductAttributeValue { get; set; } = default!;
-        public DbSet<ProductImage> ProductImage { get; set; } = default!;
-        public DbSet<ProductMarketplaceMapping> ProductMarketplaceMapping { get; set; } = default!;
-        public DbSet<ProductPricing> ProductPricing { get; set; } = default!;
-        public DbSet<ProductShipping> ProductShipping { get; set; } = default!;
-        public DbSet<ProductStock> ProductStock { get; set; } = default!;
-        public DbSet<ProductVariant> ProductVariant { get; set; } = default!;
-        public DbSet<ProductVariantValue> ProductVariantValue { get; set; } = default!;
-        public DbSet<Warehouse> Warehouse { get; set; } = default!;
+        //public DbSet<CategoryAttribute> CategoryAttribute { get; set; } = default!;
+        //public DbSet<Marketplace> Marketplace { get; set; } = default!;
+        //public DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMapping { get; set; } = default!;
+        //public DbSet<MarketplaceAttributeValueMapping> MarketplaceAttributeValueMapping { get; set; } = default!;
+        //public DbSet<Product> Product { get; set; } = default!;
+        //public DbSet<ProductAttribute> ProductAttribute { get; set; } = default!;
+        //public DbSet<ProductAttributeValue> ProductAttributeValue { get; set; } = default!;
+        //public DbSet<ProductImage> ProductImage { get; set; } = default!;
+        //public DbSet<ProductMarketplaceMapping> ProductMarketplaceMapping { get; set; } = default!;
+        //public DbSet<ProductPricing> ProductPricing { get; set; } = default!;
+        //public DbSet<ProductShipping> ProductShipping { get; set; } = default!;
+        //public DbSet<ProductStock> ProductStock { get; set; } = default!;
+        //public DbSet<ProductVariant> ProductVariant { get; set; } = default!;
+        //public DbSet<ProductVariantValue> ProductVariantValue { get; set; } = default!;
+        //public DbSet<Warehouse> Warehouse { get; set; } = default!;
 
 
 

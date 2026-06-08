@@ -88,20 +88,20 @@ namespace data
 
 
         // Products
-        //public DbSet<CategoryAttribute> CategoryAttribute { get; set; } = default!;
-        //public DbSet<Marketplace> Marketplace { get; set; } = default!;
-        //public DbSet<MarketplaceAttributeMapping> MarketplaceAttributeMapping { get; set; } = default!;
-        //public DbSet<MarketplaceAttributeValueMapping> MarketplaceAttributeValueMapping { get; set; } = default!;
-        //public DbSet<Product> Product { get; set; } = default!;
-        //public DbSet<ProductAttribute> ProductAttribute { get; set; } = default!;
-        //public DbSet<ProductAttributeValue> ProductAttributeValue { get; set; } = default!;
-        //public DbSet<ProductImage> ProductImage { get; set; } = default!;
-        //public DbSet<ProductMarketplaceMapping> ProductMarketplaceMapping { get; set; } = default!;
-        //public DbSet<ProductPricing> ProductPricing { get; set; } = default!;
-        //public DbSet<ProductShipping> ProductShipping { get; set; } = default!;
-        //public DbSet<ProductStock> ProductStock { get; set; } = default!;
-        //public DbSet<ProductVariant> ProductVariant { get; set; } = default!;
-        //public DbSet<ProductVariantValue> ProductVariantValue { get; set; } = default!;
+
+        public DbSet<ProductAttributeMappings> ProductAttributeMappings { get; set; } = default!;
+        public DbSet<ProductAttributes> ProductAttributes { get; set; } = default!;
+        public DbSet<ProductAttributeValues> ProductAttributeValues { get; set; } = default!;
+        public DbSet<ProductCategoryMappings> ProductCategoryMappings { get; set; } = default!;
+        public DbSet<ProductImportBatches> ProductImportBatches { get; set; } = default!;
+        public DbSet<ProductImportProfiles> ProductImportProfiles { get; set; } = default!;
+        public DbSet<ProductPrices> ProductPrices { get; set; } = default!;
+        public DbSet<Products> Products { get; set; } = default!;
+        public DbSet<ProductSeo> ProductSeo { get; set; } = default!;
+        public DbSet<ProductSpecifications> ProductSpecifications { get; set; } = default!;
+        public DbSet<ProductStocks> ProductStocks { get; set; } = default!;
+        public DbSet<ProductVariantAttributeMappings> ProductVariantAttributeMappings { get; set; } = default!;
+        public DbSet<ProductVariants> ProductVariants { get; set; } = default!;
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
 
 

@@ -55,7 +55,6 @@
     <Folder Include="_Shared\hi\" />
     <Folder Include="_Shared\pt\" />
     <Folder Include="_Shared\ru\" />
-    <Folder Include="_Shared\tr\Pages\Admin\Product\" />
     <Folder Include="_Shared\zh\" />
   </ItemGroup>
 

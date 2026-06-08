@@ -10,6 +10,7 @@ using System.Xml;
 namespace web.Areas.Sitemap
 {
     [Area("Sitemap")]
+    [Route("/Sitemap/[controller]/[action]/{id?}")]
     public class GetXmlTr : Controller
     {
         private readonly _ApplicationConnectionDb _context;
@@ -44,7 +45,7 @@ namespace web.Areas.Sitemap
             await writer.WriteStartDocumentAsync();
             await writer.WriteStartElementAsync(null, "sitemapindex", "http://www.sitemaps.org/schemas/sitemap/0.9");
 
-            var baseUrl = $"{Request.Scheme}://{Request.Host}/tr/Sitemap/GetXmlTr";
+            var baseUrl = $"{Request.Scheme}://{Request.Host}/Sitemap/GetXmlTr";
 
             for (int i = 1; i <= totalPages; i++)
             {
@@ -93,7 +94,7 @@ namespace web.Areas.Sitemap
             await writer.WriteStartElementAsync(null, "urlset", "http://www.sitemaps.org/schemas/sitemap/0.9");
 
             // Nihai sayfa linkleri için "tr" kültürünü manuel ekliyoruz
-            var baseUrl = $"{Request.Scheme}://{Request.Host}/tr";
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
             foreach (var user in usersChunk)
             {

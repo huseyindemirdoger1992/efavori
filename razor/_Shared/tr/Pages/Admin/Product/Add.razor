@@ -1,0 +1,1911 @@
+﻿@* ============================================================
+   AddProduct.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ GlobalStateHub — RAM cache + broadcast
+   ✅ SemaphoreSlim — yazma kilidi
+   ✅ TakeLogs — tüm aksiyonlar loglanır
+   ✅ FileUploadService — medya seçimi (tekli + çoklu)
+   ✅ ItemGallery — ürün + varyant galerisi
+   ✅ 7 adımlı wizard (Mağaza→Bilgi→Varyant→Fiyat→Stok→Görsel→SEO)
+   ✅ Kartezyen varyant üretimi
+   ✅ Varyant bazlı galeri desteği (ItemType="VariantGallery")
+   ✅ Çoklu para birimi (TRY/USD/EUR/AZN)
+   ✅ Depo bazlı stok yönetimi
+   ✅ Kategori arama (20.000+ kategori desteği)
+   ✅ Tek transaction kayıt zinciri
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using data._Product
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using razor._Shared.tr.Media
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+@inject FileUploadService FileService
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",      "Ana Sayfa",        "/"),
+        ("fa fa-cube",      "Ürün Yönetimi",    "javascript:void(0)"),
+        ("fa fa-plus",      PAGE_TITLE,         "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@if (_isLoading && !_isInitialized)
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else
+{
+    @* ═══════════════════════════════════════════
+       ADIM GÖSTERGESİ
+       ═══════════════════════════════════════════ *@
+    <div class="d-flex flex-wrap align-items-center gap-1 mb-4 px-2">
+        @for (int i = 0; i < _steps.Length; i++)
+        {
+            var idx = i;
+            var isActive = _currentStep == idx;
+            var isDone = _currentStep > idx;
+            <button class="btn btn-sm @(isActive ? "btn-info" : isDone ? "btn-outline-success" : "btn-outline-secondary") d-flex align-items-center gap-1"
+                    @onclick="() => GoToStep(idx)"
+                    disabled="@(idx > _currentStep)">
+                @if (isDone)
+                {
+                    <i class="fa fa-check-circle"></i>
+                }
+                else
+                {
+                    <span class="badge @(isActive ? "bg-white text-info" : "bg-secondary") rounded-circle" style="width:20px;height:20px;font-size:0.7rem;line-height:20px;padding:0;">@(idx + 1)</span>
+                }
+                <span class="d-none d-md-inline small">@_steps[idx]</span>
+            </button>
+            @if (i < _steps.Length - 1)
+            {
+                <i class="fa fa-chevron-right text-secondary small"></i>
+            }
+        }
+    </div>
+
+    @* ═══════════════════════════════════════════
+       ADIM 1 — Mağaza & Kategori
+       ═══════════════════════════════════════════ *@
+    @if (_currentStep == 0)
+    {
+        <div class="card bg-light border-secondary">
+            <div class="card-header border-secondary py-2">
+                <h6 class="mb-0 text-white"><i class="fa fa-building me-2"></i>Mağaza & Kategori Seçimi</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @* Mağaza Seçimi *@
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>Mağaza <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                value="@_selectedStoreId"
+                                @onchange="OnStoreChanged">
+                            <option value="@Guid.Empty">Mağaza Seçiniz</option>
+                            @foreach (var s in _userStores)
+                            {
+                                <option value="@s.Id">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    @* Ürün Tipi *@
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-white-50 small"><i class="fa fa-tags me-1"></i>Ürün Tipi <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                @bind="_product.ProductType">
+                            <option value="Standard">Standart Ürün (Tek SKU)</option>
+                            <option value="Variable">Varyantlı Ürün (Renk, Beden vb.)</option>
+                        </select>
+                    </div>
+
+                    @* Kategori Arama *@
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small"><i class="fa fa-sitemap me-1"></i>Kategori <span class="text-danger">*</span></label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-transparent border-secondary text-white"><i class="fa fa-search"></i></span>
+                            <input type="text"
+                                   class="form-control bg-dark text-white border-secondary"
+                                   placeholder="Kategori ara... (Örn: Tişört, Elektronik, Ayakkabı)"
+                                   value="@_categorySearchTerm"
+                                   @oninput="OnCategorySearch" />
+                            @if (!string.IsNullOrWhiteSpace(_categorySearchTerm))
+                            {
+                                <button class="btn btn-outline-secondary" @onclick="() => { _categorySearchTerm = string.Empty; _categorySearchResults.Clear(); }">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            }
+                        </div>
+
+                        @* Arama Sonuçları *@
+                        @if (_categorySearchResults.Any())
+                        {
+                            <div class="list-group mt-1" style="max-height:200px;overflow-y:auto;">
+                                @foreach (var cat in _categorySearchResults.Take(20))
+                                {
+                                    var isSelected = _selectedCategoryIds.Contains(cat.Id);
+                                    <button type="button"
+                                            class="list-group-item list-group-item-action bg-dark text-white border-secondary py-1 small @(isSelected ? "active" : "")"
+                                            @onclick="() => ToggleCategory(cat)">
+                                        <i class="fa @(isSelected ? "fa-check-square-o text-success" : "fa-square-o") me-1"></i>
+                                        <span class="text-white-50">@(cat.DepartmentName ?? "") ›</span> @cat.Name
+                                        @if (_primaryCategoryId == cat.Id)
+                                        {
+                                            <span class="badge bg-info ms-1">Ana</span>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        }
+
+                        @* Seçilen Kategoriler *@
+                        @if (_selectedCategoryIds.Any())
+                        {
+                            <div class="mt-2">
+                                <small class="text-white-50">Seçili Kategoriler:</small>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    @foreach (var catId in _selectedCategoryIds)
+                                    {
+                                        var cat = _allCategories.FirstOrDefault(c => c.Id == catId);
+                                        if (cat == null) continue;
+                                        <span class="badge @(_primaryCategoryId == catId ? "bg-info" : "bg-secondary") d-flex align-items-center gap-1">
+                                            @cat.Name
+                                            @if (_primaryCategoryId != catId)
+                                            {
+                                                <button type="button" class="btn-close btn-close-white p-0 ms-1" style="font-size:0.5rem;"
+                                                        @onclick="() => { _selectedCategoryIds.Remove(catId); }"></button>
+                                            }
+                                            else
+                                            {
+                                                <i class="fa fa-star" style="font-size:0.6rem;" title="Ana Kategori"></i>
+                                            }
+                                        </span>
+                                    }
+                                </div>
+                                <small class="text-white-50 d-block mt-1">
+                                    <i class="fa fa-info-circle me-1"></i>İlk seçilen kategori ana kategori olarak işaretlenir. Değiştirmek için tıklayın:
+                                </small>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    @foreach (var catId in _selectedCategoryIds)
+                                    {
+                                        var cat = _allCategories.FirstOrDefault(c => c.Id == catId);
+                                        if (cat == null) continue;
+                                        <button type="button"
+                                                class="btn btn-sm @(_primaryCategoryId == catId ? "btn-info" : "btn-outline-secondary")"
+                                                @onclick="() => _primaryCategoryId = catId">
+                                            @cat.Name
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════
+       ADIM 2 — Temel Bilgiler
+       ═══════════════════════════════════════════ *@
+    @if (_currentStep == 1)
+    {
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary py-2">
+                <h6 class="mb-0 text-white"><i class="fa fa-info-circle me-2"></i>Temel Ürün Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Ürün Adı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                               placeholder="Örn: Nike Air Max 270 Erkek Spor Ayakkabı"
+                               @bind="_product.Name" />
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small"><i class="fa fa-align-left me-1"></i>Ürün Açıklaması</label>
+                        <textarea class="form-control form-control-sm bg-dark text-white border-secondary"
+                                  rows="4" placeholder="Detaylı ürün açıklaması..."
+                                  @bind="_product.Description"></textarea>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small"><i class="fa fa-file-text-o me-1"></i>Kısa Açıklama</label>
+                        <textarea class="form-control form-control-sm bg-dark text-white border-secondary"
+                                  rows="2" placeholder="Özet açıklama (listeleme sayfalarında görünür)"
+                                  @bind="_product.ShortDescription"></textarea>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label text-white-50 small"><i class="fa fa-bookmark me-1"></i>Marka</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                               placeholder="Örn: Nike, Samsung..." @bind="_product.Brand" />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label text-white-50 small"><i class="fa fa-industry me-1"></i>Üretici</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                               placeholder="Üretici firma adı" @bind="_product.Manufacturer" />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label class="form-label text-white-50 small"><i class="fa fa-percent me-1"></i>KDV Oranı (%)</label>
+                        <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                               placeholder="Örn: 20" @bind="_product.TaxRate" min="0" max="100" step="1" />
+                    </div>
+
+                    @* Standart ürünler için SKU/Barkod *@
+                    @if (_product.ProductType == "Standard")
+                    {
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-barcode me-1"></i>SKU (Stok Kodu)</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Örn: NK-AM270-BLK-42" @bind="_product.SKU" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-barcode me-1"></i>Barkod (GTIN/EAN/UPC)</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Barkod numarası" @bind="_product.Barcode" />
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Ağırlık (gr)</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_product.Weight" min="0" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Genişlik (cm)</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_product.Width" min="0" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Yükseklik (cm)</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_product.Height" min="0" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Derinlik (cm)</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_product.Length" min="0" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════
+       ADIM 3 — Özellikler & Varyantlar
+       ═══════════════════════════════════════════ *@
+    @if (_currentStep == 2)
+    {
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary py-2">
+                <h6 class="mb-0 text-white">
+                    <i class="fa fa-th me-2"></i>
+                    @(_product.ProductType == "Variable" ? "Özellikler & Varyant Oluşturma" : "Ürün Özellikleri")
+                </h6>
+            </div>
+            <div class="card-body">
+
+                @* Özellik Seçimi *@
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small"><i class="fa fa-list me-1"></i>Özellik Ekle</label>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_selectedAttributeToAdd">
+                                <option value="@Guid.Empty">Özellik Seçiniz (Renk, Beden, RAM...)</option>
+                                @foreach (var attr in _availableAttributes.Where(a => !_selectedAttributes.Any(sa => sa.Id == a.Id)))
+                                {
+                                    <option value="@attr.Id">@attr.Name (@attr.AttributeType)</option>
+                                }
+                            </select>
+                            <button class="btn btn-outline-info btn-sm" @onclick="AddSelectedAttribute" disabled="@(_selectedAttributeToAdd == Guid.Empty)">
+                                <i class="fa fa-plus me-1"></i>Ekle
+                            </button>
+                        </div>
+                    </div>
+
+                    @* Yeni özellik tanımlama *@
+                    <div class="col-12">
+                        <div class="d-flex gap-2 align-items-end">
+                            <div class="flex-grow-1">
+                                <label class="form-label text-white-50 small"><i class="fa fa-plus-circle me-1"></i>Yeni Özellik Tanımla</label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                       placeholder="Örn: Malzeme, Kapasite..." @bind="_newAttributeName" />
+                            </div>
+                            <div>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_newAttributeType">
+                                    <option value="Custom">Özel</option>
+                                    <option value="Color">Renk</option>
+                                    <option value="Size">Beden</option>
+                                    <option value="Select">Seçim</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-outline-success btn-sm" @onclick="CreateNewAttribute"
+                                    disabled="@string.IsNullOrWhiteSpace(_newAttributeName)">
+                                <i class="fa fa-plus me-1"></i>Oluştur
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                @* Seçilen Özellikler ve Değer Girişi *@
+                @if (_selectedAttributes.Any())
+                {
+                    <hr class="border-secondary" />
+                    @foreach (var attr in _selectedAttributes)
+                    {
+                        <div class="card bg-transparent border-secondary mb-3">
+                            <div class="card-header border-secondary py-1 d-flex align-items-center justify-content-between">
+                                <span class="small text-white fw-semibold">
+                                    <i class="fa @(attr.AttributeType == "Color" ? "fa-paint-brush" : attr.AttributeType == "Size" ? "fa-arrows-alt" : "fa-cog") me-1"></i>
+                                    @attr.Name
+                                    @if (_product.ProductType == "Variable")
+                                    {
+                                        <span class="badge bg-info ms-1" style="font-size:0.6rem;">Varyant</span>
+                                    }
+                                </span>
+                                <button class="btn btn-outline-danger btn-sm py-0 px-1" style="font-size:0.7rem;"
+                                        @onclick="() => RemoveAttribute(attr.Id)">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="card-body py-2">
+                                @* Mevcut değerler *@
+                                @if (_attributeValuesMap.ContainsKey(attr.Id) && _attributeValuesMap[attr.Id].Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        @foreach (var val in _attributeValuesMap[attr.Id])
+                                        {
+                                            var isChecked = _selectedValueIds.ContainsKey(attr.Id) && _selectedValueIds[attr.Id].Contains(val.Id);
+                                            <button type="button"
+                                                    class="btn btn-sm @(isChecked ? "btn-info" : "btn-outline-secondary")"
+                                                    @onclick="() => ToggleAttributeValue(attr.Id, val.Id)">
+                                                @if (attr.AttributeType == "Color" && !string.IsNullOrWhiteSpace(val.ColorCode))
+                                                {
+                                                    <span class="d-inline-block rounded-circle border me-1"
+                                                          style="width:12px;height:12px;background:@val.ColorCode;vertical-align:middle;"></span>
+                                                }
+                                                @val.Value
+                                                @if (isChecked) { <i class="fa fa-check ms-1"></i> }
+                                            </button>
+                                        }
+                                    </div>
+                                }
+
+                                @* Yeni değer ekleme *@
+                                <div class="d-flex gap-2">
+                                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                           placeholder="Yeni değer (Örn: Kırmızı, XL, 16GB...)"
+                                           @bind="_newValueInputs[attr.Id]"
+                                           @onkeydown="@(e => { if (e.Key == "Enter") AddNewValueAsync(attr.Id); })" />
+                                    @if (attr.AttributeType == "Color")
+                                    {
+                                        <input type="color" class="form-control form-control-sm border-secondary"
+                                               style="width:40px;padding:2px;"
+                                               @bind="_newColorCode" />
+                                    }
+                                    <button class="btn btn-outline-success btn-sm" @onclick="() => AddNewValueAsync(attr.Id)">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* Varyant Üretimi *@
+                    @if (_product.ProductType == "Variable")
+                    {
+                        <div class="d-flex gap-2 mb-3">
+                            <button class="btn btn-info btn-sm" @onclick="GenerateVariants"
+                                    disabled="@(!_selectedAttributes.Any() || !_selectedValueIds.Any(kv => kv.Value.Any()))">
+                                <i class="fa fa-magic me-1"></i>Varyantları Oluştur
+                            </button>
+                            @if (_variants.Any())
+                            {
+                                <span class="badge bg-success align-self-center">@_variants.Count varyant</span>
+                            }
+                        </div>
+
+                        @* Oluşturulan Varyantlar Tablosu *@
+                        @if (_variants.Any())
+                        {
+                            <div class="table-responsive rounded overflow-hidden border border-secondary">
+                                <table class="table table-sm table-dark table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="small" style="width:2rem;">
+                                                <input type="checkbox" class="form-check-input"
+                                                       checked="@_variants.All(v => v.IsActive)"
+                                                       @onchange="ToggleAllVariants" />
+                                            </th>
+                                            <th class="small">Varyant</th>
+                                            <th class="small">SKU</th>
+                                            <th class="small">Barkod</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var v in _variants)
+                                        {
+                                            <tr class="@(!v.IsActive ? "opacity-50" : "")">
+                                                <td>
+                                                    <input type="checkbox" class="form-check-input"
+                                                           checked="@v.IsActive"
+                                                           @onchange="() => v.IsActive = !v.IsActive" />
+                                                </td>
+                                                <td class="small">
+                                                    @foreach (var kv in v.AttributeValueMap)
+                                                    {
+                                                        var attrName = _selectedAttributes.FirstOrDefault(a => a.Id == kv.Key)?.Name ?? "";
+                                                        var valObj = _attributeValuesMap.ContainsKey(kv.Key) ? _attributeValuesMap[kv.Key].FirstOrDefault(x => x.Id == kv.Value) : null;
+                                                        <span class="badge bg-secondary me-1">@attrName: @(valObj?.Value ?? "?")</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm bg-transparent text-white border-secondary"
+                                                           style="max-width:140px;" placeholder="SKU" @bind="v.SKU" />
+                                                </td>
+                                                <td>
+                                                    <input type="text" class="form-control form-control-sm bg-transparent text-white border-secondary"
+                                                           style="max-width:140px;" placeholder="Barkod" @bind="v.Barcode" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════
+       ADIM 4 — Fiyatlandırma
+       ═══════════════════════════════════════════ *@
+    @if (_currentStep == 3)
+    {
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary py-2">
+                <h6 class="mb-0 text-white"><i class="fa fa-money me-2"></i>Fiyatlandırma</h6>
+            </div>
+            <div class="card-body">
+                @* Para Birimi Seçimi *@
+                <div class="mb-3">
+                    <label class="form-label text-white-50 small"><i class="fa fa-globe me-1"></i>Para Birimi</label>
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary" style="max-width:200px;"
+                            @bind="_selectedCurrency">
+                        <option value="TRY">₺ TRY (Türk Lirası)</option>
+                        <option value="USD">$ USD (Amerikan Doları)</option>
+                        <option value="EUR">€ EUR (Euro)</option>
+                        <option value="AZN">₼ AZN (Azerbaycan Manatı)</option>
+                    </select>
+                </div>
+
+                @if (_product.ProductType == "Standard")
+                {
+                    @* Standart ürün — tek fiyat satırı *@
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">Satış Fiyatı <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-transparent border-secondary text-white">@GetCurrencySymbol()</span>
+                                <input type="number" class="form-control bg-dark text-white border-secondary"
+                                       step="0.01" min="0" @bind="_stdPrice" />
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">Karşılaştırma Fiyatı</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-transparent border-secondary text-white">@GetCurrencySymbol()</span>
+                                <input type="number" class="form-control bg-dark text-white border-secondary"
+                                       step="0.01" min="0" @bind="_stdComparePrice" />
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">Maliyet Fiyatı</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-transparent border-secondary text-white">@GetCurrencySymbol()</span>
+                                <input type="number" class="form-control bg-dark text-white border-secondary"
+                                       step="0.01" min="0" @bind="_stdCostPrice" />
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    @* Varyantlı ürün — her varyant için fiyat *@
+                    @if (!_variants.Any(v => v.IsActive))
+                    {
+                        <div class="text-center text-white-50 py-3">
+                            <i class="fa fa-exclamation-circle me-1"></i>Önce 3. adımda varyant oluşturmalısınız.
+                        </div>
+                    }
+                    else
+                    {
+                        @* Toplu fiyat atama *@
+                        <div class="card bg-transparent border-info mb-3">
+                            <div class="card-body py-2">
+                                <small class="text-info d-block mb-2"><i class="fa fa-bolt me-1"></i>Tüm varyantlara toplu fiyat ata:</small>
+                                <div class="d-flex flex-wrap gap-2 align-items-end">
+                                    <div>
+                                        <label class="form-label text-white-50 small mb-0">Satış</label>
+                                        <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                               style="width:120px;" step="0.01" @bind="_bulkPrice" />
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-white-50 small mb-0">Karşılaştırma</label>
+                                        <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                               style="width:120px;" step="0.01" @bind="_bulkComparePrice" />
+                                    </div>
+                                    <div>
+                                        <label class="form-label text-white-50 small mb-0">Maliyet</label>
+                                        <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                               style="width:120px;" step="0.01" @bind="_bulkCostPrice" />
+                                    </div>
+                                    <button class="btn btn-info btn-sm" @onclick="ApplyBulkPrices">
+                                        <i class="fa fa-check me-1"></i>Uygula
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive rounded overflow-hidden border border-secondary">
+                            <table class="table table-sm table-dark table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="small">Varyant</th>
+                                        <th class="small">Satış Fiyatı</th>
+                                        <th class="small">Karşılaştırma</th>
+                                        <th class="small">Maliyet</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var v in _variants.Where(x => x.IsActive))
+                                    {
+                                        EnsureVariantPrice(v.TempId);
+                                        <tr>
+                                            <td class="small">@v.DisplayName</td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary"
+                                                       style="max-width:120px;" step="0.01" @bind="_variantPrices[v.TempId].Price" />
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary"
+                                                       style="max-width:120px;" step="0.01" @bind="_variantPrices[v.TempId].CompareAtPrice" />
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary"
+                                                       style="max-width:120px;" step="0.01" @bind="_variantPrices[v.TempId].CostPrice" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════
+       ADIM 5 — Stok Yönetimi
+       ═══════════════════════════════════════════ *@
+    @if (_currentStep == 4)
+    {
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary py-2">
+                <h6 class="mb-0 text-white"><i class="fa fa-cubes me-2"></i>Stok Yönetimi</h6>
+            </div>
+            <div class="card-body">
+                @if (!_userWarehouses.Any())
+                {
+                    <div class="text-center text-warning py-3">
+                        <i class="fa fa-exclamation-triangle fa-2x mb-2 d-block"></i>
+                        <p class="small">Henüz depo tanımınız bulunmuyor. Stok yönetimi için önce depo eklemelisiniz.</p>
+                    </div>
+                }
+                else
+                {
+                    @if (_product.ProductType == "Standard")
+                    {
+                        @* Standart ürün — depo bazlı stok *@
+                        <div class="table-responsive rounded overflow-hidden border border-secondary">
+                            <table class="table table-sm table-dark table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="small">Depo</th>
+                                        <th class="small" style="width:100px;">Stok Adedi</th>
+                                        <th class="small" style="width:100px;">Uyarı Eşiği</th>
+                                        <th class="small text-center" style="width:60px;">Takip</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var wh in _userWarehouses)
+                                    {
+                                        EnsureStockEntry(Guid.Empty, wh.Id);
+                                        var key = (Guid.Empty, wh.Id);
+                                        <tr>
+                                            <td class="small">
+                                                <i class="fa fa-cube me-1 text-info"></i>@(wh.AddressInfo?.MapTitle ?? "Depo")
+                                                @if (wh.IsDefault) { <span class="badge bg-warning text-dark ms-1" style="font-size:0.6rem;">Varsayılan</span> }
+                                            </td>
+                                            <td><input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" min="0" @bind="_stockEntries[key].Quantity" /></td>
+                                            <td><input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" min="0" @bind="_stockEntries[key].LowStockThreshold" /></td>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input" checked="@_stockEntries[key].TrackStock"
+                                                       @onchange="() => _stockEntries[key].TrackStock = !_stockEntries[key].TrackStock" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Varyantlı ürün — varyant × depo stok matrisi *@
+                        @if (!_variants.Any(v => v.IsActive))
+                        {
+                            <div class="text-center text-white-50 py-3">
+                                <i class="fa fa-exclamation-circle me-1"></i>Önce 3. adımda varyant oluşturmalısınız.
+                            </div>
+                        }
+                        else
+                        {
+                            @* Toplu stok atama *@
+                            <div class="card bg-transparent border-info mb-3">
+                                <div class="card-body py-2">
+                                    <small class="text-info d-block mb-2"><i class="fa fa-bolt me-1"></i>Tüm varyantlara toplu stok ata:</small>
+                                    <div class="d-flex flex-wrap gap-2 align-items-end">
+                                        <div>
+                                            <label class="form-label text-white-50 small mb-0">Adet</label>
+                                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                                   style="width:100px;" min="0" @bind="_bulkStockQty" />
+                                        </div>
+                                        <button class="btn btn-info btn-sm" @onclick="ApplyBulkStock">
+                                            <i class="fa fa-check me-1"></i>Uygula
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @foreach (var wh in _userWarehouses)
+                            {
+                                <div class="mb-3">
+                                    <small class="text-white-50 fw-semibold"><i class="fa fa-cube me-1"></i>@(wh.AddressInfo?.MapTitle ?? "Depo")</small>
+                                    <div class="table-responsive rounded overflow-hidden border border-secondary mt-1">
+                                        <table class="table table-sm table-dark table-hover align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th class="small">Varyant</th>
+                                                    <th class="small" style="width:100px;">Stok</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var v in _variants.Where(x => x.IsActive))
+                                                {
+                                                    EnsureStockEntry(v.TempId, wh.Id);
+                                                    var key = (v.TempId, wh.Id);
+                                                    <tr>
+                                                        <td class="small">@v.DisplayName</td>
+                                                        <td><input type="number" class="form-control form-control-sm bg-transparent text-white border-secondary" min="0" @bind="_stockEntries[key].Quantity" /></td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════
+       ADIM 6 — Görseller
+       ═══════════════════════════════════════════ *@
+    @if (_currentStep == 5)
+    {
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary py-2">
+                <h6 class="mb-0 text-white"><i class="fa fa-picture-o me-2"></i>Ürün Görselleri</h6>
+            </div>
+            <div class="card-body">
+
+                @* Ana Ürün Galerisi *@
+                <div class="mb-4">
+                    <label class="form-label text-white-50 small fw-semibold">
+                        <i class="fa fa-image me-1 text-info"></i>Ürün Ana Görselleri
+                    </label>
+                    <button type="button" class="btn btn-outline-light btn-sm d-block mb-2"
+                            @onclick="OpenProductGalleryModal">
+                        <i class="fa fa-picture-o me-1"></i>Medyadan Seç
+                        @if (_productGalleryFiles.Any())
+                        {
+                            <span class="badge bg-info ms-1">@_productGalleryFiles.Count</span>
+                        }
+                    </button>
+                    @if (_productGalleryFiles.Any())
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var m in _productGalleryFiles.ToList())
+                            {
+                                <div class="position-relative">
+                                    <img src="@m.FileUrl" class="rounded border border-secondary" style="width:75px;height:75px;object-fit:cover;" alt="@m.FileName" />
+                                    <button type="button"
+                                            class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                            style="width:20px;height:20px;font-size:0.65rem;margin-top:-5px;margin-right:-5px;"
+                                            @onclick="() => _productGalleryFiles.Remove(m)">
+                                        <i class="fa fa-times text-white" style="margin-left:4px;"></i>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @* Varyant Galerisi *@
+                @if (_product.ProductType == "Variable" && _variants.Any(v => v.IsActive))
+                {
+                    <hr class="border-secondary" />
+                    <label class="form-label text-white-50 small fw-semibold">
+                        <i class="fa fa-th-large me-1 text-warning"></i>Varyant Görselleri
+                        <small class="text-white-50 fw-normal">(Her varyanta özel görsel atayın)</small>
+                    </label>
+
+                    <div class="row g-2">
+                        @foreach (var v in _variants.Where(x => x.IsActive))
+                        {
+                            _variantGalleryFiles.TryAdd(v.TempId, new List<Data.Media>());
+                            var variantFiles = _variantGalleryFiles[v.TempId];
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <div class="card bg-transparent border-secondary h-100">
+                                    <div class="card-header border-secondary py-1">
+                                        <small class="text-white fw-semibold">@v.DisplayName</small>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <button type="button" class="btn btn-outline-light btn-sm btn-block w-100 mb-2"
+                                                @onclick="() => OpenVariantGalleryModal(v.TempId)">
+                                            <i class="fa fa-camera me-1"></i>Görsel Seç
+                                            @if (variantFiles.Any())
+                                            {
+                                                <span class="badge bg-warning text-dark ms-1">@variantFiles.Count</span>
+                                            }
+                                        </button>
+                                        @if (variantFiles.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var m in variantFiles.ToList())
+                                                {
+                                                    <div class="position-relative">
+                                                        <img src="@m.FileUrl" class="rounded border border-secondary"
+                                                             style="width:50px;height:50px;object-fit:cover;" alt="@m.FileName" />
+                                                        <button type="button"
+                                                                class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 p-0 d-flex align-items-center justify-content-center border-0"
+                                                                style="width:16px;height:16px;font-size:0.55rem;margin-top:-4px;margin-right:-4px;"
+                                                                @onclick="() => variantFiles.Remove(m)">
+                                                            <i class="fa fa-times text-white" style="margin-left:3px;"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════
+       ADIM 7 — SEO & Teknik Özellikler
+       ═══════════════════════════════════════════ *@
+    @if (_currentStep == 6)
+    {
+        <div class="card bg-dark border-secondary mb-3">
+            <div class="card-header border-secondary py-2">
+                <h6 class="mb-0 text-white"><i class="fa fa-search me-2"></i>SEO Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-white-50 small">Slug (URL)</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-transparent border-secondary text-white-50 small">efavori.com/urun/</span>
+                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                                   placeholder="urun-adi-slug" @bind="_seoSlug" />
+                        </div>
+                        <button class="btn btn-outline-info btn-sm mt-1" @onclick="GenerateSlug">
+                            <i class="fa fa-magic me-1"></i>Otomatik Oluştur
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-white-50 small">Meta Başlık</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                               placeholder="Sayfa başlığı (max 60 karakter)" maxlength="60" @bind="_seoMetaTitle" />
+                        <small class="text-white-50">@(_seoMetaTitle?.Length ?? 0)/60</small>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small">Meta Açıklama</label>
+                        <textarea class="form-control form-control-sm bg-dark text-white border-secondary"
+                                  rows="2" placeholder="Arama motorlarında görünecek açıklama (max 160 karakter)"
+                                  maxlength="160" @bind="_seoMetaDescription"></textarea>
+                        <small class="text-white-50">@(_seoMetaDescription?.Length ?? 0)/160</small>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small">Meta Anahtar Kelimeler</label>
+                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                               placeholder="anahtar, kelime, virgülle, ayrılmış" @bind="_seoMetaKeywords" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Teknik Özellikler *@
+        <div class="card bg-dark border-secondary">
+            <div class="card-header border-secondary py-2 d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 text-white"><i class="fa fa-list-alt me-2"></i>Teknik Özellikler</h6>
+                <button class="btn btn-outline-info btn-sm" @onclick="AddSpecRow">
+                    <i class="fa fa-plus me-1"></i>Satır Ekle
+                </button>
+            </div>
+            <div class="card-body">
+                @if (!_specifications.Any())
+                {
+                    <p class="text-white-50 small text-center mb-0"><i class="fa fa-info-circle me-1"></i>Henüz teknik özellik eklenmedi.</p>
+                }
+                else
+                {
+                    @foreach (var spec in _specifications.ToList())
+                    {
+                        var idx = _specifications.IndexOf(spec);
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-3">
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                       placeholder="Grup (Genel, Teknik...)" @bind="_specifications[idx].GroupName" />
+                            </div>
+                            <div class="col-4">
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                       placeholder="Özellik Adı" @bind="_specifications[idx].Key" />
+                            </div>
+                            <div class="col-4">
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                       placeholder="Değer" @bind="_specifications[idx].Value" />
+                            </div>
+                            <div class="col-1 text-center">
+                                <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => _specifications.RemoveAt(idx)">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+
+    @* ═══════════════════════════════════════════
+       NAVİGASYON BUTONLARI
+       ═══════════════════════════════════════════ *@
+    <div class="d-flex justify-content-between mt-3">
+        <button class="btn btn-outline-secondary btn-sm" @onclick="PrevStep" disabled="@(_currentStep == 0)">
+            <i class="fa fa-arrow-left me-1"></i>Geri
+        </button>
+
+        @if (_currentStep < _steps.Length - 1)
+        {
+            <button class="btn btn-info btn-sm" @onclick="NextStep">
+                İleri<i class="fa fa-arrow-right ms-1"></i>
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-success btn-sm" @onclick="SaveProductAsync" disabled="@_isProcessing">
+                @if (_isProcessing)
+                {
+                    <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                }
+                else
+                {
+                    <i class="fa fa-check me-1"></i><span>Ürünü Kaydet</span>
+                }
+            </button>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Ürün Galerisi
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="ProductGalleryModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark border border-info" style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+            <div class="modal-header border-secondary py-2">
+                <h6 class="modal-title text-white"><i class="fa fa-picture-o me-2 text-info"></i>Ürün Görseli Seç</h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size:0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width:1px;opacity:0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" @onclick="CloseMediaModal">
+                        <i class="fa fa-times" style="font-size:0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-secondary my-3" />
+                @if (_activeMediaSlot == "productGallery")
+                {
+                    <razor._Shared.tr.Media.List use="use" IsMultiSelect="true" />
+                }
+            </div>
+            <div class="modal-footer border-secondary py-2">
+                <span class="text-white-50 small me-auto">@_productGalleryFiles.Count dosya seçildi</span>
+                <button type="button" class="btn btn-info btn-sm" data-bs-dismiss="modal" @onclick="CloseMediaModal">
+                    <i class="fa fa-check me-1"></i>Seçimi Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Varyant Galerisi
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="VariantGalleryModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark border border-warning" style="box-shadow:0 0 8px rgba(255,193,7,0.35);">
+            <div class="modal-header border-secondary py-2">
+                <h6 class="modal-title text-white"><i class="fa fa-camera me-2 text-warning"></i>Varyant Görseli — @GetActiveVariantName()</h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size:0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width:1px;opacity:0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" @onclick="CloseMediaModal">
+                        <i class="fa fa-times" style="font-size:0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-secondary my-3" />
+                @if (_activeMediaSlot?.StartsWith("variantGallery_") == true)
+                {
+                    <razor._Shared.tr.Media.List use="use" IsMultiSelect="true" />
+                }
+            </div>
+            <div class="modal-footer border-secondary py-2">
+                @{
+                    var vCount = _activeVariantId != Guid.Empty && _variantGalleryFiles.ContainsKey(_activeVariantId)
+                        ? _variantGalleryFiles[_activeVariantId].Count : 0;
+                }
+                <span class="text-white-50 small me-auto">@vCount dosya seçildi</span>
+                <button type="button" class="btn btn-warning btn-sm" data-bs-dismiss="modal" @onclick="CloseMediaModal">
+                    <i class="fa fa-check me-1"></i>Seçimi Onayla
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Yeni Ürün Ekle";
+    private const string ENTITY_NAME = "Products";
+
+    private readonly string[] _steps = {
+        "Mağaza & Kategori", "Temel Bilgiler", "Özellikler & Varyant",
+        "Fiyatlandırma", "Stok Yönetimi", "Görseller", "SEO & Özellikler"
+    };
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+
+    // ─── Yazma kilidi ─────────────────────────────────────────────
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isProcessing;
+    private int _currentStep;
+    private Notification? _notificationRef;
+
+    // ─── Medya seçim state ────────────────────────────────────────
+    private string _activeMediaSlot = string.Empty;
+    private Guid _activeVariantId = Guid.Empty;
+
+    // ─── Ürün modeli ──────────────────────────────────────────────
+    private Products _product = new();
+    private Guid _selectedStoreId = Guid.Empty;
+
+    // ─── Referans veriler ─────────────────────────────────────────
+    private List<Store> _userStores = new();
+    private List<CategoriesTr> _allCategories = new();
+    private List<Warehouse> _userWarehouses = new();
+
+    // ─── Kategori seçimi ──────────────────────────────────────────
+    private string _categorySearchTerm = string.Empty;
+    private List<CategoriesTr> _categorySearchResults = new();
+    private HashSet<int> _selectedCategoryIds = new();
+    private int _primaryCategoryId;
+
+    // ─── Özellik (Attribute) yönetimi ─────────────────────────────
+    private List<ProductAttributes> _availableAttributes = new();
+    private List<ProductAttributes> _selectedAttributes = new();
+    private Dictionary<Guid, List<ProductAttributeValues>> _attributeValuesMap = new();
+    private Dictionary<Guid, HashSet<Guid>> _selectedValueIds = new();
+    private Dictionary<Guid, string> _newValueInputs = new();
+    private Guid _selectedAttributeToAdd = Guid.Empty;
+    private string _newAttributeName = string.Empty;
+    private string _newAttributeType = "Custom";
+    private string _newColorCode = "#FF0000";
+
+    // ─── Varyantlar ───────────────────────────────────────────────
+    private List<VariantVM> _variants = new();
+
+    // ─── Fiyatlandırma ────────────────────────────────────────────
+    private string _selectedCurrency = "TRY";
+    private decimal? _stdPrice, _stdComparePrice, _stdCostPrice;
+    private decimal? _bulkPrice, _bulkComparePrice, _bulkCostPrice;
+    private Dictionary<Guid, PriceVM> _variantPrices = new();
+
+    // ─── Stok ─────────────────────────────────────────────────────
+    private int _bulkStockQty;
+    private Dictionary<(Guid ItemId, Guid WarehouseId), StockVM> _stockEntries = new();
+
+    // ─── Görseller ────────────────────────────────────────────────
+    private List<Data.Media> _productGalleryFiles = new();
+    private Dictionary<Guid, List<Data.Media>> _variantGalleryFiles = new();
+
+    // ─── SEO ──────────────────────────────────────────────────────
+    private string? _seoSlug, _seoMetaTitle, _seoMetaDescription, _seoMetaKeywords;
+
+    // ─── Teknik Özellikler ────────────────────────────────────────
+    private List<SpecVM> _specifications = new();
+
+    // ─── İç sınıflar (View Model) ────────────────────────────────
+    private class VariantVM
+    {
+        public Guid TempId { get; set; } = Guid.NewGuid();
+        public string SKU { get; set; } = "";
+        public string Barcode { get; set; } = "";
+        public bool IsActive { get; set; } = true;
+        public Dictionary<Guid, Guid> AttributeValueMap { get; set; } = new();
+        public string DisplayName { get; set; } = "";
+    }
+
+    private class PriceVM
+    {
+        public decimal? Price { get; set; }
+        public decimal? CompareAtPrice { get; set; }
+        public decimal? CostPrice { get; set; }
+    }
+
+    private class StockVM
+    {
+        public int Quantity { get; set; }
+        public int? LowStockThreshold { get; set; }
+        public bool TrackStock { get; set; } = true;
+    }
+
+    private class SpecVM
+    {
+        public string GroupName { get; set; } = "";
+        public string Key { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override void OnInitialized()
+    {
+        FileService.OnFileSelected += HandleSingleFileSelected;
+        FileService.OnSelectionChanged += HandleMultiSelectionChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+
+        _isLoading = true;
+        StateHasChanged();
+
+        await Task.WhenAll(
+            LoadUserStoresAsync(),
+            LoadCategoriesAsync(),
+            LoadAttributesAsync(),
+            LoadWarehousesAsync()
+        );
+
+        _isLoading = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        FileService.OnFileSelected -= HandleSingleFileSelected;
+        FileService.OnSelectionChanged -= HandleMultiSelectionChanged;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized) return;
+
+        if (entityName == "Store")
+            await InvokeAsync(async () => { await LoadUserStoresAsync(); StateHasChanged(); });
+        else if (entityName == "Warehouse")
+            await InvokeAsync(async () => { await LoadWarehousesAsync(); StateHasChanged(); });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadUserStoresAsync()
+    {
+        try
+        {
+            _userStores = await StateHub.GetOrLoadAsync($"AddProduct_Stores_{use?.Id}", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                return await db.Stores.AsNoTracking()
+                    .Where(s => s.UserId == use!.Id
+                             && s.IsActiveStateAdmin == true
+                             && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu == null || s.IsDeleted.IsDeletedStatu == false))
+                    .OrderBy(s => s.Name).ToListAsync(_cts.Token);
+            }, _cts.Token) ?? new();
+        }
+        catch (Exception ex) { await LogError("LoadUserStores", ex); }
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        try
+        {
+            _allCategories = await StateHub.GetOrLoadAsync("Categories_All", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                return await db.CategoriesTr.AsNoTracking().ToListAsync(_cts.Token);
+            }, _cts.Token) ?? new();
+        }
+        catch (Exception ex) { await LogError("LoadCategories", ex); }
+    }
+
+    private async Task LoadAttributesAsync()
+    {
+        try
+        {
+            _availableAttributes = await StateHub.GetOrLoadAsync($"ProductAttributes_{use?.Id}", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                return await db.ProductAttributes.AsNoTracking()
+                    .Where(a => (a.UserId == null || a.UserId == use!.Id)
+                             && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu == null || a.IsDeleted.IsDeletedStatu == false))
+                    .OrderBy(a => a.SortOrder).ThenBy(a => a.Name)
+                    .ToListAsync(_cts.Token);
+            }, _cts.Token) ?? new();
+        }
+        catch (Exception ex) { await LogError("LoadAttributes", ex); }
+    }
+
+    private async Task LoadWarehousesAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _userWarehouses = await db.Warehouse.AsNoTracking()
+                .Where(w => w.UserId == use!.Id && w.IsActive
+                         && (w.IsDeleted == null || w.IsDeleted.IsDeletedStatu == null || w.IsDeleted.IsDeletedStatu == false))
+                .OrderByDescending(w => w.IsDefault).ThenBy(w => w.CreatedAt)
+                .ToListAsync(_cts.Token);
+        }
+        catch (Exception ex) { await LogError("LoadWarehouses", ex); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ADIM NAVİGASYONU
+    // ══════════════════════════════════════════════════════════════
+
+    private void GoToStep(int step) { if (step <= _currentStep) _currentStep = step; }
+    private void PrevStep() { if (_currentStep > 0) _currentStep--; }
+
+    private async Task NextStep()
+    {
+        // Adım validasyonu
+        if (_currentStep == 0)
+        {
+            if (_selectedStoreId == Guid.Empty) { await Notify("warning", "Uyarı", "Lütfen bir mağaza seçiniz."); return; }
+            if (!_selectedCategoryIds.Any()) { await Notify("warning", "Uyarı", "Lütfen en az bir kategori seçiniz."); return; }
+        }
+        else if (_currentStep == 1)
+        {
+            if (string.IsNullOrWhiteSpace(_product.Name)) { await Notify("warning", "Uyarı", "Ürün adı boş bırakılamaz."); return; }
+        }
+        else if (_currentStep == 2 && _product.ProductType == "Variable")
+        {
+            if (!_variants.Any(v => v.IsActive)) { await Notify("warning", "Uyarı", "Lütfen en az bir aktif varyant oluşturunuz."); return; }
+        }
+
+        if (_currentStep < _steps.Length - 1) _currentStep++;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MAĞAZA SEÇİMİ
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnStoreChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+        {
+            _selectedStoreId = id;
+            _product.StoreId = id;
+
+            // Mağaza değiştiğinde depoları filtrele
+            if (id != Guid.Empty)
+                await LoadWarehousesAsync();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // KATEGORİ ARAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnCategorySearch(ChangeEventArgs e)
+    {
+        _categorySearchTerm = e.Value?.ToString() ?? "";
+        if (_categorySearchTerm.Length < 2)
+        {
+            _categorySearchResults.Clear();
+            return;
+        }
+
+        var term = _categorySearchTerm.Trim();
+        _categorySearchResults = _allCategories
+            .Where(c => c.Name != null && c.Name.Contains(term, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(c => c.DepartmentName).ThenBy(c => c.Name)
+            .Take(30).ToList();
+    }
+
+    private void ToggleCategory(CategoriesTr cat)
+    {
+        if (_selectedCategoryIds.Contains(cat.Id))
+        {
+            _selectedCategoryIds.Remove(cat.Id);
+            if (_primaryCategoryId == cat.Id)
+                _primaryCategoryId = _selectedCategoryIds.FirstOrDefault();
+        }
+        else
+        {
+            _selectedCategoryIds.Add(cat.Id);
+            if (_primaryCategoryId == 0) _primaryCategoryId = cat.Id;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ÖZELLİK (ATTRIBUTE) YÖNETİMİ
+    // ══════════════════════════════════════════════════════════════
+
+    private void AddSelectedAttribute()
+    {
+        if (_selectedAttributeToAdd == Guid.Empty) return;
+        var attr = _availableAttributes.FirstOrDefault(a => a.Id == _selectedAttributeToAdd);
+        if (attr == null || _selectedAttributes.Any(a => a.Id == attr.Id)) return;
+
+        _selectedAttributes.Add(attr);
+        _selectedValueIds.TryAdd(attr.Id, new HashSet<Guid>());
+        _newValueInputs.TryAdd(attr.Id, "");
+        _selectedAttributeToAdd = Guid.Empty;
+
+        // Değerleri yükle
+        _ = LoadAttributeValuesAsync(attr.Id);
+    }
+
+    private async Task LoadAttributeValuesAsync(Guid attributeId)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var values = await db.ProductAttributeValues.AsNoTracking()
+                .Where(v => v.AttributeId == attributeId
+                         && (v.UserId == null || v.UserId == use!.Id)
+                         && (v.IsDeleted == null || v.IsDeleted.IsDeletedStatu == null || v.IsDeleted.IsDeletedStatu == false))
+                .OrderBy(v => v.SortOrder).ThenBy(v => v.Value)
+                .ToListAsync(_cts.Token);
+
+            _attributeValuesMap[attributeId] = values;
+            StateHasChanged();
+        }
+        catch (Exception ex) { await LogError("LoadAttrValues", ex); }
+    }
+
+    private void RemoveAttribute(Guid attrId)
+    {
+        _selectedAttributes.RemoveAll(a => a.Id == attrId);
+        _selectedValueIds.Remove(attrId);
+        _attributeValuesMap.Remove(attrId);
+        _newValueInputs.Remove(attrId);
+        _variants.Clear();
+    }
+
+    private void ToggleAttributeValue(Guid attrId, Guid valueId)
+    {
+        if (!_selectedValueIds.ContainsKey(attrId)) _selectedValueIds[attrId] = new();
+        if (!_selectedValueIds[attrId].Remove(valueId))
+            _selectedValueIds[attrId].Add(valueId);
+    }
+
+    private async Task CreateNewAttribute()
+    {
+        if (string.IsNullOrWhiteSpace(_newAttributeName)) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            var attr = new ProductAttributes
+            {
+                UserId = use!.Id,
+                Name = _newAttributeName.Trim(),
+                AttributeType = _newAttributeType,
+                IsDeleted = new IsDeleted { IsDeletedStatu = false }
+            };
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            db.ProductAttributes.Add(attr);
+            await db.SaveChangesAsync(_cts.Token);
+
+            _availableAttributes.Add(attr);
+            _selectedAttributes.Add(attr);
+            _selectedValueIds.TryAdd(attr.Id, new HashSet<Guid>());
+            _attributeValuesMap.TryAdd(attr.Id, new List<ProductAttributeValues>());
+            _newValueInputs.TryAdd(attr.Id, "");
+
+            _newAttributeName = string.Empty;
+            StateHub.ClearCache($"ProductAttributes_{use.Id}");
+
+            await Notify("success", "Başarılı", $"'{attr.Name}' özelliği oluşturuldu.");
+        }
+        catch (Exception ex) { await LogError("CreateAttribute", ex); await Notify("danger", "Hata", "Özellik oluşturulamadı."); }
+        finally { _writeLock.Release(); }
+    }
+
+    private async Task AddNewValueAsync(Guid attrId)
+    {
+        if (!_newValueInputs.ContainsKey(attrId) || string.IsNullOrWhiteSpace(_newValueInputs[attrId])) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            var attr = _selectedAttributes.FirstOrDefault(a => a.Id == attrId);
+            var val = new ProductAttributeValues
+            {
+                AttributeId = attrId,
+                UserId = use!.Id,
+                Value = _newValueInputs[attrId].Trim(),
+                ColorCode = attr?.AttributeType == "Color" ? _newColorCode : null,
+                IsDeleted = new IsDeleted { IsDeletedStatu = false }
+            };
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            db.ProductAttributeValues.Add(val);
+            await db.SaveChangesAsync(_cts.Token);
+
+            if (!_attributeValuesMap.ContainsKey(attrId)) _attributeValuesMap[attrId] = new();
+            _attributeValuesMap[attrId].Add(val);
+            _selectedValueIds[attrId].Add(val.Id);
+            _newValueInputs[attrId] = "";
+        }
+        catch (Exception ex) { await LogError("AddAttrValue", ex); }
+        finally { _writeLock.Release(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VARYANT ÜRETİMİ (Kartezyen Çarpım)
+    // ══════════════════════════════════════════════════════════════
+
+    private void GenerateVariants()
+    {
+        _variants.Clear();
+
+        var attrGroups = _selectedAttributes
+            .Where(a => _selectedValueIds.ContainsKey(a.Id) && _selectedValueIds[a.Id].Any())
+            .Select(a => new
+            {
+                AttrId = a.Id,
+                ValueIds = _selectedValueIds[a.Id].ToList()
+            }).ToList();
+
+        if (!attrGroups.Any()) return;
+
+        // Kartezyen çarpım
+        var combos = new List<Dictionary<Guid, Guid>>();
+        combos.Add(new Dictionary<Guid, Guid>());
+
+        foreach (var group in attrGroups)
+        {
+            var newCombos = new List<Dictionary<Guid, Guid>>();
+            foreach (var existing in combos)
+            {
+                foreach (var valId in group.ValueIds)
+                {
+                    var combo = new Dictionary<Guid, Guid>(existing) { [group.AttrId] = valId };
+                    newCombos.Add(combo);
+                }
+            }
+            combos = newCombos;
+        }
+
+        foreach (var combo in combos)
+        {
+            var displayParts = new List<string>();
+            foreach (var kv in combo)
+            {
+                var valObj = _attributeValuesMap.ContainsKey(kv.Key)
+                    ? _attributeValuesMap[kv.Key].FirstOrDefault(x => x.Id == kv.Value) : null;
+                displayParts.Add(valObj?.Value ?? "?");
+            }
+
+            _variants.Add(new VariantVM
+            {
+                AttributeValueMap = combo,
+                DisplayName = string.Join(" / ", displayParts)
+            });
+        }
+    }
+
+    private void ToggleAllVariants(ChangeEventArgs e)
+    {
+        var val = e.Value is bool b ? b : false;
+        foreach (var v in _variants) v.IsActive = val;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // FİYAT & STOK YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private void EnsureVariantPrice(Guid tempId)
+    {
+        _variantPrices.TryAdd(tempId, new PriceVM());
+    }
+
+    private void EnsureStockEntry(Guid itemId, Guid warehouseId)
+    {
+        _stockEntries.TryAdd((itemId, warehouseId), new StockVM());
+    }
+
+    private void ApplyBulkPrices()
+    {
+        foreach (var v in _variants.Where(x => x.IsActive))
+        {
+            EnsureVariantPrice(v.TempId);
+            if (_bulkPrice.HasValue) _variantPrices[v.TempId].Price = _bulkPrice;
+            if (_bulkComparePrice.HasValue) _variantPrices[v.TempId].CompareAtPrice = _bulkComparePrice;
+            if (_bulkCostPrice.HasValue) _variantPrices[v.TempId].CostPrice = _bulkCostPrice;
+        }
+    }
+
+    private void ApplyBulkStock()
+    {
+        foreach (var v in _variants.Where(x => x.IsActive))
+        {
+            foreach (var wh in _userWarehouses)
+            {
+                EnsureStockEntry(v.TempId, wh.Id);
+                _stockEntries[(v.TempId, wh.Id)].Quantity = _bulkStockQty;
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GALERİ & MEDYA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenProductGalleryModal()
+    {
+        _activeMediaSlot = "productGallery";
+        await ShowModal("ProductGalleryModal");
+    }
+
+    private async Task OpenVariantGalleryModal(Guid variantTempId)
+    {
+        _activeVariantId = variantTempId;
+        _activeMediaSlot = $"variantGallery_{variantTempId}";
+        _variantGalleryFiles.TryAdd(variantTempId, new List<Data.Media>());
+        await ShowModal("VariantGalleryModal");
+    }
+
+    private void CloseMediaModal() => _activeMediaSlot = string.Empty;
+
+    private void HandleSingleFileSelected(Data.Media media) => InvokeAsync(StateHasChanged);
+
+    private void HandleMultiSelectionChanged(List<Data.Media> files)
+    {
+        if (files == null) return;
+
+        if (_activeMediaSlot == "productGallery")
+        {
+            _productGalleryFiles = files.ToList();
+        }
+        else if (_activeMediaSlot?.StartsWith("variantGallery_") == true && _activeVariantId != Guid.Empty)
+        {
+            _variantGalleryFiles[_activeVariantId] = files.ToList();
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetActiveVariantName()
+    {
+        if (_activeVariantId == Guid.Empty) return "";
+        return _variants.FirstOrDefault(v => v.TempId == _activeVariantId)?.DisplayName ?? "";
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // SEO
+    // ══════════════════════════════════════════════════════════════
+
+    private void GenerateSlug()
+    {
+        if (string.IsNullOrWhiteSpace(_product.Name)) return;
+        _seoSlug = _product.Name.Trim().ToLowerInvariant()
+            .Replace("ş", "s").Replace("ı", "i").Replace("ğ", "g").Replace("ü", "u").Replace("ö", "o").Replace("ç", "c")
+            .Replace("Ş", "s").Replace("İ", "i").Replace("Ğ", "g").Replace("Ü", "u").Replace("Ö", "o").Replace("Ç", "c")
+            .Replace(" ", "-").Replace("--", "-");
+
+        // Alfanumerik ve tire dışındakileri kaldır
+        _seoSlug = new string(_seoSlug.Where(c => char.IsLetterOrDigit(c) || c == '-').ToArray());
+
+        if (string.IsNullOrWhiteSpace(_seoMetaTitle))
+            _seoMetaTitle = _product.Name;
+    }
+
+    private void AddSpecRow() => _specifications.Add(new SpecVM());
+
+    // ══════════════════════════════════════════════════════════════
+    // KAYDET — Tek Transaction
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task SaveProductAsync()
+    {
+        if (_isProcessing) return;
+
+        // ── Son validasyon ──
+        var errors = new List<string>();
+        if (_selectedStoreId == Guid.Empty) errors.Add("Mağaza seçilmedi.");
+        if (!_selectedCategoryIds.Any()) errors.Add("Kategori seçilmedi.");
+        if (string.IsNullOrWhiteSpace(_product.Name)) errors.Add("Ürün adı boş bırakılamaz.");
+        if (_product.ProductType == "Standard" && (_stdPrice == null || _stdPrice <= 0)) errors.Add("Satış fiyatı girilmedi.");
+        if (_product.ProductType == "Variable" && !_variants.Any(v => v.IsActive)) errors.Add("En az bir aktif varyant gereklidir.");
+
+        if (errors.Any())
+        {
+            await Notify("danger", "Eksik Bilgiler", string.Join(" • ", errors));
+            return;
+        }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // ──────────────────────────────────────
+            // 1. ÜRÜN KAYDI
+            // ──────────────────────────────────────
+            _product.Id = Guid.NewGuid();
+            _product.UserId = use!.Id;
+            _product.StoreId = _selectedStoreId;
+            _product.Status = "Draft";
+            _product.CreatedAt = DateTime.UtcNow;
+            _product.IsDeleted = new IsDeleted { IsDeletedStatu = false };
+
+            db.Products.Add(_product);
+
+            // ──────────────────────────────────────
+            // 2. KATEGORİ EŞLEŞMELERİ
+            // ──────────────────────────────────────
+            foreach (var catId in _selectedCategoryIds)
+            {
+                db.ProductCategoryMappings.Add(new ProductCategoryMappings
+                {
+                    ProductId = _product.Id,
+                    CategoryId = catId,
+                    IsPrimary = catId == _primaryCategoryId
+                });
+            }
+
+            // ──────────────────────────────────────
+            // 3. ÖZELLİK EŞLEŞMELERİ
+            // ──────────────────────────────────────
+            foreach (var attr in _selectedAttributes)
+            {
+                db.ProductAttributeMappings.Add(new ProductAttributeMappings
+                {
+                    ProductId = _product.Id,
+                    AttributeId = attr.Id,
+                    IsVariantAttribute = _product.ProductType == "Variable",
+                    IsDeleted = new IsDeleted { IsDeletedStatu = false }
+                });
+            }
+
+            // ──────────────────────────────────────
+            // 4. VARYANTLAR (Variable ürünler)
+            // ──────────────────────────────────────
+            var variantIdMap = new Dictionary<Guid, Guid>(); // TempId → gerçek Id
+
+            if (_product.ProductType == "Variable")
+            {
+                foreach (var v in _variants.Where(x => x.IsActive))
+                {
+                    var variant = new ProductVariants
+                    {
+                        Id = Guid.NewGuid(),
+                        ProductId = _product.Id,
+                        UserId = use.Id,
+                        SKU = v.SKU,
+                        Barcode = v.Barcode,
+                        IsActive = true,
+                        IsDeleted = new IsDeleted { IsDeletedStatu = false }
+                    };
+
+                    variantIdMap[v.TempId] = variant.Id;
+                    db.ProductVariants.Add(variant);
+
+                    // Varyant ↔ Attribute değer eşleşmesi
+                    foreach (var kv in v.AttributeValueMap)
+                    {
+                        db.ProductVariantAttributeMappings.Add(new ProductVariantAttributeMappings
+                        {
+                            VariantId = variant.Id,
+                            AttributeId = kv.Key,
+                            AttributeValueId = kv.Value
+                        });
+                    }
+                }
+            }
+
+            // ──────────────────────────────────────
+            // 5. FİYATLAR
+            // ──────────────────────────────────────
+            // bu alan doldurulacak
+
+            // ──────────────────────────────────────
+            // 6. STOKLAR
+            // ──────────────────────────────────────
+            foreach (var entry in _stockEntries)
+            {
+                var (itemId, warehouseId) = entry.Key;
+                var stock = entry.Value;
+                if (stock.Quantity <= 0 && !stock.TrackStock) continue;
+
+                Guid? realVariantId = null;
+                if (itemId != Guid.Empty)
+                    realVariantId = variantIdMap.GetValueOrDefault(itemId);
+
+                db.ProductStocks.Add(new ProductStocks
+                {
+                    ProductId = _product.Id,
+                    VariantId = itemId == Guid.Empty ? null : realVariantId,
+                    WarehouseId = warehouseId,
+                    UserId = use.Id,
+                    Quantity = stock.Quantity,
+                    LowStockThreshold = stock.LowStockThreshold,
+                    TrackStock = stock.TrackStock,
+                    IsDeleted = new IsDeleted { IsDeletedStatu = false }
+                });
+            }
+
+            // ──────────────────────────────────────
+            // 7. GALERİ (ItemGallery)
+            // ──────────────────────────────────────
+            // Ürün ana galerisi
+            foreach (var media in _productGalleryFiles)
+            {
+                db.ItemGallery.Add(new ItemGallery
+                {
+                    UserId = use.Id,
+                    ItemId = _product.Id,
+                    ItemType = "ProductGallery",
+                    MediaId = media.Id,
+                    ItemAddDate = DateTime.UtcNow,
+                    IsDelete = false
+                });
+            }
+
+            // Varyant galerileri
+            foreach (var kv in _variantGalleryFiles)
+            {
+                if (!variantIdMap.ContainsKey(kv.Key)) continue;
+                var realVarId = variantIdMap[kv.Key];
+                foreach (var media in kv.Value)
+                {
+                    db.ItemGallery.Add(new ItemGallery
+                    {
+                        UserId = use.Id,
+                        ItemId = realVarId,
+                        ItemType = "VariantGallery",
+                        MediaId = media.Id,
+                        ItemAddDate = DateTime.UtcNow,
+                        IsDelete = false
+                    });
+                }
+            }
+
+            // ──────────────────────────────────────
+            // 8. SEO
+            // ──────────────────────────────────────
+            if (!string.IsNullOrWhiteSpace(_seoSlug) || !string.IsNullOrWhiteSpace(_seoMetaTitle))
+            {
+                db.ProductSeo.Add(new ProductSeo
+                {
+                    ProductId = _product.Id,
+                    UserId = use.Id,
+                    Slug = _seoSlug,
+                    MetaTitle = _seoMetaTitle,
+                    MetaDescription = _seoMetaDescription,
+                    MetaKeywords = _seoMetaKeywords,
+                    IsDeleted = new IsDeleted { IsDeletedStatu = false }
+                });
+            }
+
+            // ──────────────────────────────────────
+            // 9. TEKNİK ÖZELLİKLER
+            // ──────────────────────────────────────
+            int specOrder = 0;
+            foreach (var spec in _specifications.Where(s => !string.IsNullOrWhiteSpace(s.Key)))
+            {
+                db.ProductSpecifications.Add(new ProductSpecifications
+                {
+                    ProductId = _product.Id,
+                    UserId = use.Id,
+                    GroupName = spec.GroupName,
+                    Key = spec.Key,
+                    Value = spec.Value,
+                    SortOrder = specOrder++,
+                    IsDeleted = new IsDeleted { IsDeletedStatu = false }
+                });
+            }
+
+            // ──────────────────────────────────────
+            // 10. TEK TRANSACTION KAYIT
+            // ──────────────────────────────────────
+            await db.SaveChangesAsync(_cts.Token);
+
+            // Başarı
+            StateHub.ClearCache($"AddProduct_Stores_{use.Id}");
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "AddProduct");
+            await Notify("success", "Başarılı", "Ürün başarıyla eklendi!");
+
+            // Yeni ürün eklemek için formu sıfırla
+            ResetForm();
+        }
+        catch (Exception ex)
+        {
+            await LogError("SaveProduct", ex);
+            await Notify("danger", "Hata", "Ürün kaydedilirken sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    private void ResetForm()
+    {
+        _product = new Products();
+        _selectedStoreId = Guid.Empty;
+        _selectedCategoryIds.Clear();
+        _primaryCategoryId = 0;
+        _categorySearchTerm = string.Empty;
+        _categorySearchResults.Clear();
+        _selectedAttributes.Clear();
+        _selectedValueIds.Clear();
+        _newValueInputs.Clear();
+        _variants.Clear();
+        _variantPrices.Clear();
+        _stockEntries.Clear();
+        _productGalleryFiles.Clear();
+        _variantGalleryFiles.Clear();
+        _seoSlug = _seoMetaTitle = _seoMetaDescription = _seoMetaKeywords = null;
+        _specifications.Clear();
+        _stdPrice = _stdComparePrice = _stdCostPrice = null;
+        _currentStep = 0;
+        _isProcessing = false;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private string GetCurrencySymbol() => _selectedCurrency switch
+    {
+        "TRY" => "₺", "USD" => "$", "EUR" => "€", "AZN" => "₼", _ => _selectedCurrency
+    };
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval", $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval", $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://efavori.com/_files/main/logo/logo.png");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

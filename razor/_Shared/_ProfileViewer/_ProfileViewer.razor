@@ -1,0 +1,7 @@
+﻿@using data
+<h1>@UserProfile.Id</h1>
+@code{
+    // ─── Parametreler ─────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public Users? UserProfile { get; set; }
+}

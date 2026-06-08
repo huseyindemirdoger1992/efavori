@@ -15,20 +15,37 @@
     // Oturum kontrolü
     var userEmail = User.FindFirstValue(ClaimTypes.Email);
     Users? use = null;
-    Users? UserProfile = ViewBag.UserProfile;
+    Users? UserProfile = null;
 
-    if (!string.IsNullOrEmpty(userEmail))
+    // ViewBag.UserProfile içerisindeki Guid değerini güvenli bir şekilde yakalıyoruz
+    bool isProfileGuidValid = Guid.TryParse(ViewBag.UserProfile?.ToString(), out Guid profileId);
+
+    // userEmail veya profileId'den en az biri geçerliyse veritabanına bağlan
+    if (!string.IsNullOrEmpty(userEmail) || isProfileGuidValid)
     {
-        // Oturum açık: Veritabanından dil al
         using (var db = new _ApplicationConnectionDb())
         {
-            use = await db.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
-
-            if (use != null && !string.IsNullOrEmpty(use.Language) && supportedCultures.Contains(use.Language.ToLower()))
+            // 1. E-posta adresi üzerinden 'use' ve dil ayarı sorgusu
+            if (!string.IsNullOrEmpty(userEmail))
             {
-                currentLang = use.Language.ToLower();
+                use = await db.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
+
+                if (use != null && !string.IsNullOrEmpty(use.Language) && supportedCultures.Contains(use.Language.ToLower()))
+                {
+                    currentLang = use.Language.ToLower();
+                }
+            }
+
+            // 2. SADECE UserProfile için Guid tabanlı revize edilmiş sorgu
+            if (isProfileGuidValid)
+            {
+                UserProfile = await db.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Id == profileId);
+                // Not: Kullanıcı tablosundaki Guid birincil anahtarının "Id" olduğunu varsaydım.
+                // Eğer farklı bir kolon ise (örn: u.UserId), burayı güncelleyebilirsin.
             }
         }
     }
@@ -67,63 +84,63 @@
         switch (currentLang)
         {
             case "tr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "az":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "de":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "es":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "fr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "hi":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "pt":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "ru":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "zh":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             default:
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
         }
@@ -136,63 +153,63 @@ else
         switch (currentLang)
         {
             case "tr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "az":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "de":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "es":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "fr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "hi":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "pt":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "ru":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             case "zh":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
             default:
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Store.Edit>(
+                @(await Html.RenderComponentAsync<razor._Shared._ProfileViewer._ProfileViewer>(
                                                 RenderMode.Server,
-                                                new { use = (use != null ? use : null), SelectedStore = (UserProfile != null ? UserProfile : null) }))
+                                                new { use = (use != null ? use : null), UserProfile = (UserProfile != null ? UserProfile : null) }))
                 ;
                 break;
         }

@@ -1,0 +1,681 @@
+﻿@* ============================================================
+   Store/List.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ Parametreden gelen kullanıcı mail adresi ile eşleşen
+      UserSponsorEmail'e sahip kullanıcıların mağazalarını listeler
+   ✅ GlobalStateHub — anlık broadcast, debounce, RAM cache
+   ✅ GlobalSecurityProvider — şifreli alanlar
+   ✅ TakeLogs — aksiyonlar loglanır
+   ✅ Mobil uyumlu kart tabanlı liste
+   ✅ 10'lu sayfalama
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using Microsoft.AspNetCore.Components
+@using System.Globalization
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",     "Ana Sayfa",       "/"),
+        ("fa fa-table",    "Kayıtlar",        "javascript:void(0)"),
+        ("fa fa-list-alt", PAGE_TITLE,        "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Başlık Bilgi Bandı ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 p-2 rounded"
+     style="background:rgba(255,255,255,0.04);">
+    <i class="fa fa-link text-info"></i>
+    <span class="small text-light">
+        Sponsor bağlantınız ile eşleşen kullanıcıların mağazaları listelenmektedir.
+    </span>
+    @if (!_isLoading)
+    {
+        <span class="badge bg-info text-dark ms-auto">@_sponsoredUsers.Count kullanıcı · @_allItems.Count mağaza</span>
+    }
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-3">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Kullanıcı adı, mağaza adı veya konum ara..."
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && !_allItems.Any())
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">
+            @(string.IsNullOrWhiteSpace(_searchTerm) ? "Sponsor bağlantınıza ait mağaza bulunmuyor." : "Aramanızla eşleşen mağaza bulunmuyor.")
+        </p>
+    </div>
+}
+else
+{
+    @* ─── Masaüstü: Tablo Görünümü ─── *@
+    <div class="d-none d-md-block table-responsive rounded-3 overflow-hidden" style="border:1px solid rgba(255,255,255,0.1);">
+        <table class="table table-hover align-middle mb-0" style="border-collapse:separate;border-spacing:0;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.06);">
+                    <th class="border-0 py-2 ps-3 small text-uppercase" style="width:2.5rem;letter-spacing:.04em;font-weight:600;">#</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Üye Kullanıcısı</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Mağaza</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-lg-table-cell" style="letter-spacing:.04em;font-weight:600;">Bölge</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Onay</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Yayın</th>
+                    <th class="border-0 py-2 small text-uppercase d-none d-lg-table-cell" style="letter-spacing:.04em;font-weight:600;">Kayıt Tarihi</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Satış</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">%5 Komisyon</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">%15 Vergi</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Net</th>
+                    <th class="border-0 py-2 small text-uppercase" style="letter-spacing:.04em;font-weight:600;">Detay</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var item in _pagedItems)
+                {
+                    var ownerInfo = (item.UserId.HasValue && _userLookup.ContainsKey(item.UserId.Value))
+                        ? _userLookup[item.UserId.Value]
+                        : (OwnerName: "—", ProfileImage: (string?)null);
+
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.07);transition:background .15s ease;">
+
+                        @* ── Sıra No ── *@
+                        <td class="border-0 ps-3 small">@(rowNo++)</td>
+
+                        @* ── Kullanıcı ── *@
+                        <td class="border-0">
+                            <span class="small text-light">
+                                <i class="fa fa-user-circle-o me-1" aria-hidden="true"></i>@ownerInfo.OwnerName
+                            </span>
+                        </td>
+
+                        @* ── Mağaza Adı ── *@
+                        <td class="border-0">
+                            <img src="@(string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.ProfileImagePath)
+                                                                                                                                                                                                              ? "https://efavori.com/_files/main/NoImage.png"
+                                                                                                                                                                                                              : item.ProfileCoverGallery!.ProfileImagePath)"
+                                 class="rounded-circle"
+                                 style="width:36px;height:36px;object-fit:cover;border:2px solid rgba(255,255,255,0.15);"
+                                 alt="Profil" />
+                            <span class="fw-semibold text-light">@(item.Name ?? "—")</span>
+                        </td>
+
+                        @* ── Ülke ── *@
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small">@(Decrypt(item.AddressInfo?.Country) ?? "—")</span>
+                            <i class="fa fa-angle-right" aria-hidden="true"></i>
+                            <span class="small">@(Decrypt(item.AddressInfo?.State) ?? "—")</span>
+                            <i class="fa fa-angle-right" aria-hidden="true"></i>
+                            <span class="small">@(Decrypt(item.AddressInfo?.City) ?? "—")</span>
+                        </td>
+
+                        @* ── Onay Durumu ── *@
+                        <td class="border-0">
+                            @if (item.IsActiveStateAdmin == null)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,193,7,0.18);font-size:0.75rem;font-weight:500;">
+                                    <i class="fa fa-hourglass-half" style="font-size:0.65rem;"></i>
+                                    Beklemede
+                                </span>
+                            }
+                            else if (item.IsActiveStateAdmin == true)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(13,110,253,0.18);font-size:0.75rem;font-weight:500;">
+                                    <i class="fa fa-check-circle" style="font-size:0.65rem;"></i>
+                                    Onaylı
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(220,53,69,0.18);font-size:0.75rem;font-weight:500;">
+                                    <i class="fa fa-times-circle" style="font-size:0.65rem;"></i>
+                                    Reddedildi
+                                </span>
+                            }
+                        </td>
+
+                        @* ── Yayın Durumu ── *@
+                        <td class="border-0">
+                            @{
+                                bool isPublished = (item.IsActiveStateAdmin == true) && (item.IsActiveStateVendor ?? false);
+                            }
+                            @if (item.IsActiveStateAdmin != true && item.IsActiveStateVendor == null)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,193,7,0.18);font-size:0.75rem;font-weight:500;">
+                                    <i class="fa fa-hourglass-half" style="font-size:0.65rem;"></i>
+                                    Beklemede
+                                </span>
+                            }
+                            else if (isPublished)
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(13,202,240,0.18);font-size:0.75rem;font-weight:500;">
+                                    <i class="fa fa-eye" style="font-size:0.65rem;"></i>
+                                    Yayında
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill small"
+                                      style="background:rgba(255,255,255,0.08);font-size:0.75rem;font-weight:500;">
+                                    <i class="fa fa-eye-slash" style="font-size:0.65rem;"></i>
+                                    Gizli
+                                </span>
+                            }
+                        </td>
+
+                        @* ── Kayıt Tarihi ── *@
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small text-light-50">
+                                <b>@(item.CreatedAt?.ToString("dd.MM.yyyy") ?? "—")</b>
+                            </span>
+                        </td>
+                        @* ── Satış ── *@
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small text-light">
+                                13.758
+                            </span>
+                        </td>
+                        @* ── %5 ── *@
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small text-light">
+                                687,90 TL
+                            </span>
+                        </td>
+                        @* ── %5Ödenek ── *@
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small text-light">
+                                103,19 TL
+                            </span>
+                        </td>
+                        @* ── Net ── *@
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <span class="small text-light">
+                                <b>584,72 TL</b>
+                            </span>
+                        </td>
+                        @* ── Detay ── *@
+                        <td class="border-0 d-none d-lg-table-cell">
+                            <i class="fa fa-search btn btn-sm btn-light" aria-hidden="true"></i>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Mobil: Kart Görünümü ─── *@
+    <div class="d-md-none">
+        @{
+            int cardNo = (_currentPage - 1) * PAGE_SIZE + 1;
+        }
+        @foreach (var item in _pagedItems)
+        {
+            var ownerInfo = (item.UserId.HasValue && _userLookup.ContainsKey(item.UserId.Value))
+                ? _userLookup[item.UserId.Value]
+                : (OwnerName: "—", ProfileImage: (string?)null);
+
+            bool isPublished = (item.IsActiveStateAdmin == true) && (item.IsActiveStateVendor ?? false);
+
+            <div class="rounded-3 p-3 mb-2" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+
+                @* ── Üst satır: profil + mağaza adı ── *@
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <img src="@(string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.ProfileImagePath)
+                                                                                                                                     ? "https://efavori.com/_files/main/NoImage.png"
+                                                                                                                                     : item.ProfileCoverGallery!.ProfileImagePath)"
+                         class="rounded-circle"
+                         style="width:40px;height:40px;object-fit:cover;border:2px solid rgba(255,255,255,0.15);"
+                         alt="Profil" />
+                    <div class="flex-grow-1 min-width-0">
+                        <div class="fw-semibold text-light text-truncate" style="font-size:0.9rem;">
+                            @(item.Name ?? "—")
+                        </div>
+                        <div class="small text-white-50 text-truncate">
+                            <i class="fa fa-user-circle-o me-1" aria-hidden="true"></i>@ownerInfo.OwnerName
+                        </div>
+                    </div>
+                    <span class="badge rounded-pill small" style="font-size:0.65rem;background:rgba(255,255,255,0.1);">
+                        #@(cardNo++)
+                    </span>
+                </div>
+
+                @* ── Konum ── *@
+                <div class="small text-white-50 mb-2">
+                    <i class="fa fa-map-marker me-1" aria-hidden="true"></i>
+                    @(Decrypt(item.AddressInfo?.Country) ?? "—") /
+                    @(Decrypt(item.AddressInfo?.State) ?? "—") /
+                    @(Decrypt(item.AddressInfo?.City) ?? "—")
+                </div>
+
+                @* ── Durum etiketleri ── *@
+                <div class="d-flex flex-wrap gap-1">
+                    @if (item.IsActiveStateAdmin == null)
+                    {
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                              style="background:rgba(255,193,7,0.18);font-size:0.7rem;font-weight:500;">
+                            <i class="fa fa-hourglass-half" style="font-size:0.6rem;"></i> Onay Bekliyor
+                        </span>
+                    }
+                    else if (item.IsActiveStateAdmin == true)
+                    {
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                              style="background:rgba(13,110,253,0.18);font-size:0.7rem;font-weight:500;">
+                            <i class="fa fa-check-circle" style="font-size:0.6rem;"></i> Onaylı
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                              style="background:rgba(220,53,69,0.18);font-size:0.7rem;font-weight:500;">
+                            <i class="fa fa-times-circle" style="font-size:0.6rem;"></i> Reddedildi
+                        </span>
+                    }
+
+                    @if (item.IsActiveStateAdmin != true && item.IsActiveStateVendor == null)
+                    {
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                              style="background:rgba(255,193,7,0.18);font-size:0.7rem;font-weight:500;">
+                            <i class="fa fa-hourglass-half" style="font-size:0.6rem;"></i> Yayın Bekliyor
+                        </span>
+                    }
+                    else if (isPublished)
+                    {
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                              style="background:rgba(13,202,240,0.18);font-size:0.7rem;font-weight:500;">
+                            <i class="fa fa-eye" style="font-size:0.6rem;"></i> Yayında
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                              style="background:rgba(255,255,255,0.08);font-size:0.7rem;font-weight:500;">
+                            <i class="fa fa-eye-slash" style="font-size:0.6rem;"></i> Gizli
+                        </span>
+                    }
+
+                    @if (item.CreatedAt.HasValue)
+                    {
+                        <span class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill ms-auto"
+                              style="background:rgba(255,255,255,0.06);font-size:0.65rem;">
+                            <i class="fa fa-calendar-o" style="font-size:0.6rem;"></i>
+                            @item.CreatedAt.Value.ToString("dd.MM.yyyy")
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ─── Sayfalama ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_allItems.Count kayıt
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage - 1)">
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                    </li>
+
+                    @for (int p = 1; p <= _totalPages; p++)
+                    {
+                        var pg = p;
+                        <li class="page-item @(_currentPage == pg ? "active" : "")">
+                            <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary"
+                                    @onclick="() => GoToPage(pg)">
+                                @pg
+                            </button>
+                        </li>
+                    }
+
+                    <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage + 1)">
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Sponsor Mağazaları";
+    private const string ENTITY_NAME = "Store";
+    private const string CACHE_KEY = "SponsorStore_List";
+    private const int SEARCH_DELAY = 500;
+    private const int PAGE_SIZE = 10;
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Cache kapsamı ────────────────────────────────────────────
+    private string CacheScope => use?.Id.ToString() ?? "anonymous";
+    private string ScopedCacheKey => $"{CACHE_KEY}_{CacheScope}";
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    private List<Store> _allItems = new();
+
+    // ─── Sponsor bağlantılı kullanıcılar ──────────────────────────
+    // Key: Users.Id → OwnerFullName, ProfileImage
+    private Dictionary<Guid, (string OwnerName, string? ProfileImage)> _userLookup = new();
+    private List<(Guid UserId, string FullName)> _sponsoredUsers = new();
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private List<Store> _pagedItems = new();
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI: Şifre çöz
+    // ══════════════════════════════════════════════════════════════
+
+    private static string? Decrypt(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        var result = GlobalSecurityProvider.Decrypt(value);
+        return result?.StartsWith("Hata:") == true ? value : result;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+
+        await LoadDataAsync(_searchTerm);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GLOBAL OLAY
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadDataAsync(_searchTerm);
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadDataAsync(string? search)
+    {
+        if (use == null) return;
+
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            string baseKey = ScopedCacheKey;
+            string cacheKey = string.IsNullOrWhiteSpace(search) ? baseKey : $"{baseKey}_{search}";
+            if (!string.IsNullOrWhiteSpace(search))
+                StateHub.ClearCache(cacheKey);
+
+            var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                // 1. Mevcut kullanıcının email adresini çöz
+                var currentUserEmail = Decrypt(use.ContactInformation?.Email);
+                if (string.IsNullOrWhiteSpace(currentUserEmail))
+                    return new List<Store>();
+
+                // 2. UserSponsorEmail'i bu email ile eşleşen kullanıcıları bul
+                var allUsers = await db.Users
+                    .Where(u => u.UserSponsorEmail != null
+                                && u.UserSponsorEmail != ""
+                                && (u.IsDeleted == null || u.IsDeleted.IsDeletedStatu != true))
+                    .Select(u => new
+                    {
+                        u.Id,
+                        u.FirstName,
+                        u.LastName,
+                        u.UserSponsorEmail,
+                        ProfileImage = u.ProfileCoverGallery != null
+                            ? u.ProfileCoverGallery.ProfileImagePath : null
+                    })
+                    .AsNoTracking()
+                    .ToListAsync(token);
+
+                // Şifreli sponsor email'i çözerek mevcut kullanıcı emaili ile karşılaştır
+                var matchedUserIds = new List<Guid>();
+                var sponsoredList = new List<(Guid UserId, string FullName)>();
+                var lookup = new Dictionary<Guid, (string OwnerName, string? ProfileImage)>();
+
+                foreach (var u in allUsers)
+                {
+                    var decryptedSponsorEmail = Decrypt(u.UserSponsorEmail);
+                    if (string.Equals(decryptedSponsorEmail, currentUserEmail, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchedUserIds.Add(u.Id);
+
+                        var fn = Decrypt(u.FirstName) ?? "";
+                        var ln = Decrypt(u.LastName) ?? "";
+                        var fullName = $"{fn} {ln}".Trim();
+                        if (string.IsNullOrEmpty(fullName)) fullName = "—";
+
+                        sponsoredList.Add((u.Id, fullName));
+                        lookup[u.Id] = (fullName, u.ProfileImage);
+                    }
+                }
+
+                // Sonuçları sınıf alanlarına ata
+                _userLookup = lookup;
+                _sponsoredUsers = sponsoredList;
+
+                if (!matchedUserIds.Any())
+                    return new List<Store>();
+
+                // 3. Eşleşen kullanıcıların mağazalarını çek
+                var stores = await db.Stores
+                    .Where(s => s.UserId.HasValue
+                                && matchedUserIds.Contains(s.UserId.Value)
+                                && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu != true))
+                    .OrderByDescending(s => s.CreatedAt)
+                    .AsNoTracking()
+                    .ToListAsync(token);
+
+                return stores;
+
+            }, token);
+
+            if (token.IsCancellationRequested || result == null) return;
+
+            // Bellek içi arama (şifreli alanlar + mağaza adı + sahip)
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                result = result.Where(x =>
+                    Contains(x.Name, s) ||
+                    Contains(Decrypt(x.AddressInfo?.Country), s) ||
+                    Contains(Decrypt(x.AddressInfo?.State), s) ||
+                    Contains(Decrypt(x.AddressInfo?.City), s) ||
+                    (x.UserId.HasValue && _userLookup.TryGetValue(x.UserId.Value, out var ui) &&
+                        Contains(ui.OwnerName, s))
+                ).ToList();
+            }
+
+            _allItems = result;
+            ApplyPaging(1);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadData", ex);
+                await Notify("danger", "Hata", "Veriler yüklenirken sorun oluştu.");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static bool Contains(string? value, string search) =>
+        value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
+
+    private void ApplyPaging(int page)
+    {
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_allItems.Count / (double)PAGE_SIZE));
+        _currentPage = Math.Clamp(page, 1, _totalPages);
+        _pagedItems = _allItems.Skip((_currentPage - 1) * PAGE_SIZE).Take(PAGE_SIZE).ToList();
+    }
+
+    private void GoToPage(int page)
+    {
+        ApplyPaging(page);
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ARAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        await LoadDataAsync(_searchTerm);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        await LoadDataAsync(null);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

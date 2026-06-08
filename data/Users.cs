@@ -33,7 +33,7 @@ namespace data
         // Şifrele ***-***-***
         public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi (USD, EUR, TRY, AZN seçenekleri olabilir) + 
         // Şifrele ***-***-***
-        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi (Customer, SuperAdmin seçenekleri olabilir) + 
+        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi (sadece "Customer", "SuperAdmin" seçenekleri olabilir) + 
         // Şifrele ***-***-***
 
         // === Durum ve Yetki Bilgileri ===

@@ -4,7 +4,8 @@ namespace web.Areas.Admin.Controllers
 {
     [Area("Admin")]
     [Route("{culture}/Admin/[controller]/[action]")]
-    public class Warehouse : Controller
+    [Route("{culture}/Admin/[controller]/[action]/{id?}")]
+    public class MyMemberBusinesses : Controller
     {
         public IActionResult List()
         {

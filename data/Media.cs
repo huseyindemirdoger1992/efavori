@@ -38,6 +38,8 @@ namespace Data
 
         public bool? IsDeletedStatu { get; set; } = false;
 
+        public bool? AiAvif { get; set; }    
+
         public DateTime? DeletedAtDate { get; set; }
     }
 }

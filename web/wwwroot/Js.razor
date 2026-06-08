@@ -88,61 +88,6 @@
     };
 </script>
 
-@* Görevler sayfasında başlangıç ile bitiş arasındaki zamanlayıcıyı günceller *@
-<script>
-    function updateTimers() {
-        // Tüm timer elementlerini seç
-        const timerElements = document.querySelectorAll('[data-start][data-target]');
-
-        timerElements.forEach(timer => {
-            const startStr = timer.getAttribute('data-start');
-            const targetStr = timer.getAttribute('data-target');
-
-            const startDate = new Date(startStr).getTime();
-            const targetDate = new Date(targetStr).getTime();
-            const now = new Date().getTime();
-
-            const totalDuration = targetDate - startDate;
-            const elapsed = now - startDate;
-            const distance = targetDate - now;
-
-            // Progress bar'ı ID üzerinden değil, timer'ın yanındaki/içindeki class üzerinden bul
-            // Bu örnekte timer'ın bir üst kapsayıcısında progress bar arıyoruz
-            const container = timer.parentElement;
-            const progressBar = container.querySelector('.progress-bar');
-
-            if (progressBar) {
-                if (distance < 0) {
-                    progressBar.style.width = '100%';
-                    progressBar.classList.remove('bg-warning');
-                    progressBar.classList.add('bg-dark');
-                } else {
-                    const progressPercent = Math.max(0, Math.min((elapsed / totalDuration) * 100, 100));
-                    progressBar.style.width = progressPercent + '%';
-                    progressBar.classList.remove('bg-dark');
-                    progressBar.classList.add('bg-warning');
-                }
-            }
-
-            // Yazı güncelleme
-            if (distance < 0) {
-                timer.innerHTML = "Süre Doldu";
-                timer.classList.remove('text-dark');
-                timer.classList.add('text-dark');
-            } else {
-                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                timer.innerHTML = `${days}g ${hours}s ${minutes}d ${seconds}sn`;
-            }
-        });
-    }
-
-    setInterval(updateTimers, 1000);
-    updateTimers();
-</script>
-
 @* Sidebar Arama Alanı *@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -395,7 +340,7 @@
     }
 </script>
 
-@* Sayfa geçiş Egekti *@
+@* Sayfa geçiş Efekti *@
 <script>
     // 1. SAYFAYA GİRİŞ: Bulanıklıktan normale geçiş
     window.addEventListener('load', function() {

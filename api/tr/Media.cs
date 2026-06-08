@@ -7,10 +7,6 @@ using System.Diagnostics;
 
 namespace api.tr;
 
-// NOT: Bu dosyada herhangi bir değişiklik yapılmadı.
-// Gerçek zamanlı progress tracking tamamen client-side (Upload.razor) tarafında yapılıyor.
-// Stream okuma işlemi sırasında progress hesaplanıyor, backend'e dokunmaya gerek yok.
-
 public class Media(UserInfos userInfos)
 {
     private readonly UserInfos _userInfos = userInfos ?? throw new ArgumentNullException(nameof(userInfos));

@@ -102,7 +102,7 @@ namespace data
         //public DbSet<ProductStock> ProductStock { get; set; } = default!;
         //public DbSet<ProductVariant> ProductVariant { get; set; } = default!;
         //public DbSet<ProductVariantValue> ProductVariantValue { get; set; } = default!;
-        //public DbSet<Warehouse> Warehouse { get; set; } = default!;
+        public DbSet<Warehouse> Warehouse { get; set; } = default!;
 
 
 

@@ -16,7 +16,7 @@ namespace data
         public Guid? TaskCategoriesId { get; set; }
 
         // Görevi atayan kişi Guid tipinde
-        public Guid? AssignedByUserId { get; set; } // Görevin atandığı kişi UsersType Sadece "Admin" olabilir
+        public Guid? AssignedByUserId { get; set; } 
 
         // Görevin öncelik seviyesi (örneğin: "Düşük", "Orta", "Yüksek")
         public string? Priority { get; set; }

@@ -1,54 +1,33 @@
-using data._Shared;
 using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace data._Product
 {
     /// <summary>
-    /// Ürün veya varyant fiyat geçmişini saklar.
-    /// Her fiyat değişikliği yeni satır olarak eklenir, eski satırlar silinmez.
-    /// 4 para birimi (TRY, USD, EUR, AZN) aynı satırda bağımsız tutulur.
-    /// Standart ürünlerde VariantId=null, varyantlılarda dolu olur.
+    /// Varyant bazlı, çoklu para birimli fiyat tablosu (APPEND-ONLY tarih geçmişi).
+    /// Her para birimi (TRY/USD/EUR/AZN) için ayrı satır tutulur — kur dönüşümü YAPILMAZ,
+    /// değerler bağımsız olarak veri tabanında saklanır.
+    /// Fiyat değişiminde eski satır güncellenmez: EffectiveTo kapatılır, yeni satır açılır.
+    /// Güncel fiyat sorgusu: EffectiveTo == null olan satır.
     /// </summary>
     public class ProductPrices
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid ProductId { get; set; }    // Ürün ID bilgisi
-        public Guid? VariantId { get; set; }   // Varyant ID bilgisi (null ise standart ürün fiyatı)
-        public Guid UserId { get; set; }       // Satıcı ID bilgisi
+        public Guid ProductId { get; set; } // Ürün (Products.Id) — raporlama kolaylığı için denormalize
+        public Guid VariantId { get; set; } // Varyant (ProductVariants.Id) — basit üründe varsayılan varyant
 
-        // === TRY Fiyatları ===
-        public decimal? PriceTRY { get; set; }            // TRY normal satış fiyatı
-        public decimal? DiscountedPriceTRY { get; set; }  // TRY indirimli fiyat (boşsa indirim yok)
-        public decimal? CostPriceTRY { get; set; }        // TRY maliyet fiyatı
+        public string? Currency { get; set; } = "TRY"; // Para birimi ("TRY", "USD", "EUR", "AZN")
 
-        // === USD Fiyatları ===
-        public decimal? PriceUSD { get; set; }            // USD normal satış fiyatı
-        public decimal? DiscountedPriceUSD { get; set; }  // USD indirimli fiyat
-        public decimal? CostPriceUSD { get; set; }        // USD maliyet fiyatı
+        public decimal Price { get; set; } // Normal satış fiyatı
+        public decimal? DiscountedPrice { get; set; } // İndirimli satış fiyatı (kampanya) — null ise indirim yok
+        public decimal? CostPrice { get; set; } // Maliyet fiyatı (yalnızca satıcı görür)
 
-        // === EUR Fiyatları ===
-        public decimal? PriceEUR { get; set; }            // EUR normal satış fiyatı
-        public decimal? DiscountedPriceEUR { get; set; }  // EUR indirimli fiyat
-        public decimal? CostPriceEUR { get; set; }        // EUR maliyet fiyatı
+        public DateTime EffectiveFrom { get; set; } = DateTime.UtcNow; // Geçerlilik başlangıcı
+        public DateTime? EffectiveTo { get; set; } // Geçerlilik bitişi (null = güncel/aktif fiyat)
 
-        // === AZN Fiyatları ===
-        public decimal? PriceAZN { get; set; }            // AZN normal satış fiyatı
-        public decimal? DiscountedPriceAZN { get; set; }  // AZN indirimli fiyat
-        public decimal? CostPriceAZN { get; set; }        // AZN maliyet fiyatı
-
-        // === Geçmiş Takibi ===
-        public DateTime? EffectiveFrom { get; set; } = DateTime.UtcNow;  // Bu fiyatın geçerlilik başlangıcı
-        public DateTime? EffectiveTo { get; set; }                        // Geçerlilik bitişi (null = aktif fiyat)
-        public string? ChangeNote { get; set; }                           // Değişiklik notu (opsiyonel)
-
-        // === Dış Platform Referansı ===
-        public string? ExternalPriceId { get; set; }    // Dış platformdaki fiyat referansı
-
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public IsDeleted? IsDeleted { get; set; } = new();
+        public Guid? CreatedByUserId { get; set; } // Fiyatı giren kullanıcı (denetim için)
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Kayıt tarihi
     }
 }

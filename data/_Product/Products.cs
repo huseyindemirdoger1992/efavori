@@ -5,57 +5,57 @@ using System.ComponentModel.DataAnnotations;
 namespace data._Product
 {
     /// <summary>
-    /// Ürünün ana kaydını ve temel bilgilerini tutar.
-    /// Hem standart (tek SKU) hem de varyantlı ürünler bu tabloda başlar.
+    /// Ana ürün tablosu. Tüm ürün tipleri (basit, varyantlı, dijital, hizmet, paket, harici)
+    /// bu tablo üzerinden yönetilir. Basit ürünler dahi en az bir ProductVariants kaydına sahiptir
+    /// (birleşik tek-varyant modeli) — böylece fiyat/stok her zaman varyant üzerinden okunur.
     /// </summary>
     public class Products
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid UserId { get; set; }   // Ürünü ekleyen satıcının ID bilgisi
-        public Guid StoreId { get; set; }   // Ürünün bağlı olduğu mağazanın ID bilgisi
-
-        // === Temel Bilgiler ===
-        public string? Name { get; set; }            // Ürün adı
-        public string? Description { get; set; }     // Ürün açıklaması (HTML destekli)
-        public string? ShortDescription { get; set; } // Kısa açıklama / özet
+        // === İlişkiler (ID bazlı, navigation property kullanılmaz) ===
+        public Guid UserId { get; set; } // Ürün sahibi kullanıcı (Users.Id)
+        public Guid StoreId { get; set; } // Ürün sahibi mağaza (Store.Id)
+        public Guid? BrandId { get; set; } // Marka (Brands.Id)
+        public Guid? AttributeTemplateId { get; set; } // Ürünün oluşturulduğu özellik şablonu SÜRÜMÜ (AttributeTemplates.Id) — versiyon sabitlenir, şablon güncellense bile ürün verisi bozulmaz
+        public Guid? ShippingProfileId { get; set; } // Kargo/desi profili (ShippingProfile.Id)
 
         // === Ürün Tipi ===
-        // "Standard" = tek SKU, varyant yok
-        // "Variable" = varyantlı ürün (Renk+Beden gibi)
-        public string? ProductType { get; set; } = "Standard";
+        // "Simple", "Variant", "Digital", "Service", "Bundle", "External"
+        // Yeni tipler için enum yerine string tercih edildi (genişletilebilirlik)
+        public string? ProductType { get; set; } = "Simple";
 
-        // === SKU & Barkod (Standart ürünler için doğrudan burada tutulur) ===
-        public string? SKU { get; set; }              // Stok Kodu (standart ürünlerde burada, varyantlılarda ProductVariants'ta)
-        public string? Barcode { get; set; }          // Barkod / GTIN / EAN / UPC
-        public string? Brand { get; set; }            // Marka adı
-        public string? Manufacturer { get; set; }     // Üretici firma
+        // === İçerik Alanları ===
+        public string? Name { get; set; } // Ürün adı
+        public string? ShortDescription { get; set; } // Kısa açıklama
+        public string? FullDescription { get; set; } // Detaylı açıklama (HTML destekli)
+        public string? Tags { get; set; } // Etiketler (virgülle ayrılmış)
 
-        // === Fiziksel Özellikler (Standart ürünler için) ===
-        public decimal? Weight { get; set; }          // Ağırlık (gram)
-        public decimal? Width { get; set; }           // Genişlik (cm)
-        public decimal? Height { get; set; }          // Yükseklik (cm)
-        public decimal? Length { get; set; }          // Uzunluk / Derinlik (cm)
+        // === Medya ===
+        public Guid? CoverMediaId { get; set; } // Kapak görseli (Media.Id)
+        // Galeri görselleri: ItemGallery (ItemType = "ProductGallery", ItemId = Products.Id)
+        // Varyant görselleri: ItemGallery (ItemType = "VariantGallery", ItemId = ProductImageVariantGroups.Id)
 
-        // === Durum ===
-        // "Draft" = Taslak, "Active" = Yayında, "Passive" = Pasif, "PendingApproval" = Onay Bekliyor
-        public string? Status { get; set; } = "Draft";
+        // === Harici Ürün (External) Alanları ===
+        public string? ExternalUrl { get; set; } // Harici ürün bağlantısı
+        public string? ExternalButtonText { get; set; } // Harici ürün buton metni (Örn: "Satıcı sitesinde gör")
 
-        // === Vergi ===
-        public decimal? TaxRate { get; set; }         // KDV oranı (%)
+        // === Yayın Durumu ===
+        // "Draft", "PendingApproval", "Published", "Rejected", "Archived"
+        public string? PublishStatus { get; set; } = "Draft";
+        public bool? IsApprovedByAdmin { get; set; } // Admin onay durumu
+        public DateTime? ApprovedDate { get; set; } // Admin onay tarihi
+        public Guid? ApprovedByUserId { get; set; } // Onaylayan admin (Users.Id)
+        public bool IsActive { get; set; } = true; // Satıcı tarafından aktif/pasif
 
-        // === Dış Platform Referansları (CSV import sonrası eşleşme için) ===
-        public string? ExternalId { get; set; }       // Dış platformdaki ürün ID'si (Trendyol, Amazon vb.)
-        public string? ExternalPlatform { get; set; } // Kaynak platform adı (Trendyol, Amazon, WooCommerce, N11)
+        // === Tarih Bilgileri ===
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
+        public DateTime? UpdatedAt { get; set; } // Son güncelleme tarihi
 
-        // === İçe Aktarma ===
-        public Guid? ImportProfileId { get; set; }    // Hangi import profili ile yüklendi (null ise manuel)
-        public Guid? ImportBatchId { get; set; }      // Toplu yükleme işlem grubu ID'si
-
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedAt { get; set; }
-
+        // === Owned Type'lar ===
+        public Meta? Meta { get; set; } = new();
+        public InteractionCounts? Interaction { get; set; } = new();
         public IsDeleted? IsDeleted { get; set; } = new();
     }
 }

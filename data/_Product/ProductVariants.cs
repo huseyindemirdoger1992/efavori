@@ -5,40 +5,40 @@ using System.ComponentModel.DataAnnotations;
 namespace data._Product
 {
     /// <summary>
-    /// Varyantlı ürünlerde her kombinasyonu ayrı SKU olarak saklar.
-    /// Örn: "Kırmızı + XL" = 1 satır, "Mavi + M" = 1 satır.
-    /// Standart ürünlerde bu tabloda kayıt olmaz.
-    /// Varyant görselleri: ItemGallery tablosunda ItemType="VariantGallery", ItemId=VariantId şeklinde tutulur.
+    /// Ürün varyantları. Birleşik tek-varyant modeli gereği basit ürünlerde de
+    /// IsDefault = true olan tek bir varyant kaydı bulunur.
+    /// Fiyat (ProductPrices) ve stok (ProductStocks) daima varyant üzerinden tutulur.
     /// </summary>
     public class ProductVariants
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid ProductId { get; set; }  // Bağlı olduğu ana ürün
-        public Guid UserId { get; set; }     // Satıcı ID bilgisi
+        public Guid ProductId { get; set; } // Bağlı olduğu ürün (Products.Id)
 
-        // === SKU & Barkod ===
-        public string? SKU { get; set; }     // Varyanta özgü stok kodu
-        public string? Barcode { get; set; } // Varyanta özgü barkod / GTIN
-
-        // === Fiziksel Özellikler (Varyanta özel override) ===
-        public decimal? Weight { get; set; }  // Ağırlık (gram) — null ise üst üründen alınır
-        public decimal? Width { get; set; }   // Genişlik (cm)
-        public decimal? Height { get; set; }  // Yükseklik (cm)
-        public decimal? Length { get; set; }  // Uzunluk / Derinlik (cm)
+        // === Kimlik / Tanımlayıcı Alanlar (Marketplace entegrasyon standartları) ===
+        public string? Sku { get; set; } // Stok kodu (Örn: KZK-KRM-S)
+        public string? Barcode { get; set; } // Barkod
+        public string? Gtin { get; set; } // Global Trade Item Number
+        public string? Upc { get; set; } // Universal Product Code
+        public string? Ean { get; set; } // European Article Number
+        public string? Isbn { get; set; } // Kitaplar için ISBN
+        public string? Mpn { get; set; } // Manufacturer Part Number (Üretici parça numarası)
 
         // === Durum ===
-        public bool IsActive { get; set; } = true; // Varyant aktif mi
+        public bool IsDefault { get; set; } = false; // Varsayılan varyant mı (basit üründe tek kayıt true)
+        public bool IsActive { get; set; } = true; // Varyant satışta mı
+        public int DisplayOrder { get; set; } = 0; // Listeleme sırası
 
-        // === Sıralama ===
-        public int SortOrder { get; set; } = 0; // Görüntülenme sırası
+        // === Fiziksel Özellikler (kargo/desi hesabı ShippingProfile bölen değerleri ile yapılır) ===
+        public decimal? WeightKg { get; set; } // Ağırlık (kg)
+        public decimal? WidthCm { get; set; } // Genişlik (cm)
+        public decimal? HeightCm { get; set; } // Yükseklik (cm)
+        public decimal? LengthCm { get; set; } // Uzunluk (cm)
 
-        // === Dış Platform Referansı ===
-        public string? ExternalVariantId { get; set; } // Dış platformdaki varyant ID'si
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
+        public DateTime? UpdatedAt { get; set; } // Son güncelleme tarihi
 
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public IsDeleted? IsDeleted { get; set; } = new();
+        public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }

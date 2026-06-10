@@ -89,19 +89,31 @@ namespace data
 
         // Products
 
-        public DbSet<ProductAttributeMappings> ProductAttributeMappings { get; set; } = default!;
-        public DbSet<ProductAttributes> ProductAttributes { get; set; } = default!;
-        public DbSet<ProductAttributeValues> ProductAttributeValues { get; set; } = default!;
-        public DbSet<ProductCategoryMappings> ProductCategoryMappings { get; set; } = default!;
-        public DbSet<ProductImportBatches> ProductImportBatches { get; set; } = default!;
-        public DbSet<ProductImportProfiles> ProductImportProfiles { get; set; } = default!;
-        public DbSet<ProductPrices> ProductPrices { get; set; } = default!;
-        public DbSet<Products> Products { get; set; } = default!;
-        public DbSet<ProductSeo> ProductSeo { get; set; } = default!;
-        public DbSet<ProductSpecifications> ProductSpecifications { get; set; } = default!;
-        public DbSet<ProductStocks> ProductStocks { get; set; } = default!;
-        public DbSet<ProductVariantAttributeMappings> ProductVariantAttributeMappings { get; set; } = default!;
+        public DbSet<ProductVariantValues> ProductVariantValues { get; set; } = default!;
         public DbSet<ProductVariants> ProductVariants { get; set; } = default!;
+        public DbSet<ProductStocks> ProductStocks { get; set; } = default!;
+        public DbSet<ProductSpecifications> ProductSpecifications { get; set; } = default!;
+        public DbSet<ProductSeo> ProductSeo { get; set; } = default!;
+        public DbSet<Products> Products { get; set; } = default!;
+        public DbSet<ProductPrices> ProductPrices { get; set; } = default!;
+        public DbSet<ProductMarketplaceListings> ProductMarketplaceListings { get; set; } = default!;
+        public DbSet<ProductImportProfiles> ProductImportProfiles { get; set; } = default!;
+        public DbSet<ProductImageVariantGroups> ProductImageVariantGroups { get; set; } = default!;
+        public DbSet<ProductExternalMedias> ProductExternalMedias { get; set; } = default!;
+        public DbSet<ProductDigitalAssets> ProductDigitalAssets { get; set; } = default!;
+        public DbSet<ProductCategories> ProductCategories { get; set; } = default!;
+        public DbSet<ProductBundleItems> ProductBundleItems { get; set; } = default!;
+        public DbSet<ProductAttributeValues> ProductAttributeValues { get; set; } = default!;
+        public DbSet<ProductAttributes> ProductAttributes { get; set; } = default!;
+        public DbSet<ProductAttributeMappings> ProductAttributeMappings { get; set; } = default!;
+        public DbSet<Marketplaces> Marketplaces { get; set; } = default!;
+        public DbSet<MarketplaceCategoryMappings> MarketplaceCategoryMappings { get; set; } = default!;
+        public DbSet<MarketplaceAttributeMappings> MarketplaceAttributeMappings { get; set; } = default!;
+        public DbSet<Brands> Brands { get; set; } = default!;
+        public DbSet<AttributeTemplates> AttributeTemplates { get; set; } = default!;
+        public DbSet<AttributeTemplateItems> AttributeTemplateItems { get; set; } = default!;
+        public DbSet<AttributeTemplateCategories> AttributeTemplateCategories { get; set; } = default!;
+
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
 
 

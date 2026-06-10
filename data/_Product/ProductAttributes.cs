@@ -5,34 +5,34 @@ using System.ComponentModel.DataAnnotations;
 namespace data._Product
 {
     /// <summary>
-    /// Attribute tanımlarını saklar.
-    /// Örn: "Renk", "Beden", "RAM", "Depolama", "İşlemci" gibi özellik başlıkları.
-    /// Sistem genelinde (UserId=null → global) veya satıcıya özel olabilir.
+    /// Özellik (Attribute) tanımları — tamamen dinamik özellik sistemi.
+    /// KRİTİK SAHİPLİK KURALI:
+    ///   UserId = null ve StoreId = null → SİSTEM özelliği (yalnızca admin oluşturur/düzenler, şablonlarda kullanılabilir)
+    ///   UserId/StoreId dolu             → SATICIYA ÖZEL özellik (yalnızca o satıcının ürünlerinde görünür,
+    ///                                      asla şablonlara eklenmez, diğer satıcılara gösterilmez)
     /// </summary>
     public class ProductAttributes
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid? UserId { get; set; }    // null ise sistem geneli (global), dolu ise satıcıya özel tanım
+        public Guid? UserId { get; set; } // Null = sistem özelliği, dolu = satıcıya özel
+        public Guid? StoreId { get; set; } // Null = sistem özelliği, dolu = mağazaya özel
 
-        public string? Name { get; set; }    // Attribute adı (Renk, Beden, RAM vb.)
+        public string? Name { get; set; } // Özellik adı (Örn: Renk, RAM, Ekran Boyutu)
+        public string? Code { get; set; } // Teknik kod / slug (Örn: renk, ram) — entegrasyon eşlemede kullanılır
+        public string? Description { get; set; } // Özellik açıklaması
 
-        // === Attribute Tipi ===
-        // "Color"    = Renk (renk kodu ile birlikte gösterilebilir)
-        // "Size"     = Beden
-        // "Custom"   = Özel tanımlı (satıcı tarafından oluşturulan)
-        // "Select"   = Açılır liste seçimi
-        // "Text"     = Serbest metin
-        public string? AttributeType { get; set; } = "Custom";
+        // Giriş tipi: "Select", "MultiSelect", "Text", "Number", "Bool", "Date"
+        public string? InputType { get; set; } = "Select";
 
-        // === CSV Import Eşleşme ===
-        public string? ExternalName { get; set; } // Dış platformdaki karşılığı (Trendyol: "Renk", Amazon: "Color" vb.)
+        public string? Unit { get; set; } // Birim (Örn: GB, inç, Hz) — Number tipinde kullanışlı
+        public bool IsFilterable { get; set; } = false; // Ürün listelerinde filtre olarak gösterilsin mi
+        public bool IsActive { get; set; } = true; // Özellik kullanımda mı
+        public int DisplayOrder { get; set; } = 0; // Listeleme sırası
 
-        public int SortOrder { get; set; } = 0;   // Sıralama
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
 
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public IsDeleted? IsDeleted { get; set; } = new();
+        public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }

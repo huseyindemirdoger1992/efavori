@@ -1,36 +1,32 @@
-using data._Shared;
 using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace data._Product
 {
     /// <summary>
-    /// Ürün ve varyant stoklarını depolara göre tutar.
-    /// Warehouse tablosu ile ilişkilendirilir.
-    /// Standart ürünlerde VariantId=null olur.
+    /// Varyant + Depo bazlı stok tablosu.
+    /// Bir varyant birden fazla depoda tutulabilir (çoklu depo desteği);
+    /// toplam stok = varyantın tüm depo satırlarının toplamıdır.
     /// </summary>
     public class ProductStocks
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid ProductId { get; set; }     // Ürün ID bilgisi
-        public Guid? VariantId { get; set; }    // Varyant ID bilgisi (null ise standart ürün stoğu)
-        public Guid WarehouseId { get; set; }   // Depo ID bilgisi (Warehouse.Id)
-        public Guid UserId { get; set; }        // Satıcı ID bilgisi
+        public Guid ProductId { get; set; } // Ürün (Products.Id) — denormalize
+        public Guid VariantId { get; set; } // Varyant (ProductVariants.Id)
+        public Guid WarehouseId { get; set; } // Depo (Warehouse.Id)
 
-        // === Stok Bilgileri ===
-        public int Quantity { get; set; } = 0;            // Mevcut stok adedi
-        public int? ReservedQuantity { get; set; } = 0;   // Rezerve edilen (siparişte bekleyen) adet
-        public int? LowStockThreshold { get; set; }       // Düşük stok uyarı eşiği
+        public bool TrackStock { get; set; } = true; // Stok takibi yapılsın mı (dijital/hizmet ürünlerde false)
 
-        // === Stok Takip ===
-        public bool TrackStock { get; set; } = true;      // Stok takibi yapılsın mı
-        public bool AllowBackorder { get; set; } = false;  // Stok bittiğinde sipariş alınsın mı
+        public int Quantity { get; set; } = 0; // Mevcut stok adedi
+        public int? MinStockLevel { get; set; } // Minimum stok miktarı
+        public int? CriticalStockLevel { get; set; } // Kritik stok seviyesi (uyarı eşiği)
+        public int? MaxOrderQuantity { get; set; } // Tek siparişte alınabilecek maksimum adet
 
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedAt { get; set; }
+        // "InStock", "OutOfStock", "PreOrder", "Backorder"
+        public string? StockStatus { get; set; } = "InStock";
 
-        public IsDeleted? IsDeleted { get; set; } = new();
+        public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow; // Son stok güncelleme tarihi
     }
 }

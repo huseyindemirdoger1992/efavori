@@ -1,35 +1,31 @@
-using data._Shared;
 using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace data._Product
 {
     /// <summary>
-    /// Teknik özellikleri key-value mantığıyla saklar.
-    /// Varyant oluşturmayan, bilgi amaçlı özellikler burada tutulur.
-    /// Örn: "Malzeme" → "Pamuk", "Garanti Süresi" → "2 Yıl", "Menşei" → "Türkiye"
-    /// Gruplandırılabilir yapıda (GroupName ile).
+    /// Ürünün teknik özellik/spesifikasyon DEĞERLERİ (varyant üretmeyen bilgi alanları).
+    /// İki kullanım şekli desteklenir:
+    ///   1) Tanımlı özellik: AttributeId (+ AttributeValueId veya serbest CustomValue)
+    ///      Örn: Ekran Boyutu → 55"
+    ///   2) Tamamen serbest satır: CustomName + CustomValue (AttributeId null)
+    ///      Örn: "Kutu İçeriği" → "TV, Kumanda, Duvar Aparatı" (yalnızca bu üründe geçerli)
     /// </summary>
     public class ProductSpecifications
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid ProductId { get; set; }  // Ürün ID bilgisi
-        public Guid UserId { get; set; }     // Satıcı ID bilgisi
+        public Guid ProductId { get; set; } // Ürün (Products.Id)
 
-        // === Özellik Bilgileri ===
-        public string? GroupName { get; set; }  // Grup adı (Genel, Teknik, Fiziksel vb.)
-        public string? Key { get; set; }        // Özellik adı (Malzeme, Garanti Süresi, Menşei)
-        public string? Value { get; set; }      // Özellik değeri (Pamuk, 2 Yıl, Türkiye)
+        public Guid? AttributeId { get; set; } // Tanımlı özellik (ProductAttributes.Id) — serbest satırda null
+        public Guid? AttributeValueId { get; set; } // Önceden tanımlı değer seçildiyse (ProductAttributeValues.Id)
 
-        public int SortOrder { get; set; } = 0; // Görüntülenme sırası
+        public string? CustomName { get; set; } // Serbest özellik adı (AttributeId null ise kullanılır)
+        public string? CustomValue { get; set; } // Serbest/metinsel değer (Text-Number tipli özelliklerde de kullanılır)
 
-        // === Dış Platform Referansı ===
-        public string? ExternalKey { get; set; } // Dış platformdaki özellik adı karşılığı
+        public int DisplayOrder { get; set; } = 0; // Gösterim sırası
 
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-
-        public IsDeleted? IsDeleted { get; set; } = new();
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }

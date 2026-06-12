@@ -1,0 +1,1788 @@
+﻿@using api
+@using api.tr
+@using data
+@using data._Product.BulkWordPressProductImport
+@using Data
+@using data._Product
+@using Microsoft.AspNetCore.Http
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using System.Text
+@using System.Text.Json
+@using System.Security.Cryptography
+@using System.Globalization
+@using razor._Shared
+@using razor._Shared.tr.Media
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+@inject FileUploadService FileService
+@inject api.tr.Media MediaProcessor
+@inject IHttpClientFactory HttpFactory
+@inject NavigationManager NavigationManager
+
+@implements IAsyncDisposable
+
+@*
+    ════════════════════════════════════════════════════════════════════════════
+    WOOCOMMERCE → EFAVORI ÜRÜN İÇE AKTARIM SİHİRBAZI  (Tek dosya)
+    --------------------------------------------------------------------------
+    • Kaynak CSV galeriden seçilir (SourceMediaId hafızası).
+    • Alan / Kategori / Marka / Özellik eşleşmeleri güven seviyeli olarak yapılır
+      ve ProductImportMappings tablosunda HAFIZADA tutulur (tekrar sorulmaz).
+    • İçe aktarım batch + transaction + idempotent + KALDIĞI YERDEN DEVAM eder
+      (ProductImportRows satır kursoru + ProductImportJobs.LastProcessedRowIndex).
+    • Görseller, mevcut Media.cs (AVIF) hattıyla işlenir — yeni medya sistemi yok.
+    ════════════════════════════════════════════════════════════════════════════
+*@
+
+<Notification @ref="notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-globe", "efavori", "/"),
+        ("fa fa-cubes", "Ürün Yönetimi", "javascript:void(0)"),
+        ("fa fa-cloud-upload", "İçe Aktarım", "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+<div class="container-fluid py-3">
+
+    @* ═══════════════ ÜST BAŞLIK + ADIM GÖSTERGESİ ═══════════════ *@
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+        <h5 class="mb-0 fw-bold">
+            <i class="fa fa-cloud-upload me-2 text-primary"></i>WooCommerce Ürün İçe Aktarımı
+        </h5>
+        @if (_currentStep > 0)
+        {
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="BackToDashboard">
+                <i class="fa fa-th-list me-1"></i>Panele Dön
+            </button>
+        }
+    </div>
+
+    @if (_currentStep > 0)
+    {
+        <ul class="nav nav-pills nav-fill mb-4 small bg-light rounded p-1 shadow-sm">
+            @foreach (var s in _stepTitles)
+            {
+                var idx = s.Key;
+                var cls = idx == _currentStep ? "active fw-bold" : (idx < _currentStep ? "text-success" : "text-muted");
+                <li class="nav-item">
+                    <span class="nav-link @cls py-1">
+                        @if (idx < _currentStep)
+                        {
+                            <i class="fa fa-check-circle me-1"></i>
+                        }
+                        @s.Value
+                    </span>
+                </li>
+            }
+        </ul>
+    }
+
+    @* ════════════════════════════════════════════════════════════════════════
+       ADIM 0 — DASHBOARD (Aktarım İşleri + İstatistik Paneli)
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (_currentStep == 0)
+    {
+        <div class="d-flex justify-content-end mb-3">
+            <button type="button" class="btn btn-primary btn-sm" @onclick="StartNewImport">
+                <i class="fa fa-plus me-1"></i>Yeni İçe Aktarım
+            </button>
+        </div>
+
+        @if (_isLoading)
+        {
+            <p class="text-muted"><i class="fa fa-spinner fa-spin me-2"></i>Yükleniyor...</p>
+        }
+        else if (_jobs is null || !_jobs.Any())
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center text-muted py-5">
+                    <i class="fa fa-inbox fa-3x mb-3 d-block opacity-50"></i>
+                    Henüz bir içe aktarım oluşturulmadı. "Yeni İçe Aktarım" ile başlayın.
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var job in _jobs)
+                {
+                    var pending = Math.Max(0, job.TotalCount - job.ImportedCount - job.FailedCount - job.SkippedCount);
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold mb-0 text-truncate" title="@job.Name">@job.Name</h6>
+                                    <span class="badge @StatusBadgeClass(job.Status)">
+                                        <i class="fa @StatusIcon(job.Status) me-1"></i>@StatusText(job.Status)
+                                    </span>
+                                </div>
+                                <div class="small text-muted mb-2">
+                                    <i class="fa fa-calendar-o me-1"></i>@(job.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm"))
+                                </div>
+
+                                @* İstatistik paneli *@
+                                <div class="row text-center g-1 mb-3">
+                                    <div class="col"><div class="border rounded py-1"><div class="fw-bold">@job.TotalCount</div><div class="text-muted" style="font-size:.65rem;">Toplam</div></div></div>
+                                    <div class="col"><div class="border rounded py-1 bg-success-subtle"><div class="fw-bold text-success">@job.ImportedCount</div><div class="text-muted" style="font-size:.65rem;">Aktarılan</div></div></div>
+                                    <div class="col"><div class="border rounded py-1 bg-warning-subtle"><div class="fw-bold text-warning">@pending</div><div class="text-muted" style="font-size:.65rem;">Bekleyen</div></div></div>
+                                    <div class="col"><div class="border rounded py-1 bg-danger-subtle"><div class="fw-bold text-danger">@job.FailedCount</div><div class="text-muted" style="font-size:.65rem;">Hatalı</div></div></div>
+                                </div>
+
+                                <div class="progress mb-1" style="height:6px;">
+                                    <div class="progress-bar bg-success" style="width:@(ProgressPercent(job))%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mb-3">
+                                    <span>Başarı Oranı</span>
+                                    <span class="fw-bold">%@job.SuccessRate.ToString("0.0")</span>
+                                </div>
+
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-outline-primary btn-sm flex-fill" @onclick="() => OpenJob(job)">
+                                        <i class="fa fa-folder-open-o me-1"></i>Aç
+                                    </button>
+                                    @if (job.Status == "Running" || job.Status == "Paused")
+                                    {
+                                        <button type="button" class="btn btn-outline-success btn-sm" title="Devam Et" @onclick="() => ResumeJob(job)">
+                                            <i class="fa fa-play"></i>
+                                        </button>
+                                    }
+                                    <button type="button" class="btn btn-outline-danger btn-sm" title="Sil" @onclick="() => DeleteJob(job)">
+                                        <i class="fa fa-trash-o"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @* ════════════════════════════════════════════════════════════════════════
+       ADIM 1 — KAYNAK CSV (Galeriden Seç)
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (_currentStep == 1)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fa fa-file-excel-o me-2 text-success"></i>1. Kaynak CSV Dosyası</h6>
+                <div class="mb-3">
+                    <label class="form-label">İçe Aktarım Adı</label>
+                    <input class="form-control" @bind="_currentJob.Name" placeholder="Örn: Başer Elektrik - Aralık Aktarımı" />
+                </div>
+
+                <label class="form-label">WooCommerce Dışa Aktarım CSV'si</label>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <button type="button" class="btn btn-outline-primary"
+                            data-bs-toggle="modal" data-bs-target="#modalCsvSource"
+                            @onclick='() => _activeMediaSlot = "csvSource"'>
+                        <i class="fa fa-picture-o me-1"></i>Galeriden CSV Seç
+                    </button>
+                    @if (_sourceCsvMedia is not null)
+                    {
+                        <span class="badge bg-success-subtle text-success p-2">
+                            <i class="fa fa-file-text-o me-1"></i>@_sourceCsvMedia.FileName
+                        </span>
+                    }
+                </div>
+
+                @if (_analysisReport is not null)
+                {
+                    <hr />
+                    <h6 class="fw-bold mb-2"><i class="fa fa-search me-2 text-info"></i>CSV Analiz Raporu (AŞAMA 1)</h6>
+                    <div class="row text-center g-2 mb-3">
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.ColumnCount</div><div class="small text-muted">Kolon</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.RowCount</div><div class="small text-muted">Ürün Satırı</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.DistinctCategoryCount</div><div class="small text-muted">Kategori</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.DistinctBrandCount</div><div class="small text-muted">Marka</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.MetaColumnCount</div><div class="small text-muted">Özel (Meta)</div></div></div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var t in _analysisReport.TypeCounts)
+                        {
+                            <span class="badge bg-secondary-subtle text-dark">@t.Key: @t.Value</span>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-primary" disabled="@(_sourceCsvMedia is null || _isProcessing)" @onclick="GoToFieldMapping">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i>
+                    }
+                    else
+                    {
+
+                        <i class="fa fa-arrow-right me-1"></i>
+                    }
+                    Alan Eşleştirmeye Geç
+                </button>
+            </div>
+        </div>
+    }
+
+    @* ════════════════════════════════════════════════════════════════════════
+       ADIM 2 — ALAN EŞLEŞTİRME (Güven seviyeli)
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (_currentStep == 2)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fa fa-random me-2 text-primary"></i>2. Alan Eşleştirme (AŞAMA 2)</h6>
+                <p class="small text-muted">Otomatik eşleşmeler güven seviyesiyle işaretlendi. <span class="badge bg-danger">Belirsiz</span> olanları kontrol edin.</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>WooCommerce Kolonu</th>
+                                <th style="width:40px;"></th>
+                                <th>Sistem Alanı</th>
+                                <th style="width:130px;">Güven</th>
+                                <th style="width:90px;" class="text-center">Aktar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in _fieldMappings)
+                            {
+                                <tr class="@(m.ConfidenceLevel == "Uncertain" ? "table-warning" : "")">
+                                    <td class="small fw-semibold">@m.SourceKey</td>
+                                    <td class="text-center text-muted"><i class="fa fa-arrow-right"></i></td>
+                                    <td>
+                                        <select class="form-select form-select-sm" @bind="m.TargetValue">
+                                            <option value="">— Aktarma —</option>
+                                            @foreach (var f in _systemFields)
+                                            {
+                                                <option value="@f.Key">@f.Value</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td><span class="badge @ConfidenceBadge(m.ConfidenceLevel)">@ConfidenceText(m.ConfidenceLevel)</span></td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input"
+                                               checked="@(!string.IsNullOrEmpty(m.TargetValue))" disabled />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 1"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+                <button type="button" class="btn btn-primary" disabled="@_isProcessing" @onclick="GoToCategoryMapping">
+                    <i class="fa fa-arrow-right me-1"></i>Kategori Eşleştirmeye Geç
+                </button>
+            </div>
+        </div>
+    }
+
+    @* ════════════════════════════════════════════════════════════════════════
+       ADIM 3 — KATEGORİ EŞLEŞTİRME (Ağaç + Sayım + Akıllı Öneri + Hafıza)
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (_currentStep == 3)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fa fa-sitemap me-2 text-warning"></i>3. Kategori Eşleştirme (AŞAMA 3)</h6>
+                <p class="small text-muted">Her WooCommerce kategorisini sistem kategorinizle eşleyin. Onaylanan eşleşmeler hafızaya alınır, tekrar sorulmaz.</p>
+                <div class="table-responsive" style="max-height:480px;overflow:auto;">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light position-sticky top-0">
+                            <tr>
+                                <th>WooCommerce Kategori Yolu</th>
+                                <th style="width:90px;" class="text-center">Ürün</th>
+                                <th style="width:280px;">Sistem Kategorisi</th>
+                                <th style="width:110px;" class="text-center">Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in _categoryMappings.OrderByDescending(x => x.SourceItemCount))
+                            {
+                                <tr>
+                                    <td class="small">
+                                        <i class="fa fa-folder-o me-1 text-warning"></i>@c.SourceKey
+                                        @if (!string.IsNullOrEmpty(c.SuggestionsJson))
+                                        {
+                                            <div class="small text-muted mt-1">
+                                                <i class="fa fa-lightbulb-o me-1"></i>Öneri:
+                                                @foreach (var sug in DeserializeSuggestions(c.SuggestionsJson))
+                                                {
+                                                    <span class="badge bg-light text-primary border me-1" style="cursor:pointer;"
+                                                          @onclick="() => ApplySuggestion(c, sug)">@sug.Name</span>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="text-center"><span class="badge bg-secondary">@c.SourceItemCount</span></td>
+                                    <td>
+                                        <select class="form-select form-select-sm" value="@c.TargetValue"
+                                                @onchange="(e) => OnCategorySelected(c, e)">
+                                            <option value="">— Seçiniz —</option>
+                                            @foreach (var sc in _systemCategories)
+                                            {
+                                                <option value="@sc.Id">@(string.IsNullOrEmpty(sc.DepartmentName) ? sc.Name : sc.DepartmentName + " > " + sc.Name)</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (c.IsConfirmedByUser)
+                                        {
+                                            <span class="badge bg-success"><i class="fa fa-check"></i></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Bekliyor</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 2"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+                <button type="button" class="btn btn-primary" @onclick="GoToBrandMapping"><i class="fa fa-arrow-right me-1"></i>Marka Eşleştirmeye Geç</button>
+            </div>
+        </div>
+    }
+
+    @* ════════════════════════════════════════════════════════════════════════
+       ADIM 4 — MARKA EŞLEŞTİRME (AŞAMA 4)
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (_currentStep == 4)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fa fa-trademark me-2 text-info"></i>4. Marka Eşleştirme (AŞAMA 4)</h6>
+                @if (!_brandMappings.Any())
+                {
+                    <p class="text-muted"><i class="fa fa-info-circle me-1"></i>CSV'de marka alanı bulunamadı, bu adım atlanabilir.</p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light"><tr><th>WooCommerce Marka</th><th style="width:90px;" class="text-center">Ürün</th><th style="width:280px;">Sistem Markası</th><th style="width:140px;">İşlem</th></tr></thead>
+                        <tbody>
+                            @foreach (var b in _brandMappings)
+                            {
+                                <tr>
+                                    <td class="small fw-semibold">@b.SourceKey</td>
+                                    <td class="text-center"><span class="badge bg-secondary">@b.SourceItemCount</span></td>
+                                    <td>
+                                        <select class="form-select form-select-sm" value="@b.TargetValue" @onchange="(e) => OnBrandSelected(b, e)">
+                                            <option value="">— Seçiniz —</option>
+                                            @foreach (var sb in _systemBrands)
+                                            {
+                                                <option value="@sb.Id">@sb.Name</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" @bind="b.CreateIfMissing" />
+                                            <label class="form-check-label small">Yoksa oluştur</label>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 3"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+                <button type="button" class="btn btn-primary" @onclick="GoToStrategy"><i class="fa fa-arrow-right me-1"></i>Strateji Raporuna Geç</button>
+            </div>
+        </div>
+    }
+
+    @* ════════════════════════════════════════════════════════════════════════
+       ADIM 5 — STRATEJİ RAPORU + ÖN İZLEME (AŞAMA 13)
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (_currentStep == 5)
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="fa fa-clipboard me-2 text-success"></i>5. İçe Aktarım Strateji Raporu (AŞAMA 13)</h6>
+                <div class="row g-3">
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-random me-2 text-primary"></i>Alan Eşleşmesi</div><div class="small text-muted">@_fieldMappings.Count(x => !string.IsNullOrEmpty(x.TargetValue)) / @_fieldMappings.Count kolon eşlendi</div></div></div>
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-sitemap me-2 text-warning"></i>Kategori Eşleşmesi</div><div class="small text-muted">@_categoryMappings.Count(x => x.IsConfirmedByUser) / @_categoryMappings.Count kategori onaylandı</div></div></div>
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-trademark me-2 text-info"></i>Marka Eşleşmesi</div><div class="small text-muted">@_brandMappings.Count(x => !string.IsNullOrEmpty(x.TargetValue) || x.CreateIfMissing) / @_brandMappings.Count marka hazır</div></div></div>
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-picture-o me-2 text-success"></i>Görsel İşleme Planı</div><div class="small text-muted">URL görseller indirilip Media.cs (AVIF) hattıyla işlenecek</div></div></div>
+                </div>
+
+                <hr />
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small">Varsayılan Depo</label>
+                        <select class="form-select form-select-sm" @bind="_currentJob.DefaultWarehouseId">
+                            <option value="">— Seçiniz —</option>
+                            @foreach (var w in _warehouses)
+                            {
+                                <option value="@w.Id">@(w.AddressInfo?.MapTitle ?? w.Id.ToString().Substring(0, 8))</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Para Birimi (CSV fiyatları)</label>
+                        <select class="form-select form-select-sm" @bind="_currentJob.DefaultCurrency">
+                            <option value="TRY">TRY (₺)</option>
+                            <option value="USD">USD ($)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="AZN">AZN (₼)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small">Batch Boyutu</label>
+                        <input type="number" class="form-control form-control-sm" @bind="_currentJob.BatchSize" min="50" max="2000" />
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3 small mb-0">
+                    <i class="fa fa-shield me-1"></i>Aktarım <b>idempotent</b> çalışır: aynı satır iki kez işlenmez, yarıda kalırsa <b>kaldığı yerden devam</b> eder.
+                </div>
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 4"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+                <button type="button" class="btn btn-success" disabled="@_isProcessing" @onclick="GoToRun">
+                    <i class="fa fa-rocket me-1"></i>Aktarımı Hazırla
+                </button>
+            </div>
+        </div>
+    }
+
+    @* ════════════════════════════════════════════════════════════════════════
+       ADIM 6 — ÇALIŞTIR (Batch + Pause/Resume/Cancel + Hata Logu)
+       ════════════════════════════════════════════════════════════════════ *@
+    @if (_currentStep == 6)
+    {
+        var pending = Math.Max(0, _currentJob.TotalCount - _currentJob.ImportedCount - _currentJob.FailedCount - _currentJob.SkippedCount);
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0"><i class="fa fa-rocket me-2 text-success"></i>6. İçe Aktarım</h6>
+                    <span class="badge @StatusBadgeClass(_currentJob.Status) fs-6">
+                        <i class="fa @StatusIcon(_currentJob.Status) me-1"></i>@StatusText(_currentJob.Status)
+                    </span>
+                </div>
+
+                @* İstatistik paneli *@
+                <div class="row text-center g-2 mb-3">
+                    <div class="col"><div class="border rounded py-3"><div class="fw-bold fs-4">@_currentJob.TotalCount</div><div class="small text-muted">Toplam Ürün</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-success-subtle"><div class="fw-bold fs-4 text-success">@_currentJob.ImportedCount</div><div class="small text-muted">Aktarılan</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-warning-subtle"><div class="fw-bold fs-4 text-warning">@pending</div><div class="small text-muted">Bekleyen</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-danger-subtle"><div class="fw-bold fs-4 text-danger">@_currentJob.FailedCount</div><div class="small text-muted">Hatalı</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-info-subtle"><div class="fw-bold fs-4 text-info">%@_currentJob.SuccessRate.ToString("0.0")</div><div class="small text-muted">Başarı Oranı</div></div></div>
+                </div>
+
+                <div class="progress mb-3" style="height:14px;">
+                    <div class="progress-bar progress-bar-striped @(_currentJob.Status == "Running" ? "progress-bar-animated" : "") bg-success"
+                         style="width:@(ProgressPercent(_currentJob))%">
+                        @(ProgressPercent(_currentJob))%
+                    </div>
+                </div>
+
+                @* Kontroller *@
+                <div class="d-flex gap-2 mb-3">
+                    @if (_currentJob.Status == "Ready" || _currentJob.Status == "Paused")
+                    {
+                        <button type="button" class="btn btn-success" @onclick="RunImport"><i class="fa fa-play me-1"></i>@(_currentJob.Status == "Paused" ? "Devam Et" : "Başlat")</button>
+                    }
+                    @if (_currentJob.Status == "Running")
+                    {
+                        <button type="button" class="btn btn-warning" @onclick="PauseImport"><i class="fa fa-pause me-1"></i>Duraklat</button>
+                    }
+                    @if (_currentJob.Status == "Running" || _currentJob.Status == "Paused")
+                    {
+                        <button type="button" class="btn btn-outline-danger" @onclick="CancelImport"><i class="fa fa-stop me-1"></i>İptal Et</button>
+                    }
+                    @if (_currentJob.FailedCount > 0 && _currentJob.Status != "Running")
+                    {
+                        <button type="button" class="btn btn-outline-warning" @onclick="RetryFailed"><i class="fa fa-refresh me-1"></i>Hatalıları Tekrar Dene</button>
+                    }
+                </div>
+
+                @* Hata logu (AŞAMA 12) *@
+                @if (_errorRows.Any())
+                {
+                    <h6 class="fw-bold small mt-3"><i class="fa fa-exclamation-triangle me-2 text-danger"></i>Hata Raporu (@_errorRows.Count)</h6>
+                    <div class="table-responsive" style="max-height:300px;overflow:auto;">
+                        <table class="table table-sm small">
+                            <thead class="table-light position-sticky top-0"><tr><th>Satır</th><th>Kimlik</th><th>Hata Kodu</th><th>Mesaj</th></tr></thead>
+                            <tbody>
+                                @foreach (var er in _errorRows)
+                                {
+                                    <tr>
+                                        <td>@er.SourceRowIndex</td>
+                                        <td>@er.SourceExternalId</td>
+                                        <td><span class="badge bg-danger-subtle text-danger">@er.ErrorCode</span></td>
+                                        <td class="text-muted">@er.ErrorMessage</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@* ════════════════════════════════════════════════════════════════════════════
+   PAYLAŞIMLI MEDYA MODALI — Kaynak CSV galeriden seçimi (SamplePage deseni)
+   ════════════════════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="modalCsvSource" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content bg-dark border border-light-3">
+            <div class="modal-header border-light-3">
+                <h6 class="modal-title text-white"><i class="fa fa-file-excel-o me-2 text-success"></i>Kaynak CSV Dosyasını Seç</h6>
+                <div class="btn-group shadow-sm border border-secondary rounded overflow-hidden" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 d-flex align-items-center justify-content-center"
+                            onclick="toggleModalFullscreen(this)" title="Tam Ekran" style="padding: 0.5rem 0.75rem;">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="vr bg-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm border-0 d-flex align-items-center justify-content-center"
+                            data-bs-dismiss="modal" @onclick="CloseMediaModal" style="padding: 0.5rem 0.75rem;">
+                        <span class="btn-close btn-close-white" style="font-size: 0.65rem; padding: 0;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <Upload use="use" />
+                <hr class="border-light-3 my-3" />
+                @if (_activeMediaSlot == "csvSource")
+                {
+                    <razor._Shared.tr.Media.List use="use" IsMultiSelect="false" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string PAGE = "ProductImport";
+
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public string? Language { get; set; }
+
+    // ── Çekirdek altyapı (mimari standartları) ──
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _disposed, _isInitialized, _isLoading, _isProcessing;
+
+    private Notification? notificationRef;
+
+    // ── Sihirbaz durumu ──
+    private int _currentStep = 0;
+    private readonly Dictionary<int, string> _stepTitles = new()
+    {
+        { 1, "Kaynak CSV" }, { 2, "Alan Eşleştirme" }, { 3, "Kategori" },
+        { 4, "Marka" }, { 5, "Strateji" }, { 6, "Aktarım" }
+    };
+
+    private List<ProductImportJobs> _jobs = new();
+    private ProductImportJobs _currentJob = new();
+
+    // ── Medya seçim state (SamplePage deseni) ──
+    private string _activeMediaSlot = string.Empty;
+    private Data.Media? _sourceCsvMedia;
+
+    // ── CSV verisi (analiz + eşleştirme için bellek) ──
+    private List<string> _csvHeaders = new();
+    private List<string[]> _csvRows = new();
+    private Dictionary<string, int> _headerIndex = new();
+    private AnalysisReport? _analysisReport;
+
+    // ── Eşleşme çalışma listeleri ──
+    private List<ProductImportMappings> _fieldMappings = new();
+    private List<ProductImportMappings> _categoryMappings = new();
+    private List<ProductImportMappings> _brandMappings = new();
+
+    // ── Sistem referansları ──
+    private List<CategoriesTr> _systemCategories = new();
+    private List<data._Product.Brands> _systemBrands = new();
+    private List<data._Product.Warehouse> _warehouses = new();
+
+    // ── Çalıştırma kontrol bayrakları ──
+    private bool _pauseRequested, _cancelRequested;
+    private List<ProductImportRows> _errorRows = new();
+
+    // ── Çalışma anı hızlı sözlükleri (RAM) ──
+    private Dictionary<string, int> _categoryLookup = new();   // pathHash → CategoriesTr.Id
+    private Dictionary<string, Guid> _brandLookup = new();      // markaAdı(lower) → Brands.Id
+    private Dictionary<string, string> _fieldLookup = new();    // kolon → hedef alan
+
+    // Sistem alanı seçenekleri (UI dropdown)
+    private readonly Dictionary<string, string> _systemFields = new()
+    {
+        { "", "— Aktarma —" },
+        { "Name", "Ürün Adı (Name)" }, { "ShortDescription", "Kısa Açıklama" },
+        { "FullDescription", "Detaylı Açıklama" }, { "Sku", "Stok Kodu (Sku)" },
+        { "Barcode", "Barkod" }, { "Gtin", "GTIN/UPC/EAN/ISBN" },
+        { "Price", "Normal Fiyat (Price)" }, { "DiscountedPrice", "İndirimli Fiyat" },
+        { "Quantity", "Stok Adedi" }, { "StockStatus", "Stok Durumu" },
+        { "WeightKg", "Ağırlık (kg)" }, { "LengthCm", "Uzunluk (cm)" },
+        { "WidthCm", "Genişlik (cm)" }, { "HeightCm", "Yükseklik (cm)" },
+        { "Categories", "Kategoriler" }, { "Tags", "Etiketler" },
+        { "Images", "Görseller" }, { "Brand", "Marka" },
+        { "PublishStatus", "Yayın Durumu" }, { "ExternalUrl", "Harici URL" },
+        { "ExternalButtonText", "Harici Buton Metni" }, { "ExternalId", "Kaynak Kimlik (idempotency)" },
+        { "ProductType", "Ürün Tipi" }, { "ParentExternalId", "Ebeveyn (varyasyon)" },
+        { "Attribute", "Özellik/Attribute (bilgi dağarcığı)" }
+    };
+
+    // ════════════════════════ YAŞAM DÖNGÜSÜ ════════════════════════
+    protected override void OnInitialized()
+    {
+        FileService.OnFileSelected += HandleSingleFileSelected;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+        await LoadDashboard();
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || _currentStep != 0) return;
+        if (entityName is "ProductImportJobs")
+            await InvokeAsync(async () => { await LoadDashboard(); StateHasChanged(); });
+    }
+
+    private async Task LoadDashboard()
+    {
+        try
+        {
+            _isLoading = true; StateHasChanged();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _jobs = await db.ProductImportJobs.AsNoTracking()
+                .Where(j => j.StoreId == CurrentStoreId() && (j.IsDeleted == null || j.IsDeleted.IsDeletedStatu != true))
+                .OrderByDescending(j => j.CreatedAt)
+                .ToListAsync(_cts.Token);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadDashboard", exception: ex.Message, stackTrace: ex.StackTrace);
+        }
+        finally { _isLoading = false; StateHasChanged(); }
+    }
+
+    // Mağaza kimliği — gerçek projede use üzerinden aktif mağaza çözülür.
+    private Guid CurrentStoreId() => _currentJob.StoreId != Guid.Empty ? _currentJob.StoreId : (use?.Id ?? Guid.Empty);
+
+    // ════════════════════════ MEDYA SEÇİM (CSV) ════════════════════════
+    private void HandleSingleFileSelected(Data.Media media)
+    {
+        if (_activeMediaSlot == "csvSource")
+        {
+            _sourceCsvMedia = media;
+            _currentJob.SourceMediaId = media.Id;
+            if (string.IsNullOrWhiteSpace(_currentJob.Name))
+                _currentJob.Name = Path.GetFileNameWithoutExtension(media.FileName ?? "İçe Aktarım");
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseMediaModal() => _activeMediaSlot = string.Empty;
+
+    // ════════════════════════ NAVİGASYON ════════════════════════
+    private void BackToDashboard() { _currentStep = 0; _ = LoadDashboard(); }
+
+    private void StartNewImport()
+    {
+        _currentJob = new ProductImportJobs
+        {
+            UserId = use?.Id ?? Guid.Empty,
+            StoreId = use?.Id ?? Guid.Empty, // gerçek projede aktif Store.Id
+            Status = "Draft",
+            DefaultCurrency = "TRY",
+            BatchSize = 500
+        };
+        _sourceCsvMedia = null; _analysisReport = null;
+        _fieldMappings.Clear(); _categoryMappings.Clear(); _brandMappings.Clear();
+        _csvHeaders.Clear(); _csvRows.Clear(); _errorRows.Clear();
+        _currentStep = 1;
+    }
+
+    private async Task OpenJob(ProductImportJobs job)
+    {
+        if (_isProcessing) return;
+        _isProcessing = true; StateHasChanged();
+        try
+        {
+            await LoadJobIntoMemory(job.Id);   // job + media + referanslar + CSV (diskten)
+
+            // Önceden yüklenmiş CSV varsa: analiz + alan eşleştirmeyi yeniden kur, önceki onaylı
+            // seçimleri üzerine bindir → kullanıcı doğrudan "Alan Eşleştirme"den devam eder ve
+            // yeniden işleyip ilerleyebilir. Yeni seçimler kaydedildiğinde güncellenir.
+            if (_csvHeaders.Any())
+            {
+                await BuildAnalysisReport();           // AŞAMA 1
+                BuildFieldMappings();                  // AŞAMA 2 (otomatik + güven)
+                ApplySavedFieldMappings();             // daha önce kaydedilen alan seçimlerini geri getir
+                await LoadSystemReferences();
+                _currentStep = 2;                      // Alan Eşleştirme
+            }
+            else
+            {
+                _currentStep = 1;                      // CSV okunamadıysa kaynak adımına düş
+            }
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "OpenJob", exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Job açılırken sorun oluştu: " + ex.Message, null);
+        }
+        finally { _isProcessing = false; StateHasChanged(); }
+    }
+
+    // Daha önce kaydedilmiş alan eşleşmelerini (FieldMappingJson) otomatik tahminin üzerine bindirir.
+    private void ApplySavedFieldMappings()
+    {
+        if (string.IsNullOrWhiteSpace(_currentJob.FieldMappingJson)) return;
+        Dictionary<string, string>? saved;
+        try { saved = JsonSerializer.Deserialize<Dictionary<string, string>>(_currentJob.FieldMappingJson); }
+        catch { return; }
+        if (saved is null) return;
+        foreach (var m in _fieldMappings)
+        {
+            if (!string.IsNullOrEmpty(m.SourceKey) && saved.TryGetValue(m.SourceKey, out var tv) && !string.IsNullOrEmpty(tv))
+            {
+                m.TargetValue = tv;
+                m.IsConfirmedByUser = true;
+            }
+        }
+    }
+
+    private async Task ResumeJob(ProductImportJobs job)
+    {
+        await LoadJobIntoMemory(job.Id);
+        _currentStep = 6;
+        await RunImport();
+    }
+
+    // ════════════════════════ ADIM GEÇİŞLERİ ════════════════════════
+    private async Task GoToFieldMapping()
+    {
+        if (_isProcessing) return;
+        _isProcessing = true; StateHasChanged();
+        try
+        {
+            await LoadCsvFromMedia();          // diskten oku + parse
+            await BuildAnalysisReport();       // AŞAMA 1
+            BuildFieldMappings();              // AŞAMA 2 (otomatik + güven)
+            await LoadSystemReferences();
+            _currentStep = 2;
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "GoToFieldMapping", exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "CSV okunurken bir sorun oluştu: " + ex.Message, null);
+        }
+        finally { _isProcessing = false; StateHasChanged(); }
+    }
+
+    private async Task GoToCategoryMapping()
+    {
+        BuildCategoryMappings();   // AŞAMA 3
+        await ApplyRememberedMappings("Category", _categoryMappings);
+        _currentStep = 3;
+    }
+
+    private async Task GoToBrandMapping()
+    {
+        BuildBrandMappings();      // AŞAMA 4
+        await ApplyRememberedMappings("Brand", _brandMappings);
+        _currentStep = 4;
+    }
+
+    private async Task GoToStrategy()
+    {
+        await LoadWarehouses();
+        _currentStep = 5;
+    }
+
+    private async Task GoToRun()
+    {
+        if (_isProcessing) return;
+        _isProcessing = true; StateHasChanged();
+        try
+        {
+            await PersistJobAndMappings();   // job + tüm eşleşmeler DB'ye (hafıza)
+            await PrepareRows();             // satırları oluştur (idempotent)
+            _currentStep = 6;
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "GoToRun", exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Hazırlık başarısız: " + ex.Message, null);
+        }
+        finally { _isProcessing = false; StateHasChanged(); }
+    }
+
+    // ════════════════════════ CSV OKUMA & PARSE ════════════════════════
+    private async Task LoadCsvFromMedia()
+    {
+        if (_sourceCsvMedia is null) throw new InvalidOperationException("Kaynak CSV seçilmedi.");
+
+        // Galerideki dosyanın fiziksel diskteki yolu (Media.cs ile aynı kök mantığı)
+        var rel = (_sourceCsvMedia.OrjFileUrl ?? _sourceCsvMedia.FileUrl ?? string.Empty)
+            .TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.Combine(Directory.GetCurrentDirectory(), rel);
+        if (!File.Exists(fullPath)) throw new FileNotFoundException("CSV dosyası bulunamadı: " + rel);
+
+        var content = await File.ReadAllTextAsync(fullPath, Encoding.UTF8, _cts.Token);
+        var (headers, rows) = ParseCsv(content);
+        _csvHeaders = headers;
+        _csvRows = rows;
+        _headerIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < headers.Count; i++) _headerIndex[headers[i].Trim()] = i;
+    }
+
+    // RFC-4180 uyumlu minimal CSV ayrıştırıcı (tırnak içi virgül/yeni satır/çift tırnak destekler)
+    private (List<string> headers, List<string[]> rows) ParseCsv(string text)
+    {
+        var result = new List<string[]>();
+        var field = new StringBuilder();
+        var record = new List<string>();
+        bool inQuotes = false;
+        // BOM temizliği
+        if (text.Length > 0 && text[0] == '\uFEFF') text = text.Substring(1);
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (inQuotes)
+            {
+                if (c == '"')
+                {
+                    if (i + 1 < text.Length && text[i + 1] == '"') { field.Append('"'); i++; }
+                    else inQuotes = false;
+                }
+                else field.Append(c);
+            }
+            else
+            {
+                if (c == '"') inQuotes = true;
+                else if (c == ',') { record.Add(field.ToString()); field.Clear(); }
+                else if (c == '\r') { /* yoksay */ }
+                else if (c == '\n')
+                {
+                    record.Add(field.ToString()); field.Clear();
+                    result.Add(record.ToArray()); record = new List<string>();
+                }
+                else field.Append(c);
+            }
+        }
+        if (field.Length > 0 || record.Count > 0) { record.Add(field.ToString()); result.Add(record.ToArray()); }
+
+        var headers = result.Count > 0 ? result[0].ToList() : new List<string>();
+        var rows = result.Skip(1).Where(r => r.Any(c => !string.IsNullOrWhiteSpace(c))).ToList();
+        return (headers, rows);
+    }
+
+    private string Col(string[] row, string header)
+    {
+        if (_headerIndex.TryGetValue(header.Trim(), out int idx) && idx < row.Length)
+            return row[idx]?.Trim() ?? string.Empty;
+        return string.Empty;
+    }
+
+    // ════════════════════════ AŞAMA 1 — ANALİZ ════════════════════════
+    private Task BuildAnalysisReport()
+    {
+        var report = new AnalysisReport
+        {
+            ColumnCount = _csvHeaders.Count,
+            RowCount = _csvRows.Count,
+            MetaColumnCount = _csvHeaders.Count(h => h.StartsWith("Meta:", StringComparison.OrdinalIgnoreCase))
+        };
+        foreach (var r in _csvRows)
+        {
+            var t = Col(r, "Tür");
+            if (string.IsNullOrEmpty(t)) t = "simple";
+            report.TypeCounts[t] = report.TypeCounts.GetValueOrDefault(t) + 1;
+        }
+        report.DistinctCategoryCount = _csvRows
+            .Select(r => PrimaryCategoryPath(Col(r, "Kategoriler")))
+            .Where(p => !string.IsNullOrEmpty(p)).Distinct().Count();
+        report.DistinctBrandCount = _csvRows
+            .Select(r => Col(r, "Markalar")).Where(b => !string.IsNullOrEmpty(b)).Distinct().Count();
+        _analysisReport = report;
+        return Task.CompletedTask;
+    }
+
+    // ════════════════════════ AŞAMA 2 — ALAN EŞLEŞTİRME ════════════════════════
+    private void BuildFieldMappings()
+    {
+        _fieldMappings = new List<ProductImportMappings>();
+        foreach (var h in _csvHeaders)
+        {
+            var (target, level, score) = GuessField(h);
+            _fieldMappings.Add(new ProductImportMappings
+            {
+                JobId = _currentJob.Id,
+                UserId = _currentJob.UserId,
+                StoreId = _currentJob.StoreId,
+                MappingType = "Field",
+                SourceKey = h,
+                SourceKeyHash = Hash(h),
+                TargetType = "ProductField",
+                TargetValue = target,
+                ConfidenceLevel = level,
+                ConfidenceScore = score,
+                IsConfirmedByUser = level == "Exact"
+            });
+        }
+    }
+
+    // Kesin / Büyük olasılıkla / Belirsiz güven seviyeli otomatik eşleştirme
+    private (string target, string level, int score) GuessField(string header)
+    {
+        var h = header.Trim();
+        switch (h)
+        {
+            case "İsim": return ("Name", "Exact", 100);
+            case "Açıklama": return ("FullDescription", "Exact", 98);
+            case "Kısa açıklama": return ("ShortDescription", "Exact", 98);
+            case "Stok kodu (SKU)": return ("Sku", "Exact", 100);
+            case "GTIN, UPC, EAN veya ISBN": return ("Gtin", "Likely", 85);
+            case "Stok": return ("Quantity", "Exact", 95);
+            case "Stokta?": return ("StockStatus", "Likely", 80);
+            case "Ağırlık (kg)": return ("WeightKg", "Exact", 100);
+            case "Uzunluk (cm)": return ("LengthCm", "Exact", 100);
+            case "Genişlik (cm)": return ("WidthCm", "Exact", 100);
+            case "Yükseklik (cm)": return ("HeightCm", "Exact", 100);
+            case "Kategoriler": return ("Categories", "Exact", 100);
+            case "Etiketler": return ("Tags", "Exact", 95);
+            case "Görseller": return ("Images", "Exact", 100);
+            case "Markalar": return ("Brand", "Exact", 95);
+            case "Normal fiyat": return ("Price", "Likely", 88);
+            case "İndirimli satış fiyatı": return ("DiscountedPrice", "Likely", 85);
+            case "Kimlik": return ("ExternalId", "Exact", 100);
+            case "Tür": return ("ProductType", "Exact", 100);
+            case "Ebeveyn": return ("ParentExternalId", "Exact", 95);
+            case "Yayımlanmış": return ("PublishStatus", "Likely", 75);
+            case "Harici URL": return ("ExternalUrl", "Exact", 90);
+            case "Düğme metni": return ("ExternalButtonText", "Exact", 90);
+        }
+        if (h.StartsWith("Öznitelik", StringComparison.OrdinalIgnoreCase) && h.Contains("değer"))
+            return ("Attribute", "Likely", 70);
+        // Geri kalanlar (Meta:* ve bilinmeyenler) → BELİRSİZ, kullanıcı onayı şart
+        return ("", "Uncertain", 30);
+    }
+
+    // ════════════════════════ AŞAMA 3 — KATEGORİ ════════════════════════
+    private string PrimaryCategoryPath(string categoriesCell)
+    {
+        if (string.IsNullOrWhiteSpace(categoriesCell)) return string.Empty;
+        // WooCommerce hücresi: "A, B, A > B > C, A > B"  → en uzun (en derin) yolu birincil al
+        var paths = categoriesCell.Split(',').Select(p => p.Trim()).Where(p => p.Length > 0);
+        return paths.OrderByDescending(p => p.Count(ch => ch == '>')).ThenByDescending(p => p.Length).FirstOrDefault() ?? string.Empty;
+    }
+
+    private void BuildCategoryMappings()
+    {
+        var counts = new Dictionary<string, int>();
+        foreach (var r in _csvRows)
+        {
+            var path = PrimaryCategoryPath(Col(r, "Kategoriler"));
+            if (string.IsNullOrEmpty(path)) continue;
+            counts[path] = counts.GetValueOrDefault(path) + 1;
+        }
+        _categoryMappings = counts.Select(kv => new ProductImportMappings
+        {
+            JobId = _currentJob.Id,
+            UserId = _currentJob.UserId,
+            StoreId = _currentJob.StoreId,
+            MappingType = "Category",
+            SourceKey = kv.Key,
+            SourceKeyHash = Hash(kv.Key),
+            SourceItemCount = kv.Value,
+            TargetType = "CategoryId",
+            ConfidenceLevel = "Unmapped",
+            SuggestionsJson = JsonSerializer.Serialize(SuggestCategories(kv.Key))
+        }).ToList();
+    }
+
+    // Akıllı öneri: yol son segmentini sistem kategori adlarıyla eşleştir
+    private List<SuggestionDto> SuggestCategories(string path)
+    {
+        var leaf = path.Split('>').Last().Trim().ToLowerInvariant();
+        return _systemCategories
+            .Select(c => new { c, score = Similarity(leaf, (c.Name ?? "").ToLowerInvariant()) })
+            .Where(x => x.score > 0).OrderByDescending(x => x.score).Take(3)
+            .Select(x => new SuggestionDto { Id = x.c.Id.ToString(), Name = x.c.Name ?? "" }).ToList();
+    }
+
+    private int Similarity(string a, string b)
+    {
+        if (a == b) return 100;
+        if (a.Contains(b) || b.Contains(a)) return 70;
+        var wa = a.Split(' '); var wb = b.Split(' ');
+        return wa.Intersect(wb).Count() * 25;
+    }
+
+    private void OnCategorySelected(ProductImportMappings c, ChangeEventArgs e)
+    {
+        c.TargetValue = e.Value?.ToString();
+        c.IsConfirmedByUser = !string.IsNullOrEmpty(c.TargetValue);
+        c.ConfidenceLevel = c.IsConfirmedByUser ? "Exact" : "Unmapped";
+        var sc = _systemCategories.FirstOrDefault(x => x.Id.ToString() == c.TargetValue);
+        c.TargetDisplayName = sc?.Name;
+    }
+
+    private void ApplySuggestion(ProductImportMappings c, SuggestionDto sug)
+    {
+        c.TargetValue = sug.Id; c.TargetDisplayName = sug.Name;
+        c.IsConfirmedByUser = true; c.ConfidenceLevel = "Likely";
+        StateHasChanged();
+    }
+
+    // ════════════════════════ AŞAMA 4 — MARKA ════════════════════════
+    private void BuildBrandMappings()
+    {
+        var counts = new Dictionary<string, int>();
+        foreach (var r in _csvRows)
+        {
+            var b = Col(r, "Markalar");
+            if (string.IsNullOrEmpty(b)) continue;
+            foreach (var single in b.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0))
+                counts[single] = counts.GetValueOrDefault(single) + 1;
+        }
+        _brandMappings = counts.Select(kv => new ProductImportMappings
+        {
+            JobId = _currentJob.Id,
+            UserId = _currentJob.UserId,
+            StoreId = _currentJob.StoreId,
+            MappingType = "Brand",
+            SourceKey = kv.Key,
+            SourceKeyHash = Hash(kv.Key),
+            SourceItemCount = kv.Value,
+            TargetType = "BrandId",
+            ConfidenceLevel = "Unmapped",
+            CreateIfMissing = true
+        }).ToList();
+    }
+
+    private void OnBrandSelected(ProductImportMappings b, ChangeEventArgs e)
+    {
+        b.TargetValue = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(b.TargetValue))
+        {
+            b.IsConfirmedByUser = true; b.ConfidenceLevel = "Exact"; b.CreateIfMissing = false;
+            b.TargetDisplayName = _systemBrands.FirstOrDefault(x => x.Id.ToString() == b.TargetValue)?.Name;
+        }
+    }
+
+    // ════════════════════════ SİSTEM REFERANSLARI ════════════════════════
+    private async Task LoadSystemReferences()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        _systemCategories = await db.CategoriesTr.AsNoTracking().OrderBy(c => c.DepartmentName).ThenBy(c => c.Name).ToListAsync(_cts.Token);
+        _systemBrands = await db.Brands.AsNoTracking()
+            .Where(b => (b.UserId == null || b.UserId == _currentJob.UserId) && (b.IsDeleted == null || b.IsDeleted.IsDeletedStatu != true))
+            .OrderBy(b => b.Name).ToListAsync(_cts.Token);
+    }
+
+    private async Task LoadWarehouses()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        _warehouses = await db.Warehouse.AsNoTracking()
+            .Where(w => w.StoreId == _currentJob.StoreId && (w.IsDeleted == null || w.IsDeleted.IsDeletedStatu != true))
+            .ToListAsync(_cts.Token);
+        if (_currentJob.DefaultWarehouseId == null)
+            _currentJob.DefaultWarehouseId = _warehouses.FirstOrDefault(w => w.IsDefault)?.Id ?? _warehouses.FirstOrDefault()?.Id;
+    }
+
+    // ════════════════════════ HAFIZA: önceki eşleşmeleri uygula ════════════════════════
+    private async Task ApplyRememberedMappings(string type, List<ProductImportMappings> working)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var remembered = await db.ProductImportMappings.AsNoTracking()
+                .Where(m => m.StoreId == _currentJob.StoreId && m.MappingType == type
+                            && m.IsConfirmedByUser && (m.IsDeleted == null || m.IsDeleted.IsDeletedStatu != true))
+                .ToListAsync(_cts.Token);
+            var byHash = remembered.GroupBy(m => m.SourceKeyHash).ToDictionary(g => g.Key!, g => g.First());
+            foreach (var w in working)
+            {
+                if (w.SourceKeyHash != null && byHash.TryGetValue(w.SourceKeyHash, out var prev))
+                {
+                    w.TargetValue = prev.TargetValue;
+                    w.TargetDisplayName = prev.TargetDisplayName;
+                    w.IsConfirmedByUser = true;
+                    w.ConfidenceLevel = "Exact"; // hafızadan geldi → tekrar sorma
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "ApplyRememberedMappings", exception: ex.Message, stackTrace: ex.StackTrace);
+        }
+    }
+
+    // ════════════════════════ KALICILIK (job + mappings) ════════════════════════
+    private async Task PersistJobAndMappings()
+    {
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            _currentJob.FieldMappingJson = JsonSerializer.Serialize(
+                _fieldMappings.Where(m => !string.IsNullOrEmpty(m.TargetValue))
+                    .ToDictionary(m => m.SourceKey!, m => m.TargetValue!));
+            _currentJob.AnalysisReportJson = JsonSerializer.Serialize(_analysisReport);
+            _currentJob.TotalCount = _csvRows.Count;
+            _currentJob.Status = "Ready";
+            _currentJob.UpdatedAt = DateTime.UtcNow;
+
+            var exists = await db.ProductImportJobs.AnyAsync(j => j.Id == _currentJob.Id, _cts.Token);
+            if (exists) db.ProductImportJobs.Update(_currentJob);
+            else db.ProductImportJobs.Add(_currentJob);
+
+            // Tekrar kaydedilebilirlik: bu job'a ait eski Category/Brand eşleşmelerini temizle,
+            // böylece job yeniden açılıp kaydedildiğinde çift kayıt birikmez (yeni seçimler geçerli olur).
+            var oldMaps = await db.ProductImportMappings
+                .Where(m => m.JobId == _currentJob.Id && (m.MappingType == "Category" || m.MappingType == "Brand"))
+                .ToListAsync(_cts.Token);
+            if (oldMaps.Any()) db.ProductImportMappings.RemoveRange(oldMaps);
+
+            // Eşleşmeleri (Category + Brand) hafızaya yaz — sonraki aktarımlarda yeniden kullanılır
+            var allMaps = _categoryMappings.Concat(_brandMappings)
+                .Where(m => m.IsConfirmedByUser && !string.IsNullOrEmpty(m.TargetValue));
+            foreach (var m in allMaps)
+            {
+                m.UpdatedAt = DateTime.UtcNow;
+                db.ProductImportMappings.Add(new ProductImportMappings
+                {
+                    JobId = _currentJob.Id,
+                    UserId = _currentJob.UserId,
+                    StoreId = _currentJob.StoreId,
+                    MappingType = m.MappingType,
+                    SourceKey = m.SourceKey,
+                    SourceKeyHash = m.SourceKeyHash,
+                    SourceParentKey = m.SourceParentKey,
+                    SourceItemCount = m.SourceItemCount,
+                    TargetType = m.TargetType,
+                    TargetValue = m.TargetValue,
+                    TargetDisplayName = m.TargetDisplayName,
+                    ConfidenceLevel = m.ConfidenceLevel,
+                    ConfidenceScore = m.ConfidenceScore,
+                    IsConfirmedByUser = true,
+                    CreateIfMissing = m.CreateIfMissing,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            await db.SaveChangesAsync(_cts.Token);
+            await StateHub.NotifyDataChanged("ProductImportJobs");
+        }
+        finally { _writeLock.Release(); }
+    }
+
+    // ════════════════════════ SATIR HAZIRLAMA (idempotent) ════════════════════════
+    private async Task PrepareRows()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        var already = await db.ProductImportRows.AnyAsync(r => r.JobId == _currentJob.Id, _cts.Token);
+        if (already) return; // zaten hazırlanmış → tekrar oluşturma (idempotent)
+
+        var rows = new List<ProductImportRows>();
+        for (int i = 0; i < _csvRows.Count; i++)
+        {
+            var r = _csvRows[i];
+            var raw = new Dictionary<string, string>();
+            for (int c = 0; c < _csvHeaders.Count && c < r.Length; c++) raw[_csvHeaders[c]] = r[c];
+
+            rows.Add(new ProductImportRows
+            {
+                JobId = _currentJob.Id,
+                UserId = _currentJob.UserId,
+                StoreId = _currentJob.StoreId,
+                SourceRowIndex = i,
+                SourceExternalId = Col(r, "Kimlik"),
+                SourceSku = Col(r, "Stok kodu (SKU)"),
+                ParentExternalId = Col(r, "Ebeveyn"),
+                SourceProductType = string.IsNullOrEmpty(Col(r, "Tür")) ? "simple" : Col(r, "Tür"),
+                RowStatus = "Pending",
+                RawRowJson = JsonSerializer.Serialize(raw),
+                CreatedAt = DateTime.UtcNow
+            });
+
+            if (rows.Count >= 1000) { await db.ProductImportRows.AddRangeAsync(rows, _cts.Token); await db.SaveChangesAsync(_cts.Token); rows.Clear(); }
+        }
+        if (rows.Any()) { await db.ProductImportRows.AddRangeAsync(rows, _cts.Token); await db.SaveChangesAsync(_cts.Token); }
+    }
+
+    // ════════════════════════ ÇALIŞTIRMA MOTORU ════════════════════════
+    private async Task RunImport()
+    {
+        if (_isProcessing) return;
+        _pauseRequested = false; _cancelRequested = false;
+
+        // Çalışma anı sözlüklerini RAM'e al (kategori/marka hızlı arama)
+        await BuildRuntimeLookups();
+
+        _currentJob.Status = "Running";
+        _currentJob.StartedAt ??= DateTime.UtcNow;
+        await UpdateJobStatus("Running");
+
+        try
+        {
+            while (!_cancelRequested && !_pauseRequested)
+            {
+                var processed = await ProcessNextBatch();
+                await RefreshErrorRows();
+                StateHasChanged();
+                if (processed == 0) { await UpdateJobStatus("Completed", DateTime.UtcNow); break; }
+                await Task.Yield(); // circuit'in nefes alması için
+            }
+
+            if (_cancelRequested) await UpdateJobStatus("Cancelled", DateTime.UtcNow);
+            else if (_pauseRequested) await UpdateJobStatus("Paused");
+        }
+        catch (Exception ex)
+        {
+            _currentJob.LastErrorMessage = ex.Message;
+            await UpdateJobStatus("Failed", DateTime.UtcNow);
+            await Logger.TakeIt(use?.Id, PAGE, "RunImport", exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "İçe aktarım durdu: " + ex.Message, null);
+        }
+        finally { StateHasChanged(); }
+    }
+
+    private void PauseImport() => _pauseRequested = true;
+
+    private async Task CancelImport()
+    {
+        _cancelRequested = true;
+        if (_currentJob.Status != "Running") await UpdateJobStatus("Cancelled", DateTime.UtcNow);
+    }
+
+    private async Task RetryFailed()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        var failed = await db.ProductImportRows.Where(r => r.JobId == _currentJob.Id && r.RowStatus == "Failed").ToListAsync(_cts.Token);
+        foreach (var f in failed) { f.RowStatus = "Pending"; f.ErrorCode = null; f.ErrorMessage = null; }
+        await db.SaveChangesAsync(_cts.Token);
+        _currentJob.FailedCount = 0;
+        await UpdateJobStatus("Ready");
+        await RunImport();
+    }
+
+    // Tek batch işle → işlenen satır sayısını döndür (0 = bitti)
+    private async Task<int> ProcessNextBatch()
+    {
+        List<ProductImportRows> batch;
+        await using (var db = await DbFactory.CreateDbContextAsync(_cts.Token))
+        {
+            batch = await db.ProductImportRows
+                .Where(r => r.JobId == _currentJob.Id && r.RowStatus == "Pending")
+                .OrderBy(r => r.SourceRowIndex)
+                .Take(Math.Max(50, _currentJob.BatchSize))
+                .ToListAsync(_cts.Token);
+        }
+        if (!batch.Any()) return 0;
+
+        foreach (var row in batch)
+        {
+            if (_cancelRequested || _pauseRequested) break;
+            await ProcessRow(row);                          // kendi transaction'ı içinde
+            _currentJob.LastProcessedRowIndex = row.SourceRowIndex;
+        }
+
+        await PersistCountersFromDb();                       // sayaçları DB gerçeğinden tazele
+        return batch.Count;
+    }
+
+    // ── TEK SATIR → ÜRÜN (transaction + rollback) ──
+    private async Task ProcessRow(ProductImportRows row)
+    {
+        // EnableRetryOnFailure açık olduğunda (SqlServerRetryingExecutionStrategy) manuel
+        // transaction DOĞRUDAN açılamaz; execution strategy üzerinden çalıştırılmalıdır.
+        // Aksi halde "does not support user-initiated transactions" hatası alınır.
+        try
+        {
+            await using var stratDb = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var strategy = stratDb.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                // Her deneme TAZE context ile başlar → retry'de değişiklik takibi temiz kalır.
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                await using var tx = await db.Database.BeginTransactionAsync(_cts.Token);
+                // 1) IDEMPOTENCY — bu Kimlik bu mağazada zaten aktarıldı mı?
+                if (!string.IsNullOrEmpty(row.SourceExternalId))
+                {
+                    bool dup = await db.ProductImportRows.AnyAsync(r =>
+                        r.StoreId == _currentJob.StoreId && r.SourceExternalId == row.SourceExternalId
+                        && r.RowStatus == "Imported" && r.Id != row.Id, _cts.Token);
+                    if (dup) { await MarkRow(db, row, "Duplicate", null, null); await tx.CommitAsync(_cts.Token); return; }
+                }
+
+                var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(row.RawRowJson ?? "{}") ?? new();
+                string G(string h) => raw.TryGetValue(h, out var v) ? (v ?? "").Trim() : "";
+
+                var type = (row.SourceProductType ?? "simple").ToLowerInvariant();
+
+                // Varyasyon → üst ürünü bul
+                Guid parentProductId = Guid.Empty;
+                if (type == "variation")
+                {
+                    var parentRow = await db.ProductImportRows.FirstOrDefaultAsync(r =>
+                        r.JobId == _currentJob.Id && r.SourceExternalId == row.ParentExternalId
+                        && r.CreatedProductId != null, _cts.Token);
+                    if (parentRow?.CreatedProductId == null)
+                    {
+                        await MarkRow(db, row, "Failed", "OrphanVariation", "Üst ürün henüz oluşturulmadı.");
+                        await tx.CommitAsync(_cts.Token); return;
+                    }
+                    parentProductId = parentRow.CreatedProductId.Value;
+                }
+
+                // 2) ÜRÜN (variation değilse yeni ürün oluştur)
+                Guid productId = parentProductId;
+                if (type != "variation")
+                {
+                    var product = new data._Product.Products
+                    {
+                        UserId = _currentJob.UserId,
+                        StoreId = _currentJob.StoreId,
+                        ProductType = type == "variable" ? "Variant" : (type == "external" ? "External" : "Simple"),
+                        Name = G("İsim"),
+                        ShortDescription = G("Kısa açıklama"),
+                        FullDescription = G("Açıklama"),
+                        Tags = G("Etiketler"),
+                        ExternalUrl = G("Harici URL"),
+                        ExternalButtonText = G("Düğme metni"),
+                        PublishStatus = G("Yayımlanmış") == "1" ? "Published" : "Draft",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    product.BrandId = ResolveBrand(G("Markalar"));
+                    db.Products.Add(product);
+                    productId = product.Id;
+
+                    // Kategoriler
+                    AddCategories(db, productId, G("Kategoriler"));
+                    // SEO
+                    AddSeo(db, productId, product.Name);
+                }
+
+                // 3) VARYANT (basit/varyasyon → fiyat & stok her zaman varyant üzerinden)
+                var variant = new data._Product.ProductVariants
+                {
+                    ProductId = productId,
+                    Sku = string.IsNullOrEmpty(G("Stok kodu (SKU)")) ? null : G("Stok kodu (SKU)"),
+                    Gtin = G("GTIN, UPC, EAN veya ISBN"),
+                    IsDefault = type != "variation",
+                    IsActive = true,
+                    WeightKg = ParseDec(G("Ağırlık (kg)")),
+                    LengthCm = ParseDec(G("Uzunluk (cm)")),
+                    WidthCm = ParseDec(G("Genişlik (cm)")),
+                    HeightCm = ParseDec(G("Yükseklik (cm)")),
+                    CreatedAt = DateTime.UtcNow
+                };
+                db.ProductVariants.Add(variant);
+
+                // 4) FİYAT (append-only, EffectiveTo=null = güncel)
+                var price = ParseDec(G("Normal fiyat"));
+                if (price.HasValue)
+                {
+                    db.ProductPrices.Add(new data._Product.ProductPrices
+                    {
+                        ProductId = productId,
+                        VariantId = variant.Id,
+                        Currency = _currentJob.DefaultCurrency,
+                        Price = price.Value,
+                        DiscountedPrice = ParseDec(G("İndirimli satış fiyatı")),
+                        EffectiveFrom = DateTime.UtcNow,
+                        CreatedByUserId = _currentJob.UserId,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+
+                // 5) STOK
+                if (_currentJob.DefaultWarehouseId.HasValue)
+                {
+                    int.TryParse(G("Stok"), out int qty);
+                    db.ProductStocks.Add(new data._Product.ProductStocks
+                    {
+                        ProductId = productId,
+                        VariantId = variant.Id,
+                        WarehouseId = _currentJob.DefaultWarehouseId.Value,
+                        Quantity = qty,
+                        TrackStock = true,
+                        StockStatus = MapStockStatus(G("Stokta?"), G("Ön Siparişe İzin Ver?")),
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                }
+
+                await db.SaveChangesAsync(_cts.Token);
+
+                // 6) GÖRSELLER (URL → Media.cs AVIF hattı → CoverMediaId + ItemGallery)
+                if (type != "variation")
+                    await ImportImages(db, productId, G("Görseller"), row);
+
+                await db.SaveChangesAsync(_cts.Token);
+                await MarkRow(db, row, "Imported", null, null, productId, variant.Id);
+                await tx.CommitAsync(_cts.Token);
+            }); // strategy.ExecuteAsync sonu
+        }
+        catch (Exception ex)
+        {
+            // Transaction commit edilmedi → dispose'da otomatik geri alındı. Hatayı satıra işle.
+            await using var edb = await DbFactory.CreateDbContextAsync(_cts.Token);
+            await MarkRow(edb, row, "Failed", "Unknown", ex.Message);
+            await Logger.TakeIt(use?.Id, PAGE, $"ProcessRow#{row.SourceRowIndex}", exception: ex.Message, stackTrace: ex.StackTrace);
+        }
+    }
+
+    // ── Görsel migrasyonu: mevcut Media.cs kullanılır, yeni sistem yok ──
+    private async Task ImportImages(_ApplicationConnectionDb db, Guid productId, string imagesCell, ProductImportRows row)
+    {
+        if (string.IsNullOrWhiteSpace(imagesCell)) return;
+        var urls = imagesCell.Split(',').Select(u => u.Trim()).Where(u => u.StartsWith("http")).ToList();
+        if (!urls.Any()) return;
+
+        var http = HttpFactory.CreateClient();
+        http.Timeout = TimeSpan.FromSeconds(30);
+        var warnings = new List<string>();
+        bool firstSet = false;
+
+        foreach (var url in urls)
+        {
+            // Bilinen placeholder'ları atla
+            if (url.IndexOf("ResimYok", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                url.IndexOf("NoImage", StringComparison.OrdinalIgnoreCase) >= 0)
+            { warnings.Add($"Placeholder atlandı: {url}"); continue; }
+
+            try
+            {
+                var bytes = await http.GetByteArrayAsync(url, _cts.Token);
+                var fileName = Path.GetFileName(new Uri(url).LocalPath);
+                if (string.IsNullOrEmpty(fileName)) fileName = $"img_{Guid.NewGuid():N}.jpg";
+
+                // Framework'ün kendi FormFile'ı; özel IFormFile sınıfına gerek yok.
+                // ASP.NET bağımlılığı tamamen web katmanında kalır, data projesi temiz POCO olur.
+                using var ms = new MemoryStream(bytes);
+                var form = new FormFile(ms, 0, bytes.Length, "file", fileName)
+                {
+                    Headers = new HeaderDictionary(),
+                    ContentType = GuessContentType(fileName)
+                };
+
+                // Mevcut AVIF dönüştürme + oranlama + Media kaydı (Media.cs)
+                var (storedName, _) = await MediaProcessor.ConvertToAvifWithLogAsync(form, UserEmail(), _currentJob.UserId);
+                if (string.IsNullOrEmpty(storedName)) { warnings.Add($"İşlenemedi: {url}"); continue; }
+
+                var media = await db.Media.AsNoTracking()
+                    .Where(m => m.FileStoredName == storedName)
+                    .OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(_cts.Token);
+                if (media == null) { warnings.Add($"Media kaydı bulunamadı: {url}"); continue; }
+
+                if (!firstSet)
+                {
+                    var prod = await db.Products.FirstOrDefaultAsync(p => p.Id == productId, _cts.Token);
+                    if (prod != null) { prod.CoverMediaId = media.Id; firstSet = true; }
+                }
+                db.ItemGallery.Add(new ItemGallery
+                {
+                    UserId = _currentJob.UserId,
+                    ItemId = productId,
+                    ItemType = "ProductGallery",
+                    MediaId = media.Id,
+                    ItemAddDate = DateTime.UtcNow,
+                    IsDelete = false
+                });
+            }
+            catch (Exception ex) { warnings.Add($"Görsel hatası ({url}): {ex.Message}"); }
+        }
+        if (warnings.Any()) row.WarningsJson = JsonSerializer.Serialize(warnings);
+    }
+
+    // ════════════════════════ ÇALIŞMA ANI YARDIMCILARI ════════════════════════
+    private async Task BuildRuntimeLookups()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        var cats = await db.ProductImportMappings.AsNoTracking()
+            .Where(m => m.JobId == _currentJob.Id && m.MappingType == "Category" && m.IsConfirmedByUser).ToListAsync(_cts.Token);
+        _categoryLookup = cats.Where(c => int.TryParse(c.TargetValue, out _))
+            .ToDictionary(c => c.SourceKeyHash!, c => int.Parse(c.TargetValue!));
+
+        _brandLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var brs = await db.ProductImportMappings.AsNoTracking()
+            .Where(m => m.JobId == _currentJob.Id && m.MappingType == "Brand").ToListAsync(_cts.Token);
+        foreach (var b in brs)
+            if (Guid.TryParse(b.TargetValue, out var gid)) _brandLookup[b.SourceKey!] = gid;
+    }
+
+    private void AddCategories(_ApplicationConnectionDb db, Guid productId, string categoriesCell)
+    {
+        var path = PrimaryCategoryPath(categoriesCell);
+        int? catId = null;
+        if (!string.IsNullOrEmpty(path) && _categoryLookup.TryGetValue(Hash(path), out var cid)) catId = cid;
+        catId ??= _currentJob.DefaultCategoryId;
+        if (catId.HasValue)
+            db.ProductCategories.Add(new data._Product.ProductCategories
+            { ProductId = productId, CategoryId = catId.Value, IsPrimary = true, CreatedAt = DateTime.UtcNow });
+    }
+
+    private void AddSeo(_ApplicationConnectionDb db, Guid productId, string? name)
+    {
+        db.ProductSeo.Add(new data._Product.ProductSeo
+        {
+            ProductId = productId,
+            Slug = Slugify(name),
+            SeoTitle = name,
+            LanguageCode = "tr",
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+
+    private Guid? ResolveBrand(string brandCell)
+    {
+        if (string.IsNullOrWhiteSpace(brandCell)) return null;
+        var first = brandCell.Split(',').First().Trim();
+        return _brandLookup.TryGetValue(first, out var gid) ? gid : (Guid?)null;
+    }
+
+    private string MapStockStatus(string stokta, string backorder)
+    {
+        if (backorder == "1") return "Backorder";
+        return stokta == "1" ? "InStock" : "OutOfStock";
+    }
+
+    // ── Satır işaretle + job sayaçları (DB gerçeği) ──
+    private async Task MarkRow(_ApplicationConnectionDb db, ProductImportRows row, string status,
+        string? errorCode, string? errorMsg, Guid? productId = null, Guid? variantId = null)
+    {
+        var tracked = await db.ProductImportRows.FirstOrDefaultAsync(r => r.Id == row.Id, _cts.Token);
+        if (tracked == null) return;
+        tracked.RowStatus = status; tracked.ErrorCode = errorCode; tracked.ErrorMessage = errorMsg;
+        tracked.CreatedProductId = productId; tracked.CreatedVariantId = variantId;
+        tracked.WarningsJson = row.WarningsJson; tracked.ProcessedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(_cts.Token);
+        row.RowStatus = status;
+    }
+
+    private async Task PersistCountersFromDb()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        var stats = await db.ProductImportRows.Where(r => r.JobId == _currentJob.Id)
+            .GroupBy(r => r.RowStatus).Select(g => new { g.Key, C = g.Count() }).ToListAsync(_cts.Token);
+
+        _currentJob.ImportedCount = stats.FirstOrDefault(s => s.Key == "Imported")?.C ?? 0;
+        _currentJob.FailedCount = stats.FirstOrDefault(s => s.Key == "Failed")?.C ?? 0;
+        _currentJob.SkippedCount = (stats.FirstOrDefault(s => s.Key == "Skipped")?.C ?? 0)
+                                 + (stats.FirstOrDefault(s => s.Key == "Duplicate")?.C ?? 0);
+        var done = _currentJob.ImportedCount + _currentJob.FailedCount;
+        _currentJob.SuccessRate = done > 0 ? Math.Round((decimal)_currentJob.ImportedCount / done * 100m, 1) : 0m;
+
+        var job = await db.ProductImportJobs.FirstOrDefaultAsync(j => j.Id == _currentJob.Id, _cts.Token);
+        if (job != null)
+        {
+            job.ImportedCount = _currentJob.ImportedCount; job.FailedCount = _currentJob.FailedCount;
+            job.SkippedCount = _currentJob.SkippedCount; job.SuccessRate = _currentJob.SuccessRate;
+            job.LastProcessedRowIndex = _currentJob.LastProcessedRowIndex; job.LastRunAt = DateTime.UtcNow;
+            job.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(_cts.Token);
+        }
+    }
+
+    private async Task UpdateJobStatus(string status, DateTime? completedAt = null)
+    {
+        _currentJob.Status = status;
+        if (completedAt.HasValue) _currentJob.CompletedAt = completedAt;
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        var job = await db.ProductImportJobs.FirstOrDefaultAsync(j => j.Id == _currentJob.Id, _cts.Token);
+        if (job != null)
+        {
+            job.Status = status; job.CompletedAt = _currentJob.CompletedAt;
+            job.LastErrorMessage = _currentJob.LastErrorMessage; job.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(_cts.Token);
+        }
+        await StateHub.NotifyDataChanged("ProductImportJobs");
+    }
+
+    private async Task RefreshErrorRows()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        _errorRows = await db.ProductImportRows.AsNoTracking()
+            .Where(r => r.JobId == _currentJob.Id && r.RowStatus == "Failed")
+            .OrderBy(r => r.SourceRowIndex).Take(200).ToListAsync(_cts.Token);
+    }
+
+    private async Task DeleteJob(ProductImportJobs job)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        var j = await db.ProductImportJobs.FirstOrDefaultAsync(x => x.Id == job.Id, _cts.Token);
+        if (j != null) { j.IsDeleted = new() { IsDeletedStatu = true, DeletedAtDate = DateTime.UtcNow }; await db.SaveChangesAsync(_cts.Token); }
+        await StateHub.NotifyDataChanged("ProductImportJobs");
+        await LoadDashboard();
+    }
+
+    private async Task LoadJobIntoMemory(Guid jobId)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        _currentJob = await db.ProductImportJobs.FirstOrDefaultAsync(j => j.Id == jobId, _cts.Token) ?? new();
+        _sourceCsvMedia = await db.Media.AsNoTracking().FirstOrDefaultAsync(m => m.Id == _currentJob.SourceMediaId, _cts.Token);
+        await LoadSystemReferences();
+        await LoadWarehouses();
+        await RefreshErrorRows();
+        // CSV'yi tekrar yükle (kaldığı yerden devam için bellek tazelemesi)
+        if (_sourceCsvMedia != null) { try { await LoadCsvFromMedia(); } catch { } }
+    }
+
+    // ════════════════════════ KÜÇÜK YARDIMCILAR ════════════════════════
+    private decimal? ParseDec(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return null;
+        s = s.Replace(".", "").Replace(',', '.'); // Türkçe ondalık: 1.088,1 → 1088.1
+        return decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : (decimal?)null;
+    }
+
+    private string Slugify(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return Guid.NewGuid().ToString("N").Substring(0, 8);
+        var map = new Dictionary<char, char> { { 'ı', 'i' }, { 'ğ', 'g' }, { 'ü', 'u' }, { 'ş', 's' }, { 'ö', 'o' }, { 'ç', 'c' }, { 'İ', 'i' } };
+        var sb = new StringBuilder();
+        foreach (var ch in s.ToLowerInvariant())
+        {
+            var c = map.TryGetValue(ch, out var m) ? m : ch;
+            if (char.IsLetterOrDigit(c)) sb.Append(c);
+            else if (char.IsWhiteSpace(c) || c == '-') sb.Append('-');
+        }
+        var slug = sb.ToString().Trim('-');
+        while (slug.Contains("--")) slug = slug.Replace("--", "-");
+        return string.IsNullOrEmpty(slug) ? Guid.NewGuid().ToString("N").Substring(0, 8) : slug + "-" + Guid.NewGuid().ToString("N").Substring(0, 4);
+    }
+
+    private string Hash(string input)
+    {
+        var norm = (input ?? "").Trim().ToLowerInvariant();
+        using var sha = SHA256.Create();
+        return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(norm))).Substring(0, 32);
+    }
+
+    private string GuessContentType(string fileName)
+    {
+        var ext = Path.GetExtension(fileName).ToLowerInvariant();
+        return ext switch { ".png" => "image/png", ".webp" => "image/webp", ".gif" => "image/gif", ".avif" => "image/avif", _ => "image/jpeg" };
+    }
+
+    private string UserEmail() => use?.ContactInformation?.Email ?? use?.Id.ToString() ?? "system";
+
+    private List<SuggestionDto> DeserializeSuggestions(string json)
+    {
+        try { return JsonSerializer.Deserialize<List<SuggestionDto>>(json) ?? new(); } catch { return new(); }
+    }
+
+    private int ProgressPercent(ProductImportJobs j)
+    {
+        if (j.TotalCount == 0) return 0;
+        var done = j.ImportedCount + j.FailedCount + j.SkippedCount;
+        return (int)Math.Round((double)done / j.TotalCount * 100);
+    }
+
+    // ── Durum rozetleri ──
+    private string StatusBadgeClass(string? s) => s switch
+    {
+        "Draft" => "bg-secondary",
+        "Ready" => "bg-info text-dark",
+        "Running" => "bg-primary",
+        "Paused" => "bg-warning text-dark",
+        "Completed" => "bg-success",
+        "Failed" => "bg-danger",
+        "Cancelled" => "bg-dark",
+        _ => "bg-secondary"
+    };
+    private string StatusIcon(string? s) => s switch
+    {
+        "Draft" => "fa-pencil",
+        "Ready" => "fa-check",
+        "Running" => "fa-spinner fa-spin",
+        "Paused" => "fa-pause",
+        "Completed" => "fa-check-circle",
+        "Failed" => "fa-times-circle",
+        "Cancelled" => "fa-ban",
+        _ => "fa-circle-o"
+    };
+    private string StatusText(string? s) => s switch
+    {
+        "Draft" => "Taslak",
+        "Ready" => "Hazır",
+        "Running" => "Çalışıyor",
+        "Paused" => "Duraklatıldı",
+        "Completed" => "Tamamlandı",
+        "Failed" => "Başarısız",
+        "Cancelled" => "İptal Edildi",
+        _ => s ?? ""
+    };
+    private string ConfidenceBadge(string? c) => c switch
+    {
+        "Exact" => "bg-success",
+        "Likely" => "bg-info text-dark",
+        "Uncertain" => "bg-danger",
+        _ => "bg-secondary"
+    };
+    private string ConfidenceText(string? c) => c switch
+    {
+        "Exact" => "Kesin",
+        "Likely" => "Olası",
+        "Uncertain" => "Belirsiz",
+        _ => "Eşlenmedi"
+    };
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://efavori.com/_files/main/logo/logo.png" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+        FileService.OnFileSelected -= HandleSingleFileSelected;
+        _cancelRequested = true;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    // ════════════════════════ DTO'lar ════════════════════════
+    public class AnalysisReport
+    {
+        public int ColumnCount { get; set; }
+        public int RowCount { get; set; }
+        public int MetaColumnCount { get; set; }
+        public int DistinctCategoryCount { get; set; }
+        public int DistinctBrandCount { get; set; }
+        public Dictionary<string, int> TypeCounts { get; set; } = new();
+    }
+
+    public class SuggestionDto
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+    }
+}

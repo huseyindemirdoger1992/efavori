@@ -54,7 +54,7 @@ try
 
 
     // Api Services
-    builder.Services.AddHttpClient<GeminiAiService>();
+    builder.Services.AddHttpClient<AIProductKnowledgeGenerator>();
     builder.Services.AddHostedService<AllBackgroundServices>();
 
     var app = builder.Build();

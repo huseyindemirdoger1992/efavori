@@ -50,6 +50,12 @@ public class Media(UserInfos userInfos)
             uniqueFileNameAvif = $"{timestamp}_{guidPart}_{cleanFileName}.avif";
             string uniqueFileNameOriginal = $"{timestamp}_{guidPart}_{cleanFileName}{originalExtension}";
 
+            // Küçültülmüş versiyonlar için isimlendirmeler
+            string fileNameAvif_1_2 = $"{timestamp}_{guidPart}_{cleanFileName}_1_2.avif";
+            string fileNameAvif_1_4 = $"{timestamp}_{guidPart}_{cleanFileName}_1_4.avif";
+            string fileNameAvif_1_8 = $"{timestamp}_{guidPart}_{cleanFileName}_1_8.avif";
+            string fileNameAvif_1_16 = $"{timestamp}_{guidPart}_{cleanFileName}_1_16.avif";
+
             string fullPathAvif = Path.Combine(avifFolder, uniqueFileNameAvif);
             string fullPathOriginal = Path.Combine(originalFolder, uniqueFileNameOriginal);
 
@@ -59,7 +65,7 @@ public class Media(UserInfos userInfos)
             var originalBytes = memoryStream.ToArray();
             await File.WriteAllBytesAsync(fullPathOriginal, originalBytes);
 
-            // 4. AVIF Dönüştürme
+            // 4. AVIF Dönüştürme ve Oranlama
             memoryStream.Position = 0;
             using var image = new MagickImage();
             await image.ReadAsync(memoryStream);
@@ -67,21 +73,61 @@ public class Media(UserInfos userInfos)
             image.Format = MagickFormat.Avif;
             image.Quality = 64;
             image.ColorSpace = ColorSpace.sRGB;
+
+            // Ana (Tam Boyut) AVIF Kaydı
             await image.WriteAsync(fullPathAvif);
+
+            // 1/2 Oranında Küçültme
+            using (var img_1_2 = image.Clone())
+            {
+                img_1_2.Resize(Math.Max(1, image.Width / 2), Math.Max(1, image.Height / 2));
+                await img_1_2.WriteAsync(Path.Combine(avifFolder, fileNameAvif_1_2));
+            }
+
+            // 1/4 Oranında Küçültme
+            using (var img_1_4 = image.Clone())
+            {
+                img_1_4.Resize(Math.Max(1, image.Width / 4), Math.Max(1, image.Height / 4));
+                await img_1_4.WriteAsync(Path.Combine(avifFolder, fileNameAvif_1_4));
+            }
+
+            // 1/8 Oranında Küçültme
+            using (var img_1_8 = image.Clone())
+            {
+                img_1_8.Resize(Math.Max(1, image.Width / 8), Math.Max(1, image.Height / 8));
+                await img_1_8.WriteAsync(Path.Combine(avifFolder, fileNameAvif_1_8));
+            }
+
+            // 1/16 Oranında Küçültme
+            using (var img_1_16 = image.Clone())
+            {
+                img_1_16.Resize(Math.Max(1, image.Width / 16), Math.Max(1, image.Height / 16));
+                await img_1_16.WriteAsync(Path.Combine(avifFolder, fileNameAvif_1_16));
+            }
 
             // 5. Media Tablosuna Kayıt (Veritabanı İşlemi)
             using var db = new _ApplicationConnectionDb();
 
-            // AVIF Dosyası İçin Kayıt
             var fileInfoAvif = new FileInfo(fullPathAvif);
+            string urlBasePath = $"/{relativeBasePath.Replace("\\", "/")}/avif/";
+
             var mediaEntry = new Data.Media
             {
                 Id = Guid.NewGuid(),
                 UserId = targetUserId,
-                FileName = file.FileName, // Orijinal adı saklıyoruz
+                FileName = file.FileName,
                 FileStoredName = uniqueFileNameAvif,
-                FileUrl = $"/{relativeBasePath.Replace("\\", "/")}/avif/{uniqueFileNameAvif}",
-                FilePhysicalPathRoad = "https://efavori.com" + $"/{relativeBasePath.Replace("\\", "/")}/avif/{uniqueFileNameAvif}",
+
+                // Ana Dosya Yolları
+                FileUrl = $"{urlBasePath}{uniqueFileNameAvif}",
+
+                // Oranlı Dosya Yolları
+                FileUrl_Ratio_1_2 = $"{urlBasePath}{fileNameAvif_1_2}",
+                FileUrl_Ratio_1_4 = $"{urlBasePath}{fileNameAvif_1_4}",
+                FileUrl_Ratio_1_8 = $"{urlBasePath}{fileNameAvif_1_8}",
+                FileUrl_Ratio_1_16 = $"{urlBasePath}{fileNameAvif_1_16}",
+
+                FilePhysicalPathRoad = "https://efavori.com" + $"{urlBasePath}{uniqueFileNameAvif}",
                 OrjFileUrl = $"/{relativeBasePath.Replace("\\", "/")}/original/{uniqueFileNameOriginal}",
                 OrjFilePhysicalPathRoad = "https://efavori.com" + $"/{relativeBasePath.Replace("\\", "/")}/original/{uniqueFileNameOriginal}",
                 FileExtensionType = ".avif",

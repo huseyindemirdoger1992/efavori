@@ -18,7 +18,20 @@ namespace Data
 
         public string? FileStoredName { get; set; }
 
+        // Dosyanın boyutu düşürülmemiş halidir.
         public string? FileUrl { get; set; }
+
+        // 1/2 oranında küçültülmüş 
+        public string? FileUrl_Ratio_1_2 { get; set; }
+
+        // 1/4 oranında küçültülmüş 
+        public string? FileUrl_Ratio_1_4 { get; set; }
+
+        // 1/8 oranında küçültülmüş 
+        public string? FileUrl_Ratio_1_8 { get; set; }
+
+        // 1/16 oranında küçültülmüş 
+        public string? FileUrl_Ratio_1_16 { get; set; }
 
         public string? FilePhysicalPathRoad { get; set; }
 

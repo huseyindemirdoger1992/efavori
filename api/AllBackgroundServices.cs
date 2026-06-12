@@ -4,38 +4,27 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Linq;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace api
 {
-    /// <summary>
-    /// Product tablosunda AiSeoKeywordsIsOk alanı true OLMAYAN ürünleri tarar ve
-    /// HER 1 DAKİKADA 1 ürün için Gemini AI üzerinden SEO anahtar kelimeleri üretir.
-    ///
-    /// Hız politikası:
-    /// - Tur başına EN FAZLA 1 API isteği (1 ürün) atılır.
-    /// - Her tur arasında sabit 1 dakika beklenir (ürün bulunsa da bulunmasa da).
-    /// - Sonuç: dakikada azami 1 istek => günde azami 1440 istek (1500 kotanın altında).
-    ///
-    /// Tasarım notları:
-    /// - Bu servis SINGLETON'dur (AddHostedService). Bu yüzden SCOPED/TRANSIENT servisler
-    ///   (GeminiAiService bir typed-HttpClient => transient) doğrudan enjekte edilmez;
-    ///   her döngüde IServiceScopeFactory ile scope açılıp oradan çözülür (captive dependency önlenir).
-    /// - IDbContextFactory zaten Singleton kaydı olduğundan doğrudan enjekte edilebilir.
-    /// - Production'da DbContext global olarak NoTracking çalıştığından, güncelleme yapılacak
-    ///   sorguda açıkça .AsTracking() kullanılır; aksi halde SaveChanges hiçbir şey kaydetmez.
-    /// </summary>
+    // API'den dönecek JSON verisini karşılamak için oluşturulan kayıt (record)
+    public record ExchangeRateApiResponse(string Base_code, Dictionary<string, decimal> Rates);
+
     public class AllBackgroundServices : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IDbContextFactory<_ApplicationConnectionDb> _dbFactory;
         private readonly ILogger<AllBackgroundServices> _logger;
 
-        // --- Ayarlanabilir sabitler ---
-        // Turlar arası sabit bekleme. Dakikada 1 ürün => 1 dakika.
-        private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
+        // HTTP istekleri için paylaşılan istemci
+        private static readonly HttpClient _httpClient = new HttpClient();
+
+        private static readonly TimeSpan Interval = TimeSpan.FromSeconds(10);
 
         public AllBackgroundServices(
             IServiceScopeFactory scopeFactory,
@@ -49,79 +38,58 @@ namespace api
 
         protected override async Task ExecuteAsync(CancellationToken durdurmaSinyali)
         {
-            _logger.LogInformation("AllBackgroundServices başlatıldı (dakikada 1 ürün).");
+            _logger.LogInformation("AllBackgroundServices başlatıldı (10 Saniyede Bir Kur Değeri Kaydediliyor).");
 
-            // PeriodicTimer ile sabit aralık: işin süresi ne olursa olsun her turun
-            // başlangıcı bir önceki turdan ~1 dakika sonra tetiklenir.
             using var timer = new PeriodicTimer(Interval);
 
-            // İlk tur da bir periyot beklenerek başlatılır
-            // (uygulama ve DB bağlantısı tam ayağa kalksın diye).
-            while (await WaitForNextTickAsync(timer, durdurmaSinyali))
-            {
-                try
-                {
-                    // await ProcessSingleProductAsync(durdurmaSinyali);
-                }
-                catch (OperationCanceledException) when (durdurmaSinyali.IsCancellationRequested)
-                {
-                    // Uygulama kapanıyor; sessizce çık
-                    break;
-                }
-                catch (Exception hata)
-                {
-                    // Turu etkileyen beklenmeyen hata: hem ILogger'a hem Logs tablosuna yaz
-                    _logger.LogError(hata, "SEO anahtar kelime üretim turunda beklenmeyen hata.");
-                    await SafeLogToDbAsync("ExecuteAsync", "SEO keyword generation tick", hata, durdurmaSinyali);
-                }
-            }
-
-            _logger.LogInformation("AllBackgroundServices durduruldu.");
-        }
-
-
-        /// <summary>
-        /// Logs tablosuna doğrudan hata kaydı yazar.
-        /// Arka plan servisinde HttpContext bulunmadığından (TakeLogs/UserInfos HttpContext'e bağımlı),
-        /// burada UserInfos'a uğramadan doğrudan DbContext üzerinden yazılır.
-        /// </summary>
-        private async Task SafeLogToDbAsync(string pageNameSpaceTitle, string action, Exception ex, CancellationToken token)
-        {
             try
             {
-                await using var db = await _dbFactory.CreateDbContextAsync(token);
-
-                db.Logs.Add(new Logs
+                // timer.WaitForNextTickAsync 10 saniyede bir true döner
+                while (await timer.WaitForNextTickAsync(durdurmaSinyali))
                 {
-                    UserId = null, // Sistem/arka plan işlemi: kullanıcı yok
-                    PageNameSpaceTitle = $"[BACKGROUND] {pageNameSpaceTitle}",
-                    Action = action,
-                    Exception = ex.Message,
-                    StackTrace = ex.StackTrace,
-                    Date = DateTime.UtcNow
-                });
-
-                await db.SaveChangesAsync(token);
-            }
-            catch
-            {
-                // Loglama da başarısız olursa servisi kilitleme: sessizce geç (Shut Up)
-            }
-        }
-
-        /// <summary>
-        /// PeriodicTimer.WaitForNextTickAsync'i iptal sinyalinde exception fırlatmadan sarmalar.
-        /// false dönerse: iptal istendi, döngüden çıkılmalı.
-        /// </summary>
-        private static async Task<bool> WaitForNextTickAsync(PeriodicTimer timer, CancellationToken token)
-        {
-            try
-            {
-                return await timer.WaitForNextTickAsync(token);
+                    await FetchAndSaveExchangeRatesAsync(durdurmaSinyali);
+                }
             }
             catch (OperationCanceledException)
             {
-                return false;
+                _logger.LogInformation("Arka plan görevi durdurma sinyali aldı.");
+            }
+
+            _logger.LogInformation("AllBackgroundServices Durduruldu.");
+        }
+
+        private async Task FetchAndSaveExchangeRatesAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                // Ücretsiz ve API Key gerektirmeyen açık bir endpoint (Temel para birimi: USD)
+                string apiUrl = "https://open.er-api.com/v6/latest/USD";
+
+                var response = await _httpClient.GetFromJsonAsync<ExchangeRateApiResponse>(apiUrl, cancellationToken);
+
+                if (response != null && response.Rates != null)
+                {
+                    using var context = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+                    var newRate = new MoneyExchangeRate
+                    {
+                        Dolar_Usd = response.Rates.GetValueOrDefault("USD", 1m),
+                        Euro_Eur = response.Rates.GetValueOrDefault("EUR", 0m),
+                        Manat_Azn = response.Rates.GetValueOrDefault("AZN", 0m),
+                        Lira_Tl = response.Rates.GetValueOrDefault("TRY", 0m),
+                        CreatedAt = DateTime.Now
+                    };
+
+                    context.Set<MoneyExchangeRate>().Add(newRate);
+                    await context.SaveChangesAsync(cancellationToken);
+
+                    _logger.LogInformation("Güncel kurlar veritabanına kaydedildi. USD: 1 | EUR: {Eur} | AZN: {Azn} | TRY: {Try}",
+                        newRate.Euro_Eur, newRate.Manat_Azn, newRate.Lira_Tl);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kur verileri çekilirken veya veritabanına kaydedilirken bir hata oluştu.");
             }
         }
     }

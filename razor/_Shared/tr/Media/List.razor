@@ -88,7 +88,7 @@
 
                                 @if (isImage)
                                 {
-                                    <img src="@media.FileUrl"
+                                    <img src="@media.FileUrl_Ratio_1_4"
                                          class="card-img-top lazy-load"
                                          style="height: 150px; object-fit: cover;"
                                          alt="@media.FileName"
@@ -229,7 +229,7 @@
                             @if (isImage)
                             {
                                 <center>
-                                    <img src="@selectedMedia.FileUrl" class="img-fluid rounded" alt="@selectedMedia.FileName" style="max-height:512px;" />
+                                    <img src="@selectedMedia.FileUrl_Ratio_1_4" class="img-fluid rounded" alt="@selectedMedia.FileName" style="max-height:512px;" />
                                 </center>
                             }
                             else

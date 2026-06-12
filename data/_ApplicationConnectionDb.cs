@@ -1,4 +1,5 @@
 ﻿using data._Product;
+using data._Product.BulkWordPressProductImport;
 using data._Shared;
 using Data;
 using Microsoft.EntityFrameworkCore;
@@ -89,6 +90,8 @@ namespace data
 
         // Products
 
+        public DbSet<MoneyExchangeRate> MoneyExchangeRate { get; set; } = default!;
+
         public DbSet<ProductVariantValues> ProductVariantValues { get; set; } = default!;
         public DbSet<ProductVariants> ProductVariants { get; set; } = default!;
         public DbSet<ProductStocks> ProductStocks { get; set; } = default!;
@@ -113,8 +116,16 @@ namespace data
         public DbSet<AttributeTemplates> AttributeTemplates { get; set; } = default!;
         public DbSet<AttributeTemplateItems> AttributeTemplateItems { get; set; } = default!;
         public DbSet<AttributeTemplateCategories> AttributeTemplateCategories { get; set; } = default!;
-
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
+
+        // Products BulkWordPressProductImport
+
+        public DbSet<ProductImportJobs> ProductImportJobs { get; set; } = default!;
+        public DbSet<ProductImportMappings> ProductImportMappings { get; set; } = default!;
+        public DbSet<ProductImportRows> ProductImportRows { get; set; } = default!;
+        // public DbSet<UrlImportFormFile> UrlImportFormFile { get; set; } = default!;
+
+
 
 
 

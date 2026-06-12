@@ -1,1 +1,460 @@
-﻿
+﻿@using data
+
+
+<!-- ============================================================
+     efavori · Ürün Ekle  ·  FINAL (7 adım)
+     Yalnızca body içeriği · Bootstrap 5.3 + Font Awesome 4.7.0
+     Custom CSS/JS yok · geçişler: pills · paneller/ağaç: collapse
+     Tüm data._Product yapıları arayüze eşlenmiştir (yorum etiketleri).
+     ============================================================ -->
+<div class="container-fluid bg-light p-3 p-lg-4">
+
+    <!-- ===================== ÜST BAŞLIK ===================== -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary fs-5 rounded-3 p-2"><i class="fa fa-shopping-bag"></i></span>
+            <div>
+                <h4 class="mb-0">Yeni Ürün Ekle</h4>
+                <small class="text-muted">Sol menüden adımlar arasında geçiş yapın · 7 adım</small>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#importPanel"><i class="fa fa-cloud-download me-1"></i>İçe Aktar</button>
+            <button type="button" class="btn btn-outline-primary btn-sm"><i class="fa fa-floppy-o me-1"></i>Taslak Kaydet</button>
+        </div>
+    </div>
+
+    <!-- ===================== İÇE AKTARIM PANELİ → ProductImportProfiles ===================== -->
+    <div class="collapse mb-4" id="importPanel">
+        <div class="card border-secondary">
+            <div class="card-header bg-light fw-semibold"><i class="fa fa-database text-secondary me-2"></i>Toplu İçe Aktarım Profili <small class="text-muted">(ProductImportProfiles)</small></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label">Profil Adı</label><input class="form-control" placeholder="Örn: Trendyol Aylık Aktarım"></div>
+                    <div class="col-md-4"><label class="form-label">Kaynak Tipi</label><select class="form-select"><option>CSV</option><option>XML</option><option>JSON</option><option>RestApi</option><option>SoapApi</option><option>Amazon</option><option>Alibaba</option><option>Ebay</option><option>MercadoLibre</option><option>Jd</option><option>Trendyol</option><option>Hepsiburada</option><option>N11</option><option>CicekSepeti</option><option>Etsy</option><option>Shopify</option><option>WooCommerce</option></select></div>
+                    <div class="col-md-2"><label class="form-label">Ayraç</label><input class="form-control" value=";"></div>
+                    <div class="col-md-2"><label class="form-label">Karakter Seti</label><input class="form-control" value="UTF-8"></div>
+                    <div class="col-md-6"><label class="form-label">Kaynak URL <small class="text-muted">(API/feed)</small></label><input type="url" class="form-control" placeholder="https://…"></div>
+                    <div class="col-md-3"><label class="form-label">Varsayılan Depo</label><select class="form-select"><option>Merkez Depo</option></select></div>
+                    <div class="col-md-3"><label class="form-label">Varsayılan Kategori</label><select class="form-select"><option>Genel</option></select></div>
+                    <div class="col-12"><label class="form-label">Alan Eşleme (FieldMappingJson)</label><textarea class="form-control" rows="2" placeholder='{"kaynak_kolon":"sistem_alani"}'></textarea></div>
+                    <div class="col-12 d-flex align-items-center justify-content-between">
+                        <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="impActive" checked><label class="form-check-label" for="impActive">Profil aktif</label></div>
+                        <div><span class="me-3 small text-muted"><i class="fa fa-clock-o me-1"></i>Son çalıştırma: —</span><button class="btn btn-primary btn-sm"><i class="fa fa-bolt me-1"></i>Dosya Seç &amp; İçe Aktar</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- ===================== SOL ADIM RAYI (7 pills) ===================== -->
+        <div class="col-lg-3">
+            <div class="nav flex-column nav-pills position-sticky top-0" role="tablist" aria-orientation="vertical">
+                <button class="nav-link active text-start d-flex align-items-center gap-2 mb-2 border" data-bs-toggle="pill" data-bs-target="#s1" type="button"><span class="badge rounded-pill bg-light text-dark">1</span><span><span class="d-block fw-semibold">Temel Bilgiler</span><small class="opacity-75">Tip, kategori, marka</small></span></button>
+                <button class="nav-link text-start d-flex align-items-center gap-2 mb-2 border" data-bs-toggle="pill" data-bs-target="#s2" type="button"><span class="badge rounded-pill bg-light text-dark">2</span><span><span class="d-block fw-semibold">Açıklama &amp; Özellikler</span><small class="opacity-75">İçerik, spesifikasyon</small></span></button>
+                <button class="nav-link text-start d-flex align-items-center gap-2 mb-2 border" data-bs-toggle="pill" data-bs-target="#s3" type="button"><span class="badge rounded-pill bg-light text-dark">3</span><span><span class="d-block fw-semibold">Varyasyonlar</span><small class="opacity-75">Renk, beden, SKU</small></span></button>
+                <button class="nav-link text-start d-flex align-items-center gap-2 mb-2 border" data-bs-toggle="pill" data-bs-target="#s4" type="button"><span class="badge rounded-pill bg-light text-dark">4</span><span><span class="d-block fw-semibold">Fiyatlandırma</span><small class="opacity-75">Çoklu para birimi</small></span></button>
+                <button class="nav-link text-start d-flex align-items-center gap-2 mb-2 border" data-bs-toggle="pill" data-bs-target="#s5" type="button"><span class="badge rounded-pill bg-light text-dark">5</span><span><span class="d-block fw-semibold">Stok &amp; Kargo</span><small class="opacity-75">Depo, desi</small></span></button>
+                <button class="nav-link text-start d-flex align-items-center gap-2 mb-2 border" data-bs-toggle="pill" data-bs-target="#s6" type="button"><span class="badge rounded-pill bg-light text-dark">6</span><span><span class="d-block fw-semibold">Medya</span><small class="opacity-75">Görsel, video, dosya</small></span></button>
+                <button class="nav-link text-start d-flex align-items-center gap-2 mb-2 border" data-bs-toggle="pill" data-bs-target="#s7" type="button"><span class="badge rounded-pill bg-light text-dark">7</span><span><span class="d-block fw-semibold">SEO &amp; Pazaryeri</span><small class="opacity-75">Önizleme, kanal, onay</small></span></button>
+            </div>
+        </div>
+
+        <!-- ===================== İÇERİK ===================== -->
+        <div class="col-lg-9">
+            <div class="tab-content">
+
+                <!-- ====================================================== ADIM 1: TEMEL & SINIFLANDIRMA -->
+                <!-- Products · ProductCategories+CategoriesTr · Brands · AttributeTemplates -->
+                <div class="tab-pane fade show active" id="s1" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-light py-3"><h6 class="mb-0"><i class="fa fa-info-circle text-primary me-2"></i>Temel Bilgiler &amp; Sınıflandırma</h6></div>
+                        <div class="card-body">
+
+                            <!-- Products.ProductType -->
+                            <label class="form-label text-uppercase fw-bold small text-muted">Ürün Tipi</label>
+                            <div class="row g-2 mb-4">
+                                <div class="col-6 col-md-2"><input type="radio" class="btn-check" name="ptype" id="ptSimple" checked><label class="btn btn-outline-primary w-100 py-2" for="ptSimple"><i class="fa fa-cube d-block mb-1"></i>Basit</label></div>
+                                <div class="col-6 col-md-2"><input type="radio" class="btn-check" name="ptype" id="ptVariant"><label class="btn btn-outline-primary w-100 py-2" for="ptVariant"><i class="fa fa-sliders d-block mb-1"></i>Varyantlı</label></div>
+                                <div class="col-6 col-md-2"><input type="radio" class="btn-check" name="ptype" id="ptDigital"><label class="btn btn-outline-primary w-100 py-2" for="ptDigital"><i class="fa fa-download d-block mb-1"></i>Dijital</label></div>
+                                <div class="col-6 col-md-2"><input type="radio" class="btn-check" name="ptype" id="ptService"><label class="btn btn-outline-primary w-100 py-2" for="ptService"><i class="fa fa-cog d-block mb-1"></i>Hizmet</label></div>
+                                <div class="col-6 col-md-2"><input type="radio" class="btn-check" name="ptype" id="ptBundle"><label class="btn btn-outline-primary w-100 py-2" for="ptBundle"><i class="fa fa-gift d-block mb-1"></i>Paket</label></div>
+                                <div class="col-6 col-md-2"><input type="radio" class="btn-check" name="ptype" id="ptExternal"><label class="btn btn-outline-primary w-100 py-2" for="ptExternal"><i class="fa fa-link d-block mb-1"></i>Harici</label></div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8"><label class="form-label fw-semibold">Ürün Adı <span class="text-danger">*</span></label><input type="text" class="form-control form-control-lg" placeholder="Örn: Samsung 55&quot; 4K OLED Smart TV"></div>
+                                <div class="col-md-4"><label class="form-label fw-semibold">Stok Kodu (SKU)</label><div class="input-group input-group-lg"><span class="input-group-text"><i class="fa fa-barcode"></i></span><input type="text" class="form-control" placeholder="SMS-OLED-55"></div></div>
+                                <div class="col-12"><div class="d-flex justify-content-between align-items-center"><label class="form-label fw-semibold mb-0">Kısa Açıklama</label><button class="btn btn-sm btn-outline-primary" type="button"><i class="fa fa-magic me-1"></i>AI Oluştur</button></div><textarea class="form-control mt-1" rows="2" placeholder="Ürünü tek-iki cümlede özetleyin."></textarea></div>
+                                <div class="col-12"><div class="d-flex justify-content-between align-items-center"><label class="form-label fw-semibold mb-0">Etiketler</label><button class="btn btn-sm btn-outline-primary" type="button"><i class="fa fa-magic me-1"></i>Etiket Öner</button></div><div class="input-group mt-1"><span class="input-group-text"><i class="fa fa-tags"></i></span><input type="text" class="form-control" placeholder="virgülle: televizyon, oled, 4k"></div></div>
+                            </div>
+
+                            <div class="row g-4">
+                                <!-- ProductCategories ← CategoriesTr (collapse ağaç, 3-5 derinlik) -->
+                                <div class="col-lg-6">
+                                    <div class="card border h-100">
+                                        <div class="card-header bg-light d-flex justify-content-between align-items-center"><span class="fw-semibold"><i class="fa fa-folder-open text-secondary me-2"></i>Kategori</span><span class="badge bg-light text-muted">3–5 derinlik</span></div>
+                                        <div class="card-body">
+                                            <div class="input-group mb-3"><span class="input-group-text"><i class="fa fa-search"></i></span><input type="text" class="form-control" placeholder="Kategori ara (oled, koltuk, elbise)"></div>
+                                            <ul class="list-unstyled mb-3">
+                                                <li>
+                                                    <a class="d-inline-flex align-items-center gap-1 text-decoration-none text-dark" data-bs-toggle="collapse" href="#c-ele"><i class="fa fa-caret-right"></i> <i class="fa fa-folder text-warning"></i> Elektronik</a>
+                                                    <div class="collapse show ms-3 border-start ps-2" id="c-ele">
+                                                        <a class="d-inline-flex align-items-center gap-1 text-decoration-none text-dark" data-bs-toggle="collapse" href="#c-tv"><i class="fa fa-caret-right"></i> <i class="fa fa-folder-o text-secondary"></i> TV, Ses &amp; Görüntü</a>
+                                                        <div class="collapse show ms-3 border-start ps-2" id="c-tv">
+                                                            <a class="d-inline-flex align-items-center gap-1 text-decoration-none text-dark" data-bs-toggle="collapse" href="#c-tel"><i class="fa fa-caret-right"></i> <i class="fa fa-folder-o text-secondary"></i> Televizyonlar</a>
+                                                            <div class="collapse show ms-3 border-start ps-2" id="c-tel">
+                                                                <a class="d-inline-flex align-items-center gap-1 text-decoration-none text-dark" data-bs-toggle="collapse" href="#c-oled"><i class="fa fa-caret-right"></i> <i class="fa fa-folder-o text-secondary"></i> OLED TV</a>
+                                                                <div class="collapse show ms-3 border-start ps-2" id="c-oled">
+                                                                    <div class="d-flex align-items-center"><span class="flex-grow-1"><i class="fa fa-tag text-muted me-1"></i>55&quot; OLED</span><button class="btn btn-sm btn-outline-primary py-0">Seç</button></div>
+                                                                    <div class="d-flex align-items-center mt-1"><span class="flex-grow-1"><i class="fa fa-tag text-muted me-1"></i>65&quot; OLED</span><button class="btn btn-sm btn-outline-primary py-0">Seç</button></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                                <li class="mt-1">
+                                                    <a class="d-inline-flex align-items-center gap-1 text-decoration-none text-dark" data-bs-toggle="collapse" href="#c-ev"><i class="fa fa-caret-right"></i> <i class="fa fa-folder text-warning"></i> Ev &amp; Yaşam</a>
+                                                    <div class="collapse ms-3 border-start ps-2" id="c-ev"><div class="d-flex align-items-center"><span class="flex-grow-1"><i class="fa fa-tag text-muted me-1"></i>Mobilya › Oturma › Koltuk › Köşe Koltuk</span><button class="btn btn-sm btn-outline-primary py-0">Seç</button></div></div>
+                                                </li>
+                                                <li class="mt-1">
+                                                    <a class="d-inline-flex align-items-center gap-1 text-decoration-none text-dark" data-bs-toggle="collapse" href="#c-mod"><i class="fa fa-caret-right"></i> <i class="fa fa-folder text-warning"></i> Moda</a>
+                                                    <div class="collapse ms-3 border-start ps-2" id="c-mod"><div class="d-flex align-items-center"><span class="flex-grow-1"><i class="fa fa-tag text-muted me-1"></i>Kadın › Giyim › Elbise › Günlük</span><button class="btn btn-sm btn-outline-primary py-0">Seç</button></div></div>
+                                                </li>
+                                            </ul>
+                                            <!-- ProductCategories.IsPrimary -->
+                                            <label class="form-label small text-muted">Seçili (yıldız = ana kategori)</label>
+                                            <div class="d-flex flex-column gap-2">
+                                                <div class="d-flex align-items-center gap-2 border rounded p-2"><i class="fa fa-star text-warning"></i><span class="small flex-grow-1">Elektronik › TV › Televizyonlar › OLED TV › 55&quot; OLED</span><i class="fa fa-times text-danger"></i></div>
+                                                <div class="d-flex align-items-center gap-2 border rounded p-2"><i class="fa fa-star-o text-muted"></i><span class="small flex-grow-1">Elektronik › TV › Televizyonlar › OLED TV</span><i class="fa fa-times text-danger"></i></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <!-- Brands (+ yeni marka tüm alanlar) -->
+                                    <div class="card border mb-3">
+                                        <div class="card-header bg-light fw-semibold d-flex justify-content-between align-items-center"><span><i class="fa fa-tag text-secondary me-2"></i>Marka</span><button class="btn btn-sm btn-outline-primary py-0" data-bs-toggle="collapse" data-bs-target="#newBrand"><i class="fa fa-plus me-1"></i>Yeni</button></div>
+                                        <div class="card-body">
+                                            <select class="form-select"><option selected>Marka seçin…</option><option>Samsung</option><option>LG</option><option>Sony</option></select>
+                                            <div class="collapse mt-3" id="newBrand">
+                                                <div class="row g-2">
+                                                    <div class="col-6"><label class="form-label small">Marka Adı</label><input class="form-control form-control-sm" placeholder="Samsung"></div>
+                                                    <div class="col-6"><label class="form-label small">Slug</label><input class="form-control form-control-sm" placeholder="samsung"></div>
+                                                    <div class="col-12"><label class="form-label small">Web Sitesi</label><input class="form-control form-control-sm" placeholder="https://…"></div>
+                                                    <div class="col-12"><label class="form-label small">Açıklama</label><input class="form-control form-control-sm" placeholder="Marka açıklaması"></div>
+                                                    <div class="col-12"><label class="form-label small">Logo</label><div class="border border-2 border-primary rounded bg-primary bg-opacity-10 text-primary text-center p-2 small"><i class="fa fa-cloud-upload me-1"></i>Logo Yükle (LogoMediaId)</div></div>
+                                                </div>
+                                                <small class="text-muted d-block mt-2"><i class="fa fa-info-circle me-1"></i>Satıcı markası admin onayından (IsApprovedByAdmin) sonra aktifleşir.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- AttributeTemplates (+ AttributeTemplateItems/Categories notu) -->
+                                    <div class="card border">
+                                        <div class="card-header bg-light fw-semibold"><i class="fa fa-clone text-secondary me-2"></i>Özellik Şablonu</div>
+                                        <div class="card-body">
+                                            <select class="form-select"><option selected>Televizyon (v3 · yayında)</option><option>Beyaz Eşya (v1)</option><option>Şablonsuz devam et</option></select>
+                                            <small class="text-muted d-block mt-2"><i class="fa fa-info-circle me-1"></i>Seçilen kategoriye göre önerilir; şablonun özellikleri (AttributeTemplateItems) 2. ve 3. adıma yüklenir. Sürüm ürüne sabitlenir.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Harici → Products.ExternalUrl / ExternalButtonText -->
+                            <div class="border rounded-3 p-3 mt-4">
+                                <div class="text-uppercase fw-bold small text-muted mb-3"><i class="fa fa-link me-1"></i>Harici Ürün Ayarları <span class="text-lowercase fw-normal">(yalnızca "Harici" tipinde)</span></div>
+                                <div class="row g-3"><div class="col-md-8"><label class="form-label">Harici Bağlantı</label><input type="url" class="form-control" placeholder="https://..."></div><div class="col-md-4"><label class="form-label">Buton Metni</label><input class="form-control" placeholder="Satıcı sitesinde gör"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====================================================== ADIM 2: AÇIKLAMA & TEKNİK ÖZELLİKLER -->
+                <!-- Products.FullDescription · ProductSpecifications · ProductAttributes -->
+                <div class="tab-pane fade" id="s2" role="tabpanel">
+                    <div class="card border shadow-sm mb-4">
+                        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="fa fa-align-left text-primary me-2"></i>Detaylı Açıklama</h6><button class="btn btn-sm btn-outline-primary" type="button"><i class="fa fa-magic me-1"></i>AI ile Oluştur</button></div>
+                        <div class="card-body">
+                            <div class="btn-toolbar border rounded-top px-2 py-1 bg-light"><div class="btn-group btn-group-sm me-2"><button class="btn btn-light"><i class="fa fa-bold"></i></button><button class="btn btn-light"><i class="fa fa-italic"></i></button><button class="btn btn-light"><i class="fa fa-underline"></i></button></div><div class="btn-group btn-group-sm me-2"><button class="btn btn-light"><i class="fa fa-list-ul"></i></button><button class="btn btn-light"><i class="fa fa-list-ol"></i></button></div><div class="btn-group btn-group-sm"><button class="btn btn-light"><i class="fa fa-link"></i></button><button class="btn btn-light"><i class="fa fa-picture-o"></i></button><button class="btn btn-light"><i class="fa fa-table"></i></button></div></div>
+                            <textarea class="form-control rounded-top-0" rows="8" placeholder="Öne çıkan özellikler, kullanım senaryoları, teknik detaylar… (HTML destekli)"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-light py-3 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="fa fa-list-ul text-primary me-2"></i>Teknik Özellikler</h6><div><button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="collapse" data-bs-target="#newAttr"><i class="fa fa-plus me-1"></i>Özel Özellik</button><button class="btn btn-sm btn-outline-primary" type="button"><i class="fa fa-magic me-1"></i>Öner</button></div></div>
+                        <div class="card-body">
+                            <p class="text-muted small"><i class="fa fa-info-circle me-1"></i>Şablondan gelen veya serbest özellikleri doldurun. Varyant üretmez. <code>ProductSpecifications</code></p>
+
+                            <!-- Yeni özel özellik tanımı → ProductAttributes -->
+                            <div class="collapse mb-3" id="newAttr">
+                                <div class="border rounded-3 p-3 bg-light">
+                                    <div class="row g-2">
+                                        <div class="col-md-3"><label class="form-label small">Özellik Adı</label><input class="form-control form-control-sm" placeholder="Ekran Yenileme Hızı"></div>
+                                        <div class="col-md-2"><label class="form-label small">Kod</label><input class="form-control form-control-sm" placeholder="yenileme_hizi"></div>
+                                        <div class="col-md-3"><label class="form-label small">Giriş Tipi</label><select class="form-select form-select-sm"><option>Select</option><option>MultiSelect</option><option>Text</option><option>Number</option><option>Bool</option><option>Date</option></select></div>
+                                        <div class="col-md-2"><label class="form-label small">Birim</label><input class="form-control form-control-sm" placeholder="Hz"></div>
+                                        <div class="col-md-2 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="filt"><label class="form-check-label small" for="filt">Filtrelenebilir</label></div></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light"><tr><th class="w-25">Özellik</th><th>Değer</th><th>Sıra</th><th></th></tr></thead>
+                                    <tbody>
+                                        <tr><td><select class="form-select form-select-sm"><option>Ekran Boyutu</option><option>Çözünürlük</option><option>Panel Tipi</option></select></td><td><div class="input-group input-group-sm"><input class="form-control" value="55"><span class="input-group-text">inç</span></div></td><td><input type="number" class="form-control form-control-sm" value="0"></td><td><button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-o"></i></button></td></tr>
+                                        <tr><td><input class="form-control form-control-sm" placeholder="Serbest ad (CustomName)"></td><td><input class="form-control form-control-sm" placeholder="Serbest değer (CustomValue)"></td><td><input type="number" class="form-control form-control-sm" value="1"></td><td><button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-o"></i></button></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm"><i class="fa fa-plus me-1"></i>Özellik Satırı Ekle</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====================================================== ADIM 3: VARYASYONLAR -->
+                <!-- ProductAttributeMappings · ProductAttributeValues · ProductVariants · ProductVariantValues -->
+                <div class="tab-pane fade" id="s3" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-light py-3"><h6 class="mb-0"><i class="fa fa-sliders text-primary me-2"></i>Varyasyonlar &amp; Seçenekler</h6></div>
+                        <div class="card-body">
+                            <div class="alert alert-light border"><i class="fa fa-info-circle me-1"></i>Basit üründe tek varsayılan varyant (<code>IsDefault</code>) otomatik oluşur. Aşağısı <strong>Varyantlı</strong> tip içindir.</div>
+
+                            <!-- ProductAttributeMappings -->
+                            <div class="text-uppercase fw-bold small text-muted mb-2"><i class="fa fa-check-square-o me-1"></i>Varyant Üreten Özellikler</div>
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-bordered align-middle">
+                                    <thead class="table-light"><tr><th>Özellik</th><th class="text-center">Varyant Üret</th><th class="text-center">Görsel Grubu</th><th class="text-center">Zorunlu</th><th class="text-center">Değerler</th></tr></thead>
+                                    <tbody>
+                                        <tr><td><i class="fa fa-circle text-danger me-1"></i>Renk</td><td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#valColor">Yönet</button></td></tr>
+                                        <tr>
+                                            <td colspan="5" class="p-0">
+                                                <div class="collapse" id="valColor">
+                                                    <div class="p-2 bg-light">
+                                                        <!-- ProductAttributeValues (Value, Code, ColorHex, IsActive, DisplayOrder) -->
+                                                        <table class="table table-sm mb-1">
+                                                            <thead><tr><th>Değer</th><th>Kod</th><th>Renk (HEX)</th><th>Sıra</th><th>Aktif</th><th></th></tr></thead>
+                                                            <tbody>
+                                                                <tr><td><input class="form-control form-control-sm" value="Kırmızı"></td><td><input class="form-control form-control-sm" value="kirmizi"></td><td><input type="color" class="form-control form-control-color form-control-sm" value="#e03131"></td><td><input type="number" class="form-control form-control-sm" value="0"></td><td><input type="checkbox" checked></td><td><button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-o"></i></button></td></tr>
+                                                                <tr><td><input class="form-control form-control-sm" value="Siyah"></td><td><input class="form-control form-control-sm" value="siyah"></td><td><input type="color" class="form-control form-control-color form-control-sm" value="#212529"></td><td><input type="number" class="form-control form-control-sm" value="1"></td><td><input type="checkbox" checked></td><td><button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-o"></i></button></td></tr>
+                                                            </tbody>
+                                                        </table>
+                                                        <button class="btn btn-sm btn-outline-primary py-0"><i class="fa fa-plus me-1"></i>Değer Ekle</button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr><td><i class="fa fa-arrows-h text-muted me-1"></i>Beden</td><td class="text-center"><input class="form-check-input" type="checkbox" checked></td><td class="text-center"><input class="form-check-input" type="checkbox"></td><td class="text-center"><input class="form-check-input" type="checkbox"></td><td class="text-center"><button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#valSize">Yönet</button></td></tr>
+                                        <tr><td colspan="5" class="p-0"><div class="collapse" id="valSize"><div class="p-2 bg-light"><table class="table table-sm mb-1"><thead><tr><th>Değer</th><th>Kod</th><th>Sıra</th><th>Aktif</th><th></th></tr></thead><tbody><tr><td><input class="form-control form-control-sm" value="S"></td><td><input class="form-control form-control-sm" value="s"></td><td><input type="number" class="form-control form-control-sm" value="0"></td><td><input type="checkbox" checked></td><td><button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-o"></i></button></td></tr></tbody></table><button class="btn btn-sm btn-outline-primary py-0"><i class="fa fa-plus me-1"></i>Değer Ekle</button></div></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- ProductVariants + ProductVariantValues (kimlik + fiziksel ölçü) -->
+                            <div class="text-uppercase fw-bold small text-muted mb-2"><i class="fa fa-th me-1"></i>Varyant Listesi</div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light"><tr><th>Kombinasyon</th><th>SKU</th><th>Barkod</th><th>GTIN</th><th class="text-center">Vars.</th><th class="text-center">Aktif</th><th></th></tr></thead>
+                                    <tbody>
+                                        <tr><td><span class="badge bg-danger me-1">Kırmızı</span><span class="badge bg-secondary">S</span></td><td><input class="form-control form-control-sm" value="SMS-KRM-S"></td><td><input class="form-control form-control-sm" placeholder="869…"></td><td><input class="form-control form-control-sm" placeholder="GTIN"></td><td class="text-center"><input type="radio" name="defv" checked></td><td class="text-center"><input type="checkbox" checked></td><td><button class="btn btn-sm btn-link p-0 text-decoration-none" data-bs-toggle="collapse" data-bs-target="#v1m"><i class="fa fa-chevron-down"></i></button></td></tr>
+                                        <tr class="collapse" id="v1m">
+                                            <td colspan="7" class="bg-light">
+                                                <div class="row g-2 p-2">
+                                                    <div class="col-md-3"><label class="form-label small">UPC</label><input class="form-control form-control-sm"></div>
+                                                    <div class="col-md-3"><label class="form-label small">EAN</label><input class="form-control form-control-sm"></div>
+                                                    <div class="col-md-3"><label class="form-label small">ISBN</label><input class="form-control form-control-sm"></div>
+                                                    <div class="col-md-3"><label class="form-label small">MPN</label><input class="form-control form-control-sm"></div>
+                                                    <div class="col-md-3"><label class="form-label small">Ağırlık (kg)</label><input type="number" class="form-control form-control-sm"></div>
+                                                    <div class="col-md-3"><label class="form-label small">Genişlik (cm)</label><input type="number" class="form-control form-control-sm"></div>
+                                                    <div class="col-md-3"><label class="form-label small">Yükseklik (cm)</label><input type="number" class="form-control form-control-sm"></div>
+                                                    <div class="col-md-3"><label class="form-label small">Uzunluk (cm)</label><input type="number" class="form-control form-control-sm"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr><td><span class="badge bg-danger me-1">Kırmızı</span><span class="badge bg-secondary">M</span></td><td><input class="form-control form-control-sm" value="SMS-KRM-M"></td><td><input class="form-control form-control-sm" placeholder="869…"></td><td><input class="form-control form-control-sm" placeholder="GTIN"></td><td class="text-center"><input type="radio" name="defv"></td><td class="text-center"><input type="checkbox" checked></td><td><button class="btn btn-sm btn-link p-0 text-decoration-none" data-bs-toggle="collapse" data-bs-target="#v2m"><i class="fa fa-chevron-down"></i></button></td></tr>
+                                        <tr class="collapse" id="v2m"><td colspan="7" class="bg-light"><div class="row g-2 p-2"><div class="col-md-3"><label class="form-label small">UPC</label><input class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">EAN</label><input class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">ISBN</label><input class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">MPN</label><input class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">Ağırlık (kg)</label><input type="number" class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">Genişlik (cm)</label><input type="number" class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">Yükseklik (cm)</label><input type="number" class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">Uzunluk (cm)</label><input type="number" class="form-control form-control-sm"></div></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====================================================== ADIM 4: FİYATLANDIRMA -->
+                <!-- ProductPrices · MoneyExchangeRate -->
+                <div class="tab-pane fade" id="s4" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-light py-3"><h6 class="mb-0"><i class="fa fa-money text-primary me-2"></i>Fiyatlandırma &amp; Vergi</h6></div>
+                        <div class="card-body">
+
+                            <!-- Toplu kur doldurma → MoneyExchangeRate -->
+                            <div class="card border-primary bg-primary bg-opacity-10 mb-4">
+                                <div class="card-body">
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-3"><label class="form-label small fw-semibold mb-1"><i class="fa fa-bolt text-primary me-1"></i>Temel Para Birimi</label><select class="form-select form-select-sm"><option selected>USD ($)</option><option>TRY (₺)</option><option>EUR (€)</option><option>AZN (₼)</option></select></div>
+                                        <div class="col-md-4"><label class="form-label small fw-semibold mb-1">Temel Satış Fiyatı</label><input type="number" class="form-control form-control-sm" placeholder="Örn: 500"></div>
+                                        <div class="col-md-5"><button class="btn btn-primary btn-sm w-100" type="button"><i class="fa fa-calculator me-1"></i>Kura Göre Diğerlerini Doldur</button></div>
+                                    </div>
+                                    <div class="small text-muted mt-2"><i class="fa fa-refresh me-1"></i>Güncel kur: 1 USD = 32,40 ₺ · 1 EUR = 35,10 ₺ · 1 AZN = 19,05 ₺ <span class="text-secondary">(öneri; değerler bağımsız saklanır, kur dönüşümü zorunlu değil)</span></div>
+                                </div>
+                            </div>
+
+                            <!-- ProductPrices: para birimi başına Price / DiscountedPrice / CostPrice -->
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle">
+                                    <thead class="table-light"><tr><th>Para Birimi</th><th>Satış Fiyatı</th><th>İndirimli</th><th>Maliyet <small>(yalnızca satıcı)</small></th></tr></thead>
+                                    <tbody>
+                                        <tr><td><span class="badge bg-secondary"><i class="fa fa-try me-1"></i>TRY</span></td><td><div class="input-group input-group-sm"><span class="input-group-text">₺</span><input type="number" class="form-control" placeholder="0,00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">₺</span><input type="number" class="form-control" placeholder="0,00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">₺</span><input type="number" class="form-control" placeholder="0,00"></div></td></tr>
+                                        <tr><td><span class="badge bg-secondary"><i class="fa fa-usd me-1"></i>USD</span></td><td><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control" placeholder="0.00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control" placeholder="0.00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">$</span><input type="number" class="form-control" placeholder="0.00"></div></td></tr>
+                                        <tr><td><span class="badge bg-secondary"><i class="fa fa-eur me-1"></i>EUR</span></td><td><div class="input-group input-group-sm"><span class="input-group-text">€</span><input type="number" class="form-control" placeholder="0.00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">€</span><input type="number" class="form-control" placeholder="0.00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">€</span><input type="number" class="form-control" placeholder="0.00"></div></td></tr>
+                                        <tr><td><span class="badge bg-secondary">AZN</span></td><td><div class="input-group input-group-sm"><span class="input-group-text">₼</span><input type="number" class="form-control" placeholder="0.00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">₼</span><input type="number" class="form-control" placeholder="0.00"></div></td><td><div class="input-group input-group-sm"><span class="input-group-text">₼</span><input type="number" class="form-control" placeholder="0.00"></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="row g-3 mt-1">
+                                <div class="col-md-4"><label class="form-label">KDV Oranı (%)</label><select class="form-select"><option>%20</option><option>%10</option><option>%1</option><option>%0</option></select></div>
+                                <div class="col-md-8 d-flex align-items-end"><a class="small" data-bs-toggle="collapse" href="#priceHist"><i class="fa fa-history me-1"></i>Fiyat geçmişini göster (append-only)</a></div>
+                            </div>
+                            <!-- ProductPrices.EffectiveFrom / EffectiveTo -->
+                            <div class="collapse mt-2" id="priceHist"><div class="border rounded-3 p-2"><table class="table table-sm mb-0"><thead class="table-light"><tr><th>Para Birimi</th><th>Fiyat</th><th>Başlangıç (EffectiveFrom)</th><th>Bitiş (EffectiveTo)</th></tr></thead><tbody><tr><td>TRY</td><td>15.999 ₺</td><td>01.01.2026</td><td><span class="badge bg-success">Güncel</span></td></tr><tr class="text-muted"><td>TRY</td><td>14.499 ₺</td><td>01.11.2025</td><td>31.12.2025</td></tr></tbody></table></div></div>
+                            <small class="text-muted d-block mt-1"><i class="fa fa-info-circle me-1"></i>Fiyat değişiminde eski satır güncellenmez; EffectiveTo kapatılır, yeni satır açılır.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====================================================== ADIM 5: STOK & KARGO -->
+                <!-- ProductStocks · Warehouse · ShippingProfile -->
+                <div class="tab-pane fade" id="s5" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-light py-3"><h6 class="mb-0"><i class="fa fa-cubes text-primary me-2"></i>Stok &amp; Kargo</h6></div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="trackStock" checked><label class="form-check-label" for="trackStock">Stok takibi yapılsın (TrackStock) <small class="text-muted">— dijital/hizmette kapatılabilir</small></label></div>
+
+                            <!-- ProductStocks (Varyant + Depo, çoklu depo) -->
+                            <div class="text-uppercase fw-bold small text-muted mb-2"><i class="fa fa-building me-1"></i>Depo Stokları</div>
+                            <div class="table-responsive mb-2">
+                                <table class="table table-sm table-bordered align-middle">
+                                    <thead class="table-light"><tr><th>Varyant</th><th>Depo</th><th>Adet</th><th>Min.</th><th>Kritik</th><th>Maks. Sip.</th><th>Durum</th><th></th></tr></thead>
+                                    <tbody>
+                                        <tr><td><select class="form-select form-select-sm"><option>Kırmızı / S</option><option>Kırmızı / M</option></select></td><td><select class="form-select form-select-sm"><option>Merkez Depo (İstanbul)</option><option>Düzce Deposu</option></select></td><td><input type="number" class="form-control form-control-sm" value="0"></td><td><input type="number" class="form-control form-control-sm" placeholder="0"></td><td><input type="number" class="form-control form-control-sm" placeholder="0"></td><td><input type="number" class="form-control form-control-sm" placeholder="—"></td><td><select class="form-select form-select-sm"><option>Stokta</option><option>Tükendi</option><option>Ön Sipariş</option><option>Backorder</option></select></td><td><button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-o"></i></button></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm mb-2"><i class="fa fa-plus me-1"></i>Depo Satırı Ekle</button>
+                            <small class="text-muted d-block mb-4"><i class="fa fa-info-circle me-1"></i>Toplam stok, varyantın tüm depo satırlarının toplamıdır. Yeni depo tanımı "Depo Yönetimi" sayfasından yapılır.</small>
+
+                            <hr>
+                            <!-- ShippingProfile (ölçüler varyant bazında 3. adımda) -->
+                            <div class="text-uppercase fw-bold small text-muted mb-2"><i class="fa fa-truck me-1"></i>Kargo &amp; Desi</div>
+                            <div class="row g-3">
+                                <div class="col-md-5"><label class="form-label">Kargo / Desi Profili (ShippingProfile)</label><select class="form-select"><option selected>Profil seçin…</option><option>Standart Kargo</option><option>Ücretsiz Kargo</option></select></div>
+                                <div class="col-md-7 d-flex align-items-end"><small class="text-muted"><i class="fa fa-info-circle me-1"></i>Desi hesabı için ağırlık ve en/boy/yükseklik <strong>her varyanta özel</strong> olarak 3. adımdaki varyant panelinden girilir.</small></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====================================================== ADIM 6: MEDYA -->
+                <!-- CoverMediaId · ItemGallery · ProductImageVariantGroups · ProductExternalMedias · ProductDigitalAssets · ProductBundleItems -->
+                <div class="tab-pane fade" id="s6" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-light py-3"><h6 class="mb-0"><i class="fa fa-picture-o text-primary me-2"></i>Medya Yönetimi</h6></div>
+                        <div class="card-body">
+
+                            <div class="d-flex justify-content-between align-items-center mb-2"><div class="text-uppercase fw-bold small text-muted">Ürün Görselleri</div><span class="small text-muted"><i class="fa fa-info-circle me-1"></i>İlk görsel kapaktır (CoverMediaId)</span></div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-6 col-md-3"><div class="ratio ratio-1x1 border border-2 border-primary rounded-3 bg-primary bg-opacity-10"><div class="d-flex flex-column align-items-center justify-content-center text-primary"><i class="fa fa-cloud-upload fa-2x mb-2"></i><small>Görsel Yükle</small><small class="text-muted">veya galeriden seç</small></div></div></div>
+                                <div class="col-6 col-md-3"><div class="ratio ratio-1x1 border rounded-3 bg-primary bg-opacity-25"><div class="d-flex align-items-center justify-content-center text-primary fs-3"><i class="fa fa-photo"></i></div><span class="position-absolute top-0 start-0 m-2 badge bg-warning text-dark"><i class="fa fa-star"></i> Kapak</span><div class="position-absolute bottom-0 end-0 m-2 btn-group btn-group-sm"><button class="btn btn-light"><i class="fa fa-star-o"></i></button><button class="btn btn-danger"><i class="fa fa-trash-o"></i></button></div></div></div>
+                                <div class="col-6 col-md-3"><div class="ratio ratio-1x1 border rounded-3 bg-info bg-opacity-25"><div class="d-flex align-items-center justify-content-center text-info fs-3"><i class="fa fa-photo"></i></div><div class="position-absolute bottom-0 end-0 m-2 btn-group btn-group-sm"><button class="btn btn-light"><i class="fa fa-star-o"></i></button><button class="btn btn-danger"><i class="fa fa-trash-o"></i></button></div></div></div>
+                                <div class="col-6 col-md-3"><div class="ratio ratio-1x1 border rounded-3 bg-success bg-opacity-25"><div class="d-flex align-items-center justify-content-center text-success fs-3"><i class="fa fa-photo"></i></div><div class="position-absolute bottom-0 end-0 m-2 btn-group btn-group-sm"><button class="btn btn-light"><i class="fa fa-star-o"></i></button><button class="btn btn-danger"><i class="fa fa-trash-o"></i></button></div></div></div>
+                            </div>
+
+                            <!-- ProductImageVariantGroups (değer bazlı + CoverMediaId) -->
+                            <div class="text-uppercase fw-bold small text-muted mb-2"><i class="fa fa-paint-brush me-1"></i>Varyant Görselleri <span class="text-lowercase fw-normal">(renk değerine bağlı · yalnızca Varyantlı)</span></div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6"><div class="card border"><div class="card-body py-2 d-flex align-items-center justify-content-between"><span><i class="fa fa-circle text-danger me-1"></i>Kırmızı grubu</span><div><button class="btn btn-sm btn-outline-secondary me-1"><i class="fa fa-star-o"></i> Kapak</button><button class="btn btn-sm btn-outline-primary"><i class="fa fa-plus me-1"></i>Görsel</button></div></div></div></div>
+                                <div class="col-md-6"><div class="card border"><div class="card-body py-2 d-flex align-items-center justify-content-between"><span><i class="fa fa-circle text-dark me-1"></i>Siyah grubu</span><div><button class="btn btn-sm btn-outline-secondary me-1"><i class="fa fa-star-o"></i> Kapak</button><button class="btn btn-sm btn-outline-primary"><i class="fa fa-plus me-1"></i>Görsel</button></div></div></div></div>
+                            </div>
+
+                            <!-- ProductExternalMedias (MediaType, Url/MediaId, Title, DisplayOrder) -->
+                            <div class="text-uppercase fw-bold small text-muted mb-2"><i class="fa fa-film me-1"></i>Video, 360° &amp; Doküman</div>
+                            <div class="input-group mb-2"><span class="input-group-text"><i class="fa fa-bars text-muted"></i></span><select class="form-select flex-grow-0 w-auto"><option>Video URL</option><option>360° Görünüm</option><option>Embed</option><option>Doküman</option></select><input class="form-control" placeholder="https://youtube.com/… veya dosya (MediaId)"><input class="form-control flex-grow-0 w-auto" placeholder="Başlık"><button class="btn btn-outline-danger"><i class="fa fa-trash-o"></i></button></div>
+                            <button class="btn btn-outline-primary btn-sm mb-4"><i class="fa fa-plus me-1"></i>Medya Kaynağı Ekle</button>
+
+                            <!-- ProductDigitalAssets -->
+                            <div class="border rounded-3 p-3 mb-3"><div class="text-uppercase fw-bold small text-muted mb-3"><i class="fa fa-key me-1"></i>Dijital Dosyalar <span class="text-lowercase fw-normal">(yalnızca Dijital)</span></div><div class="row g-3"><div class="col-md-4"><label class="form-label">Varyant</label><select class="form-select"><option>Tüm ürün</option><option>Kırmızı / S</option></select></div><div class="col-md-4"><label class="form-label">İndirilebilir Dosya (MediaId)</label><div class="border border-2 border-primary rounded bg-primary bg-opacity-10 text-primary text-center p-2"><i class="fa fa-file-archive-o me-1"></i>Dosya Seç</div></div><div class="col-md-4"><label class="form-label">Gösterim Adı</label><input class="form-control" placeholder="Lisanslı Sürüm"></div><div class="col-md-3"><label class="form-label">İndirme Limiti</label><input type="number" class="form-control" placeholder="∞"></div><div class="col-md-3"><label class="form-label">Geçerlilik (gün)</label><input type="number" class="form-control" placeholder="∞"></div><div class="col-md-6 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="lk"><label class="form-check-label" for="lk">Lisans anahtarı üretilsin (RequiresLicenseKey)</label></div></div></div></div>
+
+                            <!-- ProductBundleItems -->
+                            <div class="border rounded-3 p-3"><div class="text-uppercase fw-bold small text-muted mb-3"><i class="fa fa-gift me-1"></i>Paket İçeriği <span class="text-lowercase fw-normal">(yalnızca Paket)</span></div><div class="table-responsive"><table class="table table-sm table-bordered align-middle mb-2"><thead class="table-light"><tr><th>Ürün</th><th>Varyant</th><th>Adet</th><th>İndirim %</th><th>Sıra</th><th></th></tr></thead><tbody><tr><td><select class="form-select form-select-sm"><option>Ürün seçin…</option></select></td><td><select class="form-select form-select-sm"><option>Müşteri seçer</option></select></td><td><input type="number" class="form-control form-control-sm" value="1"></td><td><input type="number" class="form-control form-control-sm" placeholder="0"></td><td><input type="number" class="form-control form-control-sm" value="0"></td><td><button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash-o"></i></button></td></tr></tbody></table></div><button class="btn btn-outline-primary btn-sm"><i class="fa fa-plus me-1"></i>Pakete Ürün Ekle</button></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ====================================================== ADIM 7: SEO, PAZARYERİ & ONAY -->
+                <!-- ProductSeo · ProductMarketplaceListings · Marketplace*Mappings · Products.IsActive/PublishStatus -->
+                <div class="tab-pane fade" id="s7" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-light py-3"><h6 class="mb-0"><i class="fa fa-search text-primary me-2"></i>SEO, Pazaryeri &amp; Onay</h6></div>
+                        <div class="card-body">
+
+                            <!-- Arama önizleme (statik) -->
+                            <label class="form-label text-uppercase fw-bold small text-muted"><i class="fa fa-search me-1"></i>Arama Sonucu Önizlemesi</label>
+                            <div class="row mb-4"><div class="col-lg-9"><div class="border rounded-3 p-3 bg-light"><div class="d-flex align-items-center gap-2 mb-1"><i class="fa fa-shopping-bag text-primary"></i><div><div class="small fw-semibold lh-1">efavori</div><div class="small text-success">https://efavori.com › urun › samsung-55-oled-tv</div></div></div><div class="fs-5 text-primary">Samsung 55&quot; 4K OLED Smart TV – Uygun Fiyat | efavori</div><div class="text-secondary small">4K OLED panel, 120Hz ve akıllı sistemiyle Samsung 55 inç TV en uygun fiyatlarla efavori’de…</div></div></div></div>
+
+                            <!-- ProductSeo (Slug, SeoTitle, SeoDescription, SeoKeywords, CanonicalUrl, LanguageCode, MetaJson) -->
+                            <div class="row g-3">
+                                <div class="col-md-6"><label class="form-label">SEO URL (Slug)</label><div class="input-group"><span class="input-group-text">efavori.com/urun/</span><input class="form-control" placeholder="samsung-55-oled-tv"></div></div>
+                                <div class="col-md-6"><label class="form-label">Dil (LanguageCode)</label><select class="form-select"><option>Türkçe (tr)</option><option>English (en)</option><option>Azərbaycan (az)</option></select></div>
+                                <div class="col-12"><div class="d-flex justify-content-between align-items-center"><label class="form-label mb-0">SEO Başlığı</label><button class="btn btn-sm btn-outline-primary" type="button"><i class="fa fa-magic me-1"></i>AI Başlık</button></div><input class="form-control mt-1" placeholder="Boş bırakılırsa ürün adı kullanılır"></div>
+                                <div class="col-12"><div class="d-flex justify-content-between align-items-center"><label class="form-label mb-0">SEO Açıklaması</label><button class="btn btn-sm btn-outline-primary" type="button"><i class="fa fa-magic me-1"></i>AI Açıklama</button></div><textarea class="form-control mt-1" rows="2" placeholder="≈160 karakter"></textarea></div>
+                                <div class="col-md-8"><div class="d-flex justify-content-between align-items-center"><label class="form-label mb-0">Anahtar Kelimeler</label><button class="btn btn-sm btn-outline-primary" type="button"><i class="fa fa-magic me-1"></i>Öner</button></div><input class="form-control mt-1" placeholder="virgülle ayırın"></div>
+                                <div class="col-md-4"><label class="form-label">Canonical URL</label><input type="url" class="form-control" placeholder="https://…"></div>
+                                <div class="col-12"><a class="small" data-bs-toggle="collapse" href="#metaJson"><i class="fa fa-code me-1"></i>Gelişmiş meta (OpenGraph / schema.org · MetaJson)</a><div class="collapse mt-2" id="metaJson"><textarea class="form-control" rows="2" placeholder='{"og:image":"…","@@type":"Product"}'></textarea></div></div>
+                            </div>
+
+                            <hr class="my-4">
+                            <!-- ProductMarketplaceListings + Marketplace mappings -->
+                            <div class="text-uppercase fw-bold small text-muted mb-3"><i class="fa fa-shopping-cart me-1"></i>Pazaryeri Kanalları</div>
+                            <div class="row g-3">
+                                <div class="col-md-4"><div class="card border"><div class="card-body py-2 d-flex justify-content-between align-items-center"><span class="fw-semibold">Trendyol</span><div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" data-bs-toggle="collapse" data-bs-target="#mpTy"></div></div><div class="collapse" id="mpTy"><div class="px-2 pb-2"><input class="form-control form-control-sm mb-1" placeholder="ExternalProductId (contentId)"><input class="form-control form-control-sm mb-1" placeholder="ExternalSku (merchantSku)"><input class="form-control form-control-sm mb-1" placeholder="ExternalUrl"><div class="d-flex justify-content-between align-items-center"><span class="badge bg-secondary"><i class="fa fa-clock-o me-1"></i>Beklemede</span><small class="text-muted"><i class="fa fa-exchange me-1"></i>Kategori/özellik eşleme uygulanır</small></div></div></div></div></div>
+                                <div class="col-md-4"><div class="card border"><div class="card-body py-2 d-flex justify-content-between align-items-center"><span class="fw-semibold">Hepsiburada</span><div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox"></div></div></div></div>
+                                <div class="col-md-4"><div class="card border"><div class="card-body py-2 d-flex justify-content-between align-items-center"><span class="fw-semibold">Amazon</span><div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox"></div></div></div></div>
+                            </div>
+                            <small class="text-muted d-block mt-2"><i class="fa fa-info-circle me-1"></i>Sistem kategori/özellik değerleri, MarketplaceCategoryMappings &amp; MarketplaceAttributeMappings ile platform karşılıklarına çevrilir. Ham yanıt RawSourceData'da saklanır.</small>
+
+                            <hr class="my-4">
+                            <!-- Products.IsActive -->
+                            <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="isActive" checked><label class="form-check-label" for="isActive">Ürün aktif (satışa açık) — IsActive</label></div>
+
+                            <!-- Son kontrol -->
+                            <div class="card border-success"><div class="card-header bg-success text-white py-2"><i class="fa fa-check-circle me-1"></i>Son Kontrol</div><ul class="list-group list-group-flush"><li class="list-group-item d-flex justify-content-between"><span><i class="fa fa-check text-success me-2"></i>Temel bilgiler, kategori &amp; marka</span><span class="badge bg-success">Tamam</span></li><li class="list-group-item d-flex justify-content-between"><span><i class="fa fa-check text-success me-2"></i>Açıklama &amp; özellikler</span><span class="badge bg-success">Tamam</span></li><li class="list-group-item d-flex justify-content-between"><span><i class="fa fa-exclamation-triangle text-warning me-2"></i>En az bir fiyat girişi</span><span class="badge bg-warning text-dark">Eksik</span></li><li class="list-group-item d-flex justify-content-between"><span><i class="fa fa-exclamation-triangle text-warning me-2"></i>Kapak görseli</span><span class="badge bg-warning text-dark">Eksik</span></li></ul></div>
+
+                            <div class="alert alert-info mt-4 mb-0"><i class="fa fa-info-circle me-1"></i>"Onaya Gönder" ile ürün <strong>admin incelemesine</strong> alınır (PublishStatus = PendingApproval). Onaylandığında otomatik yayınlanır.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ===================== ALT KAYDETME BARI ===================== -->
+            <div class="card border shadow-sm sticky-bottom mt-4">
+                <div class="card-body d-flex flex-wrap justify-content-end align-items-center gap-2">
+                    <span class="me-auto small text-muted"><i class="fa fa-info-circle me-1"></i>Taslak istediğiniz an kaydedilebilir; onay süreci adminde işler.</span>
+                    <button type="button" class="btn btn-outline-primary"><i class="fa fa-floppy-o me-1"></i>Taslak Olarak Kaydet</button>
+                    <button type="button" class="btn btn-success"><i class="fa fa-paper-plane me-1"></i>Onaya Gönder</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [Parameter] public Users? use { get; set; }
+
+}

@@ -58,6 +58,18 @@ namespace data.Migrations
                     b.Property<string>("FileUrl")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("FileUrl_Ratio_1_16")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileUrl_Ratio_1_2")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileUrl_Ratio_1_4")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileUrl_Ratio_1_8")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool?>("IsDeletedStatu")
                         .HasColumnType("bit");
 
@@ -846,6 +858,32 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("MainJs");
+                });
+
+            modelBuilder.Entity("data.MoneyExchangeRate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Dolar_Usd")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Euro_Eur")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Lira_Tl")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Manat_Azn")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MoneyExchangeRate");
                 });
 
             modelBuilder.Entity("data.Posts", b =>
@@ -1773,6 +1811,228 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Brands");
+                });
+
+            modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportJobs", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AnalysisReportJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("BatchSize")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DefaultCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DefaultCurrency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("DefaultWarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Delimiter")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Encoding")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FieldMappingJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ImportedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LastErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("LastProcessedRowIndex")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SkippedCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("SourceMediaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SourceType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("StrategyReportJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("SuccessRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TotalCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProductImportJobs");
+                });
+
+            modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportMappings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConfidenceLevel")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ConfidenceScore")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("CreateIfMissing")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsConfirmedByUser")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("JobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MappingType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("SourceItemCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceKey")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceKeyHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceParentKey")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SuggestionsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TargetDisplayName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TargetType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TargetValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProductImportMappings");
+                });
+
+            modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportRows", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CreatedVariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ErrorCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ParentExternalId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RawRowJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RowStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceExternalId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SourceProductType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SourceRowIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceSku")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WarningsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProductImportRows");
                 });
 
             modelBuilder.Entity("data._Product.MarketplaceAttributeMappings", b =>
@@ -4092,6 +4352,54 @@ namespace data.Migrations
 
                             b1.WithOwner()
                                 .HasForeignKey("BrandsId");
+                        });
+
+                    b.Navigation("IsDeleted");
+                });
+
+            modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportJobs", b =>
+                {
+                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductImportJobsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductImportJobsId");
+
+                            b1.ToTable("ProductImportJobs");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductImportJobsId");
+                        });
+
+                    b.Navigation("IsDeleted");
+                });
+
+            modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportMappings", b =>
+                {
+                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductImportMappingsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductImportMappingsId");
+
+                            b1.ToTable("ProductImportMappings");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductImportMappingsId");
                         });
 
                     b.Navigation("IsDeleted");

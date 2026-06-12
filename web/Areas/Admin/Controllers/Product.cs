@@ -11,5 +11,9 @@ namespace web.Areas.Admin.Controllers
         {
             return View();
         }
+        public IActionResult BulkWordPressProductImport()
+        {
+            return View();
+        } 
     }
 }

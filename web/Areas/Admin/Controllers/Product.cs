@@ -15,5 +15,9 @@ namespace web.Areas.Admin.Controllers
         {
             return View();
         } 
+        public IActionResult ListProduct()
+        {
+            return View();
+        } 
     }
 }

@@ -1,0 +1,9 @@
+﻿@using data
+@using data._Product
+<h3>ProductViewer</h3>
+
+@code {
+    // ─── Parametreler ─────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public Products? SelectedProduct { get; set; }
+}

@@ -1,9 +1,9 @@
 ﻿@using api
 @using api.tr
 @using data
+@using data._Product
 @using data._Product.BulkWordPressProductImport
 @using Data
-@using data._Product
 @using Microsoft.AspNetCore.Http
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
@@ -54,12 +54,9 @@
 
     @* ═══════════════ ÜST BAŞLIK + ADIM GÖSTERGESİ ═══════════════ *@
     <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
-        <h5 class="mb-0 fw-bold">
-            <i class="fa fa-cloud-upload me-2 text-primary"></i>WooCommerce Ürün İçe Aktarımı
-        </h5>
         @if (_currentStep > 0)
         {
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="BackToDashboard">
+            <button type="button" class="btn btn-outline-light btn-sm" @onclick="BackToDashboard">
                 <i class="fa fa-th-list me-1"></i>Panele Dön
             </button>
         }
@@ -71,7 +68,7 @@
             @foreach (var s in _stepTitles)
             {
                 var idx = s.Key;
-                var cls = idx == _currentStep ? "active fw-bold" : (idx < _currentStep ? "text-success" : "text-muted");
+                var cls = idx == _currentStep ? "active fw-bold" : (idx < _currentStep ? "text-success" : "text-light");
                 <li class="nav-item">
                     <span class="nav-link @cls py-1">
                         @if (idx < _currentStep)
@@ -91,19 +88,19 @@
     @if (_currentStep == 0)
     {
         <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary btn-sm" @onclick="StartNewImport">
+            <button type="button" class="btn btn-primary btn-sm" @onclick="StartNewImport" style="width:100%">
                 <i class="fa fa-plus me-1"></i>Yeni İçe Aktarım
             </button>
         </div>
 
         @if (_isLoading)
         {
-            <p class="text-muted"><i class="fa fa-spinner fa-spin me-2"></i>Yükleniyor...</p>
+            <p class="text-light"><i class="fa fa-spinner fa-spin me-2"></i>Yükleniyor...</p>
         }
         else if (_jobs is null || !_jobs.Any())
         {
             <div class="card border-0 shadow-sm">
-                <div class="card-body text-center text-muted py-5">
+                <div class="card-body text-center text-light py-5">
                     <i class="fa fa-inbox fa-3x mb-3 d-block opacity-50"></i>
                     Henüz bir içe aktarım oluşturulmadı. "Yeni İçe Aktarım" ile başlayın.
                 </div>
@@ -124,22 +121,23 @@
                                         <i class="fa @StatusIcon(job.Status) me-1"></i>@StatusText(job.Status)
                                     </span>
                                 </div>
-                                <div class="small text-muted mb-2">
+                                <div class="small text-light mb-2">
                                     <i class="fa fa-calendar-o me-1"></i>@(job.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm"))
                                 </div>
 
                                 @* İstatistik paneli *@
                                 <div class="row text-center g-1 mb-3">
-                                    <div class="col"><div class="border rounded py-1"><div class="fw-bold">@job.TotalCount</div><div class="text-muted" style="font-size:.65rem;">Toplam</div></div></div>
-                                    <div class="col"><div class="border rounded py-1 bg-success-subtle"><div class="fw-bold text-success">@job.ImportedCount</div><div class="text-muted" style="font-size:.65rem;">Aktarılan</div></div></div>
-                                    <div class="col"><div class="border rounded py-1 bg-warning-subtle"><div class="fw-bold text-warning">@pending</div><div class="text-muted" style="font-size:.65rem;">Bekleyen</div></div></div>
-                                    <div class="col"><div class="border rounded py-1 bg-danger-subtle"><div class="fw-bold text-danger">@job.FailedCount</div><div class="text-muted" style="font-size:.65rem;">Hatalı</div></div></div>
+                                    <div class="col"><div class="border rounded py-1"><div class="fw-bold">@job.TotalCount</div><div class="text-light" style="font-size:.65rem;">Toplam</div></div></div>
+                                    <div class="col"><div class="border rounded py-1 bg-success-subtle"><div class="fw-bold text-success">@job.ImportedCount</div><div class="text-light" style="font-size:.65rem;">Aktarılan</div></div></div>
+                                    <div class="col"><div class="border rounded py-1 bg-warning-subtle"><div class="fw-bold text-warning">@pending</div><div class="text-light" style="font-size:.65rem;">Bekleyen</div></div></div>
+                                    <div class="col"><div class="border rounded py-1 bg-secondary-subtle"><div class="fw-bold text-secondary">@job.SkippedCount</div><div class="text-light" style="font-size:.65rem;">Atlandı</div></div></div>
+                                    <div class="col"><div class="border rounded py-1 bg-danger-subtle"><div class="fw-bold text-danger">@job.FailedCount</div><div class="text-light" style="font-size:.65rem;">Hatalı</div></div></div>
                                 </div>
 
                                 <div class="progress mb-1" style="height:6px;">
                                     <div class="progress-bar bg-success" style="width:@(ProgressPercent(job))%"></div>
                                 </div>
-                                <div class="d-flex justify-content-between small text-muted mb-3">
+                                <div class="d-flex justify-content-between small text-light mb-3">
                                     <span>Başarı Oranı</span>
                                     <span class="fw-bold">%@job.SuccessRate.ToString("0.0")</span>
                                 </div>
@@ -199,11 +197,11 @@
                     <hr />
                     <h6 class="fw-bold mb-2"><i class="fa fa-search me-2 text-info"></i>CSV Analiz Raporu (AŞAMA 1)</h6>
                     <div class="row text-center g-2 mb-3">
-                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.ColumnCount</div><div class="small text-muted">Kolon</div></div></div>
-                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.RowCount</div><div class="small text-muted">Ürün Satırı</div></div></div>
-                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.DistinctCategoryCount</div><div class="small text-muted">Kategori</div></div></div>
-                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.DistinctBrandCount</div><div class="small text-muted">Marka</div></div></div>
-                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.MetaColumnCount</div><div class="small text-muted">Özel (Meta)</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.ColumnCount</div><div class="small text-light">Kolon</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.RowCount</div><div class="small text-light">Ürün Satırı</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.DistinctCategoryCount</div><div class="small text-light">Kategori</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.DistinctBrandCount</div><div class="small text-light">Marka</div></div></div>
+                        <div class="col"><div class="border rounded py-2"><div class="fw-bold fs-5">@_analysisReport.MetaColumnCount</div><div class="small text-light">Özel (Meta)</div></div></div>
                     </div>
                     <div class="d-flex flex-wrap gap-1">
                         @foreach (var t in _analysisReport.TypeCounts)
@@ -213,7 +211,7 @@
                     </div>
                 }
             </div>
-            <div class="card-footer bg-white d-flex justify-content-end gap-2">
+            <div class="card-footer bg-light d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-primary" disabled="@(_sourceCsvMedia is null || _isProcessing)" @onclick="GoToFieldMapping">
                     @if (_isProcessing)
                     {
@@ -238,7 +236,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <h6 class="fw-bold mb-3"><i class="fa fa-random me-2 text-primary"></i>2. Alan Eşleştirme (AŞAMA 2)</h6>
-                <p class="small text-muted">Otomatik eşleşmeler güven seviyesiyle işaretlendi. <span class="badge bg-danger">Belirsiz</span> olanları kontrol edin.</p>
+                <p class="small text-light">Otomatik eşleşmeler güven seviyesiyle işaretlendi. <span class="badge bg-danger">Belirsiz</span> olanları kontrol edin.</p>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover align-middle">
                         <thead class="table-light">
@@ -255,7 +253,7 @@
                             {
                                 <tr class="@(m.ConfidenceLevel == "Uncertain" ? "table-warning" : "")">
                                     <td class="small fw-semibold">@m.SourceKey</td>
-                                    <td class="text-center text-muted"><i class="fa fa-arrow-right"></i></td>
+                                    <td class="text-center text-light"><i class="fa fa-arrow-right"></i></td>
                                     <td>
                                         <select class="form-select form-select-sm" @bind="m.TargetValue">
                                             <option value="">— Aktarma —</option>
@@ -276,8 +274,8 @@
                     </table>
                 </div>
             </div>
-            <div class="card-footer bg-white d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 1"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-light" @onclick="() => _currentStep = 1"><i class="fa fa-arrow-left me-1"></i>Geri</button>
                 <button type="button" class="btn btn-primary" disabled="@_isProcessing" @onclick="GoToCategoryMapping">
                     <i class="fa fa-arrow-right me-1"></i>Kategori Eşleştirmeye Geç
                 </button>
@@ -293,7 +291,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <h6 class="fw-bold mb-3"><i class="fa fa-sitemap me-2 text-warning"></i>3. Kategori Eşleştirme (AŞAMA 3)</h6>
-                <p class="small text-muted">Her WooCommerce kategorisini sistem kategorinizle eşleyin. Onaylanan eşleşmeler hafızaya alınır, tekrar sorulmaz.</p>
+                <p class="small text-light">Her WooCommerce kategorisini sistem kategorinizle eşleyin. Onaylanan eşleşmeler hafızaya alınır, tekrar sorulmaz.</p>
                 <div class="table-responsive" style="max-height:480px;overflow:auto;">
                     <table class="table table-sm align-middle">
                         <thead class="table-light position-sticky top-0">
@@ -312,7 +310,7 @@
                                         <i class="fa fa-folder-o me-1 text-warning"></i>@c.SourceKey
                                         @if (!string.IsNullOrEmpty(c.SuggestionsJson))
                                         {
-                                            <div class="small text-muted mt-1">
+                                            <div class="small text-light mt-1">
                                                 <i class="fa fa-lightbulb-o me-1"></i>Öneri:
                                                 @foreach (var sug in DeserializeSuggestions(c.SuggestionsJson))
                                                 {
@@ -324,14 +322,45 @@
                                     </td>
                                     <td class="text-center"><span class="badge bg-secondary">@c.SourceItemCount</span></td>
                                     <td>
-                                        <select class="form-select form-select-sm" value="@c.TargetValue"
-                                                @onchange="(e) => OnCategorySelected(c, e)">
-                                            <option value="">— Seçiniz —</option>
-                                            @foreach (var sc in _systemCategories)
-                                            {
-                                                <option value="@sc.Id">@(string.IsNullOrEmpty(sc.DepartmentName) ? sc.Name : sc.DepartmentName + " > " + sc.Name)</option>
-                                            }
-                                        </select>
+                                        @if (_activeCatRow == c)
+                                        {
+                                            <div class="position-relative">
+                                                <input class="form-control form-control-sm" placeholder="Kategori ara (en az 2 harf)..."
+                                                       value="@_catSearch" @oninput="OnCatSearch" autofocus />
+                                                <div class="border rounded mt-1 bg-light shadow-sm" style="max-height:220px;overflow:auto;">
+                                                    @if (!_catResults.Any())
+                                                    {
+                                                        <div class="px-2 py-1 small text-light">@(_catSearch.Trim().Length < 2 ? "Aramak için yazın..." : "Sonuç yok")</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var sc in _catResults)
+                                                        {
+                                                            <button type="button" class="dropdown-item small text-wrap py-1" @onclick="() => PickCat(c, sc)">
+                                                                @(string.IsNullOrEmpty(sc.DepartmentName) ? sc.Name : sc.DepartmentName + " > " + sc.Name)
+                                                            </button>
+                                                        }
+                                                        @if (_catHasMore)
+                                                        {
+                                                            <div class="px-2 py-1 small text-light fst-italic">Daha fazlası için aramayı daraltın…</div>
+                                                        }
+                                                    }
+                                                </div>
+                                                <button type="button" class="btn btn-link btn-sm text-light p-0 mt-1" @onclick="CloseCatPicker"><i class="fa fa-times me-1"></i>Kapat</button>
+                                            </div>
+                                        }
+                                        else if (!string.IsNullOrEmpty(c.TargetValue))
+                                        {
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-success-subtle text-success text-wrap text-start">@CatDisplay(c)</span>
+                                                <button type="button" class="btn btn-outline-light btn-sm py-0" @onclick="() => OpenCatPicker(c)">Değiştir</button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm py-0" title="Temizle" @onclick="() => ClearCat(c)"><i class="fa fa-times"></i></button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => OpenCatPicker(c)"><i class="fa fa-search me-1"></i>Kategori Seç</button>
+                                        }
                                     </td>
                                     <td class="text-center">
                                         @if (c.IsConfirmedByUser)
@@ -349,8 +378,8 @@
                     </table>
                 </div>
             </div>
-            <div class="card-footer bg-white d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 2"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-light" @onclick="() => _currentStep = 2"><i class="fa fa-arrow-left me-1"></i>Geri</button>
                 <button type="button" class="btn btn-primary" @onclick="GoToBrandMapping"><i class="fa fa-arrow-right me-1"></i>Marka Eşleştirmeye Geç</button>
             </div>
         </div>
@@ -366,7 +395,7 @@
                 <h6 class="fw-bold mb-3"><i class="fa fa-trademark me-2 text-info"></i>4. Marka Eşleştirme (AŞAMA 4)</h6>
                 @if (!_brandMappings.Any())
                 {
-                    <p class="text-muted"><i class="fa fa-info-circle me-1"></i>CSV'de marka alanı bulunamadı, bu adım atlanabilir.</p>
+                    <p class="text-light"><i class="fa fa-info-circle me-1"></i>CSV'de marka alanı bulunamadı, bu adım atlanabilir.</p>
                 }
                 else
                 {
@@ -379,13 +408,39 @@
                                     <td class="small fw-semibold">@b.SourceKey</td>
                                     <td class="text-center"><span class="badge bg-secondary">@b.SourceItemCount</span></td>
                                     <td>
-                                        <select class="form-select form-select-sm" value="@b.TargetValue" @onchange="(e) => OnBrandSelected(b, e)">
-                                            <option value="">— Seçiniz —</option>
-                                            @foreach (var sb in _systemBrands)
-                                            {
-                                                <option value="@sb.Id">@sb.Name</option>
-                                            }
-                                        </select>
+                                        @if (_activeBrandRow == b)
+                                        {
+                                            <div class="position-relative">
+                                                <input class="form-control form-control-sm" placeholder="Marka ara..."
+                                                       value="@_brandSearch" @oninput="OnBrandSearch" autofocus />
+                                                <div class="border rounded mt-1 bg-light shadow-sm" style="max-height:200px;overflow:auto;">
+                                                    @if (!_brandResults.Any())
+                                                    {
+                                                        <div class="px-2 py-1 small text-light">Sonuç yok</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var sb in _brandResults)
+                                                        {
+                                                            <button type="button" class="dropdown-item small py-1" @onclick="() => PickBrand(b, sb)">@sb.Name</button>
+                                                        }
+                                                    }
+                                                </div>
+                                                <button type="button" class="btn btn-link btn-sm text-light p-0 mt-1" @onclick="CloseBrandPicker"><i class="fa fa-times me-1"></i>Kapat</button>
+                                            </div>
+                                        }
+                                        else if (!string.IsNullOrEmpty(b.TargetValue))
+                                        {
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-success-subtle text-success">@(_systemBrands.FirstOrDefault(x => x.Id.ToString() == b.TargetValue)?.Name ?? b.TargetDisplayName)</span>
+                                                <button type="button" class="btn btn-outline-light btn-sm py-0" @onclick="() => OpenBrandPicker(b)">Değiştir</button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm py-0" title="Temizle" @onclick="() => ClearBrand(b)"><i class="fa fa-times"></i></button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => OpenBrandPicker(b)"><i class="fa fa-search me-1"></i>Marka Seç</button>
+                                        }
                                     </td>
                                     <td>
                                         <div class="form-check form-switch">
@@ -399,8 +454,8 @@
                     </table>
                 }
             </div>
-            <div class="card-footer bg-white d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 3"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-light" @onclick="() => _currentStep = 3"><i class="fa fa-arrow-left me-1"></i>Geri</button>
                 <button type="button" class="btn btn-primary" @onclick="GoToStrategy"><i class="fa fa-arrow-right me-1"></i>Strateji Raporuna Geç</button>
             </div>
         </div>
@@ -415,10 +470,10 @@
             <div class="card-body">
                 <h6 class="fw-bold mb-3"><i class="fa fa-clipboard me-2 text-success"></i>5. İçe Aktarım Strateji Raporu (AŞAMA 13)</h6>
                 <div class="row g-3">
-                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-random me-2 text-primary"></i>Alan Eşleşmesi</div><div class="small text-muted">@_fieldMappings.Count(x => !string.IsNullOrEmpty(x.TargetValue)) / @_fieldMappings.Count kolon eşlendi</div></div></div>
-                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-sitemap me-2 text-warning"></i>Kategori Eşleşmesi</div><div class="small text-muted">@_categoryMappings.Count(x => x.IsConfirmedByUser) / @_categoryMappings.Count kategori onaylandı</div></div></div>
-                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-trademark me-2 text-info"></i>Marka Eşleşmesi</div><div class="small text-muted">@_brandMappings.Count(x => !string.IsNullOrEmpty(x.TargetValue) || x.CreateIfMissing) / @_brandMappings.Count marka hazır</div></div></div>
-                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-picture-o me-2 text-success"></i>Görsel İşleme Planı</div><div class="small text-muted">URL görseller indirilip Media.cs (AVIF) hattıyla işlenecek</div></div></div>
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-random me-2 text-primary"></i>Alan Eşleşmesi</div><div class="small text-light">@_fieldMappings.Count(x => !string.IsNullOrEmpty(x.TargetValue)) / @_fieldMappings.Count kolon eşlendi</div></div></div>
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-sitemap me-2 text-warning"></i>Kategori Eşleşmesi</div><div class="small text-light">@_categoryMappings.Count(x => x.IsConfirmedByUser) / @_categoryMappings.Count kategori onaylandı</div></div></div>
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-trademark me-2 text-info"></i>Marka Eşleşmesi</div><div class="small text-light">@_brandMappings.Count(x => !string.IsNullOrEmpty(x.TargetValue) || x.CreateIfMissing) / @_brandMappings.Count marka hazır</div></div></div>
+                    <div class="col-md-6"><div class="border rounded p-3"><div class="fw-bold mb-1"><i class="fa fa-picture-o me-2 text-success"></i>Görsel İşleme Planı</div><div class="small text-light">URL görseller indirilip Media.cs (AVIF) hattıyla işlenecek</div></div></div>
                 </div>
 
                 <hr />
@@ -452,8 +507,8 @@
                     <i class="fa fa-shield me-1"></i>Aktarım <b>idempotent</b> çalışır: aynı satır iki kez işlenmez, yarıda kalırsa <b>kaldığı yerden devam</b> eder.
                 </div>
             </div>
-            <div class="card-footer bg-white d-flex justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" @onclick="() => _currentStep = 4"><i class="fa fa-arrow-left me-1"></i>Geri</button>
+            <div class="card-footer bg-light d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-light" @onclick="() => _currentStep = 4"><i class="fa fa-arrow-left me-1"></i>Geri</button>
                 <button type="button" class="btn btn-success" disabled="@_isProcessing" @onclick="GoToRun">
                     <i class="fa fa-rocket me-1"></i>Aktarımı Hazırla
                 </button>
@@ -478,12 +533,21 @@
 
                 @* İstatistik paneli *@
                 <div class="row text-center g-2 mb-3">
-                    <div class="col"><div class="border rounded py-3"><div class="fw-bold fs-4">@_currentJob.TotalCount</div><div class="small text-muted">Toplam Ürün</div></div></div>
-                    <div class="col"><div class="border rounded py-3 bg-success-subtle"><div class="fw-bold fs-4 text-success">@_currentJob.ImportedCount</div><div class="small text-muted">Aktarılan</div></div></div>
-                    <div class="col"><div class="border rounded py-3 bg-warning-subtle"><div class="fw-bold fs-4 text-warning">@pending</div><div class="small text-muted">Bekleyen</div></div></div>
-                    <div class="col"><div class="border rounded py-3 bg-danger-subtle"><div class="fw-bold fs-4 text-danger">@_currentJob.FailedCount</div><div class="small text-muted">Hatalı</div></div></div>
-                    <div class="col"><div class="border rounded py-3 bg-info-subtle"><div class="fw-bold fs-4 text-info">%@_currentJob.SuccessRate.ToString("0.0")</div><div class="small text-muted">Başarı Oranı</div></div></div>
+                    <div class="col"><div class="border rounded py-3"><div class="fw-bold fs-4">@_currentJob.TotalCount</div><div class="small text-light">Toplam Ürün</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-success-subtle"><div class="fw-bold fs-4 text-success">@_currentJob.ImportedCount</div><div class="small text-light">Aktarılan</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-warning-subtle"><div class="fw-bold fs-4 text-warning">@pending</div><div class="small text-light">Bekleyen</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-secondary-subtle"><div class="fw-bold fs-4 text-secondary">@_currentJob.SkippedCount</div><div class="small text-light">Atlandı / Yinelenen</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-danger-subtle"><div class="fw-bold fs-4 text-danger">@_currentJob.FailedCount</div><div class="small text-light">Hatalı</div></div></div>
+                    <div class="col"><div class="border rounded py-3 bg-info-subtle"><div class="fw-bold fs-4 text-info">%@_currentJob.SuccessRate.ToString("0.0")</div><div class="small text-light">Başarı Oranı</div></div></div>
                 </div>
+
+                @if (_currentJob.Status == "Completed" && _currentJob.SkippedCount > 0 && _currentJob.ImportedCount == 0)
+                {
+                    <div class="alert alert-secondary small d-flex align-items-center mb-3">
+                        <i class="fa fa-info-circle me-2"></i>
+                        <div>Bu CSV'deki ürünlerin tamamı (@_currentJob.SkippedCount adet) <b>daha önce aktarılmış</b> olduğu için yinelenen sayıldı ve atlandı. Tekrar aktarmak isterseniz önce ilgili ürünleri sistemden kaldırmanız gerekir.</div>
+                    </div>
+                }
 
                 <div class="progress mb-3" style="height:14px;">
                     <div class="progress-bar progress-bar-striped @(_currentJob.Status == "Running" ? "progress-bar-animated" : "") bg-success"
@@ -491,6 +555,18 @@
                         @(ProgressPercent(_currentJob))%
                     </div>
                 </div>
+
+                @* Şu an işlenen ürün *@
+                @if (_currentJob.Status == "Running" && !string.IsNullOrEmpty(_currentProcessingName))
+                {
+                    <div class="alert alert-primary d-flex align-items-center py-2 mb-3">
+                        <i class="fa fa-spinner fa-spin me-2"></i>
+                        <div class="text-truncate">
+                            <span class="fw-semibold">İşleniyor:</span> @_currentProcessingName
+                            <span class="text-light small ms-2">(@(_currentJob.ImportedCount + _currentJob.FailedCount + _currentJob.SkippedCount)/@_currentJob.TotalCount)</span>
+                        </div>
+                    </div>
+                }
 
                 @* Kontroller *@
                 <div class="d-flex gap-2 mb-3">
@@ -512,6 +588,35 @@
                     }
                 </div>
 
+                @* Canlı işlenen ürün akışı (en yeni üstte) *@
+                @if (_liveLog.Any())
+                {
+                    <h6 class="fw-bold small mt-3"><i class="fa fa-list-ul me-2 text-primary"></i>İşlenen Ürünler (canlı)</h6>
+                    <div class="table-responsive border rounded" style="max-height:320px;overflow:auto;">
+                        <table class="table table-sm small mb-0 align-middle">
+                            <thead class="table-light position-sticky top-0"><tr><th style="width:90px;">Kimlik</th><th>Ürün</th><th style="width:120px;">Durum</th></tr></thead>
+                            <tbody>
+                                @foreach (var li in _liveLog)
+                                {
+                                    <tr>
+                                        <td class="text-light">@li.ExternalId</td>
+                                        <td class="text-truncate" style="max-width:380px;" title="@li.Name">@li.Name</td>
+                                        <td>
+                                            <span class="badge @LiveBadge(li.Status)">
+                                                <i class="fa @LiveIcon(li.Status) me-1"></i>@LiveText(li.Status)
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(li.Error))
+                                            {
+                                                <span class="text-danger small ms-1">@li.Error</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
                 @* Hata logu (AŞAMA 12) *@
                 @if (_errorRows.Any())
                 {
@@ -526,7 +631,7 @@
                                         <td>@er.SourceRowIndex</td>
                                         <td>@er.SourceExternalId</td>
                                         <td><span class="badge bg-danger-subtle text-danger">@er.ErrorCode</span></td>
-                                        <td class="text-muted">@er.ErrorMessage</td>
+                                        <td class="text-light">@er.ErrorMessage</td>
                                     </tr>
                                 }
                             </tbody>
@@ -612,11 +717,33 @@
     // ── Sistem referansları ──
     private List<CategoriesTr> _systemCategories = new();
     private List<data._Product.Brands> _systemBrands = new();
+
+    // ── Aranabilir kategori/marka seçici durumu (1300+ kategori için dropdown yerine) ──
+    private ProductImportMappings? _activeCatRow;          // o an açık olan kategori satırı
+    private string _catSearch = string.Empty;
+    private List<CategoriesTr> _catResults = new();        // ekranda yalnızca filtrelenmiş ≤30 sonuç
+    private bool _catHasMore;
+    private ProductImportMappings? _activeBrandRow;        // o an açık olan marka satırı
+    private string _brandSearch = string.Empty;
+    private List<data._Product.Brands> _brandResults = new();
+    private const int PickerLimit = 30;
     private List<data._Product.Warehouse> _warehouses = new();
 
     // ── Çalıştırma kontrol bayrakları ──
     private bool _pauseRequested, _cancelRequested;
+    private bool _isRunning;                                 // çalıştırma reentrancy guard'ı
     private List<ProductImportRows> _errorRows = new();
+
+    // ── Canlı çalışma geri bildirimi (ilerleme/şu an işlenen/akış listesi) ──
+    private string? _currentProcessingName;                 // o an işlenen ürün adı
+    private readonly List<LiveItem> _liveLog = new();       // son işlenenler (en yeni üstte, ~50 kayıt)
+    private sealed class LiveItem
+    {
+        public string? ExternalId { get; set; }
+        public string? Name { get; set; }
+        public string Status { get; set; } = "Pending";
+        public string? Error { get; set; }
+    }
 
     // ── Çalışma anı hızlı sözlükleri (RAM) ──
     private Dictionary<string, int> _categoryLookup = new();   // pathHash → CategoriesTr.Id
@@ -1037,20 +1164,61 @@
         return wa.Intersect(wb).Count() * 25;
     }
 
-    private void OnCategorySelected(ProductImportMappings c, ChangeEventArgs e)
-    {
-        c.TargetValue = e.Value?.ToString();
-        c.IsConfirmedByUser = !string.IsNullOrEmpty(c.TargetValue);
-        c.ConfidenceLevel = c.IsConfirmedByUser ? "Exact" : "Unmapped";
-        var sc = _systemCategories.FirstOrDefault(x => x.Id.ToString() == c.TargetValue);
-        c.TargetDisplayName = sc?.Name;
-    }
-
     private void ApplySuggestion(ProductImportMappings c, SuggestionDto sug)
     {
         c.TargetValue = sug.Id; c.TargetDisplayName = sug.Name;
         c.IsConfirmedByUser = true; c.ConfidenceLevel = "Likely";
         StateHasChanged();
+    }
+
+    // ── Aranabilir KATEGORİ seçici (dropdown'da 1300 kayıt basmak yerine) ──
+    private void OpenCatPicker(ProductImportMappings c)
+    {
+        CloseBrandPicker();
+        _activeCatRow = c; _catSearch = string.Empty; _catResults = new(); _catHasMore = false;
+    }
+    private void CloseCatPicker() { _activeCatRow = null; _catSearch = string.Empty; _catResults = new(); _catHasMore = false; }
+
+    private void OnCatSearch(ChangeEventArgs e)
+    {
+        _catSearch = e.Value?.ToString() ?? string.Empty;
+        var q = _catSearch.Trim();
+        if (q.Length < 2) { _catResults = new(); _catHasMore = false; return; }
+        var nq = NormalizeTr(q);
+        // 1300 kaydı bellekte filtrelemek mikro-saniyeler sürer; ekrana yalnızca ilk 30 basılır → UI kilitlenmez.
+        var matches = _systemCategories.Where(c =>
+            NormalizeTr(c.Name ?? "").Contains(nq) ||
+            NormalizeTr(c.DepartmentName ?? "").Contains(nq));
+        _catResults = matches.Take(PickerLimit).ToList();
+        _catHasMore = _catResults.Count == PickerLimit && matches.Skip(PickerLimit).Any();
+    }
+
+    private void PickCat(ProductImportMappings c, CategoriesTr sc)
+    {
+        c.TargetValue = sc.Id.ToString();
+        c.TargetDisplayName = string.IsNullOrEmpty(sc.DepartmentName) ? sc.Name : sc.DepartmentName + " > " + sc.Name;
+        c.IsConfirmedByUser = true; c.ConfidenceLevel = "Exact";
+        CloseCatPicker();
+    }
+    private void ClearCat(ProductImportMappings c)
+    {
+        c.TargetValue = null; c.TargetDisplayName = null;
+        c.IsConfirmedByUser = false; c.ConfidenceLevel = "Unmapped";
+    }
+    private string CatDisplay(ProductImportMappings c)
+    {
+        if (!string.IsNullOrEmpty(c.TargetDisplayName)) return c.TargetDisplayName!;
+        var sc = _systemCategories.FirstOrDefault(x => x.Id.ToString() == c.TargetValue);
+        return sc == null ? "" : (string.IsNullOrEmpty(sc.DepartmentName) ? (sc.Name ?? "") : sc.DepartmentName + " > " + sc.Name);
+    }
+
+    // Türkçe karakterleri normalize ederek arama duyarlılığını artırır (İ/ı/ş/ğ/ü/ö/ç).
+    private string NormalizeTr(string s)
+    {
+        var map = new Dictionary<char, char> { { 'ı', 'i' }, { 'ğ', 'g' }, { 'ü', 'u' }, { 'ş', 's' }, { 'ö', 'o' }, { 'ç', 'c' }, { 'İ', 'i' }, { 'â', 'a' }, { 'î', 'i' }, { 'û', 'u' } };
+        var sb = new StringBuilder();
+        foreach (var ch in s.ToLowerInvariant()) sb.Append(map.TryGetValue(ch, out var m) ? m : ch);
+        return sb.ToString();
     }
 
     // ════════════════════════ AŞAMA 4 — MARKA ════════════════════════
@@ -1079,14 +1247,34 @@
         }).ToList();
     }
 
-    private void OnBrandSelected(ProductImportMappings b, ChangeEventArgs e)
+    // ── Aranabilir MARKA seçici ──
+    private void OpenBrandPicker(ProductImportMappings b)
     {
-        b.TargetValue = e.Value?.ToString();
-        if (!string.IsNullOrEmpty(b.TargetValue))
-        {
-            b.IsConfirmedByUser = true; b.ConfidenceLevel = "Exact"; b.CreateIfMissing = false;
-            b.TargetDisplayName = _systemBrands.FirstOrDefault(x => x.Id.ToString() == b.TargetValue)?.Name;
-        }
+        CloseCatPicker();
+        _activeBrandRow = b; _brandSearch = string.Empty;
+        _brandResults = _systemBrands.Take(PickerLimit).ToList();
+    }
+    private void CloseBrandPicker() { _activeBrandRow = null; _brandSearch = string.Empty; _brandResults = new(); }
+
+    private void OnBrandSearch(ChangeEventArgs e)
+    {
+        _brandSearch = e.Value?.ToString() ?? string.Empty;
+        var q = _brandSearch.Trim();
+        if (q.Length == 0) { _brandResults = _systemBrands.Take(PickerLimit).ToList(); return; }
+        var nq = NormalizeTr(q);
+        _brandResults = _systemBrands.Where(x => NormalizeTr(x.Name ?? "").Contains(nq)).Take(PickerLimit).ToList();
+    }
+
+    private void PickBrand(ProductImportMappings b, data._Product.Brands sb)
+    {
+        b.TargetValue = sb.Id.ToString(); b.TargetDisplayName = sb.Name;
+        b.IsConfirmedByUser = true; b.ConfidenceLevel = "Exact"; b.CreateIfMissing = false;
+        CloseBrandPicker();
+    }
+    private void ClearBrand(ProductImportMappings b)
+    {
+        b.TargetValue = null; b.TargetDisplayName = null;
+        b.IsConfirmedByUser = false; b.ConfidenceLevel = "Unmapped";
     }
 
     // ════════════════════════ SİSTEM REFERANSLARI ════════════════════════
@@ -1233,24 +1421,33 @@
     // ════════════════════════ ÇALIŞTIRMA MOTORU ════════════════════════
     private async Task RunImport()
     {
-        if (_isProcessing) return;
+        if (_isRunning) return;
+        _isRunning = true;
         _pauseRequested = false; _cancelRequested = false;
-
-        // Çalışma anı sözlüklerini RAM'e al (kategori/marka hızlı arama)
-        await BuildRuntimeLookups();
-
-        _currentJob.Status = "Running";
-        _currentJob.StartedAt ??= DateTime.UtcNow;
-        await UpdateJobStatus("Running");
+        _liveLog.Clear(); _currentProcessingName = null;   // canlı akış tamponunu sıfırla
 
         try
         {
+            // Çalışma anı sözlüklerini RAM'e al (kategori/marka hızlı arama)
+            await BuildRuntimeLookups();
+
+            _currentJob.Status = "Running";
+            _currentJob.StartedAt ??= DateTime.UtcNow;
+            await UpdateJobStatus("Running");
+            await InvokeAsync(StateHasChanged);
+
             while (!_cancelRequested && !_pauseRequested)
             {
                 var processed = await ProcessNextBatch();
-                await RefreshErrorRows();
-                StateHasChanged();
-                if (processed == 0) { await UpdateJobStatus("Completed", DateTime.UtcNow); break; }
+                await InvokeAsync(StateHasChanged);
+                if (processed == 0)
+                {
+                    await PersistCountersFromDb();                 // bitişte kesin senkron
+                    await UpdateJobStatus("Completed", DateTime.UtcNow);
+                    var msg = $"{_currentJob.ImportedCount} aktarıldı, {_currentJob.SkippedCount} atlandı (yinelenen), {_currentJob.FailedCount} hata.";
+                    await ShowNotification(_currentJob.FailedCount > 0 ? "warning" : "success", "İçe Aktarım Tamamlandı", msg, null);
+                    break;
+                }
                 await Task.Yield(); // circuit'in nefes alması için
             }
 
@@ -1264,7 +1461,7 @@
             await Logger.TakeIt(use?.Id, PAGE, "RunImport", exception: ex.Message, stackTrace: ex.StackTrace);
             await ShowNotification("danger", "Hata", "İçe aktarım durdu: " + ex.Message, null);
         }
-        finally { StateHasChanged(); }
+        finally { _isRunning = false; await InvokeAsync(StateHasChanged); }
     }
 
     private void PauseImport() => _pauseRequested = true;
@@ -1303,13 +1500,91 @@
         foreach (var row in batch)
         {
             if (_cancelRequested || _pauseRequested) break;
-            await ProcessRow(row);                          // kendi transaction'ı içinde
+
+            // 1) "Şu an işleniyor" — satır işlenmeden ÖNCE ekrana yansıt (görsel indirme uzun sürebilir)
+            _currentProcessingName = RowName(row);
+            await InvokeAsync(StateHasChanged);
+
+            // 2) Satırı işle (kendi transaction'ı içinde)
+            await ProcessRow(row);
             _currentJob.LastProcessedRowIndex = row.SourceRowIndex;
+
+            // 3) Bellekte canlı sayaç + akış listesi (her satırda DB GroupBy yapmadan)
+            BumpCounter(row.RowStatus);
+            _liveLog.Insert(0, new LiveItem
+            {
+                ExternalId = row.SourceExternalId,
+                Name = _currentProcessingName,
+                Status = row.RowStatus ?? "Pending",
+                Error = row.ErrorCode
+            });
+            if (_liveLog.Count > 50) _liveLog.RemoveAt(_liveLog.Count - 1);
+
+            // 4) Her satırda UI'ı tazele → ilerleme çubuğu ve liste canlı hareket eder
+            await InvokeAsync(StateHasChanged);
+
+            // 5) Her 25 satırda bir sayaçları DB gerçeğiyle bağdaştır + ilerlemeyi kalıcılaştır
+            if ((row.SourceRowIndex + 1) % 25 == 0) await PersistCountersFromDb();
         }
 
-        await PersistCountersFromDb();                       // sayaçları DB gerçeğinden tazele
+        _currentProcessingName = null;
+        await PersistCountersFromDb();                       // batch sonu kesin senkron
+        await RefreshErrorRows();
+        await InvokeAsync(StateHasChanged);
         return batch.Count;
     }
+
+    // İşlenen satırın ürün adını ham CSV verisinden okur (canlı gösterim için)
+    private string RowName(ProductImportRows row)
+    {
+        try
+        {
+            var raw = JsonSerializer.Deserialize<Dictionary<string, string>>(row.RawRowJson ?? "{}");
+            if (raw != null && raw.TryGetValue("İsim", out var n) && !string.IsNullOrWhiteSpace(n)) return n.Trim();
+        }
+        catch { }
+        return row.SourceSku ?? row.SourceExternalId ?? $"Satır {row.SourceRowIndex}";
+    }
+
+    // Bellekte anlık sayaç artışı (PersistCountersFromDb ile periyodik olarak bağdaştırılır)
+    private void BumpCounter(string? status)
+    {
+        switch (status)
+        {
+            case "Imported": _currentJob.ImportedCount++; break;
+            case "Failed": _currentJob.FailedCount++; break;
+            case "Skipped":
+            case "Duplicate": _currentJob.SkippedCount++; break;
+        }
+        var done = _currentJob.ImportedCount + _currentJob.FailedCount;
+        _currentJob.SuccessRate = done > 0 ? Math.Round((decimal)_currentJob.ImportedCount / done * 100m, 1) : 0m;
+    }
+
+    // Canlı durum rozetleri
+    private string LiveBadge(string s) => s switch
+    {
+        "Imported" => "bg-success",
+        "Failed" => "bg-danger",
+        "Duplicate" => "bg-secondary",
+        "Skipped" => "bg-warning text-dark",
+        _ => "bg-light text-dark"
+    };
+    private string LiveIcon(string s) => s switch
+    {
+        "Imported" => "fa-check",
+        "Failed" => "fa-times",
+        "Duplicate" => "fa-clone",
+        "Skipped" => "fa-forward",
+        _ => "fa-circle-o"
+    };
+    private string LiveText(string s) => s switch
+    {
+        "Imported" => "Aktarıldı",
+        "Failed" => "Hata",
+        "Duplicate" => "Yinelenen",
+        "Skipped" => "Atlandı",
+        _ => s
+    };
 
     // ── TEK SATIR → ÜRÜN (transaction + rollback) ──
     private async Task ProcessRow(ProductImportRows row)
@@ -1382,6 +1657,8 @@
                     AddCategories(db, productId, G("Kategoriler"));
                     // SEO
                     AddSeo(db, productId, product.Name);
+                    // Özellikler/Öznitelikler (bilgi dağarcığı) — WooCommerce "Öznitelik N adı/değeri" kolonları
+                    AddSpecifications(db, productId, raw);
                 }
 
                 // 3) VARYANT (basit/varyasyon → fiyat & stok her zaman varyant üzerinden)
@@ -1555,6 +1832,42 @@
         });
     }
 
+    // BİLGİ DAĞARCIĞI: WooCommerce "Öznitelik N adı" / "Öznitelik N değer(ler)i" çiftlerini
+    // ProductSpecifications'a serbest (CustomName + CustomValue) olarak yazar — veri kaybını önler.
+    // Tanımlı attribute/variant sistemine bağlanmadan, ürün özelliklerini güvenle saklar.
+    private void AddSpecifications(_ApplicationConnectionDb db, Guid productId, Dictionary<string, string> raw)
+    {
+        int order = 0;
+        foreach (var kv in raw)
+        {
+            var key = kv.Key?.Trim() ?? "";
+            // "Öznitelik 1 adı", "Öznitelik 1 değer(ler)i" desenini yakala
+            if (!key.StartsWith("Öznitelik", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!(key.Contains("ad", StringComparison.OrdinalIgnoreCase))) continue; // yalnızca "... adı" kolonundan başla
+
+            var nameVal = (kv.Value ?? "").Trim();
+            if (string.IsNullOrEmpty(nameVal)) continue;
+
+            // Aynı N numarasının "değer(ler)i" kolonunu bul
+            var num = new string(key.Where(char.IsDigit).ToArray());
+            var valueCol = raw.Keys.FirstOrDefault(k =>
+                k.StartsWith("Öznitelik", StringComparison.OrdinalIgnoreCase) &&
+                k.Contains("değer", StringComparison.OrdinalIgnoreCase) &&
+                new string(k.Where(char.IsDigit).ToArray()) == num);
+            var valueVal = valueCol != null ? (raw[valueCol] ?? "").Trim() : "";
+            if (string.IsNullOrEmpty(valueVal)) continue;
+
+            db.ProductSpecifications.Add(new data._Product.ProductSpecifications
+            {
+                ProductId = productId,
+                CustomName = nameVal,
+                CustomValue = valueVal,
+                DisplayOrder = order++,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+    }
+
     private Guid? ResolveBrand(string brandCell)
     {
         if (string.IsNullOrWhiteSpace(brandCell)) return null;
@@ -1581,7 +1894,8 @@
         row.RowStatus = status;
     }
 
-    private async Task PersistCountersFromDb()
+    // Sayaçları yalnızca OKUYARAK _currentJob'a yansıtır (DB'ye yazmaz). İş açılışında self-heal için.
+    private async Task RecomputeCountersFromDb()
     {
         await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
         var stats = await db.ProductImportRows.Where(r => r.JobId == _currentJob.Id)
@@ -1593,7 +1907,12 @@
                                  + (stats.FirstOrDefault(s => s.Key == "Duplicate")?.C ?? 0);
         var done = _currentJob.ImportedCount + _currentJob.FailedCount;
         _currentJob.SuccessRate = done > 0 ? Math.Round((decimal)_currentJob.ImportedCount / done * 100m, 1) : 0m;
+    }
 
+    private async Task PersistCountersFromDb()
+    {
+        await RecomputeCountersFromDb();   // _currentJob sayaçlarını DB gerçeğinden tazele
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
         var job = await db.ProductImportJobs.FirstOrDefaultAsync(j => j.Id == _currentJob.Id, _cts.Token);
         if (job != null)
         {
@@ -1604,6 +1923,19 @@
             await db.SaveChangesAsync(_cts.Token);
         }
     }
+
+    // İşlenen son satırları canlı listeye doldurur (tamamlanmış işi tekrar açınca da liste dolu görünür).
+    private async Task LoadLiveLogFromDb()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+        var recent = await db.ProductImportRows.AsNoTracking()
+            .Where(r => r.JobId == _currentJob.Id && r.ProcessedAt != null)
+            .OrderByDescending(r => r.ProcessedAt).Take(50).ToListAsync(_cts.Token);
+        _liveLog.Clear();
+        foreach (var r in recent)
+            _liveLog.Add(new LiveItem { ExternalId = r.SourceExternalId, Name = RowName(r), Status = r.RowStatus ?? "Pending", Error = r.ErrorCode });
+    }
+
 
     private async Task UpdateJobStatus(string status, DateTime? completedAt = null)
     {
@@ -1645,6 +1977,8 @@
         await LoadSystemReferences();
         await LoadWarehouses();
         await RefreshErrorRows();
+        await RecomputeCountersFromDb();   // sayaçları satırlardan tazele → eski/tamamlanmış işler doğru görünür
+        await LoadLiveLogFromDb();         // işlenen ürünler listesini doldur
         // CSV'yi tekrar yükle (kaldığı yerden devam için bellek tazelemesi)
         if (_sourceCsvMedia != null) { try { await LoadCsvFromMedia(); } catch { } }
     }

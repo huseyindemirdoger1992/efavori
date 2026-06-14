@@ -1,0 +1,1027 @@
+﻿@* ============================================================
+   ListProduct.razor — Ürün Listesi (efavori)
+   ─────────────────────────────────────────────────────────────
+   ✅ SUNUCU-TARAFLI SAYFALAMA → milyonlarca üründe bile kilitlenmez
+      (her sayfada yalnızca PAGE_SIZE kayıt + filtre başına tek CountAsync)
+   ✅ İlişkili veriler (kapak/marka/mağaza/yükleyen/fiyat/stok) sayfa
+      kimlikleri için TEK toplu sorguyla doldurulur → N+1 yok
+   ✅ ROL DUYARLI:
+        SuperAdmin → tüm ürünler + "Yükleyen" & "Mağaza" sütunları + TOPLU İŞLEM
+        Diğer      → yalnızca kendi ürünleri (standart görünüm)
+   ✅ GlobalStateHub broadcast + RAM yok (liste DB'den sayfalı gelir)
+   ✅ TakeLogs ile tüm aksiyonlar loglanır
+   ✅ SemaphoreSlim yazma kilidi + _isProcessing guard
+   ✅ Soft delete (owned IsDeleted) — fiziksel silme yok
+   ✅ Bootstrap 5.3 + Font Awesome, tek dosya, code-behind yok
+   ✅ GlobalSecurityProvider KULLANILMAZ (talep gereği)
+   ============================================================ *@
+
+@using data
+@using api
+@using api.tr
+@using data._Shared
+@using data._Product
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@implements IAsyncDisposable
+
+@code {
+    // Global state'ten dil alıp yönlendirme için gereklidir — SİLME.
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+}
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",     "Ana Sayfa", "/"),
+        ("fa fa-cubes",    "Ürünler",   "javascript:void(0)"),
+        ("fa fa-list-alt", PAGE_TITLE,  "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ═══════════════════════════ ÜST BAR ═══════════════════════════ *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <button class="btn btn-primary btn-sm" @onclick="NavigateToAdd">
+        <i class="fa fa-plus me-sm-1"></i><span class="d-none d-sm-inline">Yeni Ürün</span>
+    </button>
+
+    @if (IsAdmin)
+    {
+        <span class="badge bg-danger"><i class="fa fa-shield me-1"></i>SuperAdmin · Tam Yetki</span>
+    }
+    else
+    {
+        <span class="badge bg-secondary"><i class="fa fa-user me-1"></i>Mağaza Görünümü</span>
+    }
+
+    @* ── Toplu işlem çubuğu (yalnızca SuperAdmin) ── *@
+    @if (IsAdmin && _selectedIds.Any())
+    {
+        <div class="vr mx-1"></div>
+        <span class="badge bg-light text-dark">@_selectedIds.Count seçili</span>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="ClearSelection"><i class="fa fa-times me-1"></i>Temizle</button>
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-success" @onclick='() => OpenBulk("publish")' disabled="@_isProcessing"><i class="fa fa-check me-1"></i>Yayınla</button>
+            <button class="btn btn-outline-warning" @onclick='() => OpenBulk("unpublish")' disabled="@_isProcessing"><i class="fa fa-eye-slash me-1"></i>Taslağa Al</button>
+            <button class="btn btn-outline-info" @onclick='() => OpenBulk("activate")' disabled="@_isProcessing"><i class="fa fa-toggle-on me-1"></i>Aktifleştir</button>
+            <button class="btn btn-outline-dark" @onclick='() => OpenBulk("deactivate")' disabled="@_isProcessing"><i class="fa fa-toggle-off me-1"></i>Pasifleştir</button>
+            <button class="btn btn-outline-danger" @onclick='() => OpenBulk("delete")' disabled="@_isProcessing"><i class="fa fa-trash me-1"></i>Sil</button>
+        </div>
+    }
+
+    <div class="ms-auto small text-light align-self-center">
+        Toplam <span class="fw-bold">@_totalCount.ToString("N0")</span> ürün
+        @if (_isLoading)
+        {
+            <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+        }
+    </div>
+</div>
+
+@* ═══════════════════════════ FİLTRELER ═══════════════════════════ *@
+<div class="row g-2 mb-3">
+    <div class="col-12 col-lg-2" style="margin-top:12px;">
+        <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control" placeholder="Ürün adı veya SKU ara..."
+                   value="@_searchTerm" @oninput="OnSearchInput" />
+            @if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                <button class="btn btn-outline-secondary" @onclick="ClearSearch"><i class="fa fa-times"></i></button>
+            }
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-2">
+        <select class="form-select form-select-sm" value="@_filterType" @onchange="OnFilterTypeChanged">
+            <option value="">Tüm Tipler</option>
+            <option value="Simple">Basit</option>
+            <option value="Variant">Varyantlı</option>
+            <option value="Digital">Dijital</option>
+            <option value="Service">Hizmet</option>
+            <option value="Bundle">Paket</option>
+            <option value="External">Harici</option>
+        </select>
+    </div>
+
+    <div class="col-6 col-lg-2">
+        <select class="form-select form-select-sm" value="@_filterStatus" @onchange="OnFilterStatusChanged">
+            <option value="">Tüm Durumlar</option>
+            <option value="Published">Yayında</option>
+            <option value="Draft">Taslak</option>
+            <option value="PendingApproval">Onay Bekliyor</option>
+            <option value="Rejected">Reddedildi</option>
+            <option value="Archived">Arşiv</option>
+        </select>
+    </div>
+
+    <div class="col-6 col-lg-2">
+        <select class="form-select form-select-sm" value="@_filterActive" @onchange="OnFilterActiveChanged">
+            <option value="">Aktif + Pasif</option>
+            <option value="active">Yalnızca Aktif</option>
+            <option value="passive">Yalnızca Pasif</option>
+        </select>
+    </div>
+
+    <div class="col-6 col-lg-2">
+        <select class="form-select form-select-sm" value="@_sort" @onchange="OnSortChanged">
+            <option value="new">En Yeni</option>
+            <option value="old">En Eski</option>
+            <option value="name">İsim (A-Z)</option>
+            <option value="upd">Son Güncellenen</option>
+        </select>
+    </div>
+
+    @* SuperAdmin: mağaza filtresi (mağaza sayısı ürün sayısından çok azdır → güvenli) *@
+    @if (IsAdmin && _stores.Any())
+    {
+        <div class="col-12 col-lg-2">
+            <select class="form-select form-select-sm" value="@_filterStoreId" @onchange="OnFilterStoreChanged">
+                <option value="">Tüm Mağazalar</option>
+                @foreach (var s in _stores)
+                {
+                    <option value="@s.Id">@(string.IsNullOrWhiteSpace(s.Name) ? "(İsimsiz mağaza)" : s.Name)</option>
+                }
+            </select>
+        </div>
+    }
+</div>
+
+@* ═══════════════════════════ İÇERİK ═══════════════════════════ *@
+@if (_isLoading && !_rows.Any())
+{
+    <div class="text-center py-5"><i class="fa fa-spinner fa-spin fa-2x text-info"></i><p class="mt-2 small text-light">Yükleniyor...</p></div>
+}
+else if (!_rows.Any())
+{
+    <div class="text-center py-5 text-light"><i class="fa fa-inbox fa-3x mb-3 d-block"></i><p class="mb-0">Ürün bulunamadı.</p></div>
+}
+else
+{
+    <div class="table-responsive rounded-3 border">
+        <table class="table table-hover table-sm align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    @if (IsAdmin)
+                    {
+                        <th style="width:2rem;">
+                            <input type="checkbox" class="form-check-input" checked="@_pageAllSelected" @onchange="ToggleSelectPage" />
+                        </th>
+                    }
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th style="width:56px;">Görsel</th>
+                    <th>Ürün</th>
+                    <th class="d-none d-lg-table-cell">SKU</th>
+                    <th class="text-end">Fiyat</th>
+                    <th class="text-center d-none d-md-table-cell">Stok</th>
+                    <th class="d-none d-lg-table-cell">Marka</th>
+                    @if (IsAdmin)
+                    {
+                        <th class="d-none d-xl-table-cell">Mağaza</th>
+                        <th class="d-none d-xl-table-cell">Yükleyen</th>
+                    }
+                    <th class="text-center">Durum</th>
+                    <th class="d-none d-lg-table-cell">Tarih</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_page - 1) * _pageSize + 1;
+                }
+                @foreach (var r in _rows)
+                {
+                    var selected = _selectedIds.Contains(r.Id);
+                    <tr class="@(selected ? "table-active" : "")">
+                        @if (IsAdmin)
+                        {
+                            <td><input type="checkbox" class="form-check-input" checked="@selected" @onchange="() => ToggleRow(r.Id)" /></td>
+                        }
+                        <td class="d-none d-md-table-cell text-light small">@(rowNo++)</td>
+                        <td>
+                            <img src="@CoverUrl(r)" class="rounded border" style="width:42px;height:42px;object-fit:cover;" alt="" />
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-truncate" style="max-width:340px;" title="@r.Name">@(string.IsNullOrWhiteSpace(r.Name) ? "(İsimsiz ürün)" : r.Name)</div>
+                            <div>
+                                <span class="badge bg-light text-dark border">@TypeText(r.ProductType)</span>
+                                @if (r.IsApprovedByAdmin == true)
+                                {
+                                    <span class="badge bg-success-subtle text-success"><i class="fa fa-check-circle me-1"></i>Onaylı</span>
+                                }
+                            </div>
+                        </td>
+                        <td class="d-none d-lg-table-cell"><code class="small">@(_skuMap.GetValueOrDefault(r.Id) ?? "—")</code></td>
+                        <td class="text-end text-nowrap">@PriceText(r.Id)</td>
+                        <td class="text-center d-none d-md-table-cell">
+                            <span class="badge @(StockBadge(r.Id))">@(_stockMap.GetValueOrDefault(r.Id))</span>
+                        </td>
+                        <td class="d-none d-lg-table-cell">@(r.BrandId.HasValue ? _brandMap.GetValueOrDefault(r.BrandId.Value) ?? "—" : "—")</td>
+                        @if (IsAdmin)
+                        {
+                            <td class="d-none d-xl-table-cell small">@(_storeMap.GetValueOrDefault(r.StoreId) ?? "—")</td>
+                            <td class="d-none d-xl-table-cell small">@(_userMap.GetValueOrDefault(r.UserId) ?? "—")</td>
+                        }
+                        <td class="text-center text-nowrap">
+                            <span class="badge @PublishBadge(r.PublishStatus)">@PublishText(r.PublishStatus)</span>
+                            <span class="ms-1" title="@(r.IsActive ? "Aktif" : "Pasif")">
+                                <i class="fa @(r.IsActive ? "fa-toggle-on text-success" : "fa-toggle-off text-secondary")"></i>
+                            </span>
+                        </td>
+                        <td class="d-none d-lg-table-cell text-nowrap small text-light">@r.CreatedAt?.ToString("dd.MM.yyyy")</td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-outline-secondary btn-sm" title="Detay" @onclick="() => OpenDetail(r.Id)"><i class="fa fa-eye"></i></button>
+                            <button class="btn btn-outline-warning btn-sm" title="Düzenle" @onclick="() => NavigateToEdit(r.Id)"><i class="fa fa-edit"></i></button>
+                            @if (IsAdmin || r.UserId == use?.Id)
+                            {
+                                <button class="btn btn-outline-danger btn-sm" title="Sil" @onclick="() => OpenDelete(r)"><i class="fa fa-trash"></i></button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama (kompakt — milyonlarca sayfa için buton listesi basılmaz) ─── *@
+    <div class="d-flex flex-wrap align-items-center justify-content-between mt-2 gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <small class="text-light">Sayfa @_page / @_totalPages.ToString("N0")</small>
+            <select class="form-select form-select-sm w-auto" value="@_pageSize" @onchange="OnPageSizeChanged">
+                <option value="10">10 / sayfa</option>
+                <option value="100">100 / sayfa</option>
+                <option value="1000">1000 / sayfa</option>
+            </select>
+        </div>
+
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(_page <= 1 ? "disabled" : "")"><button class="page-link" @onclick="() => GoToPage(1)" title="İlk"><i class="fa fa-angle-double-left"></i></button></li>
+                <li class="page-item @(_page <= 1 ? "disabled" : "")"><button class="page-link" @onclick="() => GoToPage(_page - 1)"><i class="fa fa-angle-left"></i></button></li>
+                <li class="page-item active"><span class="page-link">@_page</span></li>
+                <li class="page-item @(_page >= _totalPages ? "disabled" : "")"><button class="page-link" @onclick="() => GoToPage(_page + 1)"><i class="fa fa-angle-right"></i></button></li>
+                <li class="page-item @(_page >= _totalPages ? "disabled" : "")"><button class="page-link" @onclick="() => GoToPage(_totalPages)" title="Son"><i class="fa fa-angle-double-right"></i></button></li>
+            </ul>
+        </nav>
+
+        <div class="input-group input-group-sm" style="width:160px;">
+            <span class="input-group-text">Git</span>
+            <input type="number" min="1" max="@_totalPages" class="form-control" value="@_page" @onchange="OnJumpPage" />
+        </div>
+    </div>
+}
+
+@* ═══════════════════════════ DETAY MODAL ═══════════════════════════ *@
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0"><i class="fa fa-cube me-1"></i>Ürün Detayı</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                @if (_detailLoading)
+                {
+                    <div class="text-center py-4"><i class="fa fa-spinner fa-spin fa-2x text-info"></i></div>
+                }
+                else if (_detail != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4 text-center">
+                            <img src="@_detail.CoverUrl" class="img-fluid rounded border" style="max-height:220px;object-fit:cover;" alt="" />
+                            @if (_detail.Gallery.Any())
+                            {
+                                <div class="d-flex flex-wrap gap-1 mt-2 justify-content-center">
+                                    @foreach (var g in _detail.Gallery.Take(8))
+                                    {
+                                        <img src="@g" class="rounded border" style="width:40px;height:40px;object-fit:cover;" alt="" />
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <h5 class="mb-1">@_detail.Name</h5>
+                            <div class="mb-2">
+                                <span class="badge @PublishBadge(_detail.PublishStatus)">@PublishText(_detail.PublishStatus)</span>
+                                <span class="badge bg-light text-dark border">@TypeText(_detail.ProductType)</span>
+                                <span class="badge @(_detail.IsActive ? "bg-success" : "bg-secondary")">@(_detail.IsActive ? "Aktif" : "Pasif")</span>
+                            </div>
+                            <table class="table table-sm mb-0">
+                                <tbody>
+                                    <tr><th class="text-light" style="width:140px;">Fiyat</th><td>@_detail.PriceText</td></tr>
+                                    <tr><th class="text-light">Toplam Stok</th><td>@_detail.TotalStock</td></tr>
+                                    <tr><th class="text-light">Marka</th><td>@(_detail.BrandName ?? "—")</td></tr>
+                                    <tr><th class="text-light">Kategoriler</th><td>@(_detail.Categories.Any() ? string.Join(", ", _detail.Categories) : "—")</td></tr>
+                                    @if (IsAdmin)
+                                    {
+                                        <tr><th class="text-light">Mağaza</th><td>@(_detail.StoreName ?? "—")</td></tr>
+                                        <tr><th class="text-light">Yükleyen</th><td>@(_detail.UploaderName ?? "—")</td></tr>
+                                        <tr><th class="text-light">Ürün ID</th><td><code class="small">@_detail.Id</code></td></tr>
+                                    }
+                                    <tr><th class="text-light">Oluşturulma</th><td>@_detail.CreatedAt?.ToString("dd.MM.yyyy HH:mm")</td></tr>
+                                </tbody>
+                            </table>
+                            @if (!string.IsNullOrWhiteSpace(_detail.ShortDescription))
+                            {
+                                <p class="small text-light mt-2 mb-0">@_detail.ShortDescription</p>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════ TEKLİ SİL MODAL ═══════════════════════════ *@
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2"><h6 class="modal-title mb-0 text-danger"><i class="fa fa-trash me-1"></i>Ürünü Sil</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p class="mb-0">"<b>@_deleteTarget?.Name</b>" ürününü silmek istediğinize emin misiniz? (Soft delete — kayıt arşivlenir)</p>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button class="btn btn-danger btn-sm" @onclick="DeleteConfirmed" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i>
+                    }
+                    <span>Sil</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════ TOPLU İŞLEM MODAL (SuperAdmin) ═══════════════════════════ *@
+<div class="modal fade" id="bulkModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2"><h6 class="modal-title mb-0"><i class="fa fa-tasks me-1"></i>Toplu İşlem</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <p class="mb-0">Seçili <b>@_selectedIds.Count</b> ürüne <b>@BulkActionText(_bulkAction)</b> işlemi uygulanacak. Onaylıyor musunuz?</p>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button class="btn btn-primary btn-sm" @onclick="ApplyBulk" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i>
+                    }
+                    <span>Uygula</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // ─────────────── Sabitler ───────────────
+    private const string PAGE_TITLE = "Ürün Listesi";
+    private const string ENTITY_NAME = "Products";
+
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public string? Language { get; set; }
+
+    private bool IsAdmin => string.Equals(use?.UsersType, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+
+    // ─────────────── Çekirdek altyapı ───────────────
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _disposed, _isInitialized, _isLoading, _isProcessing;
+    private Notification? _notificationRef;
+
+    // ─────────────── Liste + sayfalama durumu ───────────────
+    private List<ProductRow> _rows = new();
+    private int _page = 1;
+    private int _pageSize = 10;
+    private int _totalCount;
+    private int _totalPages = 1;
+
+    // ─────────────── Filtreler ───────────────
+    private string _searchTerm = string.Empty;
+    private string _filterType = string.Empty;
+    private string _filterStatus = string.Empty;
+    private string _filterActive = string.Empty;
+    private string _filterStoreId = string.Empty;
+    private string _sort = "new";
+    private CancellationTokenSource? _searchCts;
+
+    // ─────────────── Sayfa-içi toplu lookup'lar (N+1 yok) ───────────────
+    private readonly Dictionary<Guid, string> _coverMap = new();   // CoverMediaId → FileUrl
+    private readonly Dictionary<Guid, string> _brandMap = new();   // BrandId → Ad
+    private readonly Dictionary<Guid, string> _storeMap = new();   // StoreId → Ad
+    private readonly Dictionary<Guid, string> _userMap = new();    // UserId → Yükleyen
+    private readonly Dictionary<Guid, string> _skuMap = new();     // ProductId → varsayılan SKU
+    private readonly Dictionary<Guid, int> _stockMap = new();      // ProductId → toplam stok
+    private readonly Dictionary<Guid, (decimal price, decimal? disc, string cur)> _priceMap = new();
+
+    // ─────────────── Seçim (toplu işlem) ───────────────
+    private readonly HashSet<Guid> _selectedIds = new();
+    private bool _pageAllSelected;
+    private string _bulkAction = string.Empty;
+
+    // ─────────────── Mağaza filtresi referansı (admin) ───────────────
+    private List<Store> _stores = new();
+
+    // ─────────────── Modal state ───────────────
+    private ProductRow? _deleteTarget;
+    private DetailVm? _detail;
+    private bool _detailLoading;
+
+    private const string NoImage = "https://efavori.com/_files/main/NoImage.png";
+
+    // ═══════════════════════ YAŞAM DÖNGÜSÜ ═══════════════════════
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleDataChanged;
+        if (IsAdmin) await LoadStores();
+        await LoadPageAsync(recount: true);
+    }
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || entityName != ENTITY_NAME) return;
+        await InvokeAsync(async () => { await LoadPageAsync(recount: true); StateHasChanged(); });
+    }
+
+    // ═══════════════════════ MAĞAZA REFERANSI (admin) ═══════════════════════
+    private async Task LoadStores()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _stores = await db.Stores.AsNoTracking()
+                .Where(s => s.IsDeleted == null || s.IsDeleted.IsDeletedStatu != true)
+                .OrderBy(s => s.Name)
+                .Select(s => new Store { Id = s.Id, Name = s.Name })
+                .ToListAsync(_cts.Token);
+        }
+        catch (Exception ex) { await LogError("LoadStores", ex); }
+    }
+
+    // ═══════════════════════ SAYFA YÜKLEME (sunucu-taraflı) ═══════════════════════
+    // recount=true → filtre/arama değişti, toplam yeniden sayılır + sayfa 1'e döner mantığı çağıran tarafta
+    private async Task LoadPageAsync(bool recount)
+    {
+        try
+        {
+            _isLoading = true; StateHasChanged();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var q = BuildQuery(db);
+
+            if (recount)
+            {
+                _totalCount = await q.CountAsync(_cts.Token);
+                _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)_pageSize));
+                if (_page > _totalPages) _page = _totalPages;
+                if (_page < 1) _page = 1;
+            }
+
+            q = ApplySort(q);
+
+            // Yalnızca o sayfanın hafif projeksiyonu — açıklama (büyük HTML) ÇEKİLMEZ
+            _rows = await q
+                .Skip((_page - 1) * _pageSize).Take(_pageSize)
+                .Select(p => new ProductRow
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    ProductType = p.ProductType,
+                    PublishStatus = p.PublishStatus,
+                    IsActive = p.IsActive,
+                    IsApprovedByAdmin = p.IsApprovedByAdmin,
+                    CreatedAt = p.CreatedAt,
+                    UpdatedAt = p.UpdatedAt,
+                    CoverMediaId = p.CoverMediaId,
+                    BrandId = p.BrandId,
+                    StoreId = p.StoreId,
+                    UserId = p.UserId
+                })
+                .ToListAsync(_cts.Token);
+
+            await LoadRelatedLookups(db, _rows);
+            RecalcPageSelection();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await LogError("LoadPageAsync", ex);
+            await Notify("danger", "Hata", "Liste yüklenirken bir sorun oluştu.");
+        }
+        finally { _isLoading = false; StateHasChanged(); }
+    }
+
+    // Rol + filtre kapsamlı temel sorgu
+    private IQueryable<Products> BuildQuery(_ApplicationConnectionDb db)
+    {
+        var q = db.Products.AsNoTracking()
+            .Where(p => p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true);
+
+        // ROL: admin değilse yalnızca kendi ürünleri (gerçek projede aktif Store.Id ile de daraltılabilir)
+        if (!IsAdmin)
+        {
+            var uid = use?.Id ?? Guid.Empty;
+            q = q.Where(p => p.UserId == uid);
+        }
+        else if (!string.IsNullOrEmpty(_filterStoreId) && Guid.TryParse(_filterStoreId, out var sid))
+        {
+            q = q.Where(p => p.StoreId == sid);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            var term = _searchTerm.Trim();
+            // Ad VEYA varsayılan varyant SKU eşleşmesi
+            q = q.Where(p => (p.Name != null && p.Name.Contains(term))
+                || db.ProductVariants.Any(v => v.ProductId == p.Id && v.Sku != null && v.Sku.Contains(term)));
+        }
+
+        if (!string.IsNullOrEmpty(_filterType)) q = q.Where(p => p.ProductType == _filterType);
+        if (!string.IsNullOrEmpty(_filterStatus)) q = q.Where(p => p.PublishStatus == _filterStatus);
+        if (_filterActive == "active") q = q.Where(p => p.IsActive);
+        else if (_filterActive == "passive") q = q.Where(p => !p.IsActive);
+
+        return q;
+    }
+
+    private IQueryable<Products> ApplySort(IQueryable<Products> q) => _sort switch
+    {
+        "old" => q.OrderBy(p => p.CreatedAt).ThenBy(p => p.Id),
+        "name" => q.OrderBy(p => p.Name).ThenBy(p => p.Id),
+        "upd" => q.OrderByDescending(p => p.UpdatedAt ?? p.CreatedAt).ThenBy(p => p.Id),
+        _ => q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id)
+    };
+
+    // Sayfadaki kimlikler için ilişkili verileri TEK toplu sorgularla doldur (N+1 yok)
+    private async Task LoadRelatedLookups(_ApplicationConnectionDb db, List<ProductRow> rows)
+    {
+        _coverMap.Clear(); _brandMap.Clear(); _storeMap.Clear(); _userMap.Clear();
+        _skuMap.Clear(); _stockMap.Clear(); _priceMap.Clear();
+        if (!rows.Any()) return;
+
+        var ids = rows.Select(r => r.Id).ToList();
+        var coverIds = rows.Where(r => r.CoverMediaId.HasValue).Select(r => r.CoverMediaId!.Value).Distinct().ToList();
+        var brandIds = rows.Where(r => r.BrandId.HasValue).Select(r => r.BrandId!.Value).Distinct().ToList();
+
+        // Kapak görselleri
+        if (coverIds.Any())
+        {
+            var media = await db.Media.AsNoTracking()
+                .Where(m => coverIds.Contains(m.Id))
+                .Select(m => new { m.Id, m.FileUrl }).ToListAsync(_cts.Token);
+            foreach (var m in media) if (!string.IsNullOrEmpty(m.FileUrl)) _coverMap[m.Id] = m.FileUrl!;
+        }
+
+        // Markalar
+        if (brandIds.Any())
+        {
+            var brands = await db.Brands.AsNoTracking()
+                .Where(b => brandIds.Contains(b.Id))
+                .Select(b => new { b.Id, b.Name }).ToListAsync(_cts.Token);
+            foreach (var b in brands) _brandMap[b.Id] = b.Name ?? "—";
+        }
+
+        // Varsayılan varyant SKU
+        var skus = await db.ProductVariants.AsNoTracking()
+            .Where(v => ids.Contains(v.ProductId) && v.IsDefault && (v.IsDeleted == null || v.IsDeleted.IsDeletedStatu != true))
+            .Select(v => new { v.ProductId, v.Sku }).ToListAsync(_cts.Token);
+        foreach (var s in skus) if (!_skuMap.ContainsKey(s.ProductId) && !string.IsNullOrEmpty(s.Sku)) _skuMap[s.ProductId] = s.Sku!;
+
+        // Toplam stok (ürün başına tüm depo satırlarının toplamı)
+        var stocks = await db.ProductStocks.AsNoTracking()
+            .Where(s => ids.Contains(s.ProductId))
+            .Select(s => new { s.ProductId, s.Quantity }).ToListAsync(_cts.Token);
+        foreach (var grp in stocks.GroupBy(s => s.ProductId)) _stockMap[grp.Key] = grp.Sum(x => x.Quantity);
+
+        // Güncel fiyat (EffectiveTo == null) — kullanıcı para birimi tercih edilir
+        var prices = await db.ProductPrices.AsNoTracking()
+            .Where(pr => ids.Contains(pr.ProductId) && pr.EffectiveTo == null)
+            .Select(pr => new { pr.ProductId, pr.Price, pr.DiscountedPrice, pr.Currency }).ToListAsync(_cts.Token);
+        var prefCur = string.IsNullOrEmpty(use?.Currency) ? "TRY" : use!.Currency!;
+        foreach (var grp in prices.GroupBy(p => p.ProductId))
+        {
+            var chosen = grp.FirstOrDefault(x => x.Currency == prefCur) ?? grp.First();
+            _priceMap[grp.Key] = (chosen.Price, chosen.DiscountedPrice, chosen.Currency ?? prefCur);
+        }
+
+        // SuperAdmin: mağaza + yükleyen adları
+        if (IsAdmin)
+        {
+            var storeIds = rows.Select(r => r.StoreId).Distinct().ToList();
+            var stores = await db.Stores.AsNoTracking()
+                .Where(s => storeIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.Name }).ToListAsync(_cts.Token);
+            foreach (var s in stores) _storeMap[s.Id] = string.IsNullOrWhiteSpace(s.Name) ? "(İsimsiz)" : s.Name!;
+
+            var userIds = rows.Select(r => r.UserId).Distinct().ToList();
+            var users = await db.Users.AsNoTracking()
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FirstName, u.LastName, Email = u.ContactInformation!.Email })
+                .ToListAsync(_cts.Token);
+            foreach (var u in users)
+            {
+                var name = $"{u.FirstName} {u.LastName}".Trim();
+                _userMap[u.Id] = !string.IsNullOrWhiteSpace(name) ? name : (u.Email ?? u.Id.ToString());
+            }
+        }
+    }
+
+    // ═══════════════════════ FİLTRE / SAYFA OLAYLARI ═══════════════════════
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var tok = _searchCts.Token;
+        try { await Task.Delay(350, tok); } catch { return; } // debounce → hızlı yazımda kilitlenmez
+        if (tok.IsCancellationRequested) return;
+        _page = 1;
+        await LoadPageAsync(recount: true);
+    }
+
+    private async Task ClearSearch() { _searchTerm = string.Empty; _page = 1; await LoadPageAsync(recount: true); }
+    private async Task OnFilterTypeChanged(ChangeEventArgs e) { _filterType = e.Value?.ToString() ?? ""; _page = 1; await LoadPageAsync(recount: true); }
+    private async Task OnFilterStatusChanged(ChangeEventArgs e) { _filterStatus = e.Value?.ToString() ?? ""; _page = 1; await LoadPageAsync(recount: true); }
+    private async Task OnFilterActiveChanged(ChangeEventArgs e) { _filterActive = e.Value?.ToString() ?? ""; _page = 1; await LoadPageAsync(recount: true); }
+    private async Task OnFilterStoreChanged(ChangeEventArgs e) { _filterStoreId = e.Value?.ToString() ?? ""; _page = 1; await LoadPageAsync(recount: true); }
+    private async Task OnSortChanged(ChangeEventArgs e) { _sort = e.Value?.ToString() ?? "new"; await LoadPageAsync(recount: false); }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var ps)) { _pageSize = ps; _page = 1; await LoadPageAsync(recount: true); }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1) page = 1;
+        if (page > _totalPages) page = _totalPages;
+        if (page == _page) return;
+        _page = page;
+        await LoadPageAsync(recount: false); // toplam değişmedi → yeniden sayma (hız)
+    }
+
+    private async Task OnJumpPage(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var p)) await GoToPage(p);
+    }
+
+    // ═══════════════════════ SEÇİM (toplu işlem) ═══════════════════════
+    private void ToggleRow(Guid id)
+    {
+        if (!_selectedIds.Remove(id)) _selectedIds.Add(id);
+        RecalcPageSelection();
+    }
+
+    private void ToggleSelectPage()
+    {
+        var ids = _rows.Select(r => r.Id).ToList();
+        if (_pageAllSelected) foreach (var id in ids) _selectedIds.Remove(id);
+        else foreach (var id in ids) _selectedIds.Add(id);
+        RecalcPageSelection();
+    }
+
+    private void RecalcPageSelection()
+        => _pageAllSelected = _rows.Any() && _rows.All(r => _selectedIds.Contains(r.Id));
+
+    private void ClearSelection() { _selectedIds.Clear(); _pageAllSelected = false; }
+
+    // ═══════════════════════ TOPLU İŞLEM (yalnızca SuperAdmin) ═══════════════════════
+    private async Task OpenBulk(string action)
+    {
+        if (!IsAdmin || !_selectedIds.Any()) return;
+        _bulkAction = action;
+        await ShowModal("bulkModal");
+    }
+
+    private async Task ApplyBulk()
+    {
+        if (!IsAdmin || _isProcessing || !_selectedIds.Any()) return;
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            var ids = _selectedIds.ToList();
+            var now = DateTime.UtcNow;
+
+            // Büyük seçimlerde belleği şişirmemek için 500'lük parçalar halinde işle
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            foreach (var chunk in Chunk(ids, 500))
+            {
+                var items = await db.Products.Where(p => chunk.Contains(p.Id)).ToListAsync(_cts.Token);
+                foreach (var p in items)
+                {
+                    switch (_bulkAction)
+                    {
+                        case "delete": p.IsDeleted = new IsDeleted { IsDeletedStatu = true, DeletedAtDate = now }; break;
+                        case "publish": p.PublishStatus = "Published"; p.UpdatedAt = now; break;
+                        case "unpublish": p.PublishStatus = "Draft"; p.UpdatedAt = now; break;
+                        case "activate": p.IsActive = true; p.UpdatedAt = now; break;
+                        case "deactivate": p.IsActive = false; p.UpdatedAt = now; break;
+                    }
+                }
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await HideModal("bulkModal");
+            var count = ids.Count;
+            ClearSelection();
+            _isProcessing = false;
+
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"Bulk:{_bulkAction} ({count})");
+            await Notify("success", "Tamamlandı", $"{count} ürüne '{BulkActionText(_bulkAction)}' uygulandı.");
+            await LoadPageAsync(recount: true);
+        }
+        catch (Exception ex)
+        {
+            await LogError("ApplyBulk", ex);
+            await Notify("danger", "Hata", "Toplu işlem sırasında bir sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ═══════════════════════ TEKLİ SİL ═══════════════════════
+    private async Task OpenDelete(ProductRow r)
+    {
+        if (!(IsAdmin || r.UserId == use?.Id)) return; // yetki
+        _deleteTarget = r;
+        await ShowModal("deleteModal");
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (_isProcessing || _deleteTarget == null) return;
+        if (!(IsAdmin || _deleteTarget.UserId == use?.Id)) return;
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var entity = await db.Products.FirstOrDefaultAsync(p => p.Id == _deleteTarget.Id, _cts.Token);
+            if (entity != null)
+            {
+                entity.IsDeleted = new IsDeleted { IsDeletedStatu = true, DeletedAtDate = DateTime.UtcNow };
+                await db.SaveChangesAsync(_cts.Token);
+            }
+            await HideModal("deleteModal");
+            _selectedIds.Remove(_deleteTarget.Id);
+            _deleteTarget = null;
+            _isProcessing = false;
+
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
+            await Notify("success", "Silindi", "Ürün başarıyla silindi.");
+            await LoadPageAsync(recount: true);
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteConfirmed", ex);
+            await Notify("danger", "Hata", "Silme sırasında bir sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ═══════════════════════ DETAY (tek ürün → ucuz) ═══════════════════════
+    private async Task OpenDetail(Guid id)
+    {
+        _detail = null; _detailLoading = true;
+        await ShowModal("detailModal");
+        StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var p = await db.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, _cts.Token);
+            if (p == null) { _detailLoading = false; return; }
+
+            var vm = new DetailVm
+            {
+                Id = p.Id,
+                Name = p.Name ?? "(İsimsiz)",
+                ProductType = p.ProductType,
+                PublishStatus = p.PublishStatus,
+                IsActive = p.IsActive,
+                ShortDescription = p.ShortDescription,
+                CreatedAt = p.CreatedAt,
+                CoverUrl = NoImage
+            };
+
+            if (p.CoverMediaId.HasValue)
+                vm.CoverUrl = await db.Media.AsNoTracking().Where(m => m.Id == p.CoverMediaId.Value)
+                    .Select(m => m.FileUrl).FirstOrDefaultAsync(_cts.Token) ?? NoImage;
+
+            if (p.BrandId.HasValue)
+                vm.BrandName = await db.Brands.AsNoTracking().Where(b => b.Id == p.BrandId.Value)
+                    .Select(b => b.Name).FirstOrDefaultAsync(_cts.Token);
+
+            var prefCur = string.IsNullOrEmpty(use?.Currency) ? "TRY" : use!.Currency!;
+            var price = await db.ProductPrices.AsNoTracking()
+                .Where(pr => pr.ProductId == id && pr.EffectiveTo == null)
+                .Select(pr => new { pr.Price, pr.DiscountedPrice, pr.Currency }).ToListAsync(_cts.Token);
+            var chosen = price.FirstOrDefault(x => x.Currency == prefCur) ?? price.FirstOrDefault();
+            vm.PriceText = chosen == null ? "—" : FormatPrice(chosen.Price, chosen.DiscountedPrice, chosen.Currency ?? prefCur);
+
+            vm.TotalStock = await db.ProductStocks.AsNoTracking().Where(s => s.ProductId == id).SumAsync(s => (int?)s.Quantity, _cts.Token) ?? 0;
+
+            var catIds = await db.ProductCategories.AsNoTracking().Where(c => c.ProductId == id).Select(c => c.CategoryId).ToListAsync(_cts.Token);
+            if (catIds.Any())
+                vm.Categories = await db.CategoriesTr.AsNoTracking().Where(c => catIds.Contains(c.Id))
+                    .Select(c => string.IsNullOrEmpty(c.DepartmentName) ? c.Name! : c.DepartmentName + " > " + c.Name).ToListAsync(_cts.Token);
+
+            var galleryMediaIds = await db.ItemGallery.AsNoTracking()
+                .Where(g => g.ItemId == id && g.ItemType == "ProductGallery" && (g.IsDelete == null || g.IsDelete == false) && g.MediaId != null)
+                .Select(g => g.MediaId!.Value).Take(12).ToListAsync(_cts.Token);
+            if (galleryMediaIds.Any())
+                vm.Gallery = await db.Media.AsNoTracking().Where(m => galleryMediaIds.Contains(m.Id) && m.FileUrl != null)
+                    .Select(m => m.FileUrl!).ToListAsync(_cts.Token);
+
+            if (IsAdmin)
+            {
+                vm.StoreName = await db.Stores.AsNoTracking().Where(s => s.Id == p.StoreId).Select(s => s.Name).FirstOrDefaultAsync(_cts.Token);
+                var u = await db.Users.AsNoTracking().Where(x => x.Id == p.UserId)
+                    .Select(x => new { x.FirstName, x.LastName, Email = x.ContactInformation!.Email }).FirstOrDefaultAsync(_cts.Token);
+                if (u != null)
+                {
+                    var name = $"{u.FirstName} {u.LastName}".Trim();
+                    vm.UploaderName = !string.IsNullOrWhiteSpace(name) ? name : u.Email;
+                }
+            }
+
+            _detail = vm;
+        }
+        catch (Exception ex) { await LogError("OpenDetail", ex); }
+        finally { _detailLoading = false; StateHasChanged(); }
+    }
+
+    // ═══════════════════════ NAVİGASYON ═══════════════════════
+    private void NavigateToAdd()
+        => NavigationManager.NavigateTo($"/{(use?.Language ?? "tr").ToLower()}/Admin/Product/AddProduct", true);
+
+    private void NavigateToEdit(Guid id)
+        => NavigationManager.NavigateTo($"/{(use?.Language ?? "tr").ToLower()}/Admin/Product/Edit/{id}", true);
+
+    // ═══════════════════════ GÖRÜNÜM YARDIMCILARI ═══════════════════════
+    private string CoverUrl(ProductRow r)
+        => r.CoverMediaId.HasValue && _coverMap.TryGetValue(r.CoverMediaId.Value, out var u) ? u : NoImage;
+
+    private string PriceText(Guid id)
+    {
+        if (!_priceMap.TryGetValue(id, out var p)) return "—";
+        return FormatPrice(p.price, p.disc, p.cur);
+    }
+
+    private string FormatPrice(decimal price, decimal? disc, string cur)
+    {
+        var sym = cur switch { "TRY" => "₺", "USD" => "$", "EUR" => "€", "AZN" => "₼", _ => cur + " " };
+        if (disc.HasValue && disc.Value > 0 && disc.Value < price)
+            return $"{disc.Value:N2} {sym}";
+        return $"{price:N2} {sym}";
+    }
+
+    private string StockBadge(Guid id)
+    {
+        var q = _stockMap.GetValueOrDefault(id);
+        return q <= 0 ? "bg-danger-subtle text-danger" : (q < 5 ? "bg-warning-subtle text-warning" : "bg-success-subtle text-success");
+    }
+
+    private string TypeText(string? t) => t switch
+    {
+        "Simple" => "Basit",
+        "Variant" => "Varyantlı",
+        "Digital" => "Dijital",
+        "Service" => "Hizmet",
+        "Bundle" => "Paket",
+        "External" => "Harici",
+        _ => t ?? "—"
+    };
+
+    private string PublishBadge(string? s) => s switch
+    {
+        "Published" => "bg-success",
+        "Draft" => "bg-secondary",
+        "PendingApproval" => "bg-warning text-dark",
+        "Rejected" => "bg-danger",
+        "Archived" => "bg-dark",
+        _ => "bg-secondary"
+    };
+
+    private string PublishText(string? s) => s switch
+    {
+        "Published" => "Yayında",
+        "Draft" => "Taslak",
+        "PendingApproval" => "Onay Bekliyor",
+        "Rejected" => "Reddedildi",
+        "Archived" => "Arşiv",
+        _ => s ?? "—"
+    };
+
+    private string BulkActionText(string a) => a switch
+    {
+        "delete" => "Silme",
+        "publish" => "Yayınlama",
+        "unpublish" => "Taslağa Alma",
+        "activate" => "Aktifleştirme",
+        "deactivate" => "Pasifleştirme",
+        _ => a
+    };
+
+    private static IEnumerable<List<T>> Chunk<T>(List<T> source, int size)
+    {
+        for (int i = 0; i < source.Count; i += size)
+            yield return source.GetRange(i, Math.Min(size, source.Count - i));
+    }
+
+    // ═══════════════════════ ALTYAPI YARDIMCILARI ═══════════════════════
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval", $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval", $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://efavori.com/_files/main/logo/logo.png");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        StateHub.OnDataChanged -= HandleDataChanged;
+        _searchCts?.Cancel(); _searchCts?.Dispose();
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    // ═══════════════════════ DTO'lar ═══════════════════════
+    private sealed class ProductRow
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public string? ProductType { get; set; }
+        public string? PublishStatus { get; set; }
+        public bool IsActive { get; set; }
+        public bool? IsApprovedByAdmin { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public Guid? CoverMediaId { get; set; }
+        public Guid? BrandId { get; set; }
+        public Guid StoreId { get; set; }
+        public Guid UserId { get; set; }
+    }
+
+    private sealed class DetailVm
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? ProductType { get; set; }
+        public string? PublishStatus { get; set; }
+        public bool IsActive { get; set; }
+        public string? ShortDescription { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public string CoverUrl { get; set; } = "";
+        public string? BrandName { get; set; }
+        public string PriceText { get; set; } = "—";
+        public int TotalStock { get; set; }
+        public List<string> Categories { get; set; } = new();
+        public List<string> Gallery { get; set; } = new();
+        public string? StoreName { get; set; }
+        public string? UploaderName { get; set; }
+    }
+}

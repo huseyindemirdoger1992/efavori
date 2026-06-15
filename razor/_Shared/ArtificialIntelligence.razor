@@ -1,0 +1,311 @@
+﻿@* ============================================================
+   ArtificialIntelligence.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ AIProductKnowledgeGenerator entegrasyonu
+   ✅ Ürün adı girişi → AI ile Title / ShortDesc / LongDesc / Keywords üretimi
+   ✅ SemaphoreSlim yazma kilidi + CancellationToken yaşam döngüsü
+   ✅ TakeLogs — tüm aksiyonlar loglanır
+   ✅ Basit, performanslı, kötü sunucuda bile binlerce kullanıcıya cevap
+   ============================================================ *@
+
+@using data
+@using api
+@using api.tr
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject AIProductKnowledgeGenerator AiGenerator
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",        "Ana Sayfa",          "/"),
+        ("fa fa-cogs",        "Yönetim",            "javascript:void(0)"),
+        ("fa fa-magic",       PAGE_TITLE,           "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Başlık ─── *@
+<div class="d-flex align-items-center gap-2 mb-3">
+    <i class="fa fa-magic text-info"></i>
+    <h5 class="mb-0 text-white">@PAGE_TITLE</h5>
+</div>
+
+@* ─── Ürün Adı Giriş Alanı ─── *@
+<div class="card bg-dark border border-secondary mb-3">
+    <div class="card-body">
+        <label class="form-label text-white-50 small">
+            <i class="fa fa-cube me-1"></i>Ürün Bilgisi
+        </label>
+        <div class="input-group">
+            <input type="text"
+                   class="form-control bg-dark text-white border-secondary"
+                   placeholder="Ürün adını veya bilgisini girin... (ör: Samsung Galaxy S24 Ultra 256GB)"
+                   @bind="_productName"
+                   @bind:event="oninput"
+                   @onkeydown="OnKeyDown"
+                   disabled="@_isProcessing" />
+            <button class="btn btn-info"
+                    @onclick="GenerateAsync"
+                    disabled="@(_isProcessing || string.IsNullOrWhiteSpace(_productName))">
+                @if (_isProcessing)
+                {
+                    <i class="fa fa-spinner fa-spin me-1"></i><span>Üretiliyor...</span>
+                }
+                else
+                {
+                    <i class="fa fa-magic me-1"></i><span>AI ile Üret</span>
+                }
+            </button>
+        </div>
+        <small class="text-white-50 mt-1 d-block">
+            <i class="fa fa-info-circle me-1"></i>Ürün adını girin, yapay zeka SEO uyumlu başlık, açıklama ve anahtar kelimeler üretsin.
+        </small>
+    </div>
+</div>
+
+@* ─── Sonuçlar ─── *@
+@if (_isProcessing)
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yapay zeka içerik üretiyor, lütfen bekleyin...</p>
+    </div>
+}
+else if (_result != null)
+{
+    <div class="card bg-dark border border-info mb-3">
+        <div class="card-header bg-transparent border-bottom border-secondary d-flex align-items-center justify-content-between py-2">
+            <span class="text-info small fw-semibold">
+                <i class="fa fa-check-circle me-1"></i>AI Üretim Sonuçları
+            </span>
+            <button class="btn btn-outline-secondary btn-sm border-0" @onclick="ClearResult" title="Temizle">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+
+                @* ── Title ── *@
+                <div class="col-12">
+                    <label class="form-label text-white-50 small">
+                        <i class="fa fa-header me-1"></i>SEO Başlık (Title)
+                    </label>
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control bg-dark text-white border-secondary"
+                               @bind="_result.Title"
+                               readonly />
+                        <button class="btn btn-outline-secondary btn-sm" @onclick='() => CopyToClipboard(_result.Title)' title="Kopyala">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @* ── Short Description ── *@
+                <div class="col-12">
+                    <label class="form-label text-white-50 small">
+                        <i class="fa fa-align-left me-1"></i>Kısa Açıklama (ShortDesc)
+                    </label>
+                    <div class="input-group">
+                        <textarea class="form-control bg-dark text-white border-secondary"
+                                  rows="2"
+                                  readonly>@_result.ShortDesc</textarea>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick='() => CopyToClipboard(_result.ShortDesc)' title="Kopyala">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @* ── Long Description ── *@
+                <div class="col-12">
+                    <label class="form-label text-white-50 small">
+                        <i class="fa fa-align-left me-1"></i>Uzun Açıklama (LongDesc)
+                    </label>
+                    <div class="input-group">
+                        <textarea class="form-control bg-dark text-white border-secondary"
+                                  rows="5"
+                                  readonly>@_result.LongDesc</textarea>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick='() => CopyToClipboard(_result.LongDesc)' title="Kopyala">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @* ── Keywords ── *@
+                <div class="col-12">
+                    <label class="form-label text-white-50 small">
+                        <i class="fa fa-tags me-1"></i>Anahtar Kelimeler (Keywords)
+                    </label>
+                    <div class="input-group">
+                        <textarea class="form-control bg-dark text-white border-secondary"
+                                  rows="2"
+                                  readonly>@_result.Keywords</textarea>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick='() => CopyToClipboard(_result.Keywords)' title="Kopyala">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Yapay Zeka İçerik Üretici";
+    private const string ENTITY_NAME = "ArtificialIntelligence";
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+
+    // ─── Yazma kilidi ─────────────────────────────────────────────
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isProcessing;
+    private Notification? _notificationRef;
+
+    // ─── Form verileri ────────────────────────────────────────────
+    private string _productName = string.Empty;
+    private AIProductKnowledgeGenerator.ProductSeoData? _result;
+
+    // ══════════════════════════════════════════════════════════════
+    // AI İÇERİK ÜRET
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task GenerateAsync()
+    {
+        if (_isProcessing || string.IsNullOrWhiteSpace(_productName)) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            _result = null;
+            StateHasChanged();
+
+            var data = await AiGenerator.GenerateSeoContentAsync(_productName.Trim());
+
+            if (data == null)
+            {
+                await Notify("warning", "Uyarı", "Yapay zeka sonuç döndüremedi. Lütfen tekrar deneyin.");
+                return;
+            }
+
+            _result = data;
+            _isProcessing = false;
+            StateHasChanged();
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"Generate: {_productName.Trim()}");
+            await Notify("success", "Başarılı", "SEO içerikleri başarıyla üretildi.");
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await LogError("GenerateAsync", ex);
+            await Notify("danger", "Hata", "İçerik üretilirken sorun oluştu. Lütfen tekrar deneyin.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // KLAVYEDen ENTER
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !_isProcessing && !string.IsNullOrWhiteSpace(_productName))
+            await GenerateAsync();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TEMİZLE
+    // ══════════════════════════════════════════════════════════════
+
+    private void ClearResult()
+    {
+        _result = null;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // PANOYA KOPYALA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task CopyToClipboard(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            await Notify("info", "Kopyalandı", "Metin panoya kopyalandı.");
+        }
+        catch
+        {
+            await Notify("warning", "Uyarı", "Kopyalama işlemi başarısız oldu.");
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

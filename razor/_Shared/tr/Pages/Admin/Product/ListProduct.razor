@@ -885,7 +885,7 @@ else
         => NavigationManager.NavigateTo($"/{(use?.Language ?? "tr").ToLower()}/Admin/Product/AddProduct", true);
 
     private void NavigateToEdit(Guid id)
-        => NavigationManager.NavigateTo($"/{(use?.Language ?? "tr").ToLower()}/Admin/Product/Edit/{id}", true);
+        => NavigationManager.NavigateTo($"/{(use?.Language ?? "tr").ToLower()}/Public/Product/ProductViewer/{id}", true);
 
     // ═══════════════════════ GÖRÜNÜM YARDIMCILARI ═══════════════════════
     private string CoverUrl(ProductRow r)

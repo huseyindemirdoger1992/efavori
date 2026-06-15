@@ -15,43 +15,55 @@ namespace data._Product
         public Guid Id { get; set; } = Guid.NewGuid();
 
         // === İlişkiler (ID bazlı, navigation property kullanılmaz) ===
-        public Guid UserId { get; set; } // Ürün sahibi kullanıcı (Users.Id)
-        public Guid StoreId { get; set; } // Ürün sahibi mağaza (Store.Id)
-        public Guid? BrandId { get; set; } // Marka (Brands.Id)
-        public Guid? AttributeTemplateId { get; set; } // Ürünün oluşturulduğu özellik şablonu SÜRÜMÜ (AttributeTemplates.Id) — versiyon sabitlenir, şablon güncellense bile ürün verisi bozulmaz
-        public Guid? ShippingProfileId { get; set; } // Kargo/desi profili (ShippingProfile.Id)
+        public Guid UserId { get; set; }
+        public Guid StoreId { get; set; }
+        public Guid? BrandId { get; set; }
+        public Guid? AttributeTemplateId { get; set; }
+        public Guid? ShippingProfileId { get; set; }
 
         // === Ürün Tipi ===
-        // "Simple", "Variant", "Digital", "Service", "Bundle", "External"
-        // Yeni tipler için enum yerine string tercih edildi (genişletilebilirlik)
         public string? ProductType { get; set; } = "Simple";
 
         // === İçerik Alanları ===
-        public string? Name { get; set; } // Ürün adı
-        public string? ShortDescription { get; set; } // Kısa açıklama
-        public string? FullDescription { get; set; } // Detaylı açıklama (HTML destekli)
-        public string? Tags { get; set; } // Etiketler (virgülle ayrılmış)
+        public string? Name { get; set; }
+        public string? ShortDescription { get; set; }
+        public string? FullDescription { get; set; }
+        public string? Tags { get; set; }
 
         // === Medya ===
-        public Guid? CoverMediaId { get; set; } // Kapak görseli (Media.Id)
-        // Galeri görselleri: ItemGallery (ItemType = "ProductGallery", ItemId = Products.Id)
-        // Varyant görselleri: ItemGallery (ItemType = "VariantGallery", ItemId = ProductImageVariantGroups.Id)
+        public Guid? CoverMediaId { get; set; }
 
         // === Harici Ürün (External) Alanları ===
-        public string? ExternalUrl { get; set; } // Harici ürün bağlantısı
-        public string? ExternalButtonText { get; set; } // Harici ürün buton metni (Örn: "Satıcı sitesinde gör")
+        public string? ExternalUrl { get; set; }
+        public string? ExternalButtonText { get; set; }
 
         // === Yayın Durumu ===
-        // "Draft", "PendingApproval", "Published", "Rejected", "Archived"
         public string? PublishStatus { get; set; } = "Draft";
-        public bool? IsApprovedByAdmin { get; set; } // Admin onay durumu
-        public DateTime? ApprovedDate { get; set; } // Admin onay tarihi
-        public Guid? ApprovedByUserId { get; set; } // Onaylayan admin (Users.Id)
-        public bool IsActive { get; set; } = true; // Satıcı tarafından aktif/pasif
+        public bool? IsApprovedByAdmin { get; set; }
+        public DateTime? ApprovedDate { get; set; }
+        public Guid? ApprovedByUserId { get; set; }
+        public bool IsActive { get; set; } = true;
+
+        // === AI İçerik Yönetimi ===
+        // Satıcı ürün eklerken "AI Yönetimine İzin Ver" toggle'ını açarsa true olur.
+        public bool? IsAiManaged { get; set; } = false; // Satıcı AI yönetimine izin veriyor mu
+
+        // null → AI yönetimi yapılmadı (IsAiManaged=false) | true → AI tarafından başarıyla oluşturuldu | false → AI işlemi başarısız oldu
+        public bool? AiContentStatus { get; set; } // AI işlem durumu
+
+        // Satıcının orijinal girişi — AI kapatılırsa geri yüklenir
+        public string? AiOriginalName { get; set; }
+        public string? AiOriginalShortDescription { get; set; }
+        public string? AiOriginalFullDescription { get; set; }
+        public string? AiOriginalTags { get; set; }
+
+        public string? AiErrorMessage { get; set; }          // Son hata mesajı (Failed durumunda)
+        public int AiRetryCount { get; set; } = 0;           // Tekrar deneme sayısı
+        public DateTime? AiProcessedAt { get; set; }         // AI'ın işlemi tamamladığı an
 
         // === Tarih Bilgileri ===
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
-        public DateTime? UpdatedAt { get; set; } // Son güncelleme tarihi
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt { get; set; }
 
         // === Owned Type'lar ===
         public Meta? Meta { get; set; } = new();

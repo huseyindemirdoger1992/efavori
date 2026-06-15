@@ -56,15 +56,6 @@
         <i class="fa fa-plus me-sm-1"></i><span class="d-none d-sm-inline">Yeni Ürün</span>
     </button>
 
-    @if (IsAdmin)
-    {
-        <span class="badge bg-danger"><i class="fa fa-shield me-1"></i>SuperAdmin · Tam Yetki</span>
-    }
-    else
-    {
-        <span class="badge bg-secondary"><i class="fa fa-user me-1"></i>Mağaza Görünümü</span>
-    }
-
     @* ── Toplu işlem çubuğu (yalnızca SuperAdmin) ── *@
     @if (IsAdmin && _selectedIds.Any())
     {
@@ -81,11 +72,102 @@
     }
 
     <div class="ms-auto small text-light align-self-center">
-        Toplam <span class="fw-bold">@_totalCount.ToString("N0")</span> ürün
-        @if (_isLoading)
-        {
-            <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
-        }
+            @if (IsAdmin)
+            {
+                <span class="badge bg-danger"><i class="fa fa-shield me-1"></i>SuperAdmin · Tam Yetki</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary"><i class="fa fa-user me-1"></i>Mağaza Görünümü</span>
+            }        
+    </div>
+</div>
+
+@* ═══════════════════════════ Aİ İSTATİSTİK KARTLARI ═══════════════════════════ *@
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card @(_filterAiStat == "" ? "border-primary border-2 shadow-sm" : "border-0") bg-primary bg-opacity-10"
+             role="button" @onclick='() => OnStatCardClicked("")'>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-cubes text-primary"></i>
+                    <div>
+                        <div class="small text-light">Toplam Ürün</div>
+                        <div class="fw-bold">@_statTotal.ToString("N0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card @(_filterAiStat == "ai_on" ? "border-success border-2 shadow-sm" : "border-0") bg-success bg-opacity-10"
+             role="button" @onclick='() => OnStatCardClicked("ai_on")'>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-magic text-success"></i>
+                    <div>
+                        <div class="small text-light">AI Açık</div>
+                        <div class="fw-bold text-success">@_statAiManagedTrue.ToString("N0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card @(_filterAiStat == "ai_off" ? "border-secondary border-2 shadow-sm" : "border-0") bg-secondary bg-opacity-10"
+             role="button" @onclick='() => OnStatCardClicked("ai_off")'>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-ban text-secondary"></i>
+                    <div>
+                        <div class="small text-light">AI Kapalı</div>
+                        <div class="fw-bold text-secondary">@_statAiManagedFalse.ToString("N0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card @(_filterAiStat == "status_null" ? "border-warning border-2 shadow-sm" : "border-0") bg-warning bg-opacity-10"
+             role="button" @onclick='() => OnStatCardClicked("status_null")'>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-clock-o text-warning"></i>
+                    <div>
+                        <div class="small text-light">AI Bekliyor</div>
+                        <div class="fw-bold text-warning">@_statAiStatusNull.ToString("N0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card @(_filterAiStat == "status_true" ? "border-info border-2 shadow-sm" : "border-0") bg-info bg-opacity-10"
+             role="button" @onclick='() => OnStatCardClicked("status_true")'>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-check-circle text-info"></i>
+                    <div>
+                        <div class="small text-light">AI Başarılı</div>
+                        <div class="fw-bold text-info">@_statAiStatusTrue.ToString("N0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card @(_filterAiStat == "status_false" ? "border-danger border-2 shadow-sm" : "border-0") bg-danger bg-opacity-10"
+             role="button" @onclick='() => OnStatCardClicked("status_false")'>
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fa fa-exclamation-triangle text-danger"></i>
+                    <div>
+                        <div class="small text-light">AI Başarısız</div>
+                        <div class="fw-bold text-danger">@_statAiStatusFalse.ToString("N0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -414,12 +496,21 @@ else
     private int _totalCount;
     private int _totalPages = 1;
 
+    // ─────────────── AI İstatistik Sayaçları ───────────────
+    private int _statTotal;
+    private int _statAiManagedTrue;
+    private int _statAiManagedFalse;
+    private int _statAiStatusNull;
+    private int _statAiStatusTrue;
+    private int _statAiStatusFalse;
+
     // ─────────────── Filtreler ───────────────
     private string _searchTerm = string.Empty;
     private string _filterType = string.Empty;
     private string _filterStatus = string.Empty;
     private string _filterActive = string.Empty;
     private string _filterStoreId = string.Empty;
+    private string _filterAiStat = string.Empty; // "", "ai_on", "ai_off", "status_null", "status_true", "status_false"
     private string _sort = "new";
     private CancellationTokenSource? _searchCts;
 
@@ -454,13 +545,14 @@ else
         _isInitialized = true;
         StateHub.OnDataChanged += HandleDataChanged;
         if (IsAdmin) await LoadStores();
+        await LoadAiStatsAsync();
         await LoadPageAsync(recount: true);
     }
 
     private async Task HandleDataChanged(string entityName)
     {
         if (_disposed || entityName != ENTITY_NAME) return;
-        await InvokeAsync(async () => { await LoadPageAsync(recount: true); StateHasChanged(); });
+        await InvokeAsync(async () => { await LoadAiStatsAsync(); await LoadPageAsync(recount: true); StateHasChanged(); });
     }
 
     // ═══════════════════════ MAĞAZA REFERANSI (admin) ═══════════════════════
@@ -476,6 +568,38 @@ else
                 .ToListAsync(_cts.Token);
         }
         catch (Exception ex) { await LogError("LoadStores", ex); }
+    }
+
+    // ═══════════════════════ Aİ İSTATİSTİK SAYAÇLARI ═══════════════════════
+    private async Task LoadAiStatsAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var q = db.Products.AsNoTracking()
+                .Where(p => p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true);
+
+            if (!IsAdmin)
+            {
+                var uid = use?.Id ?? Guid.Empty;
+                q = q.Where(p => p.UserId == uid);
+            }
+
+            // Tek sorgu ile tüm istatistikleri çek → 6 ayrı COUNT yerine GROUP BY benzeri projeksiyon
+            var stats = await q.Select(p => new
+            {
+                AiManaged = p.IsAiManaged,
+                AiStatus = p.AiContentStatus
+            }).ToListAsync(_cts.Token);
+
+            _statTotal = stats.Count;
+            _statAiManagedTrue = stats.Count(s => s.AiManaged == true);
+            _statAiManagedFalse = stats.Count(s => s.AiManaged != true); // null veya false → AI kapalı
+            _statAiStatusNull = stats.Count(s => s.AiStatus == null);
+            _statAiStatusTrue = stats.Count(s => s.AiStatus == true);
+            _statAiStatusFalse = stats.Count(s => s.AiStatus == false);
+        }
+        catch (Exception ex) { await LogError("LoadAiStats", ex); }
     }
 
     // ═══════════════════════ SAYFA YÜKLEME (sunucu-taraflı) ═══════════════════════
@@ -560,6 +684,13 @@ else
         if (!string.IsNullOrEmpty(_filterStatus)) q = q.Where(p => p.PublishStatus == _filterStatus);
         if (_filterActive == "active") q = q.Where(p => p.IsActive);
         else if (_filterActive == "passive") q = q.Where(p => !p.IsActive);
+
+        // AI istatistik kartı filtresi
+        if (_filterAiStat == "ai_on") q = q.Where(p => p.IsAiManaged == true);
+        else if (_filterAiStat == "ai_off") q = q.Where(p => p.IsAiManaged != true);
+        else if (_filterAiStat == "status_null") q = q.Where(p => p.AiContentStatus == null);
+        else if (_filterAiStat == "status_true") q = q.Where(p => p.AiContentStatus == true);
+        else if (_filterAiStat == "status_false") q = q.Where(p => p.AiContentStatus == false);
 
         return q;
     }
@@ -665,6 +796,14 @@ else
     private async Task OnFilterActiveChanged(ChangeEventArgs e) { _filterActive = e.Value?.ToString() ?? ""; _page = 1; await LoadPageAsync(recount: true); }
     private async Task OnFilterStoreChanged(ChangeEventArgs e) { _filterStoreId = e.Value?.ToString() ?? ""; _page = 1; await LoadPageAsync(recount: true); }
     private async Task OnSortChanged(ChangeEventArgs e) { _sort = e.Value?.ToString() ?? "new"; await LoadPageAsync(recount: false); }
+
+    private async Task OnStatCardClicked(string stat)
+    {
+        // Aynı karta tekrar tıklanırsa "Toplam Ürün"e (filtresiz) döner
+        _filterAiStat = (_filterAiStat == stat) ? "" : stat;
+        _page = 1;
+        await LoadPageAsync(recount: true);
+    }
 
     private async Task OnPageSizeChanged(ChangeEventArgs e)
     {

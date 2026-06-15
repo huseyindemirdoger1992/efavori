@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260615090516_79")]
+    partial class _79
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2712,8 +2715,8 @@ namespace data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool?>("AiContentStatus")
-                        .HasColumnType("bit");
+                    b.Property<string>("AiContentStatus")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("AiErrorMessage")
                         .HasColumnType("nvarchar(max)");
@@ -2766,7 +2769,7 @@ namespace data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("IsAiManaged")
+                    b.Property<bool>("IsAiManaged")
                         .HasColumnType("bit");
 
                     b.Property<bool?>("IsApprovedByAdmin")

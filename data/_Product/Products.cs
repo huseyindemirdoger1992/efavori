@@ -38,7 +38,7 @@ namespace data._Product
         public string? ExternalButtonText { get; set; }
 
         // === Yayın Durumu ===
-        public string? PublishStatus { get; set; } = "Draft";
+        public bool? PublishStatus { get; set; }
         public bool? IsApprovedByAdmin { get; set; }
         public DateTime? ApprovedDate { get; set; }
         public Guid? ApprovedByUserId { get; set; }

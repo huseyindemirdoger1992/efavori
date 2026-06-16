@@ -316,7 +316,9 @@ else
                             <td class="d-none d-xl-table-cell small">@(_userMap.GetValueOrDefault(r.UserId) ?? "—")</td>
                         }
                         <td class="text-center text-nowrap">
-                            <span class="badge @PublishBadge(r.PublishStatus)">@PublishText(r.PublishStatus)</span>
+                            <span class="badge @(r.PublishStatus == true ? "bg-success" : r.PublishStatus == false ? "bg-secondary" : "bg-warning text-dark")">
+                                @(r.PublishStatus == true ? "Yayında" : r.PublishStatus == false ? "Taslak" : "Bekliyor")
+                            </span>
                             <span class="ms-1" title="@(r.IsActive ? "Aktif" : "Pasif")">
                                 <i class="fa @(r.IsActive ? "fa-toggle-on text-success" : "fa-toggle-off text-secondary")"></i>
                             </span>
@@ -395,9 +397,9 @@ else
                         <div class="col-12 col-md-8">
                             <h5 class="mb-1">@_detail.Name</h5>
                             <div class="mb-2">
-                                <span class="badge @PublishBadge(_detail.PublishStatus)">@PublishText(_detail.PublishStatus)</span>
-                                <span class="badge bg-light text-dark border">@TypeText(_detail.ProductType)</span>
-                                <span class="badge @(_detail.IsActive ? "bg-success" : "bg-secondary")">@(_detail.IsActive ? "Aktif" : "Pasif")</span>
+                                <span class="badge @(_detail.PublishStatus == true ? "bg-success" : _detail.PublishStatus == false ? "bg-secondary" : "bg-warning text-dark")">
+                                    @(_detail.PublishStatus == true ? "Yayında" : _detail.PublishStatus == false ? "Taslak" : "Bekliyor")
+                                </span>
                             </div>
                             <table class="table table-sm mb-0">
                                 <tbody>
@@ -681,7 +683,7 @@ else
         }
 
         if (!string.IsNullOrEmpty(_filterType)) q = q.Where(p => p.ProductType == _filterType);
-        if (!string.IsNullOrEmpty(_filterStatus)) q = q.Where(p => p.PublishStatus == _filterStatus);
+        if (!string.IsNullOrEmpty(_filterStatus)) q = q.Where(p => p.PublishStatus == true);
         if (_filterActive == "active") q = q.Where(p => p.IsActive);
         else if (_filterActive == "passive") q = q.Where(p => !p.IsActive);
 
@@ -872,8 +874,8 @@ else
                     switch (_bulkAction)
                     {
                         case "delete": p.IsDeleted = new IsDeleted { IsDeletedStatu = true, DeletedAtDate = now }; break;
-                        case "publish": p.PublishStatus = "Published"; p.UpdatedAt = now; break;
-                        case "unpublish": p.PublishStatus = "Draft"; p.UpdatedAt = now; break;
+                        case "publish": p.PublishStatus = true; p.UpdatedAt = now; break;
+                        case "unpublish": p.PublishStatus = false; p.UpdatedAt = now; break;
                         case "activate": p.IsActive = true; p.UpdatedAt = now; break;
                         case "deactivate": p.IsActive = false; p.UpdatedAt = now; break;
                     }
@@ -1134,7 +1136,7 @@ else
         public Guid Id { get; set; }
         public string? Name { get; set; }
         public string? ProductType { get; set; }
-        public string? PublishStatus { get; set; }
+        public bool? PublishStatus { get; set; }
         public bool IsActive { get; set; }
         public bool? IsApprovedByAdmin { get; set; }
         public DateTime? CreatedAt { get; set; }
@@ -1150,7 +1152,7 @@ else
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
         public string? ProductType { get; set; }
-        public string? PublishStatus { get; set; }
+        public bool? PublishStatus { get; set; }
         public bool IsActive { get; set; }
         public string? ShortDescription { get; set; }
         public DateTime? CreatedAt { get; set; }

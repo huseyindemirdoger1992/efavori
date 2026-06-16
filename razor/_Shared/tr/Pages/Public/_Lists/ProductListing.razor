@@ -1,0 +1,1894 @@
+@using Microsoft.EntityFrameworkCore
+@using data
+@using data._Product
+@using data._Shared
+@implements IAsyncDisposable
+
+<!-- ════════════════════════════════════════════════════════════════════
+     ProductListing.razor — efavori Ürün Listeleme Sayfası (PLP)
+     Single-file Blazor Server component
+     Bootstrap 5.3 + Font Awesome 4.7.0 + Bootstrap Icons
+     Convention: Turkish UI / English variables
+     ════════════════════════════════════════════════════════════════════ -->
+
+<PageTitle>@(_pageTitle ?? "Ürünler — efavori")</PageTitle>
+
+<!-- ───────── Minimal Layout-Only CSS (no colors/backgrounds/shadows) ───────── -->
+<style>
+    /* Grid layout */
+    .plp-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
+    }
+
+        .plp-grid.list-view {
+            grid-template-columns: 1fr;
+        }
+
+        .plp-grid.compact-view {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+    /* Card image */
+    .plp-card-img-wrap {
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+    }
+
+        .plp-card-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 10px;
+            transition: opacity .3s ease;
+        }
+
+    /* Hover gallery */
+    .plp-gallery-dots {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 5px;
+        opacity: 0;
+        transition: .25s ease;
+    }
+
+    .plp-card:hover .plp-gallery-dots {
+        opacity: 1;
+    }
+
+    .plp-gallery-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: .2s ease;
+    }
+
+    .plp-gallery-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .7rem;
+        opacity: 0;
+        transition: .25s ease;
+        z-index: 3;
+    }
+
+    .plp-card:hover .plp-gallery-nav {
+        opacity: 1;
+    }
+
+    .plp-gallery-nav.prev {
+        left: 6px;
+    }
+
+    .plp-gallery-nav.next {
+        right: 6px;
+    }
+
+    /* Hover action buttons */
+    .plp-card-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        z-index: 3;
+        opacity: 0;
+        transform: translateX(6px);
+        transition: .25s ease;
+    }
+
+    .plp-card:hover .plp-card-actions {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .plp-action-tooltip {
+        position: absolute;
+        right: 40px;
+        top: 50%;
+        transform: translateY(-50%);
+        white-space: nowrap;
+        font-size: .68rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: .2s ease;
+    }
+
+    .plp-action-btn:hover .plp-action-tooltip {
+        opacity: 1;
+    }
+
+    /* Card badge positioning */
+    .plp-badges {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* Title clamp */
+    .plp-card-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.35;
+        min-height: 2.4em;
+    }
+
+    /* List view layout */
+    .plp-grid.list-view .plp-card {
+        flex-direction: row !important;
+    }
+
+    .plp-grid.list-view .plp-card-img-wrap {
+        width: 200px;
+        min-width: 200px;
+        aspect-ratio: auto;
+    }
+
+    .plp-grid.list-view .plp-card-title {
+        -webkit-line-clamp: 1;
+        min-height: auto;
+    }
+
+    /* Compact view */
+    .plp-grid.compact-view .plp-card-title {
+        -webkit-line-clamp: 1;
+        min-height: auto;
+        font-size: .78rem;
+    }
+
+    .plp-grid.compact-view .plp-hide-compact {
+        display: none;
+    }
+
+    /* Filter sidebar */
+    .plp-sidebar {
+        width: 280px;
+        min-width: 280px;
+    }
+
+    .plp-check-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    /* Quick View modal sizing */
+    .plp-qv-main-img {
+        aspect-ratio: 1;
+    }
+
+        .plp-qv-main-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 16px;
+        }
+
+    .plp-qv-thumb {
+        width: 56px;
+        height: 56px;
+        cursor: pointer;
+    }
+
+        .plp-qv-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 3px;
+        }
+
+    /* Color swatch */
+    .plp-color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: .2s ease;
+        display: inline-block;
+    }
+
+    /* Skeleton loading */
+    .plp-skeleton {
+        background: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+        background-size: 200% 100%;
+        animation: plpShimmer 1.5s infinite;
+        border-radius: 6px;
+    }
+
+    @@keyframes plpShimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    .plp-skeleton-img {
+        aspect-ratio: 1;
+    }
+
+    .plp-skeleton-text {
+        height: 14px;
+        margin-bottom: 8px;
+    }
+
+        .plp-skeleton-text.short {
+            width: 60%;
+        }
+
+        .plp-skeleton-text.medium {
+            width: 80%;
+        }
+
+    .plp-skeleton-price {
+        height: 20px;
+        width: 40%;
+        margin-top: 10px;
+    }
+
+    /* Heart animation */
+    @@keyframes heartPulse {
+        0% {
+            transform: scale(1);
+        }
+
+        25% {
+            transform: scale(1.3);
+        }
+
+        50% {
+            transform: scale(1);
+        }
+
+        75% {
+            transform: scale(1.2);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .plp-heart-anim .fa {
+        animation: heartPulse .5s ease;
+    }
+
+    /* Responsive */
+    @@media (max-width: 1024px) {
+        .plp-sidebar {
+            display: none !important;
+        }
+
+        .plp-mobile-filter-btn {
+            display: flex !important;
+        }
+
+        .plp-grid {
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 10px;
+        }
+
+            .plp-grid.list-view .plp-card {
+                flex-direction: column !important;
+            }
+
+            .plp-grid.list-view .plp-card-img-wrap {
+                width: 100%;
+                min-width: unset;
+                aspect-ratio: 1;
+            }
+    }
+
+    @@media (max-width: 768px) {
+        .plp-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .plp-card-actions {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .plp-card-footer-actions {
+            display: none !important;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .plp-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+    }
+</style>
+
+<!-- ═══════════════════════ MARKUP ═══════════════════════ -->
+
+<div class="page-content">
+    <div class="container-fluid">
+
+        <!-- ─── Breadcrumb ─── -->
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="/"><i class="fa fa-home"></i> Anasayfa</a></li>
+                @if (_activeCategoryParentName != null)
+                {
+                    <li class="breadcrumb-item"><a href="/urunler">Ürünler</a></li>
+                    <li class="breadcrumb-item active">@_activeCategoryParentName</li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item active">Ürünler</li>
+                }
+            </ol>
+        </nav>
+
+        <!-- ─── Top Bar ─── -->
+        <div class="card mb-3 sticky-top" style="z-index:100">
+            <div class="card-body py-2 px-3">
+                <div class="row align-items-center g-2">
+                    <!-- Search -->
+                    <div class="col-12 col-md-5 col-lg-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="fa fa-search"></i></span>
+                            <input type="text" class="form-control"
+                                   placeholder="Ürün adı, marka, SKU veya barkod ile ara..."
+                                   @bind="_searchTerm" @bind:event="oninput" @onkeyup="OnSearchDebounce" />
+                        </div>
+                    </div>
+                    <!-- Result Count -->
+                    <div class="col-auto">
+                        <span class="text-muted small"><strong class="text-light">@_totalCount</strong> ürün bulundu</span>
+                    </div>
+                    <!-- Sort -->
+                    <div class="col-auto ms-auto">
+                        <select class="form-select form-select-sm" @bind="_sortOrder" @bind:after="OnSortChanged">
+                            <option value="recommended">Önerilen</option>
+                            <option value="newest">En Yeni</option>
+                            <option value="bestselling">En Çok Satan</option>
+                            <option value="rating_desc">En Yüksek Puan</option>
+                            <option value="price_asc">En Düşük Fiyat</option>
+                            <option value="price_desc">En Yüksek Fiyat</option>
+                            <option value="most_reviewed">En Çok İncelenen</option>
+                            <option value="discount_desc">İndirim Oranı</option>
+                        </select>
+                    </div>
+                    <!-- View Modes -->
+                    <div class="col-auto">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn @(_viewMode == "grid" ? "btn-primary" : "btn-outline-secondary")"
+                                    @onclick='() => SetViewMode("grid")' title="Grid">
+                                <i class="fa fa-th"></i>
+                            </button>
+                            <button class="btn @(_viewMode == "list" ? "btn-primary" : "btn-outline-secondary")"
+                                    @onclick='() => SetViewMode("list")' title="Liste">
+                                <i class="fa fa-th-list"></i>
+                            </button>
+                            <button class="btn @(_viewMode == "compact" ? "btn-primary" : "btn-outline-secondary")"
+                                    @onclick='() => SetViewMode("compact")' title="Kompakt">
+                                <i class="fa fa-th-large"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── Active Filters ─── -->
+        @if (HasActiveFilters())
+        {
+            <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+                @foreach (var tag in GetActiveFilterTags())
+                {
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 d-inline-flex align-items-center gap-1 fw-normal"
+                          role="button" @onclick="() => RemoveFilter(tag.Key)">
+                        @tag.Label <i class="fa fa-times small"></i>
+                    </span>
+                }
+                <button class="btn btn-link btn-sm text-danger text-decoration-none p-0 ms-1" @onclick="ClearAllFilters">
+                    <i class="fa fa-times-circle"></i> Tüm Filtreleri Temizle
+                </button>
+            </div>
+        }
+
+        <!-- ─── Main Layout: Sidebar + Grid ─── -->
+        <div class="d-flex gap-3 align-items-start">
+
+            <!-- ─── Filter Sidebar ─── -->
+            <aside class="plp-sidebar d-none d-lg-block" style="position:sticky;top:80px;max-height:calc(100vh - 100px);overflow-y:auto">
+
+                @* ── Category ── *@
+                <div class="card mb-2">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                         @onclick='() => ToggleFilter("category")'>
+                        <span class="fw-semibold small"><i class="fa fa-folder-o me-1"></i> Kategori</span>
+                        <i class="fa fa-chevron-down small text-muted"></i>
+                    </div>
+                    @if (!IsFilterCollapsed("category"))
+                    {
+                        <div class="card-body py-2 px-3">
+                            <ul class="list-unstyled mb-0 small">
+                                @foreach (var dept in _categoryTree)
+                                {
+                                    <li>
+                                        <a href="javascript:void(0)"
+                                           class="d-flex align-items-center gap-1 py-1 px-2 rounded text-decoration-none @(dept.Id == _selectedCategoryId ? "bg-primary bg-opacity-10 text-primary fw-semibold" : "text-light")"
+                                           @onclick="() => OnCategorySelect(dept.Id)">
+                                            <i class="fa fa-angle-right"></i>
+                                            @dept.Name
+                                            <span class="badge bg-light text-muted ms-auto">@dept.ProductCount</span>
+                                        </a>
+                                        @if (dept.Children?.Any() == true)
+                                        {
+                                            <ul class="list-unstyled ps-3">
+                                                @foreach (var sub in dept.Children)
+                                                {
+                                                    <li>
+                                                        <a href="javascript:void(0)"
+                                                           class="d-flex align-items-center gap-1 py-1 px-2 rounded text-decoration-none @(sub.Id == _selectedCategoryId ? "bg-primary bg-opacity-10 text-primary fw-semibold" : "text-light")"
+                                                           @onclick="() => OnCategorySelect(sub.Id)">
+                                                            @sub.Name
+                                                            <span class="badge bg-light text-muted ms-auto">@sub.ProductCount</span>
+                                                        </a>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+
+                @* ── Brand ── *@
+                <div class="card mb-2">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                         @onclick='() => ToggleFilter("brand")'>
+                        <span class="fw-semibold small"><i class="fa fa-tag me-1"></i> Marka</span>
+                        <i class="fa fa-chevron-down small text-muted"></i>
+                    </div>
+                    @if (!IsFilterCollapsed("brand"))
+                    {
+                        <div class="card-body py-2 px-3">
+                            <div class="plp-check-list">
+                                @foreach (var brand in _brandFilters)
+                                {
+                                    <div class="form-check small mb-1">
+                                        <input class="form-check-input" type="checkbox" id="brand_@brand.Id"
+                                               checked="@brand.IsSelected" @onchange="() => ToggleBrandFilter(brand.Id)" />
+                                        <label class="form-check-label d-flex justify-content-between w-100" for="brand_@brand.Id">
+                                            @brand.Name
+                                            <span class="text-muted">(@brand.Count)</span>
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* ── Price ── *@
+                <div class="card mb-2">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                         @onclick='() => ToggleFilter("price")'>
+                        <span class="fw-semibold small"><i class="bi bi-currency-lira me-1"></i> Fiyat Aralığı</span>
+                        <i class="fa fa-chevron-down small text-muted"></i>
+                    </div>
+                    @if (!IsFilterCollapsed("price"))
+                    {
+                        <div class="card-body py-2 px-3">
+                            <div class="d-flex gap-2 align-items-center mb-2">
+                                <input type="number" class="form-control form-control-sm text-center" placeholder="Min" @bind="_priceMin" />
+                                <span class="text-muted">—</span>
+                                <input type="number" class="form-control form-control-sm text-center" placeholder="Max" @bind="_priceMax" />
+                            </div>
+                            <button class="btn btn-primary btn-sm w-100" @onclick="ApplyPriceFilter">
+                                <i class="fa fa-check"></i> Uygula
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                @* ── Stock ── *@
+                <div class="card mb-2">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                         @onclick='() => ToggleFilter("stock")'>
+                        <span class="fw-semibold small"><i class="fa fa-cubes me-1"></i> Stok Durumu</span>
+                        <i class="fa fa-chevron-down small text-muted"></i>
+                    </div>
+                    @if (!IsFilterCollapsed("stock"))
+                    {
+                        <div class="card-body py-2 px-3">
+                            <div class="form-check small mb-1">
+                                <input class="form-check-input" type="checkbox" id="flt_instock"
+                                       @bind="_filterInStock" @bind:after="OnFilterChanged" />
+                                <label class="form-check-label" for="flt_instock">Stokta Var</label>
+                            </div>
+                            <div class="form-check small mb-1">
+                                <input class="form-check-input" type="checkbox" id="flt_outofstock"
+                                       @bind="_filterOutOfStock" @bind:after="OnFilterChanged" />
+                                <label class="form-check-label" for="flt_outofstock">Tükenmiş</label>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* ── Discount ── *@
+                <div class="card mb-2">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                         @onclick='() => ToggleFilter("discount")'>
+                        <span class="fw-semibold small"><i class="fa fa-percent me-1"></i> İndirim</span>
+                        <i class="fa fa-chevron-down small text-muted"></i>
+                    </div>
+                    @if (!IsFilterCollapsed("discount"))
+                    {
+                        <div class="card-body py-2 px-3">
+                            <div class="form-check small">
+                                <input class="form-check-input" type="checkbox" id="flt_disc"
+                                       @bind="_filterDiscounted" @bind:after="OnFilterChanged" />
+                                <label class="form-check-label" for="flt_disc">İndirimli Ürünler</label>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* ── Shipping ── *@
+                <div class="card mb-2">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                         @onclick='() => ToggleFilter("shipping")'>
+                        <span class="fw-semibold small"><i class="fa fa-truck me-1"></i> Kargo</span>
+                        <i class="fa fa-chevron-down small text-muted"></i>
+                    </div>
+                    @if (!IsFilterCollapsed("shipping"))
+                    {
+                        <div class="card-body py-2 px-3">
+                            <div class="form-check small mb-1">
+                                <input class="form-check-input" type="checkbox" id="flt_freeship"
+                                       @bind="_filterFreeShipping" @bind:after="OnFilterChanged" />
+                                <label class="form-check-label" for="flt_freeship">
+                                    <i class="fa fa-check-circle text-success"></i> Ücretsiz Kargo
+                                </label>
+                            </div>
+                            <div class="form-check small">
+                                <input class="form-check-input" type="checkbox" id="flt_fastship"
+                                       @bind="_filterFastDelivery" @bind:after="OnFilterChanged" />
+                                <label class="form-check-label" for="flt_fastship">
+                                    <i class="fa fa-bolt text-info"></i> Hızlı Teslimat
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* ── Rating ── *@
+                <div class="card mb-2">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                         @onclick='() => ToggleFilter("rating")'>
+                        <span class="fw-semibold small"><i class="fa fa-star me-1"></i> Puan</span>
+                        <i class="fa fa-chevron-down small text-muted"></i>
+                    </div>
+                    @if (!IsFilterCollapsed("rating"))
+                    {
+                        <div class="card-body py-2 px-3">
+                            <ul class="list-unstyled mb-0 small">
+                                @for (int star = 5; star >= 1; star--)
+                                {
+                                    var s = star;
+                                    <li class="d-flex align-items-center gap-1 py-1 cursor-pointer" @onclick="() => OnRatingFilter(s)">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            <i class="fa @(i <= s ? "fa-star text-warning" : "fa-star-o text-muted")"></i>
+                                        }
+                                        <span class="ms-1">@(s == 5 ? "" : " ve üzeri")</span>
+                                        @if (_minRating == s)
+                                        {
+                                            <i class="fa fa-check text-primary ms-auto"></i>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+
+                @* ── Dynamic Attribute Filters ── *@
+                @foreach (var attrFilter in _attributeFilters)
+                {
+                    <div class="card mb-2">
+                        <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between cursor-pointer"
+                             @onclick='() => ToggleFilter($"attr_{attrFilter.AttributeId}")'>
+                            <span class="fw-semibold small">@attrFilter.AttributeName</span>
+                            <i class="fa fa-chevron-down small text-muted"></i>
+                        </div>
+                        @if (!IsFilterCollapsed($"attr_{attrFilter.AttributeId}"))
+                        {
+                            <div class="card-body py-2 px-3">
+                                <div class="plp-check-list">
+                                    @foreach (var val in attrFilter.Values)
+                                    {
+                                        <div class="form-check small mb-1">
+                                            <input class="form-check-input" type="checkbox"
+                                                   id="attr_@(attrFilter.AttributeId)_@(val.ValueId)"
+                                                   checked="@val.IsSelected"
+                                                   @onchange="() => ToggleAttributeFilter(attrFilter.AttributeId, val.ValueId)" />
+                                            <label class="form-check-label d-flex align-items-center gap-1 w-100"
+                                                   for="attr_@(attrFilter.AttributeId)_@(val.ValueId)">
+                                                @if (!string.IsNullOrEmpty(val.ColorHex))
+                                                {
+                                                    <span class="d-inline-block rounded-circle border"
+                                                          style="width:14px;height:14px;background:@val.ColorHex"></span>
+                                                }
+                                                @val.ValueText
+                                                <span class="text-muted ms-auto">(@val.Count)</span>
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </aside>
+
+            <!-- ─── Product Grid ─── -->
+            <div class="flex-grow-1" style="min-width:0">
+                @if (_isLoading)
+                {
+                    <div class="plp-grid @GetGridClass()">
+                        @for (int sk = 0; sk < _pageSize; sk++)
+                        {
+                            <div class="card">
+                                <div class="plp-skeleton plp-skeleton-img"></div>
+                                <div class="card-body">
+                                    <div class="plp-skeleton plp-skeleton-text short"></div>
+                                    <div class="plp-skeleton plp-skeleton-text"></div>
+                                    <div class="plp-skeleton plp-skeleton-text medium"></div>
+                                    <div class="plp-skeleton plp-skeleton-price"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (_products?.Any() != true)
+                {
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="fa fa-search fa-3x text-muted d-block mb-3"></i>
+                            <h5 class="text-muted">Aramanıza uygun ürün bulunamadı</h5>
+                            <p class="text-muted mb-3">Filtrelerinizi değiştirerek tekrar deneyebilirsiniz.</p>
+                            <button class="btn btn-primary btn-sm" @onclick="ClearAllFilters">
+                                <i class="fa fa-refresh"></i> Filtreleri Temizle
+                            </button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="plp-grid @GetGridClass()">
+                        @foreach (var p in _products)
+                        {
+                            <div class="card plp-card border-0 shadow-sm d-flex flex-column h-100 position-relative overflow-hidden"
+                                 @onmouseover="() => OnCardHover(p.ProductId)" @onmouseout="() => OnCardLeave(p.ProductId)">
+
+                                <!-- Badges -->
+                                <div class="plp-badges">
+                                    @if (p.DiscountPercent > 0)
+                                    {
+                                        <span class="badge bg-danger small">%@p.DiscountPercent</span>
+                                    }
+                                    @if (p.IsNew)
+                                    {
+                                        <span class="badge bg-primary small">Yeni</span>
+                                    }
+                                    @if (p.IsBestseller)
+                                    {
+                                        <span class="badge bg-warning text-dark small">Çok Satan</span>
+                                    }
+                                    @if (p.IsLowStock)
+                                    {
+                                        <span class="badge bg-warning small">Tükenmek Üzere</span>
+                                    }
+                                    @if (p.HasFreeShipping)
+                                    {
+                                        <span class="badge bg-success small">Ücretsiz Kargo</span>
+                                    }
+                                </div>
+
+                                <!-- Hover Action Buttons -->
+                                <div class="plp-card-actions">
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-sm border @(IsFavorited(p.ProductId) ? "text-danger plp-heart-anim" : "text-muted")"
+                                            style="width:32px;height:32px;padding:0"
+                                            @onclick="() => ToggleFavorite(p.ProductId)" @onclick:stopPropagation="true">
+                                        <i class="fa @(IsFavorited(p.ProductId) ? "fa-heart" : "fa-heart-o")"></i>
+                                        <span class="plp-action-tooltip badge bg-dark">Favorilere Ekle</span>
+                                    </button>
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-sm border text-muted"
+                                            style="width:32px;height:32px;padding:0"
+                                            @onclick="() => ToggleCompare(p)" @onclick:stopPropagation="true">
+                                        <i class="fa fa-exchange"></i>
+                                        <span class="plp-action-tooltip badge bg-dark">Karşılaştır</span>
+                                    </button>
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-sm border text-muted"
+                                            style="width:32px;height:32px;padding:0"
+                                            @onclick="() => OpenQuickView(p)" @onclick:stopPropagation="true">
+                                        <i class="fa fa-eye"></i>
+                                        <span class="plp-action-tooltip badge bg-dark">Hızlı Bakış</span>
+                                    </button>
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-sm border text-muted"
+                                            style="width:32px;height:32px;padding:0" @onclick:stopPropagation="true">
+                                        <i class="fa fa-share-alt"></i>
+                                        <span class="plp-action-tooltip badge bg-dark">Paylaş</span>
+                                    </button>
+                                </div>
+
+                                <!-- Image + Hover Gallery -->
+                                <div class="plp-card-img-wrap bg-light">
+                                    @if (p.GalleryUrls?.Count > 1 && _hoveredProductId == p.ProductId)
+                                    {
+                                        <button class="plp-gallery-nav prev btn btn-light shadow-sm"
+                                                @onclick="() => GalleryPrev(p)" @onclick:stopPropagation="true">
+                                            <i class="fa fa-chevron-left"></i>
+                                        </button>
+                                        <button class="plp-gallery-nav next btn btn-light shadow-sm"
+                                                @onclick="() => GalleryNext(p)" @onclick:stopPropagation="true">
+                                            <i class="fa fa-chevron-right"></i>
+                                        </button>
+                                    }
+                                    <img src="@GetCurrentGalleryImage(p)" alt="@p.Name" loading="lazy" />
+                                    @if (p.GalleryUrls?.Count > 1)
+                                    {
+                                        <div class="plp-gallery-dots">
+                                            @for (int gi = 0; gi < Math.Min(p.GalleryUrls.Count, 6); gi++)
+                                            {
+                                                var idx = gi;
+                                                <span class="plp-gallery-dot @(GetGalleryIndex(p.ProductId) == idx ? "bg-primary" : "bg-secondary bg-opacity-50")"
+                                                      @onmouseover="() => SetGalleryIndex(p.ProductId, idx)"></span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Card Body -->
+                                <div class="card-body p-2 flex-grow-1 d-flex flex-column" role="button" @onclick="() => NavigateToProduct(p)">
+                                    <div class="text-primary fw-semibold small text-truncate mb-1">
+                                        <i class="fa fa-shopping-bag"></i> @p.StoreName
+                                    </div>
+                                    <div class="text-muted text-uppercase small plp-hide-compact" style="font-size:.68rem;letter-spacing:.5px">@p.BrandName</div>
+                                    <div class="plp-card-title fw-semibold small mb-1">
+                                        <a href="/urun/@p.Slug" class="text-light text-decoration-none stretched-link">@p.Name</a>
+                                    </div>
+                                    <div class="text-muted plp-hide-compact" style="font-size:.68rem">@p.CategoryName</div>
+
+                                    <!-- Rating -->
+                                    @if (p.Rating > 0)
+                                    {
+                                        <div class="d-flex align-items-center gap-1 mt-1 small">
+                                            <span class="text-warning">
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    <i class="fa @(i <= Math.Round(p.Rating) ? "fa-star" : "fa-star-o")"></i>
+                                                }
+                                            </span>
+                                            <span class="text-muted">(@p.ReviewCount)</span>
+                                            @if (p.SaleCount > 0)
+                                            {
+                                                <span class="text-success fw-semibold">@p.SaleCount+ satış</span>
+                                            }
+                                        </div>
+                                    }
+
+                                    <!-- Price -->
+                                    <div class="mt-auto pt-1">
+                                        @if (p.DiscountedPrice.HasValue && p.DiscountedPrice < p.Price)
+                                        {
+                                            <span class="fw-bold text-danger">@p.DiscountedPrice.Value.ToString("N2") <small>@p.Currency</small></span>
+                                            <small class="text-muted text-decoration-line-through ms-1">@p.Price.ToString("N2") @p.Currency</small>
+                                            <small class="text-danger fw-bold ms-1">%@p.DiscountPercent</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="fw-bold text-light">@p.Price.ToString("N2") <small>@p.Currency</small></span>
+                                        }
+                                    </div>
+
+                                    <!-- Stock / Shipping Meta -->
+                                    <div class="d-flex flex-wrap gap-1 mt-1 plp-hide-compact">
+                                        @if (p.TotalStock > 0)
+                                        {
+                                            if (p.IsLowStock)
+                                            {
+                                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 small">
+                                                    <i class="fa fa-exclamation-triangle"></i> Son @p.TotalStock adet
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 small">
+                                                    <i class="fa fa-check-circle"></i> Stokta
+                                                </span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 small">
+                                                <i class="fa fa-times-circle"></i> Tükendi
+                                            </span>
+                                        }
+                                        @if (p.HasFreeShipping)
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 small">
+                                                <i class="fa fa-truck"></i> Ücretsiz
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Card Footer -->
+                                <div class="card-footer bg-transparent border-0 p-2 pt-0 d-flex gap-1 plp-card-footer-actions">
+                                    <button class="btn btn-primary btn-sm flex-grow-1" @onclick="() => AddToCart(p)"
+                                            @onclick:stopPropagation="true" disabled="@(p.TotalStock <= 0)">
+                                        <i class="fa fa-shopping-cart"></i> Sepete Ekle
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => BuyNow(p)"
+                                            @onclick:stopPropagation="true" disabled="@(p.TotalStock <= 0)">
+                                        <i class="fa fa-bolt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- ─── Pagination ─── -->
+                    <nav class="d-flex align-items-center justify-content-center gap-2 py-4">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="javascript:void(0)" @onclick="() => GoToPage(_currentPage - 1)">
+                                    <i class="fa fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var pg in GetPageNumbers())
+                            {
+                                if (pg == -1)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(pg == _currentPage ? "active" : "")">
+                                        <a class="page-link" href="javascript:void(0)" @onclick="() => GoToPage(pg)">@pg</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(_currentPage >= _totalPages ? "disabled" : "")">
+                                <a class="page-link" href="javascript:void(0)" @onclick="() => GoToPage(_currentPage + 1)">
+                                    <i class="fa fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                        <div class="d-flex align-items-center gap-2 ms-3 small">
+                            <span class="text-muted">Göster:</span>
+                            <select class="form-select form-select-sm" style="width:auto" @bind="_pageSize" @bind:after="OnPageSizeChanged">
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                            </select>
+                        </div>
+                    </nav>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Mobile Filter Button ─── -->
+    <button class="btn btn-dark rounded-pill shadow-lg position-fixed bottom-0 start-50 translate-middle-x mb-3 d-none plp-mobile-filter-btn"
+            style="z-index:500" @onclick="OpenMobileFilters">
+        <i class="fa fa-sliders me-1"></i> Filtreler
+        @if (HasActiveFilters())
+        {
+            <span class="badge bg-danger rounded-pill ms-1">@GetActiveFilterCount()</span>
+        }
+    </button>
+
+    <!-- ─── Comparison Bar ─── -->
+    @if (_compareList.Any())
+    {
+        <div class="position-fixed bottom-0 start-0 end-0 bg-dark text-white p-3 d-flex align-items-center gap-3 shadow-lg" style="z-index:1000">
+            <div class="d-flex gap-2 flex-grow-1 overflow-auto">
+                @foreach (var cp in _compareList)
+                {
+                    <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 rounded px-2 py-1 small text-nowrap">
+                        <img src="@cp.CoverUrl" alt="" class="rounded" style="width:34px;height:34px;object-fit:contain;background:#fff" />
+                        <span>@TruncateText(cp.Name, 28)</span>
+                        <button class="btn btn-sm p-0 text-white-50" @onclick="() => RemoveFromCompare(cp.ProductId)">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+            <button class="btn btn-primary btn-sm fw-bold text-nowrap" disabled="@(_compareList.Count < 2)" @onclick="OpenCompareModal">
+                <i class="fa fa-exchange"></i> Karşılaştır (@_compareList.Count)
+            </button>
+        </div>
+    }
+
+    <!-- ─── Quick View Modal ─── -->
+    @if (_quickViewProduct != null)
+    {
+        <div class="modal-backdrop fade show" @onclick="CloseQuickView"></div>
+        <div class="modal fade show d-block" tabindex="-1" @onclick="CloseQuickView">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" @onclick:stopPropagation="true">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title fw-bold"><i class="fa fa-eye me-1"></i> Hızlı Bakış</h6>
+                        <button type="button" class="btn-close" @onclick="CloseQuickView"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <!-- Gallery -->
+                            <div class="col-md-6">
+                                <div class="plp-qv-main-img bg-light rounded overflow-hidden mb-2">
+                                    <img src="@GetQuickViewMainImage()" alt="@_quickViewProduct.Name" />
+                                </div>
+                                @if (_quickViewProduct.GalleryUrls?.Count > 1)
+                                {
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        @for (int ti = 0; ti < _quickViewProduct.GalleryUrls.Count; ti++)
+                                        {
+                                            var tidx = ti;
+                                            <div class="plp-qv-thumb rounded border @(tidx == _qvGalleryIndex ? "border-primary border-2" : "") overflow-hidden bg-light"
+                                                 @onclick="() => SetQvGalleryIndex(tidx)">
+                                                <img src="@_quickViewProduct.GalleryUrls[tidx]" alt="" />
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <!-- Info -->
+                            <div class="col-md-6 d-flex flex-column">
+                                <div class="text-muted text-uppercase small mb-1" style="letter-spacing:.5px">@_quickViewProduct.BrandName</div>
+                                <h5 class="fw-bold mb-2">@_quickViewProduct.Name</h5>
+
+                                @if (_quickViewProduct.Rating > 0)
+                                {
+                                    <div class="d-flex align-items-center gap-1 mb-2 small">
+                                        <span class="text-warning">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fa @(i <= Math.Round(_quickViewProduct.Rating) ? "fa-star" : "fa-star-o")"></i>
+                                            }
+                                        </span>
+                                        <span class="text-muted">@_quickViewProduct.ReviewCount değerlendirme</span>
+                                    </div>
+                                }
+
+                                <!-- Price -->
+                                <div class="bg-light rounded p-3 mb-3">
+                                    @if (_quickViewProduct.DiscountedPrice.HasValue && _quickViewProduct.DiscountedPrice < _quickViewProduct.Price)
+                                    {
+                                        <span class="fs-4 fw-bold text-danger">@_quickViewProduct.DiscountedPrice.Value.ToString("N2") @_quickViewProduct.Currency</span>
+                                        <span class="text-muted text-decoration-line-through ms-2">@_quickViewProduct.Price.ToString("N2") @_quickViewProduct.Currency</span>
+                                        <span class="text-danger fw-bold ms-2">%@_quickViewProduct.DiscountPercent indirim</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="fs-4 fw-bold text-light">@_quickViewProduct.Price.ToString("N2") @_quickViewProduct.Currency</span>
+                                    }
+                                </div>
+
+                                <!-- Variants -->
+                                @if (_qvVariantGroups?.Any() == true)
+                                {
+                                    @foreach (var vg in _qvVariantGroups)
+                                    {
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold">@vg.AttributeName:</label>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var vo in vg.Options)
+                                                {
+                                                    @if (!string.IsNullOrEmpty(vo.ColorHex))
+                                                    {
+                                                        <span class="plp-color-swatch border @(vo.IsSelected ? "border-primary border-2 shadow-sm" : "")"
+                                                              style="background:@vo.ColorHex" title="@vo.Value"
+                                                              @onclick="() => SelectQvVariant(vg.AttributeId, vo.ValueId)"></span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm @(vo.IsSelected ? "btn-outline-primary" : "btn-outline-secondary")"
+                                                                @onclick="() => SelectQvVariant(vg.AttributeId, vo.ValueId)">
+                                                            @vo.Value
+                                                        </button>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+
+                                <!-- Specs -->
+                                @if (_qvSpecs?.Any() == true)
+                                {
+                                    <div class="mb-3">
+                                        @foreach (var spec in _qvSpecs.Take(5))
+                                        {
+                                            <div class="d-flex small border-bottom py-1">
+                                                <span class="text-muted" style="width:120px">@spec.Label</span>
+                                                <span class="fw-semibold">@spec.Value</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+
+                                <!-- Quantity -->
+                                <div class="d-flex align-items-center gap-3 mb-3">
+                                    <label class="small fw-semibold">Adet:</label>
+                                    <div class="input-group input-group-sm" style="width:120px">
+                                        <button class="btn btn-outline-secondary" @onclick="QvDecreaseQty">−</button>
+                                        <input type="text" class="form-control text-center" value="@_qvQuantity" readonly />
+                                        <button class="btn btn-outline-secondary" @onclick="QvIncreaseQty">+</button>
+                                    </div>
+                                    @if (_quickViewProduct.TotalStock > 0)
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success">
+                                            <i class="fa fa-check-circle"></i> Stokta (@_quickViewProduct.TotalStock)
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger bg-opacity-10 text-danger">
+                                            <i class="fa fa-times-circle"></i> Tükendi
+                                        </span>
+                                    }
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="d-flex gap-2 mt-auto">
+                                    <button class="btn btn-primary flex-grow-1" disabled="@(_quickViewProduct.TotalStock <= 0)">
+                                        <i class="fa fa-shopping-cart"></i> Sepete Ekle
+                                    </button>
+                                    <button class="btn btn-outline-primary" disabled="@(_quickViewProduct.TotalStock <= 0)">
+                                        <i class="fa fa-bolt"></i> Satın Al
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ─── Comparison Modal ─── -->
+    @if (_showCompareModal && _compareList.Count >= 2)
+    {
+        <div class="modal-backdrop fade show" @onclick="CloseCompareModal"></div>
+        <div class="modal fade show d-block" tabindex="-1" @onclick="CloseCompareModal">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" @onclick:stopPropagation="true">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h6 class="modal-title fw-bold"><i class="fa fa-exchange me-1"></i> Ürün Karşılaştırma</h6>
+                        <button type="button" class="btn-close" @onclick="CloseCompareModal"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-0 small">
+                                <thead>
+                                    <tr>
+                                        <th class="bg-light" style="width:140px"></th>
+                                        @foreach (var cp in _compareList)
+                                        {
+                                            <th class="text-center" style="min-width:180px">
+                                                <img src="@cp.CoverUrl" alt="" class="d-block mx-auto mb-2 bg-light rounded p-1"
+                                                     style="width:100px;height:100px;object-fit:contain" />
+                                                <span class="fw-bold">@cp.Name</span>
+                                            </th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="bg-light fw-semibold">Fiyat</td>
+                                        @foreach (var cp in _compareList)
+                                        {
+                                            <td class="text-center">
+                                                <span class="fw-bold text-primary">@((cp.DiscountedPrice ?? cp.Price).ToString("N2")) @cp.Currency</span>
+                                            </td>
+                                        }
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-semibold">Marka</td>
+                                        @foreach (var cp in _compareList)
+                                        {
+                                            <td class="text-center">@cp.BrandName</td>
+                                        }
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-semibold">Puan</td>
+                                        @foreach (var cp in _compareList)
+                                        {
+                                            <td class="text-center">@(cp.Rating > 0 ? $"{cp.Rating:N1} / 5" : "—")</td>
+                                        }
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-semibold">Stok</td>
+                                        @foreach (var cp in _compareList)
+                                        {
+                                            <td class="text-center">
+                                                @if (cp.TotalStock > 0)
+                                                {
+                                                    <span class="text-success">@cp.TotalStock adet</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-danger">Tükendi</span>
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                    <tr>
+                                        <td class="bg-light fw-semibold">Mağaza</td>
+                                        @foreach (var cp in _compareList)
+                                        {
+                                            <td class="text-center">@cp.StoreName</td>
+                                        }
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ─── Mobile Offcanvas Filters ─── -->
+    @if (_showMobileFilters)
+    {
+        <div class="offcanvas offcanvas-start show" style="visibility:visible;width:300px;z-index:1100">
+            <div class="offcanvas-header">
+                <h6 class="offcanvas-title fw-bold"><i class="fa fa-sliders me-1"></i> Filtreler</h6>
+                <button type="button" class="btn-close" @onclick="CloseMobileFilters"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                <!-- Category -->
+                <div class="border-bottom p-3">
+                    <h6 class="fw-semibold small mb-2"><i class="fa fa-folder-o me-1"></i> Kategori</h6>
+                    <ul class="list-unstyled mb-0 small">
+                        @foreach (var dept in _categoryTree)
+                        {
+                            <li>
+                                <a href="javascript:void(0)"
+                                   class="d-flex align-items-center py-1 text-decoration-none @(dept.Id == _selectedCategoryId ? "text-primary fw-semibold" : "text-light")"
+                                   @onclick="() => { OnCategorySelect(dept.Id); CloseMobileFilters(); }">
+                                    <i class="fa fa-angle-right me-1"></i> @dept.Name
+                                    <span class="badge bg-light text-muted ms-auto">@dept.ProductCount</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                <!-- Brand -->
+                <div class="border-bottom p-3">
+                    <h6 class="fw-semibold small mb-2"><i class="fa fa-tag me-1"></i> Marka</h6>
+                    @foreach (var brand in _brandFilters)
+                    {
+                        <div class="form-check small mb-1">
+                            <input class="form-check-input" type="checkbox" checked="@brand.IsSelected"
+                                   @onchange="() => ToggleBrandFilter(brand.Id)" />
+                            <label class="form-check-label">@brand.Name (@brand.Count)</label>
+                        </div>
+                    }
+                </div>
+                <!-- Price -->
+                <div class="border-bottom p-3">
+                    <h6 class="fw-semibold small mb-2"><i class="bi bi-currency-lira me-1"></i> Fiyat</h6>
+                    <div class="d-flex gap-2 align-items-center mb-2">
+                        <input type="number" class="form-control form-control-sm text-center" placeholder="Min" @bind="_priceMin" />
+                        <span>—</span>
+                        <input type="number" class="form-control form-control-sm text-center" placeholder="Max" @bind="_priceMax" />
+                    </div>
+                    <button class="btn btn-primary btn-sm w-100" @onclick="ApplyPriceFilter">Uygula</button>
+                </div>
+            </div>
+            <div class="p-3 border-top">
+                <button class="btn btn-primary w-100" @onclick="CloseMobileFilters">
+                    <i class="fa fa-check me-1"></i> @_totalCount Ürünü Göster
+                </button>
+            </div>
+        </div>
+        <div class="offcanvas-backdrop fade show" style="z-index:1050" @onclick="CloseMobileFilters"></div>
+    }
+</div>
+
+<!-- ═══════════════════════ CODE ═══════════════════════ -->
+@code {
+    // ─── Parameters ───
+    [Parameter] public string? CategorySlug { get; set; }
+    [Parameter] public string? BrandSlug { get; set; }
+    [Parameter] public string? StoreSlug { get; set; }
+
+    // ─── Injections ───
+    [Inject] private IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    // [Inject] private GlobalStateHub GlobalStateHub { get; set; } = default!;
+    // [Inject] private TakeLogs TakeLogs { get; set; } = default!;
+
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Locks ───
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+    // ─── Page State ───
+    private bool _isLoading = true;
+    private string? _pageTitle;
+    private string? _activeCategoryParentName;
+    private string _viewMode = "grid";
+    private string _sortOrder = "recommended";
+    private string _searchTerm = "";
+    private int _currentPage = 1;
+    private int _pageSize = 20;
+    private int _totalCount;
+    private int _totalPages;
+
+    // ─── Filter State ───
+    private int? _selectedCategoryId;
+    private decimal? _priceMin;
+    private decimal? _priceMax;
+    private bool _filterInStock;
+    private bool _filterOutOfStock;
+    private bool _filterDiscounted;
+    private bool _filterFreeShipping;
+    private bool _filterFastDelivery;
+    private int? _minRating;
+    private HashSet<string> _collapsedFilters = new();
+    private bool _showMobileFilters;
+
+    // ─── Data ───
+    private List<ProductCardDto> _products = new();
+    private List<CategoryTreeNode> _categoryTree = new();
+    private List<BrandFilterItem> _brandFilters = new();
+    private List<AttributeFilterGroup> _attributeFilters = new();
+    private HashSet<Guid> _favoriteIds = new();
+    private List<ProductCardDto> _compareList = new();
+    private bool _showCompareModal;
+
+    // ─── Hover Gallery ───
+    private Guid? _hoveredProductId;
+    private Dictionary<Guid, int> _galleryIndexes = new();
+
+    // ─── Quick View ───
+    private ProductCardDto? _quickViewProduct;
+    private int _qvGalleryIndex;
+    private int _qvQuantity = 1;
+    private List<VariantGroupDto>? _qvVariantGroups;
+    private List<SpecDto>? _qvSpecs;
+
+    // ─── Search Debounce ───
+    private System.Timers.Timer? _searchDebounceTimer;
+
+    // ═══════════════════ LIFECYCLE ═══════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    // ═══════════════════ DATA LOADING ═══════════════════
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // ── Base Query ──
+            var query = db.Set<Products>()
+                .Where(p => p.IsActive
+                    && p.PublishStatus == true
+                    && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true));
+
+            // ── Search ──
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                var term = _searchTerm.Trim().ToLower();
+                var matchingBrandIds = await db.Set<Brands>()
+                    .Where(b => b.Name != null && b.Name.ToLower().Contains(term))
+                    .Select(b => b.Id).ToListAsync();
+
+                var matchingVariantProductIds = await db.Set<ProductVariants>()
+                    .Where(v => (v.Sku != null && v.Sku.ToLower().Contains(term))
+                             || (v.Barcode != null && v.Barcode.ToLower().Contains(term)))
+                    .Select(v => v.ProductId).Distinct().ToListAsync();
+
+                query = query.Where(p =>
+                    (p.Name != null && p.Name.ToLower().Contains(term))
+                    || (p.Tags != null && p.Tags.ToLower().Contains(term))
+                    || (p.ShortDescription != null && p.ShortDescription.ToLower().Contains(term))
+                    || (p.BrandId.HasValue && matchingBrandIds.Contains(p.BrandId.Value))
+                    || matchingVariantProductIds.Contains(p.Id));
+            }
+
+            // ── Category ──
+            if (_selectedCategoryId.HasValue)
+            {
+                var catProductIds = await db.Set<ProductCategories>()
+                    .Where(pc => pc.CategoryId == _selectedCategoryId.Value)
+                    .Select(pc => pc.ProductId).ToListAsync();
+                query = query.Where(p => catProductIds.Contains(p.Id));
+            }
+
+            // ── Brand ──
+            var selectedBrands = _brandFilters.Where(b => b.IsSelected).Select(b => b.Id).ToList();
+            if (selectedBrands.Any())
+                query = query.Where(p => p.BrandId.HasValue && selectedBrands.Contains(p.BrandId.Value));
+
+            // ── Discount ──
+            if (_filterDiscounted)
+            {
+                var discountedIds = await db.Set<ProductPrices>()
+                    .Where(pp => pp.EffectiveTo == null && pp.DiscountedPrice.HasValue && pp.DiscountedPrice < pp.Price)
+                    .Select(pp => pp.ProductId).Distinct().ToListAsync();
+                query = query.Where(p => discountedIds.Contains(p.Id));
+            }
+
+            // ── Rating ──
+            if (_minRating.HasValue)
+                query = query.Where(p => p.Interaction != null && (p.Interaction.LikeCount ?? 0) > 0);
+
+            // ── Attribute Filters ──
+            foreach (var af in _attributeFilters)
+            {
+                var selectedValues = af.Values.Where(v => v.IsSelected).Select(v => v.ValueId).ToList();
+                if (selectedValues.Any())
+                {
+                    var matchIds = await db.Set<ProductVariantValues>()
+                        .Where(pvv => pvv.AttributeId == af.AttributeId && selectedValues.Contains(pvv.AttributeValueId))
+                        .Join(db.Set<ProductVariants>(), pvv => pvv.VariantId, pv => pv.Id, (pvv, pv) => pv.ProductId)
+                        .Distinct().ToListAsync();
+                    query = query.Where(p => matchIds.Contains(p.Id));
+                }
+            }
+
+            // ── Count & Pages ──
+            _totalCount = await query.CountAsync();
+            _totalPages = (int)Math.Ceiling((double)_totalCount / _pageSize);
+            if (_currentPage > _totalPages) _currentPage = Math.Max(1, _totalPages);
+
+            // ── Sort ──
+            IQueryable<Products> sortedQuery = _sortOrder switch
+            {
+                "newest" => query.OrderByDescending(p => p.CreatedAt),
+                "rating_desc" => query.OrderByDescending(p => p.Interaction != null ? (p.Interaction.LikeCount ?? 0) : 0),
+                "most_reviewed" => query.OrderByDescending(p => p.Interaction != null ? (p.Interaction.ViewCount ?? 0) : 0),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            var pagedProducts = await sortedQuery
+                .Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToListAsync();
+            var productIds = pagedProducts.Select(p => p.Id).ToList();
+
+            // ── Related Data ──
+            var defaultVariants = await db.Set<ProductVariants>()
+                .Where(v => productIds.Contains(v.ProductId) && v.IsDefault
+                    && (v.IsDeleted == null || v.IsDeleted.IsDeletedStatu != true))
+                .ToListAsync();
+            var variantDict = defaultVariants.GroupBy(v => v.ProductId).ToDictionary(g => g.Key, g => g.First());
+
+            var variantIds = defaultVariants.Select(v => v.Id).ToList();
+            var currentPrices = await db.Set<ProductPrices>()
+                .Where(pp => variantIds.Contains(pp.VariantId) && pp.EffectiveTo == null && pp.Currency == "TRY")
+                .ToListAsync();
+            var priceDict = currentPrices.GroupBy(pp => pp.ProductId).ToDictionary(g => g.Key, g => g.First());
+
+            var stocks = await db.Set<ProductStocks>()
+                .Where(s => productIds.Contains(s.ProductId))
+                .GroupBy(s => s.ProductId)
+                .Select(g => new { ProductId = g.Key, Total = g.Sum(s => s.Quantity) })
+                .ToListAsync();
+            var stockDict = stocks.ToDictionary(s => s.ProductId, s => s.Total);
+
+            var brandIds = pagedProducts.Where(p => p.BrandId.HasValue).Select(p => p.BrandId!.Value).Distinct().ToList();
+            var brands = await db.Set<Brands>().Where(b => brandIds.Contains(b.Id))
+                .ToDictionaryAsync(b => b.Id, b => b.Name ?? "");
+
+            var storeIds = pagedProducts.Select(p => p.StoreId).Distinct().ToList();
+            var stores = await db.Set<Store>().Where(s => storeIds.Contains(s.Id))
+                .ToDictionaryAsync(s => s.Id, s => s.Name ?? "");
+
+            var primaryCats = await db.Set<ProductCategories>()
+                .Where(pc => productIds.Contains(pc.ProductId) && pc.IsPrimary).ToListAsync();
+            var catIds = primaryCats.Select(pc => pc.CategoryId).Distinct().ToList();
+            var categories = await db.Set<CategoriesTr>().Where(c => catIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.Name ?? "");
+            var productCatDict = primaryCats.ToDictionary(pc => pc.ProductId, pc => pc.CategoryId);
+
+            var coverMediaIds = pagedProducts.Where(p => p.CoverMediaId.HasValue).Select(p => p.CoverMediaId!.Value).Distinct().ToList();
+            var galleryItems = await db.Set<ItemGallery>()
+                .Where(ig => productIds.Contains(ig.ItemId!.Value) && ig.ItemType == "ProductGallery" && ig.IsDelete != true)
+                .ToListAsync();
+            var allMediaIds = coverMediaIds
+                .Union(galleryItems.Where(g => g.MediaId.HasValue).Select(g => g.MediaId!.Value)).Distinct().ToList();
+            var medias = await db.Set<Data.Media>().Where(m => allMediaIds.Contains(m.Id))
+                .ToDictionaryAsync(m => m.Id, m => m);
+
+            var seoData = await db.Set<ProductSeo>().Where(s => productIds.Contains(s.ProductId))
+                .ToDictionaryAsync(s => s.ProductId, s => s);
+
+            // ── Build DTOs ──
+            _products = pagedProducts.Select(p =>
+            {
+                var hasPrice = priceDict.TryGetValue(p.Id, out var price);
+                var stock = stockDict.GetValueOrDefault(p.Id, 0);
+                var coverUrl = p.CoverMediaId.HasValue && medias.TryGetValue(p.CoverMediaId.Value, out var coverMedia)
+                    ? (coverMedia.FileUrl_Ratio_1_4 ?? coverMedia.FileUrl ?? "/img/placeholder.webp")
+                    : "/img/placeholder.webp";
+
+                var galleryUrls = galleryItems
+                    .Where(g => g.ItemId == p.Id && g.MediaId.HasValue && medias.ContainsKey(g.MediaId.Value))
+                    .OrderBy(g => g.ItemAddDate)
+                    .Select(g => { var m = medias[g.MediaId!.Value]; return m.FileUrl_Ratio_1_4 ?? m.FileUrl ?? ""; })
+                    .Where(u => !string.IsNullOrEmpty(u)).ToList();
+                if (!galleryUrls.Contains(coverUrl)) galleryUrls.Insert(0, coverUrl);
+
+                var discountPct = 0;
+                if (hasPrice && price!.DiscountedPrice.HasValue && price.Price > 0 && price.DiscountedPrice < price.Price)
+                    discountPct = (int)Math.Round((1 - (price.DiscountedPrice.Value / price.Price)) * 100);
+
+                var catName = "";
+                if (productCatDict.TryGetValue(p.Id, out var catId) && categories.TryGetValue(catId, out var cn))
+                    catName = cn;
+
+                return new ProductCardDto
+                {
+                    ProductId = p.Id,
+                    Name = p.Name ?? "",
+                    Slug = seoData.TryGetValue(p.Id, out var seo) ? (seo.Slug ?? p.Id.ToString()) : p.Id.ToString(),
+                    BrandName = p.BrandId.HasValue && brands.TryGetValue(p.BrandId.Value, out var bn) ? bn : "",
+                    StoreName = stores.GetValueOrDefault(p.StoreId, ""),
+                    CategoryName = catName,
+                    CoverUrl = coverUrl,
+                    GalleryUrls = galleryUrls,
+                    Price = hasPrice ? price!.Price : 0,
+                    DiscountedPrice = hasPrice ? price!.DiscountedPrice : null,
+                    Currency = hasPrice ? (price!.Currency ?? "TRY") : "TRY",
+                    DiscountPercent = discountPct,
+                    TotalStock = stock,
+                    IsLowStock = stock > 0 && stock <= 5,
+                    Rating = 0,
+                    ReviewCount = 0,
+                    FavoriteCount = p.Interaction?.BookmarkCount ?? 0,
+                    SaleCount = 0,
+                    IsNew = p.CreatedAt.HasValue && (DateTime.UtcNow - p.CreatedAt.Value).TotalDays <= 30,
+                    IsBestseller = (p.Interaction?.ViewCount ?? 0) > 500,
+                    HasFreeShipping = false,
+                    HasFastDelivery = false,
+                };
+            }).ToList();
+
+            // ── In-memory sorts ──
+            _products = _sortOrder switch
+            {
+                "price_asc" => _products.OrderBy(p => p.DiscountedPrice ?? p.Price).ToList(),
+                "price_desc" => _products.OrderByDescending(p => p.DiscountedPrice ?? p.Price).ToList(),
+                "discount_desc" => _products.OrderByDescending(p => p.DiscountPercent).ToList(),
+                "bestselling" => _products.OrderByDescending(p => p.SaleCount).ToList(),
+                _ => _products
+            };
+
+            // ── In-memory price/stock filters ──
+            if (_priceMin.HasValue) _products = _products.Where(p => (p.DiscountedPrice ?? p.Price) >= _priceMin.Value).ToList();
+            if (_priceMax.HasValue) _products = _products.Where(p => (p.DiscountedPrice ?? p.Price) <= _priceMax.Value).ToList();
+            if (_filterInStock && !_filterOutOfStock) _products = _products.Where(p => p.TotalStock > 0).ToList();
+            else if (_filterOutOfStock && !_filterInStock) _products = _products.Where(p => p.TotalStock <= 0).ToList();
+
+            await LoadFilterData(db);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"PLP LoadData Error: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadFilterData(_ApplicationConnectionDb db)
+    {
+        var catCounts = await db.Set<ProductCategories>()
+            .Join(db.Set<Products>().Where(p => p.IsActive && p.PublishStatus == true
+                && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true)),
+                pc => pc.ProductId, p => p.Id, (pc, p) => pc)
+            .GroupBy(pc => pc.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() }).ToListAsync();
+
+        var allCats = await db.Set<CategoriesTr>().ToListAsync();
+        var catCountDict = catCounts.ToDictionary(c => c.CategoryId, c => c.Count);
+
+        _categoryTree = allCats.Where(c => c.ParentCategoryId == null).OrderBy(c => c.DepartmentName)
+            .Select(dept => new CategoryTreeNode
+            {
+                Id = dept.Id,
+                Name = dept.DepartmentName ?? dept.Name ?? "",
+                ProductCount = catCountDict.GetValueOrDefault(dept.Id, 0),
+                Children = allCats.Where(c => c.ParentCategoryId == dept.Id).OrderBy(c => c.Name)
+                    .Select(sub => new CategoryTreeNode { Id = sub.Id, Name = sub.Name ?? "", ProductCount = catCountDict.GetValueOrDefault(sub.Id, 0) })
+                    .Where(c => c.ProductCount > 0).ToList()
+            }).Where(d => d.ProductCount > 0 || d.Children?.Any() == true).ToList();
+
+        var brandCounts = await db.Set<Products>()
+            .Where(p => p.IsActive && p.PublishStatus == true && p.BrandId.HasValue
+                && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true))
+            .GroupBy(p => p.BrandId!.Value)
+            .Select(g => new { BrandId = g.Key, Count = g.Count() }).ToListAsync();
+        var brandIds2 = brandCounts.Select(b => b.BrandId).ToList();
+        var brandNames = await db.Set<Brands>()
+            .Where(b => brandIds2.Contains(b.Id) && (b.IsDeleted == null || b.IsDeleted.IsDeletedStatu != true))
+            .ToDictionaryAsync(b => b.Id, b => b.Name ?? "");
+        var selectedBrandIds = _brandFilters.Where(b => b.IsSelected).Select(b => b.Id).ToHashSet();
+        _brandFilters = brandCounts.Where(bc => brandNames.ContainsKey(bc.BrandId)).OrderByDescending(bc => bc.Count)
+            .Select(bc => new BrandFilterItem { Id = bc.BrandId, Name = brandNames[bc.BrandId], Count = bc.Count, IsSelected = selectedBrandIds.Contains(bc.BrandId) }).ToList();
+
+        var filterableAttrs = await db.Set<ProductAttributes>()
+            .Where(a => a.IsFilterable && a.IsActive && a.UserId == null
+                && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu != true))
+            .OrderBy(a => a.DisplayOrder).ToListAsync();
+
+        var prevSelections = _attributeFilters
+            .SelectMany(af => af.Values.Where(v => v.IsSelected).Select(v => (af.AttributeId, v.ValueId))).ToHashSet();
+
+        _attributeFilters = new();
+        foreach (var attr in filterableAttrs.Take(10))
+        {
+            var values = await db.Set<ProductAttributeValues>()
+                .Where(v => v.AttributeId == attr.Id && v.IsActive
+                    && (v.IsDeleted == null || v.IsDeleted.IsDeletedStatu != true) && v.UserId == null)
+                .OrderBy(v => v.DisplayOrder).ToListAsync();
+            if (!values.Any()) continue;
+
+            var valueIds = values.Select(v => v.Id).ToList();
+            var valueCounts = await db.Set<ProductVariantValues>()
+                .Where(pvv => pvv.AttributeId == attr.Id && valueIds.Contains(pvv.AttributeValueId))
+                .Join(db.Set<ProductVariants>().Where(pv => pv.IsActive && (pv.IsDeleted == null || pv.IsDeleted.IsDeletedStatu != true)),
+                    pvv => pvv.VariantId, pv => pv.Id, (pvv, pv) => new { pvv.AttributeValueId, pv.ProductId })
+                .Distinct().GroupBy(x => x.AttributeValueId)
+                .Select(g => new { ValueId = g.Key, Count = g.Count() }).ToListAsync();
+            var vcDict = valueCounts.ToDictionary(v => v.ValueId, v => v.Count);
+
+            _attributeFilters.Add(new AttributeFilterGroup
+            {
+                AttributeId = attr.Id,
+                AttributeName = attr.Name ?? "",
+                Values = values.Where(v => vcDict.GetValueOrDefault(v.Id, 0) > 0)
+                    .Select(v => new AttributeFilterValue
+                    {
+                        ValueId = v.Id,
+                        ValueText = v.Value ?? "",
+                        ColorHex = v.ColorHex,
+                        Count = vcDict.GetValueOrDefault(v.Id, 0),
+                        IsSelected = prevSelections.Contains((attr.Id, v.Id))
+                    }).ToList()
+            });
+        }
+    }
+
+    // ═══════════════════ QUICK VIEW ═══════════════════
+
+    private async Task OpenQuickView(ProductCardDto product)
+    {
+        _quickViewProduct = product; _qvGalleryIndex = 0; _qvQuantity = 1;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var mappings = await db.Set<ProductAttributeMappings>()
+                .Where(m => m.ProductId == product.ProductId && m.IsVariantAttribute)
+                .OrderBy(m => m.DisplayOrder).ToListAsync();
+
+            _qvVariantGroups = new();
+            foreach (var map in mappings)
+            {
+                var attr = await db.Set<ProductAttributes>().FindAsync(map.AttributeId);
+                if (attr == null) continue;
+                var variantValueIds = await db.Set<ProductVariantValues>()
+                    .Where(pvv => pvv.AttributeId == map.AttributeId)
+                    .Join(db.Set<ProductVariants>().Where(pv => pv.ProductId == product.ProductId && pv.IsActive),
+                        pvv => pvv.VariantId, pv => pv.Id, (pvv, pv) => pvv.AttributeValueId)
+                    .Distinct().ToListAsync();
+                var values = await db.Set<ProductAttributeValues>()
+                    .Where(v => variantValueIds.Contains(v.Id)).OrderBy(v => v.DisplayOrder).ToListAsync();
+                _qvVariantGroups.Add(new VariantGroupDto
+                {
+                    AttributeId = map.AttributeId,
+                    AttributeName = attr.Name ?? "",
+                    Options = values.Select((v, idx) => new VariantOptionDto
+                    { ValueId = v.Id, Value = v.Value ?? "", ColorHex = v.ColorHex, IsSelected = idx == 0 }).ToList()
+                });
+            }
+
+            var specs = await db.Set<ProductSpecifications>()
+                .Where(s => s.ProductId == product.ProductId).OrderBy(s => s.DisplayOrder).ToListAsync();
+            var specAttrIds = specs.Where(s => s.AttributeId.HasValue).Select(s => s.AttributeId!.Value).Distinct().ToList();
+            var specAttrs = await db.Set<ProductAttributes>().Where(a => specAttrIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.Name ?? "");
+            var specValueIds = specs.Where(s => s.AttributeValueId.HasValue).Select(s => s.AttributeValueId!.Value).Distinct().ToList();
+            var specValues = await db.Set<ProductAttributeValues>().Where(v => specValueIds.Contains(v.Id))
+                .ToDictionaryAsync(v => v.Id, v => v.Value ?? "");
+            _qvSpecs = specs.Select(s => new SpecDto
+            {
+                Label = s.CustomName ?? (s.AttributeId.HasValue && specAttrs.TryGetValue(s.AttributeId.Value, out var an) ? an : ""),
+                Value = s.CustomValue ?? (s.AttributeValueId.HasValue && specValues.TryGetValue(s.AttributeValueId.Value, out var av) ? av : "")
+            }).Where(s => !string.IsNullOrEmpty(s.Label) && !string.IsNullOrEmpty(s.Value)).ToList();
+        }
+        catch (Exception ex) { Console.Error.WriteLine($"QuickView Error: {ex.Message}"); }
+        StateHasChanged();
+    }
+
+    private void CloseQuickView() { _quickViewProduct = null; _qvVariantGroups = null; _qvSpecs = null; }
+    private string GetQuickViewMainImage() =>
+        _quickViewProduct?.GalleryUrls?.Count > _qvGalleryIndex
+            ? _quickViewProduct.GalleryUrls[_qvGalleryIndex] : (_quickViewProduct?.CoverUrl ?? "/img/placeholder.webp");
+    private void SetQvGalleryIndex(int idx) => _qvGalleryIndex = idx;
+    private void QvIncreaseQty() { if (_qvQuantity < (_quickViewProduct?.TotalStock ?? 99)) _qvQuantity++; }
+    private void QvDecreaseQty() { if (_qvQuantity > 1) _qvQuantity--; }
+    private void SelectQvVariant(Guid attrId, Guid valueId)
+    {
+        var group = _qvVariantGroups?.FirstOrDefault(g => g.AttributeId == attrId);
+        if (group != null) foreach (var opt in group.Options) opt.IsSelected = opt.ValueId == valueId;
+    }
+
+    // ═══════════════════ FILTERS ═══════════════════
+
+    private async Task OnFilterChanged() { _currentPage = 1; await LoadData(); }
+    private async Task OnSortChanged() { _currentPage = 1; await LoadData(); }
+    private async Task OnPageSizeChanged() { _currentPage = 1; await LoadData(); }
+    private async Task OnCategorySelect(int catId) { _selectedCategoryId = _selectedCategoryId == catId ? null : catId; _currentPage = 1; await LoadData(); }
+    private async Task ToggleBrandFilter(Guid brandId)
+    {
+        var b = _brandFilters.FirstOrDefault(x => x.Id == brandId);
+        if (b != null) b.IsSelected = !b.IsSelected;
+        _currentPage = 1; await LoadData();
+    }
+    private async Task ToggleAttributeFilter(Guid attrId, Guid valueId)
+    {
+        var v = _attributeFilters.FirstOrDefault(g => g.AttributeId == attrId)?.Values.FirstOrDefault(x => x.ValueId == valueId);
+        if (v != null) v.IsSelected = !v.IsSelected;
+        _currentPage = 1; await LoadData();
+    }
+    private async Task ApplyPriceFilter() { _currentPage = 1; await LoadData(); }
+    private async Task OnRatingFilter(int stars) { _minRating = _minRating == stars ? null : stars; _currentPage = 1; await LoadData(); }
+    private async Task ClearAllFilters()
+    {
+        _selectedCategoryId = null; _priceMin = null; _priceMax = null;
+        _filterInStock = false; _filterOutOfStock = false; _filterDiscounted = false;
+        _filterFreeShipping = false; _filterFastDelivery = false; _minRating = null; _searchTerm = "";
+        foreach (var b in _brandFilters) b.IsSelected = false;
+        foreach (var af in _attributeFilters) foreach (var v in af.Values) v.IsSelected = false;
+        _currentPage = 1; await LoadData();
+    }
+    private async Task RemoveFilter(string key)
+    {
+        if (key == "category") _selectedCategoryId = null;
+        else if (key == "price") { _priceMin = null; _priceMax = null; }
+        else if (key == "stock") { _filterInStock = false; _filterOutOfStock = false; }
+        else if (key == "discount") _filterDiscounted = false;
+        else if (key == "shipping") { _filterFreeShipping = false; _filterFastDelivery = false; }
+        else if (key == "rating") _minRating = null;
+        else if (key == "search") _searchTerm = "";
+        else if (key.StartsWith("brand_") && Guid.TryParse(key[6..], out var bid))
+        { var b = _brandFilters.FirstOrDefault(x => x.Id == bid); if (b != null) b.IsSelected = false; }
+        else if (key.StartsWith("attr_"))
+        {
+            var parts = key[5..].Split('_');
+            if (parts.Length == 2 && Guid.TryParse(parts[0], out var aId) && Guid.TryParse(parts[1], out var vId))
+            { var v = _attributeFilters.FirstOrDefault(x => x.AttributeId == aId)?.Values.FirstOrDefault(x => x.ValueId == vId); if (v != null) v.IsSelected = false; }
+        }
+        _currentPage = 1; await LoadData();
+    }
+    private bool HasActiveFilters() =>
+        _selectedCategoryId.HasValue || _priceMin.HasValue || _priceMax.HasValue
+        || _filterInStock || _filterOutOfStock || _filterDiscounted
+        || _filterFreeShipping || _filterFastDelivery || _minRating.HasValue
+        || !string.IsNullOrWhiteSpace(_searchTerm)
+        || _brandFilters.Any(b => b.IsSelected)
+        || _attributeFilters.Any(af => af.Values.Any(v => v.IsSelected));
+    private int GetActiveFilterCount()
+    {
+        int c = 0;
+        if (_selectedCategoryId.HasValue) c++; if (_priceMin.HasValue || _priceMax.HasValue) c++;
+        if (_filterInStock || _filterOutOfStock) c++; if (_filterDiscounted) c++;
+        if (_filterFreeShipping || _filterFastDelivery) c++; if (_minRating.HasValue) c++;
+        if (!string.IsNullOrWhiteSpace(_searchTerm)) c++;
+        c += _brandFilters.Count(b => b.IsSelected);
+        c += _attributeFilters.Sum(af => af.Values.Count(v => v.IsSelected));
+        return c;
+    }
+    private List<FilterTag> GetActiveFilterTags()
+    {
+        var tags = new List<FilterTag>();
+        if (!string.IsNullOrWhiteSpace(_searchTerm)) tags.Add(new("search", $"Arama: {_searchTerm}"));
+        if (_selectedCategoryId.HasValue)
+        {
+            var catName = _categoryTree.SelectMany(d => (d.Children ?? new()).Prepend(d)).FirstOrDefault(c => c.Id == _selectedCategoryId)?.Name ?? "Kategori";
+            tags.Add(new("category", catName));
+        }
+        foreach (var b in _brandFilters.Where(b => b.IsSelected)) tags.Add(new($"brand_{b.Id}", b.Name));
+        if (_priceMin.HasValue || _priceMax.HasValue) tags.Add(new("price", $"Fiyat: {_priceMin?.ToString("N0") ?? "0"} - {_priceMax?.ToString("N0") ?? "∞"} ₺"));
+        if (_filterDiscounted) tags.Add(new("discount", "İndirimli"));
+        if (_filterInStock) tags.Add(new("stock", "Stokta Var"));
+        if (_filterOutOfStock) tags.Add(new("stock", "Tükenmiş"));
+        if (_filterFreeShipping) tags.Add(new("shipping", "Ücretsiz Kargo"));
+        if (_filterFastDelivery) tags.Add(new("shipping", "Hızlı Teslimat"));
+        if (_minRating.HasValue) tags.Add(new("rating", $"{_minRating}+ Yıldız"));
+        foreach (var af in _attributeFilters)
+            foreach (var v in af.Values.Where(v => v.IsSelected))
+                tags.Add(new($"attr_{af.AttributeId}_{v.ValueId}", $"{af.AttributeName}: {v.ValueText}"));
+        return tags;
+    }
+
+    // ═══════════════════ GALLERY ═══════════════════
+
+    private void OnCardHover(Guid id) => _hoveredProductId = id;
+    private void OnCardLeave(Guid id) => _hoveredProductId = null;
+    private string GetCurrentGalleryImage(ProductCardDto p)
+    { var idx = GetGalleryIndex(p.ProductId); return p.GalleryUrls?.Count > idx ? p.GalleryUrls[idx] : (p.CoverUrl ?? "/img/placeholder.webp"); }
+    private int GetGalleryIndex(Guid id) => _galleryIndexes.GetValueOrDefault(id, 0);
+    private void SetGalleryIndex(Guid id, int idx) => _galleryIndexes[id] = idx;
+    private void GalleryNext(ProductCardDto p) { var c = GetGalleryIndex(p.ProductId); var mx = (p.GalleryUrls?.Count ?? 1) - 1; _galleryIndexes[p.ProductId] = c >= mx ? 0 : c + 1; }
+    private void GalleryPrev(ProductCardDto p) { var c = GetGalleryIndex(p.ProductId); var mx = (p.GalleryUrls?.Count ?? 1) - 1; _galleryIndexes[p.ProductId] = c <= 0 ? mx : c - 1; }
+
+    // ═══════════════════ FAVORITES ═══════════════════
+
+    private bool IsFavorited(Guid id) => _favoriteIds.Contains(id);
+    private void ToggleFavorite(Guid id) { if (!_favoriteIds.Add(id)) _favoriteIds.Remove(id); }
+
+    // ═══════════════════ COMPARE ═══════════════════
+
+    private void ToggleCompare(ProductCardDto p) { var e = _compareList.FirstOrDefault(c => c.ProductId == p.ProductId); if (e != null) _compareList.Remove(e); else if (_compareList.Count < 4) _compareList.Add(p); }
+    private void RemoveFromCompare(Guid id) => _compareList.RemoveAll(c => c.ProductId == id);
+    private void OpenCompareModal() { if (_compareList.Count >= 2) _showCompareModal = true; }
+    private void CloseCompareModal() => _showCompareModal = false;
+
+    // ═══════════════════ VIEW ═══════════════════
+
+    private void SetViewMode(string mode) => _viewMode = mode;
+    private string GetGridClass() => _viewMode switch { "list" => "list-view", "compact" => "compact-view", _ => "" };
+    private void NavigateToProduct(ProductCardDto p) => Nav.NavigateTo($"/urun/{p.Slug}");
+    private void AddToCart(ProductCardDto p) { /* Cart service */ }
+    private void BuyNow(ProductCardDto p) => Nav.NavigateTo($"/urun/{p.Slug}?buy=1");
+
+    // ═══════════════════ PAGINATION ═══════════════════
+
+    private async Task GoToPage(int page) { if (page < 1 || page > _totalPages) return; _currentPage = page; await LoadData(); }
+    private List<int> GetPageNumbers()
+    {
+        var pages = new List<int>();
+        if (_totalPages <= 7) { for (int i = 1; i <= _totalPages; i++) pages.Add(i); }
+        else
+        {
+            pages.Add(1);
+            if (_currentPage > 3) pages.Add(-1);
+            for (int i = Math.Max(2, _currentPage - 1); i <= Math.Min(_totalPages - 1, _currentPage + 1); i++) pages.Add(i);
+            if (_currentPage < _totalPages - 2) pages.Add(-1);
+            pages.Add(_totalPages);
+        }
+        return pages;
+    }
+
+    // ═══════════════════ SEARCH DEBOUNCE ═══════════════════
+
+    private void OnSearchDebounce()
+    {
+        _searchDebounceTimer?.Stop(); _searchDebounceTimer?.Dispose();
+        _searchDebounceTimer = new System.Timers.Timer(400);
+        _searchDebounceTimer.Elapsed += async (s, e) =>
+        { _searchDebounceTimer?.Stop(); await InvokeAsync(async () => { _currentPage = 1; await LoadData(); }); };
+        _searchDebounceTimer.AutoReset = false; _searchDebounceTimer.Start();
+    }
+
+    // ═══════════════════ MOBILE ═══════════════════
+
+    private void OpenMobileFilters() => _showMobileFilters = true;
+    private void CloseMobileFilters() => _showMobileFilters = false;
+
+    // ═══════════════════ FILTER COLLAPSE ═══════════════════
+
+    private void ToggleFilter(string key) { if (!_collapsedFilters.Add(key)) _collapsedFilters.Remove(key); }
+    private bool IsFilterCollapsed(string key) => _collapsedFilters.Contains(key);
+
+    // ═══════════════════ HELPERS ═══════════════════
+
+    private string TruncateText(string? t, int m) => string.IsNullOrEmpty(t) ? "" : (t.Length > m ? t[..m] + "…" : t);
+
+    // ═══════════════════ DTOs ═══════════════════
+
+    private class ProductCardDto
+    {
+        public Guid ProductId { get; set; }
+        public string Name { get; set; } = "";
+        public string Slug { get; set; } = "";
+        public string BrandName { get; set; } = "";
+        public string StoreName { get; set; } = "";
+        public string CategoryName { get; set; } = "";
+        public string CoverUrl { get; set; } = "";
+        public List<string> GalleryUrls { get; set; } = new();
+        public decimal Price { get; set; }
+        public decimal? DiscountedPrice { get; set; }
+        public string Currency { get; set; } = "TRY";
+        public int DiscountPercent { get; set; }
+        public int TotalStock { get; set; }
+        public bool IsLowStock { get; set; }
+        public double Rating { get; set; }
+        public int ReviewCount { get; set; }
+        public int FavoriteCount { get; set; }
+        public int SaleCount { get; set; }
+        public bool IsNew { get; set; }
+        public bool IsBestseller { get; set; }
+        public bool HasFreeShipping { get; set; }
+        public bool HasFastDelivery { get; set; }
+    }
+    private class CategoryTreeNode { public int Id { get; set; } public string Name { get; set; } = ""; public int ProductCount { get; set; } public List<CategoryTreeNode>? Children { get; set; } }
+    private class BrandFilterItem { public Guid Id { get; set; } public string Name { get; set; } = ""; public int Count { get; set; } public bool IsSelected { get; set; } }
+    private class AttributeFilterGroup { public Guid AttributeId { get; set; } public string AttributeName { get; set; } = ""; public List<AttributeFilterValue> Values { get; set; } = new(); }
+    private class AttributeFilterValue { public Guid ValueId { get; set; } public string ValueText { get; set; } = ""; public string? ColorHex { get; set; } public int Count { get; set; } public bool IsSelected { get; set; } }
+    private class VariantGroupDto { public Guid AttributeId { get; set; } public string AttributeName { get; set; } = ""; public List<VariantOptionDto> Options { get; set; } = new(); }
+    private class VariantOptionDto { public Guid ValueId { get; set; } public string Value { get; set; } = ""; public string? ColorHex { get; set; } public bool IsSelected { get; set; } }
+    private class SpecDto { public string Label { get; set; } = ""; public string Value { get; set; } = ""; }
+    private record FilterTag(string Key, string Label);
+
+    // ═══════════════════ DISPOSE ═══════════════════
+
+    public async ValueTask DisposeAsync()
+    {
+        _searchDebounceTimer?.Stop(); _searchDebounceTimer?.Dispose(); _semaphore.Dispose();
+    }
+}

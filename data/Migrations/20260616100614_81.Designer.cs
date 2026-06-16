@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260616100614_81")]
+    partial class _81
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,7 +90,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Media", (string)null);
+                    b.ToTable("Media");
                 });
 
             modelBuilder.Entity("data.AccountPermissions", b =>
@@ -109,7 +112,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountPermissions", (string)null);
+                    b.ToTable("AccountPermissions");
                 });
 
             modelBuilder.Entity("data.Addresses", b =>
@@ -123,7 +126,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("data.Article", b =>
@@ -151,7 +154,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Article", (string)null);
+                    b.ToTable("Article");
                 });
 
             modelBuilder.Entity("data.CategoriesAz", b =>
@@ -176,7 +179,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesAz", (string)null);
+                    b.ToTable("CategoriesAz");
                 });
 
             modelBuilder.Entity("data.CategoriesDe", b =>
@@ -201,7 +204,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesDe", (string)null);
+                    b.ToTable("CategoriesDe");
                 });
 
             modelBuilder.Entity("data.CategoriesEn", b =>
@@ -226,7 +229,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesEn", (string)null);
+                    b.ToTable("CategoriesEn");
                 });
 
             modelBuilder.Entity("data.CategoriesEs", b =>
@@ -251,7 +254,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesEs", (string)null);
+                    b.ToTable("CategoriesEs");
                 });
 
             modelBuilder.Entity("data.CategoriesFr", b =>
@@ -276,7 +279,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesFr", (string)null);
+                    b.ToTable("CategoriesFr");
                 });
 
             modelBuilder.Entity("data.CategoriesHi", b =>
@@ -301,7 +304,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesHi", (string)null);
+                    b.ToTable("CategoriesHi");
                 });
 
             modelBuilder.Entity("data.CategoriesPt", b =>
@@ -326,7 +329,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesPt", (string)null);
+                    b.ToTable("CategoriesPt");
                 });
 
             modelBuilder.Entity("data.CategoriesRu", b =>
@@ -351,7 +354,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesRu", (string)null);
+                    b.ToTable("CategoriesRu");
                 });
 
             modelBuilder.Entity("data.CategoriesTr", b =>
@@ -376,7 +379,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesTr", (string)null);
+                    b.ToTable("CategoriesTr");
                 });
 
             modelBuilder.Entity("data.CategoriesZh", b =>
@@ -401,7 +404,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CategoriesZh", (string)null);
+                    b.ToTable("CategoriesZh");
                 });
 
             modelBuilder.Entity("data.ChatMessage", b =>
@@ -437,7 +440,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ChatMessage", (string)null);
+                    b.ToTable("ChatMessage");
                 });
 
             modelBuilder.Entity("data.Cities", b =>
@@ -501,7 +504,7 @@ namespace data.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("Cities", (string)null);
+                    b.ToTable("Cities");
                 });
 
             modelBuilder.Entity("data.Country", b =>
@@ -605,7 +608,7 @@ namespace data.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("Country", (string)null);
+                    b.ToTable("Country");
                 });
 
             modelBuilder.Entity("data.EmailHistory", b =>
@@ -643,7 +646,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("EmailHistory", (string)null);
+                    b.ToTable("EmailHistory");
                 });
 
             modelBuilder.Entity("data.FriendShip", b =>
@@ -672,7 +675,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FriendShip", (string)null);
+                    b.ToTable("FriendShip");
                 });
 
             modelBuilder.Entity("data.ItemGallery", b =>
@@ -701,7 +704,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ItemGallery", (string)null);
+                    b.ToTable("ItemGallery");
                 });
 
             modelBuilder.Entity("data.Languages", b =>
@@ -723,7 +726,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Languages", (string)null);
+                    b.ToTable("Languages");
                 });
 
             modelBuilder.Entity("data.LoginTry", b =>
@@ -758,7 +761,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LoginTry", (string)null);
+                    b.ToTable("LoginTry");
                 });
 
             modelBuilder.Entity("data.Logs", b =>
@@ -799,7 +802,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Logs", (string)null);
+                    b.ToTable("Logs");
                 });
 
             modelBuilder.Entity("data.MainCss", b =>
@@ -828,7 +831,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MainCss", (string)null);
+                    b.ToTable("MainCss");
                 });
 
             modelBuilder.Entity("data.MainJs", b =>
@@ -857,7 +860,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MainJs", (string)null);
+                    b.ToTable("MainJs");
                 });
 
             modelBuilder.Entity("data.MoneyExchangeRate", b =>
@@ -883,7 +886,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MoneyExchangeRate", (string)null);
+                    b.ToTable("MoneyExchangeRate");
                 });
 
             modelBuilder.Entity("data.Posts", b =>
@@ -907,7 +910,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Posts", (string)null);
+                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("data.Regions", b =>
@@ -941,7 +944,7 @@ namespace data.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("Regions", (string)null);
+                    b.ToTable("Regions");
                 });
 
             modelBuilder.Entity("data.States", b =>
@@ -1031,7 +1034,7 @@ namespace data.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("States", (string)null);
+                    b.ToTable("States");
                 });
 
             modelBuilder.Entity("data.Store", b =>
@@ -1111,7 +1114,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Stores", (string)null);
+                    b.ToTable("Stores");
                 });
 
             modelBuilder.Entity("data.StoreBlockingInfos", b =>
@@ -1141,7 +1144,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StoreBlockingInfos", (string)null);
+                    b.ToTable("StoreBlockingInfos");
                 });
 
             modelBuilder.Entity("data.StoreIntegration", b =>
@@ -1191,7 +1194,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StoreIntegration", (string)null);
+                    b.ToTable("StoreIntegration");
                 });
 
             modelBuilder.Entity("data.StoreShip", b =>
@@ -1220,7 +1223,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StoreShip", (string)null);
+                    b.ToTable("StoreShip");
                 });
 
             modelBuilder.Entity("data.TaskCategories", b =>
@@ -1249,7 +1252,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TaskCategories", (string)null);
+                    b.ToTable("TaskCategories");
                 });
 
             modelBuilder.Entity("data.TaskFramework", b =>
@@ -1278,7 +1281,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TaskFramework", (string)null);
+                    b.ToTable("TaskFramework");
                 });
 
             modelBuilder.Entity("data.TaskKeeperJoint", b =>
@@ -1313,7 +1316,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TaskKeeperJoint", (string)null);
+                    b.ToTable("TaskKeeperJoint");
                 });
 
             modelBuilder.Entity("data.TaskNotes", b =>
@@ -1339,7 +1342,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TaskNotes", (string)null);
+                    b.ToTable("TaskNotes");
                 });
 
             modelBuilder.Entity("data.TaskStatus", b =>
@@ -1404,7 +1407,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TaskStatus", (string)null);
+                    b.ToTable("TaskStatus");
                 });
 
             modelBuilder.Entity("data.TryTableSingle", b =>
@@ -1442,7 +1445,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TryTableSingle", (string)null);
+                    b.ToTable("TryTableSingle");
                 });
 
             modelBuilder.Entity("data.UserAddressMethod", b =>
@@ -1506,7 +1509,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserAddressMethod", (string)null);
+                    b.ToTable("UserAddressMethod");
                 });
 
             modelBuilder.Entity("data.UserPaymentMethod", b =>
@@ -1550,7 +1553,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserPaymentMethod", (string)null);
+                    b.ToTable("UserPaymentMethod");
                 });
 
             modelBuilder.Entity("data.UserShortcuts", b =>
@@ -1579,7 +1582,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserShortcuts", (string)null);
+                    b.ToTable("UserShortcuts");
                 });
 
             modelBuilder.Entity("data.Users", b =>
@@ -1647,7 +1650,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("data.UsersRoles", b =>
@@ -1662,7 +1665,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UsersRoles", (string)null);
+                    b.ToTable("UsersRoles");
                 });
 
             modelBuilder.Entity("data.WorkstationEmployeeGroup", b =>
@@ -1682,7 +1685,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WorkstationEmployeeGroup", (string)null);
+                    b.ToTable("WorkstationEmployeeGroup");
                 });
 
             modelBuilder.Entity("data._Product.AttributeTemplateCategories", b =>
@@ -1702,7 +1705,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AttributeTemplateCategories", (string)null);
+                    b.ToTable("AttributeTemplateCategories");
                 });
 
             modelBuilder.Entity("data._Product.AttributeTemplateItems", b =>
@@ -1728,7 +1731,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AttributeTemplateItems", (string)null);
+                    b.ToTable("AttributeTemplateItems");
                 });
 
             modelBuilder.Entity("data._Product.AttributeTemplates", b =>
@@ -1769,7 +1772,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AttributeTemplates", (string)null);
+                    b.ToTable("AttributeTemplates");
                 });
 
             modelBuilder.Entity("data._Product.Brands", b =>
@@ -1795,7 +1798,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Brands", (string)null);
+                    b.ToTable("Brands");
                 });
 
             modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportJobs", b =>
@@ -1890,7 +1893,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductImportJobs", (string)null);
+                    b.ToTable("ProductImportJobs");
                 });
 
             modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportMappings", b =>
@@ -1955,7 +1958,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductImportMappings", (string)null);
+                    b.ToTable("ProductImportMappings");
                 });
 
             modelBuilder.Entity("data._Product.BulkWordPressProductImport.ProductImportRows", b =>
@@ -2017,7 +2020,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductImportRows", (string)null);
+                    b.ToTable("ProductImportRows");
                 });
 
             modelBuilder.Entity("data._Product.MarketplaceAttributeMappings", b =>
@@ -2049,7 +2052,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MarketplaceAttributeMappings", (string)null);
+                    b.ToTable("MarketplaceAttributeMappings");
                 });
 
             modelBuilder.Entity("data._Product.MarketplaceCategoryMappings", b =>
@@ -2075,7 +2078,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("MarketplaceCategoryMappings", (string)null);
+                    b.ToTable("MarketplaceCategoryMappings");
                 });
 
             modelBuilder.Entity("data._Product.Marketplaces", b =>
@@ -2104,7 +2107,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Marketplaces", (string)null);
+                    b.ToTable("Marketplaces");
                 });
 
             modelBuilder.Entity("data._Product.ProductAttributeMappings", b =>
@@ -2139,7 +2142,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductAttributeMappings", (string)null);
+                    b.ToTable("ProductAttributeMappings");
                 });
 
             modelBuilder.Entity("data._Product.ProductAttributeValues", b =>
@@ -2177,7 +2180,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductAttributeValues", (string)null);
+                    b.ToTable("ProductAttributeValues");
                 });
 
             modelBuilder.Entity("data._Product.ProductAttributes", b =>
@@ -2221,7 +2224,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductAttributes", (string)null);
+                    b.ToTable("ProductAttributes");
                 });
 
             modelBuilder.Entity("data._Product.ProductBundleItems", b =>
@@ -2253,7 +2256,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductBundleItems", (string)null);
+                    b.ToTable("ProductBundleItems");
                 });
 
             modelBuilder.Entity("data._Product.ProductCategories", b =>
@@ -2276,7 +2279,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductCategories", (string)null);
+                    b.ToTable("ProductCategories");
                 });
 
             modelBuilder.Entity("data._Product.ProductDigitalAssets", b =>
@@ -2311,7 +2314,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductDigitalAssets", (string)null);
+                    b.ToTable("ProductDigitalAssets");
                 });
 
             modelBuilder.Entity("data._Product.ProductExternalMedias", b =>
@@ -2343,7 +2346,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductExternalMedias", (string)null);
+                    b.ToTable("ProductExternalMedias");
                 });
 
             modelBuilder.Entity("data._Product.ProductImageVariantGroups", b =>
@@ -2369,7 +2372,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductImageVariantGroups", (string)null);
+                    b.ToTable("ProductImageVariantGroups");
                 });
 
             modelBuilder.Entity("data._Product.ProductImportProfiles", b =>
@@ -2419,7 +2422,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductImportProfiles", (string)null);
+                    b.ToTable("ProductImportProfiles");
                 });
 
             modelBuilder.Entity("data._Product.ProductMarketplaceListings", b =>
@@ -2466,7 +2469,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductMarketplaceListings", (string)null);
+                    b.ToTable("ProductMarketplaceListings");
                 });
 
             modelBuilder.Entity("data._Product.ProductPrices", b =>
@@ -2507,7 +2510,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductPrices", (string)null);
+                    b.ToTable("ProductPrices");
                 });
 
             modelBuilder.Entity("data._Product.ProductSeo", b =>
@@ -2548,7 +2551,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductSeo", (string)null);
+                    b.ToTable("ProductSeo");
                 });
 
             modelBuilder.Entity("data._Product.ProductSpecifications", b =>
@@ -2580,7 +2583,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductSpecifications", (string)null);
+                    b.ToTable("ProductSpecifications");
                 });
 
             modelBuilder.Entity("data._Product.ProductStocks", b =>
@@ -2621,7 +2624,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductStocks", (string)null);
+                    b.ToTable("ProductStocks");
                 });
 
             modelBuilder.Entity("data._Product.ProductVariantValues", b =>
@@ -2641,7 +2644,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductVariantValues", (string)null);
+                    b.ToTable("ProductVariantValues");
                 });
 
             modelBuilder.Entity("data._Product.ProductVariants", b =>
@@ -2703,7 +2706,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductVariants", (string)null);
+                    b.ToTable("ProductVariants");
                 });
 
             modelBuilder.Entity("data._Product.Products", b =>
@@ -2801,7 +2804,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("data._Product.Warehouse", b =>
@@ -2827,7 +2830,7 @@ namespace data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Warehouse", (string)null);
+                    b.ToTable("Warehouse");
                 });
 
             modelBuilder.Entity("data.Addresses", b =>
@@ -2866,7 +2869,7 @@ namespace data.Migrations
 
                             b1.HasKey("AddressesId");
 
-                            b1.ToTable("Addresses", (string)null);
+                            b1.ToTable("Addresses");
 
                             b1.WithOwner()
                                 .HasForeignKey("AddressesId");
@@ -2885,7 +2888,7 @@ namespace data.Migrations
 
                             b1.HasKey("AddressesId");
 
-                            b1.ToTable("Addresses", (string)null);
+                            b1.ToTable("Addresses");
 
                             b1.WithOwner()
                                 .HasForeignKey("AddressesId");
@@ -2917,7 +2920,7 @@ namespace data.Migrations
 
                             b1.HasKey("ArticleId");
 
-                            b1.ToTable("Article", (string)null);
+                            b1.ToTable("Article");
 
                             b1.WithOwner()
                                 .HasForeignKey("ArticleId");
@@ -2936,7 +2939,7 @@ namespace data.Migrations
 
                             b1.HasKey("ArticleId");
 
-                            b1.ToTable("Article", (string)null);
+                            b1.ToTable("Article");
 
                             b1.WithOwner()
                                 .HasForeignKey("ArticleId");
@@ -2975,7 +2978,7 @@ namespace data.Migrations
 
                             b1.HasKey("ArticleId");
 
-                            b1.ToTable("Article", (string)null);
+                            b1.ToTable("Article");
 
                             b1.WithOwner()
                                 .HasForeignKey("ArticleId");
@@ -3003,7 +3006,7 @@ namespace data.Migrations
 
                             b1.HasKey("FriendShipId");
 
-                            b1.ToTable("FriendShip", (string)null);
+                            b1.ToTable("FriendShip");
 
                             b1.WithOwner()
                                 .HasForeignKey("FriendShipId");
@@ -3033,7 +3036,7 @@ namespace data.Migrations
 
                             b1.HasKey("PostsId");
 
-                            b1.ToTable("Posts", (string)null);
+                            b1.ToTable("Posts");
 
                             b1.WithOwner()
                                 .HasForeignKey("PostsId");
@@ -3052,7 +3055,7 @@ namespace data.Migrations
 
                             b1.HasKey("PostsId");
 
-                            b1.ToTable("Posts", (string)null);
+                            b1.ToTable("Posts");
 
                             b1.WithOwner()
                                 .HasForeignKey("PostsId");
@@ -3091,7 +3094,7 @@ namespace data.Migrations
 
                             b1.HasKey("PostsId");
 
-                            b1.ToTable("Posts", (string)null);
+                            b1.ToTable("Posts");
 
                             b1.WithOwner()
                                 .HasForeignKey("PostsId");
@@ -3140,7 +3143,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreId");
 
-                            b1.ToTable("Stores", (string)null);
+                            b1.ToTable("Stores");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreId");
@@ -3291,7 +3294,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreId");
 
-                            b1.ToTable("Stores", (string)null);
+                            b1.ToTable("Stores");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreId");
@@ -3316,7 +3319,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreId");
 
-                            b1.ToTable("Stores", (string)null);
+                            b1.ToTable("Stores");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreId");
@@ -3335,7 +3338,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreId");
 
-                            b1.ToTable("Stores", (string)null);
+                            b1.ToTable("Stores");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreId");
@@ -3374,7 +3377,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreId");
 
-                            b1.ToTable("Stores", (string)null);
+                            b1.ToTable("Stores");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreId");
@@ -3393,7 +3396,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreId");
 
-                            b1.ToTable("Stores", (string)null);
+                            b1.ToTable("Stores");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreId");
@@ -3469,7 +3472,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreId");
 
-                            b1.ToTable("Stores", (string)null);
+                            b1.ToTable("Stores");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreId");
@@ -3505,7 +3508,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreBlockingInfosId");
 
-                            b1.ToTable("StoreBlockingInfos", (string)null);
+                            b1.ToTable("StoreBlockingInfos");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreBlockingInfosId");
@@ -3529,7 +3532,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreIntegrationId");
 
-                            b1.ToTable("StoreIntegration", (string)null);
+                            b1.ToTable("StoreIntegration");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreIntegrationId");
@@ -3553,7 +3556,7 @@ namespace data.Migrations
 
                             b1.HasKey("StoreShipId");
 
-                            b1.ToTable("StoreShip", (string)null);
+                            b1.ToTable("StoreShip");
 
                             b1.WithOwner()
                                 .HasForeignKey("StoreShipId");
@@ -3577,7 +3580,7 @@ namespace data.Migrations
 
                             b1.HasKey("TaskCategoriesId");
 
-                            b1.ToTable("TaskCategories", (string)null);
+                            b1.ToTable("TaskCategories");
 
                             b1.WithOwner()
                                 .HasForeignKey("TaskCategoriesId");
@@ -3601,7 +3604,7 @@ namespace data.Migrations
 
                             b1.HasKey("TaskFrameworkId");
 
-                            b1.ToTable("TaskFramework", (string)null);
+                            b1.ToTable("TaskFramework");
 
                             b1.WithOwner()
                                 .HasForeignKey("TaskFrameworkId");
@@ -3625,7 +3628,7 @@ namespace data.Migrations
 
                             b1.HasKey("TaskKeeperJointId");
 
-                            b1.ToTable("TaskKeeperJoint", (string)null);
+                            b1.ToTable("TaskKeeperJoint");
 
                             b1.WithOwner()
                                 .HasForeignKey("TaskKeeperJointId");
@@ -3649,7 +3652,7 @@ namespace data.Migrations
 
                             b1.HasKey("TaskNotesId");
 
-                            b1.ToTable("TaskNotes", (string)null);
+                            b1.ToTable("TaskNotes");
 
                             b1.WithOwner()
                                 .HasForeignKey("TaskNotesId");
@@ -3673,7 +3676,7 @@ namespace data.Migrations
 
                             b1.HasKey("TaskStatusId");
 
-                            b1.ToTable("TaskStatus", (string)null);
+                            b1.ToTable("TaskStatus");
 
                             b1.WithOwner()
                                 .HasForeignKey("TaskStatusId");
@@ -3697,7 +3700,7 @@ namespace data.Migrations
 
                             b1.HasKey("TryTableSingleId");
 
-                            b1.ToTable("TryTableSingle", (string)null);
+                            b1.ToTable("TryTableSingle");
 
                             b1.WithOwner()
                                 .HasForeignKey("TryTableSingleId");
@@ -3716,7 +3719,7 @@ namespace data.Migrations
 
                             b1.HasKey("TryTableSingleId");
 
-                            b1.ToTable("TryTableSingle", (string)null);
+                            b1.ToTable("TryTableSingle");
 
                             b1.WithOwner()
                                 .HasForeignKey("TryTableSingleId");
@@ -3742,7 +3745,7 @@ namespace data.Migrations
 
                             b1.HasKey("UserAddressMethodId");
 
-                            b1.ToTable("UserAddressMethod", (string)null);
+                            b1.ToTable("UserAddressMethod");
 
                             b1.WithOwner()
                                 .HasForeignKey("UserAddressMethodId");
@@ -3766,7 +3769,7 @@ namespace data.Migrations
 
                             b1.HasKey("UserPaymentMethodId");
 
-                            b1.ToTable("UserPaymentMethod", (string)null);
+                            b1.ToTable("UserPaymentMethod");
 
                             b1.WithOwner()
                                 .HasForeignKey("UserPaymentMethodId");
@@ -3922,7 +3925,7 @@ namespace data.Migrations
 
                             b1.HasKey("UsersId");
 
-                            b1.ToTable("Users", (string)null);
+                            b1.ToTable("Users");
 
                             b1.WithOwner()
                                 .HasForeignKey("UsersId");
@@ -3941,7 +3944,26 @@ namespace data.Migrations
 
                             b1.HasKey("UsersId");
 
-                            b1.ToTable("Users", (string)null);
+                            b1.ToTable("Users");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UsersId");
+                        });
+
+                    b.OwnsOne("data._Shared.ProfileCoverGallery", "ProfileCoverGallery", b1 =>
+                        {
+                            b1.Property<Guid>("UsersId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("CoverImagePath")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("ProfileImagePath")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("UsersId");
+
+                            b1.ToTable("Users");
 
                             b1.WithOwner()
                                 .HasForeignKey("UsersId");
@@ -4029,26 +4051,7 @@ namespace data.Migrations
 
                             b1.HasKey("UsersId");
 
-                            b1.ToTable("Users", (string)null);
-
-                            b1.WithOwner()
-                                .HasForeignKey("UsersId");
-                        });
-
-                    b.OwnsOne("data._Shared.ProfileCoverGallery", "ProfileCoverGallery", b1 =>
-                        {
-                            b1.Property<Guid>("UsersId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("CoverImagePath")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("ProfileImagePath")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("UsersId");
-
-                            b1.ToTable("Users", (string)null);
+                            b1.ToTable("Users");
 
                             b1.WithOwner()
                                 .HasForeignKey("UsersId");
@@ -4064,7 +4067,7 @@ namespace data.Migrations
 
                             b1.HasKey("UsersId");
 
-                            b1.ToTable("Users", (string)null);
+                            b1.ToTable("Users");
 
                             b1.WithOwner()
                                 .HasForeignKey("UsersId");
@@ -4117,7 +4120,7 @@ namespace data.Migrations
 
                             b1.HasKey("WorkstationEmployeeGroupId");
 
-                            b1.ToTable("WorkstationEmployeeGroup", (string)null);
+                            b1.ToTable("WorkstationEmployeeGroup");
 
                             b1.WithOwner()
                                 .HasForeignKey("WorkstationEmployeeGroupId");
@@ -4268,7 +4271,7 @@ namespace data.Migrations
 
                             b1.HasKey("WorkstationEmployeeGroupId");
 
-                            b1.ToTable("WorkstationEmployeeGroup", (string)null);
+                            b1.ToTable("WorkstationEmployeeGroup");
 
                             b1.WithOwner()
                                 .HasForeignKey("WorkstationEmployeeGroupId");
@@ -4287,7 +4290,7 @@ namespace data.Migrations
 
                             b1.HasKey("WorkstationEmployeeGroupId");
 
-                            b1.ToTable("WorkstationEmployeeGroup", (string)null);
+                            b1.ToTable("WorkstationEmployeeGroup");
 
                             b1.WithOwner()
                                 .HasForeignKey("WorkstationEmployeeGroupId");
@@ -4306,7 +4309,7 @@ namespace data.Migrations
 
                             b1.HasKey("WorkstationEmployeeGroupId");
 
-                            b1.ToTable("WorkstationEmployeeGroup", (string)null);
+                            b1.ToTable("WorkstationEmployeeGroup");
 
                             b1.WithOwner()
                                 .HasForeignKey("WorkstationEmployeeGroupId");
@@ -4336,7 +4339,7 @@ namespace data.Migrations
 
                             b1.HasKey("AttributeTemplatesId");
 
-                            b1.ToTable("AttributeTemplates", (string)null);
+                            b1.ToTable("AttributeTemplates");
 
                             b1.WithOwner()
                                 .HasForeignKey("AttributeTemplatesId");
@@ -4360,7 +4363,7 @@ namespace data.Migrations
 
                             b1.HasKey("BrandsId");
 
-                            b1.ToTable("Brands", (string)null);
+                            b1.ToTable("Brands");
 
                             b1.WithOwner()
                                 .HasForeignKey("BrandsId");
@@ -4384,7 +4387,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductImportJobsId");
 
-                            b1.ToTable("ProductImportJobs", (string)null);
+                            b1.ToTable("ProductImportJobs");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductImportJobsId");
@@ -4408,7 +4411,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductImportMappingsId");
 
-                            b1.ToTable("ProductImportMappings", (string)null);
+                            b1.ToTable("ProductImportMappings");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductImportMappingsId");
@@ -4432,7 +4435,7 @@ namespace data.Migrations
 
                             b1.HasKey("MarketplacesId");
 
-                            b1.ToTable("Marketplaces", (string)null);
+                            b1.ToTable("Marketplaces");
 
                             b1.WithOwner()
                                 .HasForeignKey("MarketplacesId");
@@ -4456,7 +4459,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductAttributeValuesId");
 
-                            b1.ToTable("ProductAttributeValues", (string)null);
+                            b1.ToTable("ProductAttributeValues");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductAttributeValuesId");
@@ -4480,7 +4483,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductAttributesId");
 
-                            b1.ToTable("ProductAttributes", (string)null);
+                            b1.ToTable("ProductAttributes");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductAttributesId");
@@ -4504,7 +4507,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductImportProfilesId");
 
-                            b1.ToTable("ProductImportProfiles", (string)null);
+                            b1.ToTable("ProductImportProfiles");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductImportProfilesId");
@@ -4528,7 +4531,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductVariantsId");
 
-                            b1.ToTable("ProductVariants", (string)null);
+                            b1.ToTable("ProductVariants");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductVariantsId");
@@ -4558,7 +4561,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductsId");
 
-                            b1.ToTable("Products", (string)null);
+                            b1.ToTable("Products");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductsId");
@@ -4577,7 +4580,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductsId");
 
-                            b1.ToTable("Products", (string)null);
+                            b1.ToTable("Products");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductsId");
@@ -4616,7 +4619,7 @@ namespace data.Migrations
 
                             b1.HasKey("ProductsId");
 
-                            b1.ToTable("Products", (string)null);
+                            b1.ToTable("Products");
 
                             b1.WithOwner()
                                 .HasForeignKey("ProductsId");
@@ -4665,7 +4668,7 @@ namespace data.Migrations
 
                             b1.HasKey("WarehouseId");
 
-                            b1.ToTable("Warehouse", (string)null);
+                            b1.ToTable("Warehouse");
 
                             b1.WithOwner()
                                 .HasForeignKey("WarehouseId");
@@ -4684,7 +4687,7 @@ namespace data.Migrations
 
                             b1.HasKey("WarehouseId");
 
-                            b1.ToTable("Warehouse", (string)null);
+                            b1.ToTable("Warehouse");
 
                             b1.WithOwner()
                                 .HasForeignKey("WarehouseId");

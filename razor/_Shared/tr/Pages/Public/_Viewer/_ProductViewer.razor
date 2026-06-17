@@ -1,0 +1,1422 @@
+﻿@* ════════════════════════════════════════════════════════════════════════
+   ProductProfile.razor
+   ─────────────────────────────────────────────────────────────────────────
+   Tekli ürün inceleme sayfası — Amazon / Trendyol / eBay tarzı profesyonel yapı.
+   ✅ Yalnızca Bootstrap 5.3 + Font Awesome 4.7.0 (özel CSS/JS YOK)
+   ✅ IDbContextFactory + AsNoTracking + CancellationToken
+   ✅ Navigation property kullanılmaz (ID bazlı join)
+   ✅ Turkish UI / English variables, single-file Razor
+   ✅ GlobalStateHub, TakeLogs, IAsyncDisposable, SemaphoreSlim
+
+   VERİ İLİŞKİLERİ:
+   - Products (ana kayıt)            → Parametre olarak gelir (SelectedProduct)
+   - Brands.Id          ← Products.BrandId
+   - Store.Id           ← Products.StoreId
+   - ProductSeo         ← ProductId (Slug, SeoTitle, SeoDescription)
+   - ProductVariants    ← ProductId (varsayılan + tüm varyantlar, SKU/Barkod)
+   - ProductVariantValues ← VariantId (Renk=Kırmızı, Beden=S kombinasyonları)
+   - ProductAttributes / ProductAttributeValues (özellik adı/değeri çözümleme)
+   - ProductPrices      ← VariantId, EffectiveTo==null (güncel fiyat, çoklu para birimi)
+   - ProductStocks      ← VariantId (toplam stok = depo satırlarının toplamı)
+   - ProductSpecifications ← ProductId (teknik özellik tablosu)
+   - ProductCategories  ← ProductId → CategoriesTr (breadcrumb)
+   - CoverMediaId       → Media (kapak görseli)
+   - ItemGallery (ItemType="Product"/"ProductGallery", ItemId=ProductId) → Media (galeri)
+   - ProductImageVariantGroups → değer bazlı varyant görseli (CoverMediaId)
+   - ProductExternalMedias ← ProductId (video, 360, döküman)
+   ════════════════════════════════════════════════════════════════════════ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using data._Product
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@using System.Globalization
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@if (_loading)
+{
+    @* ─── İSKELET YÜKLEME ─── *@
+    <div class="container-xxl py-4">
+        <div class="placeholder-glow">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="placeholder col-12 rounded-3" style="height:420px;"></div>
+                </div>
+                <div class="col-lg-6">
+                    <span class="placeholder col-4 mb-3"></span>
+                    <span class="placeholder col-9 mb-2"></span>
+                    <span class="placeholder col-7 mb-4"></span>
+                    <span class="placeholder col-5 mb-3"></span>
+                    <span class="placeholder col-12 mb-2" style="height:48px;"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (_product == null)
+{
+    @* ─── ÜRÜN BULUNAMADI ─── *@
+    <div class="container-xxl py-5 text-center text-light">
+        <i class="fa fa-exclamation-triangle fa-3x text-warning mb-3 d-block"></i>
+        <h4>Ürün bulunamadı</h4>
+        <p class="text- light">Aradığınız ürün kaldırılmış veya yayından alınmış olabilir.</p>
+        <a href="/Public/_Viewer/ProductListing" class="btn btn-info btn-sm mt-2">
+            <i class="fa fa-arrow-left me-1"></i>Ürünlere Dön
+        </a>
+    </div>
+}
+else
+{
+    var p = _product;
+
+    @* ═══════════════════════════════════════════════════════════════
+       BREADCRUMB
+       ═══════════════════════════════════════════════════════════════ *@
+    var roads = new List<(string icon, string Name, string Url)>
+        {
+            ("fa fa-home",         "Ana Sayfa", "/"),
+            ("fa fa-shopping-bag", "Ürünler",   "/tr/Public/Home/Index")
+        };
+    foreach (var bc in _breadcrumbCategories)
+        roads.Add(("null", bc.Name ?? "—", "javascript:void(0)"));
+    @*roads.Add(("null", p.Name?.Length > 40 ? p.Name.Substring(0, 40) + "…" : p.Name ?? "Ürün", "javascript:void(0)"));*@
+    <div class="container-xxl pt-3">
+        <razor._Shared.BreadCrumbLinksUrl roads="roads" />
+    </div>
+
+    <div class="container-xxl pb-5">
+        <div class="row g-4">
+
+            @* ═══════════════════════════════════════════════════════
+               SOL: GÖRSEL GALERİ (sticky)
+               ═══════════════════════════════════════════════════════ *@
+            <div class="col-lg-5">
+                <div class="position-lg-sticky" style="top:80px;">
+                    <div class="row g-2">
+
+                        @* Dikey küçük resimler (masaüstü) *@
+                        @if (_displayImages.Count > 1)
+                        {
+                            <div class="col-2 d-none d-md-block">
+                                <div class="d-flex flex-column gap-2" style="max-height:520px; overflow-y:auto;">
+                                    @for (int i = 0; i < _displayImages.Count; i++)
+                                    {
+                                        var idx = i;
+                                        <div role="button"
+                                             class="border rounded-2 overflow-hidden @(idx == _activeImageIndex ? "border-info border-2" : "border-secondary")"
+                                             style="aspect-ratio:1; @(idx == _activeImageIndex ? "" : "opacity:.6;")"
+                                             @onclick="() => _activeImageIndex = idx"
+                                             @onmouseover="() => _activeImageIndex = idx">
+                                            <img src="@_displayImages[idx]" alt="@p.Name görseli @(idx + 1)"
+                                                 class="w-100 h-100" style="object-fit:cover;" loading="lazy" />
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @* Ana görsel *@
+                        <div class="@(_displayImages.Count > 1 ? "col-md-10" : "col-12")">
+                            <div class="position-relative bg-white rounded-3 overflow-hidden border border-secondary border-opacity-25"
+                                 style="aspect-ratio:1;">
+                                @if (_displayImages.Any())
+                                {
+                                    <img src="@_displayImages[_activeImageIndex]" alt="@p.Name"
+                                         class="w-100 h-100" style="object-fit:contain;" />
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-center justify-content-center h-100 text- light bg-dark">
+                                        <i class="fa fa-picture-o fa-4x"></i>
+                                    </div>
+                                }
+
+                                @* İndirim rozeti *@
+                                @if (_currentDiscountPercent > 0)
+                                {
+                                    <span class="badge bg-danger position-absolute top-0 start-0 m-3 fs-6 px-3 py-2 rounded-pill">
+                                        %@_currentDiscountPercent İndirim
+                                    </span>
+                                }
+
+                                @* Favori (sağ üst) *@
+                                <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm"
+                                        style="width:44px; height:44px;"
+                                        @onclick="ToggleFavorite" title="Favorilere Ekle">
+                                    <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-dark")"></i>
+                                </button>
+                            </div>
+
+                            @* Yatay küçük resimler (mobil) *@
+                            @if (_displayImages.Count > 1)
+                            {
+                                <div class="d-flex d-md-none gap-2 mt-2 overflow-auto pb-1">
+                                    @for (int i = 0; i < _displayImages.Count; i++)
+                                    {
+                                        var idx = i;
+                                        <div role="button"
+                                             class="border rounded-2 overflow-hidden flex-shrink-0 @(idx == _activeImageIndex ? "border-info border-2" : "border-secondary")"
+                                             style="width:64px; height:64px; @(idx == _activeImageIndex ? "" : "opacity:.6;")"
+                                             @onclick="() => _activeImageIndex = idx">
+                                            <img src="@_displayImages[idx]" alt="" class="w-100 h-100" style="object-fit:cover;" loading="lazy" />
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    @* Harici Medya (Video / 360 / Döküman) *@
+                    @if (_externalMedias.Any())
+                    {
+                        <div class="mt-3">
+                            <h6 class="text-light small fw-semibold mb-2">
+                                <i class="fa fa-film me-1 text-info"></i>Video & Medya
+                            </h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var em in _externalMedias)
+                                {
+                                    var icon = em.MediaType switch
+                                    {
+                                        "VideoUrl" => "fa-youtube-play",
+                                        "View360" => "fa-refresh",
+                                        "Document" => "fa-file-pdf-o",
+                                        _ => "fa-external-link"
+                                    };
+                                    <a href="@em.Url" target="_blank" rel="noopener"
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="fa @icon me-1"></i>@(string.IsNullOrEmpty(em.Title) ? em.MediaType : em.Title)
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* ═══════════════════════════════════════════════════════
+               SAĞ: ÜRÜN BİLGİLERİ + SATIN ALMA
+               ═══════════════════════════════════════════════════════ *@
+            <div class="col-lg-7">
+
+                @* Marka + Mağaza *@
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    @if (!string.IsNullOrEmpty(_brandName))
+                    {
+                        <a href="/Public/_Viewer/ProductListing?brand=@Uri.EscapeDataString(_brandName)"
+                           class="badge bg-info bg-opacity-25 text-info border border-info text-decoration-none px-3 py-2">
+                            <i class="fa fa-bookmark me-1"></i>@_brandName
+                        </a>
+                    }
+                    @if (_store != null)
+                    {
+                        <button class="btn btn-link btn-sm text-warning text-decoration-none p-0"
+                                @onclick="OpenStoreModal">
+                            <i class="fa fa-building me-1"></i>@_store.Name
+                        </button>
+                    }
+                </div>
+
+                @* Başlık *@
+                <h1 class="h4 text-light fw-semibold lh-base mb-2">@p.Name</h1>
+
+                @* ─── KISA AÇIKLAMA ─── *@
+                @if (!string.IsNullOrWhiteSpace(p.ShortDescription))
+                {
+                    <div class="bg-dark bg-opacity-25 rounded-3 p-3">
+                        <p class="text-light small mb-0 lh-base">@p.ShortDescription</p>
+                    </div>
+                }
+
+                @* Beğeni / Görüntülenme / SKU *@
+                <div class="d-flex align-items-center flex-wrap gap-3 text- light small mb-3 mt-3">
+                    <span><i class="fa fa-heart text-danger me-1"></i>@(p.Interaction?.LikeCount ?? 0) beğeni</span>
+                    <span><i class="fa fa-eye me-1"></i>@(p.Interaction?.ViewCount ?? 0) görüntülenme</span>
+                    @if (!string.IsNullOrEmpty(_selectedVariant?.Sku))
+                    {
+                        <span><i class="fa fa-tag me-1"></i>SKU: @_selectedVariant.Sku</span>
+                    }
+                    @if (!string.IsNullOrEmpty(_selectedVariant?.Barcode))
+                    {
+                        <span><i class="fa fa-barcode me-1"></i>@_selectedVariant.Barcode</span>
+                    }
+                </div>
+
+                <hr class="border-secondary" />
+
+                @* ─── FİYAT KUTUSU ─── *@
+                <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-3 mb-3">
+                    @if (_currentPrice != null)
+                    {
+                        var cur = CurrencySymbol(_currentPrice.Currency);
+                        @if (_currentPrice.DiscountedPrice.HasValue && _currentPrice.DiscountedPrice < _currentPrice.Price)
+                        {
+                            <div class="d-flex align-items-baseline flex-wrap gap-2">
+                                <span class="display-6 fw-bold text-info mb-0">@_currentPrice.DiscountedPrice.Value.ToString("N2") @cur</span>
+                                <del class="text- light fs-5">@_currentPrice.Price.ToString("N2") @cur</del>
+                                <span class="badge bg-danger fs-6">%@_currentDiscountPercent</span>
+                            </div>
+                            <div class="text-success small mt-1">
+                                <i class="fa fa-arrow-down me-1"></i>
+                                @((_currentPrice.Price - _currentPrice.DiscountedPrice.Value).ToString("N2")) @cur tasarruf ediyorsunuz
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="display-6 fw-bold text-info">@_currentPrice.Price.ToString("N2") @cur</span>
+                        }
+
+                        @* Diğer para birimleri *@
+                        @if (_otherCurrencyPrices.Any())
+                        {
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                @foreach (var op in _otherCurrencyPrices)
+                                {
+                                    var ocur = CurrencySymbol(op.Currency);
+                                    var oval = (op.DiscountedPrice ?? op.Price);
+                                    <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">
+                                        @oval.ToString("N2") @ocur
+                                    </span>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text- light"><i class="fa fa-info-circle me-1"></i>Fiyat bilgisi bulunmuyor</span>
+                    }
+                </div>
+
+                @* ─── STOK DURUMU ─── *@
+                <div class="mb-3">
+                    @if (_currentStockQty > 0)
+                    {
+                        <span class="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2">
+                            <i class="fa fa-check-circle me-1"></i>Stokta var
+                            @if (_currentStockQty <= 10)
+                            {
+                                <span class="ms-1">(son @_currentStockQty adet)</span>
+                            }
+                        </span>
+                    }
+                    else if (_hasStockData)
+                    {
+                        <span class="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2">
+                            <i class="fa fa-times-circle me-1"></i>Stokta yok
+                        </span>
+                    }
+                </div>
+
+                @* ─── VARYANT SEÇİCİLER ─── *@
+                @if (_variantAttributes.Any())
+                {
+                    @foreach (var attr in _variantAttributes)
+                    {
+                        <div class="mb-3">
+                            <div class="text-light small fw-semibold mb-2">
+                                @attr.AttributeName:
+                                <span class="text-info">@GetSelectedValueName(attr.AttributeId)</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var val in attr.Values)
+                                {
+                                    var v = val;
+                                    var isSelected = _selectedAttributeValues.TryGetValue(attr.AttributeId, out var sv) && sv == v.ValueId;
+                                    var isAvailable = IsCombinationAvailable(attr.AttributeId, v.ValueId);
+
+                                    @if (!string.IsNullOrEmpty(v.ColorHex))
+                                    {
+                                        @* Renk kutucuğu *@
+                                        <button class="btn p-0 rounded-circle border @(isSelected ? "border-info border-3" : "border-secondary") @(isAvailable ? "" : "opacity-50")"
+                                                style="width:40px; height:40px; background:@v.ColorHex;"
+                                                disabled="@(!isAvailable)"
+                                                @onclick="() => SelectVariantValue(attr.AttributeId, v.ValueId)"
+                                                title="@v.ValueName"></button>
+                                    }
+                                    else
+                                    {
+                                        @* Metin etiketi *@
+                                        <button class="btn btn-sm @(isSelected ? "btn-info" : "btn-outline-secondary") @(isAvailable ? "" : "opacity-50 text-decoration-line-through")"
+                                                disabled="@(!isAvailable)"
+                                                @onclick="() => SelectVariantValue(attr.AttributeId, v.ValueId)">
+                                            @v.ValueName
+                                        </button>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+
+                @* ─── ADET SEÇİCİ ─── *@
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <span class="text-light small fw-semibold">Adet:</span>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-secondary btn-sm" @onclick="() => ChangeQuantity(-1)"
+                                disabled="@(_quantity <= 1)">
+                            <i class="fa fa-minus"></i>
+                        </button>
+                        <span class="btn btn-outline-secondary btn-sm disabled text-light" style="min-width:48px;">@_quantity</span>
+                        <button class="btn btn-secondary btn-sm" @onclick="() => ChangeQuantity(1)"
+                                disabled="@(_maxOrderQty.HasValue && _quantity >= _maxOrderQty.Value)">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
+                    @if (_maxOrderQty.HasValue)
+                    {
+                        <span class="text- light small">(En fazla @_maxOrderQty adet)</span>
+                    }
+                </div>
+
+                                @* ─── AKSİYON BUTONLARI ─── *@
+                @if (string.Equals(p.ProductType, "External", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(p.ExternalUrl))
+                {
+                    @* Harici ürün *@
+                    <a href="@p.ExternalUrl" target="_blank" rel="noopener"
+                       class="btn btn-warning btn-lg w-100 mb-2">
+                        <i class="fa fa-external-link me-2"></i>@(string.IsNullOrEmpty(p.ExternalButtonText) ? "Satıcıya Git" : p.ExternalButtonText)
+                    </a>
+                }
+                else
+                {
+                    <div class="d-grid gap-2 d-md-flex mb-3">
+                        <button class="btn btn-info btn-lg flex-fill" @onclick="OnAddToCart"
+                                disabled="@(_hasStockData && _currentStockQty <= 0)">
+                            <i class="fa fa-shopping-cart me-2"></i>Sepete Ekle
+                        </button>
+                        <button class="btn btn-success btn-lg flex-fill" @onclick="OnQuickBuy"
+                                disabled="@(_hasStockData && _currentStockQty <= 0)">
+                            <i class="fa fa-bolt me-2"></i>Hemen Al
+                        </button>
+                    </div>
+                }
+   
+
+                @* ─── GÜVEN ROZETLERİ ─── *@
+                <div class="row g-2 text-center mb-3">
+                    <div class="col-4">
+                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-2 h-100">
+                            <i class="fa fa-truck fa-lg text-info d-block mb-1"></i>
+                            <span class="text-light" style="font-size:.72rem;">Hızlı Kargo</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-2 h-100">
+                            <i class="fa fa-shield fa-lg text-info d-block mb-1"></i>
+                            <span class="text-light" style="font-size:.72rem;">Güvenli Ödeme</span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-2 h-100">
+                            <i class="fa fa-undo fa-lg text-info d-block mb-1"></i>
+                            <span class="text-light" style="font-size:.72rem;">Kolay İade</span>
+                        </div>
+                    </div>
+                </div>
+
+                @* İkincil aksiyonlar *@
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <button class="btn btn-danger btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleFavorite">
+                        <i class="fa @(_isFavorite ? "fa-heart" : "fa-heart-o") me-2"></i>Favori
+                    </button>
+
+                    <button class="btn btn-warning btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleCompare">
+                        <i class="fa fa-exchange me-2"></i>Karşılaştır
+                    </button>
+
+                    <button class="btn btn-info btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="OpenShareModal">
+                        <i class="fa fa-share-alt me-2"></i>Paylaş
+                    </button>
+
+                    <button class="btn btn-primary btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleRecommendation">
+                        <i class="fa fa-thumbs-o-up me-2"></i>Tavsiye Et
+                    </button>
+
+                    <button class="btn btn-light btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleAskTheSeller">
+                        <i class="fa fa-comments-o me-2"></i>Satıcıya Sor
+                    </button>
+
+                    <button class="btn btn-secondary btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleIsOnSale">
+                        <i class="fa fa-bell-o me-2"></i>Fiyat Düşünce Haber Ver
+                    </button>
+                </div>        
+            </div>
+        </div>
+
+        @* ═══════════════════════════════════════════════════════════
+           ALT SEKMELER: Açıklama / Özellikler / Mağaza
+           ═══════════════════════════════════════════════════════════ *@
+        <div class="mt-5">
+            <ul class="nav nav-tabs border-secondary" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "desc" ? "active bg-dark text-info border-secondary" : "text-light")"
+                            @onclick='() => _activeTab = "desc"'>
+                        <i class="fa fa-align-left me-1"></i>Ürün Açıklaması
+                    </button>
+                </li>
+                @if (_specifications.Any())
+                {
+                    <li class="nav-item">
+                        <button class="nav-link @(_activeTab == "specs" ? "active bg-dark text-info border-secondary" : "text-light")"
+                                @onclick='() => _activeTab = "specs"'>
+                            <i class="fa fa-list-ul me-1"></i>Teknik Özellikler
+                        </button>
+                    </li>
+                }
+                @if (_store != null)
+                {
+                    <li class="nav-item">
+                        <button class="nav-link @(_activeTab == "store" ? "active bg-dark text-info border-secondary" : "text-light")"
+                                @onclick='() => _activeTab = "store"'>
+                            <i class="fa fa-building me-1"></i>Satıcı Bilgileri
+                        </button>
+                    </li>
+                }
+            </ul>
+
+            <div class="bg-dark bg-opacity-25 rounded-bottom-3 border border-top-0 border-secondary border-opacity-25 p-4">
+
+                @* AÇIKLAMA SEKMESİ *@
+                @if (_activeTab == "desc")
+                {
+                    @if (!string.IsNullOrWhiteSpace(p.FullDescription))
+                    {
+                        <div class="text-light lh-lg">@((MarkupString)SanitizeDescription(p.FullDescription))</div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(p.ShortDescription))
+                    {
+                        <p class="text-light lh-lg mb-0">@p.ShortDescription</p>
+                    }
+                    else
+                    {
+                        <p class="text- light mb-0"><i class="fa fa-info-circle me-1"></i>Bu ürün için açıklama girilmemiş.</p>
+                    }
+
+                    @* Etiketler *@
+                    @if (!string.IsNullOrWhiteSpace(p.Tags))
+                    {
+                        <div class="mt-4">
+                            <h6 class="text-light small fw-semibold mb-2"><i class="fa fa-tags me-1 text-info"></i>Etiketler</h6>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var tag in p.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                {
+                                    <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">@tag</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+
+                @* ÖZELLİKLER SEKMESİ *@
+                @if (_activeTab == "specs")
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped table-borderless mb-0">
+                            <tbody>
+                                @foreach (var spec in _specifications)
+                                {
+                                    <tr>
+                                        <th class="text- light fw-normal" style="width:40%;">@spec.Name</th>
+                                        <td class="text-light fw-semibold">@spec.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @* MAĞAZA SEKMESİ *@
+                @if (_activeTab == "store" && _store != null)
+                {
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        @if (!string.IsNullOrEmpty(_storeProfileUrl))
+                        {
+                            <img src="@_storeProfileUrl" alt="@_store.Name"
+                                 class="rounded-circle border border-info" style="width:64px; height:64px; object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
+                                 style="width:64px; height:64px;">
+                                <i class="fa fa-building fa-2x text-info"></i>
+                            </div>
+                        }
+                        <div>
+                            <h5 class="text-light mb-1">@_store.Name</h5>
+                            @if (!string.IsNullOrEmpty(_store.Description))
+                            {
+                                <p class="text- light small mb-0">@_store.Description</p>
+                            }
+                        </div>
+                    </div>
+                    <button class="btn btn-outline-info btn-sm" @onclick="OpenStoreModal">
+                        <i class="fa fa-info-circle me-1"></i>Mağaza Detaylarını Gör
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ═══════════════════════════════════════════════════════════════
+       MOBİL SABİT SATIN ALMA ÇUBUĞU
+       ═══════════════════════════════════════════════════════════════ *@
+    <div class="d-lg-none fixed-bottom bg-dark border-top border-secondary p-2"
+         style="z-index:1030;">
+        <div class="d-flex align-items-center gap-2">
+            <div class="flex-shrink-0">
+                @if (_currentPrice != null)
+                {
+                    var cur = CurrencySymbol(_currentPrice.Currency);
+                    var val = _currentPrice.DiscountedPrice ?? _currentPrice.Price;
+                    <div class="text-info fw-bold">@val.ToString("N2") @cur</div>
+                }
+            </div>
+            <button class="btn btn-info btn-sm flex-fill" @onclick="OnAddToCart"
+                    disabled="@(_hasStockData && _currentStockQty <= 0)">
+                <i class="fa fa-shopping-cart me-1"></i>Sepete Ekle
+            </button>
+            <button class="btn btn-success btn-sm flex-fill" @onclick="OnQuickBuy"
+                    disabled="@(_hasStockData && _currentStockQty <= 0)">
+                <i class="fa fa-bolt me-1"></i>Hemen Al
+            </button>
+        </div>
+    </div>
+}
+
+@* ═══════════════════════════════════════════════════════════════
+   MAĞAZA DETAY MODALI
+   ═══════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="StoreDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-info">
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-info mb-0"><i class="fa fa-building me-1"></i>Mağaza Bilgileri</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                @if (_store != null)
+                {
+                    var st = _store;
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex align-items-center gap-3">
+                                @if (!string.IsNullOrEmpty(_storeProfileUrl))
+                                {
+                                    <img src="@_storeProfileUrl" alt="@st.Name" class="rounded-circle border border-info"
+                                         style="width:64px; height:64px; object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
+                                         style="width:64px; height:64px;">
+                                        <i class="fa fa-building fa-2x text-info"></i>
+                                    </div>
+                                }
+                                <div>
+                                    <h5 class="text-light mb-1">@st.Name</h5>
+                                    @if (!string.IsNullOrEmpty(st.Description))
+                                    {
+                                        <p class="text- light small mb-0">@st.Description</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (st.ContactInformation != null)
+                        {
+                            <div class="col-md-6">
+                                <label class="form-label text-white-50 small mb-0"><i class="fa fa-phone me-1"></i>Telefon</label>
+                                <div class="text-light">@(string.IsNullOrEmpty(st.ContactInformation.FullPhoneNumber) ? "—" : st.ContactInformation.FullPhoneNumber)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-white-50 small mb-0"><i class="fa fa-envelope me-1"></i>E-posta</label>
+                                <div class="text-light">@(string.IsNullOrEmpty(st.ContactInformation.Email) ? "—" : st.ContactInformation.Email)</div>
+                            </div>
+                        }
+
+                        @if (st.AddressInfo != null)
+                        {
+                            <div class="col-12">
+                                <label class="form-label text-white-50 small mb-1"><i class="fa fa-map-marker me-1"></i>Adres</label>
+                                <div class="text-light small">
+                                    @st.AddressInfo.Address,
+                                    @st.AddressInfo.City / @st.AddressInfo.State / @st.AddressInfo.Country
+                                    @if (!string.IsNullOrEmpty(st.AddressInfo.ZipCode))
+                                    {
+                                        <span class="text- light"> — @st.AddressInfo.ZipCode</span>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (st.AddressInfo.Latitude != null && st.AddressInfo.Longitude != null)
+                            {
+                                var lat = st.AddressInfo.Latitude.Value.ToString(CultureInfo.InvariantCulture);
+                                var lng = st.AddressInfo.Longitude.Value.ToString(CultureInfo.InvariantCulture);
+                                <div class="col-12 d-flex gap-2">
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=@(lat),@(lng)"
+                                       target="_blank" rel="noopener" class="btn btn-outline-info btn-sm">
+                                        <i class="fa fa-location-arrow me-1"></i>Yol Tarifi Al
+                                    </a>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=@(lat),@(lng)"
+                                       target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fa fa-map me-1"></i>Haritada Gör
+                                    </a>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════════════════════════
+   PAYLAŞ MODALI
+   ═══════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="ShareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bg-dark border border-secondary">
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-light mb-0"><i class="fa fa-share-alt me-1"></i>Paylaş</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                @{
+                    var shareUrl = $"{NavigationManager.BaseUri}Public/_Viewer/ProductProfile/{_slug}";
+                }
+                <div class="d-flex justify-content-center gap-3 mb-3">
+                    <a href="https://api.whatsapp.com/send?text=@Uri.EscapeDataString(shareUrl)"
+                       target="_blank" rel="noopener" class="btn btn-outline-success btn-lg rounded-circle"
+                       style="width:52px; height:52px;" title="WhatsApp"><i class="fa fa-whatsapp"></i></a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u=@Uri.EscapeDataString(shareUrl)"
+                       target="_blank" rel="noopener" class="btn btn-outline-primary btn-lg rounded-circle"
+                       style="width:52px; height:52px;" title="Facebook"><i class="fa fa-facebook"></i></a>
+                    <a href="https://twitter.com/intent/tweet?url=@Uri.EscapeDataString(shareUrl)"
+                       target="_blank" rel="noopener" class="btn btn-outline-info btn-lg rounded-circle"
+                       style="width:52px; height:52px;" title="X (Twitter)"><i class="fa fa-twitter"></i></a>
+                </div>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control bg-transparent text-light border-secondary" value="@shareUrl" readonly />
+                    <button class="btn btn-outline-info" @onclick="() => CopyToClipboard(shareUrl)" title="Kopyala">
+                        <i class="fa fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    // ─── Sabitler ─────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Ürün İnceleme";
+    private const int MAX_COMPARE = 4;
+
+    // ─── Parametreler ─────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public Products? SelectedProduct { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _loading = true;
+    private Guid _loadedProductId; // Hangi ürün için yüklediğimizi takip eder (parametre değişiminde tekrar yükleme)
+
+    private readonly CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
+    private Notification? _notificationRef;
+
+    // ─── Ürün Verisi ──────────────────────────────────────────────
+    private Products? _product;
+    private string? _slug;
+    private string? _brandName;
+    private Store? _store;
+    private string? _storeProfileUrl;
+
+    // ─── Görseller ────────────────────────────────────────────────
+    private List<string> _baseImages = new();          // Kapak + genel galeri
+    private List<string> _displayImages = new();        // Ekranda gösterilen (varyant seçimine göre değişebilir)
+    private int _activeImageIndex;
+
+    // ─── Varyantlar ───────────────────────────────────────────────
+    private List<VariantInfo> _variants = new();
+    private VariantInfo? _selectedVariant;
+    private List<VariantAttributeGroup> _variantAttributes = new();
+    private Dictionary<Guid, Guid> _selectedAttributeValues = new(); // AttributeId -> ValueId
+    private Dictionary<Guid, Guid?> _variantGroupCovers = new();      // AttributeValueId -> CoverMediaId (görsel grup)
+
+    // ─── Fiyat / Stok ─────────────────────────────────────────────
+    private PriceInfo? _currentPrice;
+    private List<PriceInfo> _otherCurrencyPrices = new();
+    private int _currentStockQty;
+    private bool _hasStockData;
+    private int? _maxOrderQty;
+    private int _currentDiscountPercent;
+
+    // ─── Spesifikasyonlar / Kategori / Harici medya ──────────────
+    private List<SpecRow> _specifications = new();
+    private List<CategoriesTr> _breadcrumbCategories = new();
+    private List<ProductExternalMedias> _externalMedias = new();
+
+    // ─── UI Durumu ────────────────────────────────────────────────
+    private string _activeTab = "desc";
+    private int _quantity = 1;
+    private bool _isFavorite;
+    private bool _isCompared;
+
+    // ═══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ═══════════════════════════════════════════════════════════════
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Parametre olarak gelen ürün değiştiyse (veya ilk yükleme) verileri çek
+        if (SelectedProduct != null && SelectedProduct.Id != _loadedProductId)
+        {
+            _loadedProductId = SelectedProduct.Id;
+            await LoadAllAsync();
+        }
+        else if (SelectedProduct == null && !_disposed)
+        {
+            _loading = false;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        StateHub.OnDataChanged += HandleDataChanged;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _loadSemaphore.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || _product == null) return;
+        if (entityName != "Products" && entityName != "ProductPrices" && entityName != "ProductStocks" && entityName != "Store")
+            return;
+        await InvokeAsync(async () => { await LoadAllAsync(); StateHasChanged(); });
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ANA YÜKLEME
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task LoadAllAsync()
+    {
+        if (SelectedProduct == null) { _loading = false; return; }
+        if (!await _loadSemaphore.WaitAsync(0)) return;
+
+        try
+        {
+            _loading = true;
+            StateHasChanged();
+
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            // 1) Ürünü tazele (parametre eski olabilir; güncel veriyi DB'den al)
+            _product = await db.Set<Products>().AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == SelectedProduct.Id &&
+                                          x.IsActive &&
+                                          x.IsDeleted.IsDeletedStatu != true, token)
+                       ?? SelectedProduct;
+
+            var productId = _product.Id;
+
+            // Görüntülenme logla (denetim)
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "ProductView", "details", _product.Name);
+
+            // 2) Slug (SEO)
+            _slug = await db.Set<ProductSeo>().AsNoTracking()
+                .Where(s => s.ProductId == productId)
+                .OrderByDescending(s => s.CreatedAt)
+                .Select(s => s.Slug)
+                .FirstOrDefaultAsync(token) ?? productId.ToString();
+
+            // 3) Marka
+            if (_product.BrandId.HasValue)
+            {
+                _brandName = await db.Set<Brands>().AsNoTracking()
+                    .Where(b => b.Id == _product.BrandId.Value)
+                    .Select(b => b.Name)
+                    .FirstOrDefaultAsync(token);
+            }
+
+            // 4) Mağaza
+            _store = await db.Set<Store>().AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == _product.StoreId, token);
+            _storeProfileUrl = _store?.ProfileCoverGallery?.ProfileImagePath;
+
+            // 5) Kategori breadcrumb (birincil kategori → kök yol)
+            await LoadBreadcrumbAsync(db, productId, token);
+
+            // 6) Varyantlar + değerleri
+            await LoadVariantsAsync(db, productId, token);
+
+            // 7) Görseller (kapak + galeri + varyant görsel grupları)
+            await LoadImagesAsync(db, productId, token);
+
+            // 8) Spesifikasyonlar (teknik özellikler)
+            await LoadSpecificationsAsync(db, productId, token);
+
+            // 9) Harici medya (video/360/döküman)
+            _externalMedias = await db.Set<ProductExternalMedias>().AsNoTracking()
+                .Where(em => em.ProductId == productId)
+                .OrderBy(em => em.DisplayOrder)
+                .ToListAsync(token);
+
+            // 10) Seçili varyanta göre fiyat & stok hesapla
+            await RefreshSelectedVariantDataAsync(db, token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await LogError("LoadAll", ex);
+            await Notify("danger", "Hata", "Ürün bilgileri yüklenirken sorun oluştu.");
+        }
+        finally
+        {
+            _loading = false;
+            _loadSemaphore.Release();
+            if (!_disposed) StateHasChanged();
+        }
+    }
+
+    // ─── BREADCRUMB ──────────────────────────────────────────────
+    private async Task LoadBreadcrumbAsync(_ApplicationConnectionDb db, Guid productId, CancellationToken token)
+    {
+        _breadcrumbCategories.Clear();
+
+        // Birincil kategori (yoksa ilk kategori)
+        var catId = await db.Set<ProductCategories>().AsNoTracking()
+            .Where(pc => pc.ProductId == productId)
+            .OrderByDescending(pc => pc.IsPrimary)
+            .Select(pc => (int?)pc.CategoryId)
+            .FirstOrDefaultAsync(token);
+
+        if (catId == null) return;
+
+        // Tüm kategorileri çek (ağaç yürüyüşü için) — küçük tablo
+        var allCats = await db.Set<CategoriesTr>().AsNoTracking()
+            .ToDictionaryAsync(c => c.Id, c => c, token);
+
+        var path = new List<CategoriesTr>();
+        var current = allCats.GetValueOrDefault(catId.Value);
+        var guard = 0;
+        while (current != null && guard++ < 20)
+        {
+            path.Insert(0, current);
+            current = current.ParentCategoryId.HasValue ? allCats.GetValueOrDefault(current.ParentCategoryId.Value) : null;
+        }
+        _breadcrumbCategories = path;
+    }
+
+    // ─── VARYANTLAR ──────────────────────────────────────────────
+    private async Task LoadVariantsAsync(_ApplicationConnectionDb db, Guid productId, CancellationToken token)
+    {
+        var rawVariants = await db.Set<ProductVariants>().AsNoTracking()
+            .Where(v => v.ProductId == productId &&
+                        v.IsActive &&
+                        v.IsDeleted.IsDeletedStatu != true)
+            .OrderByDescending(v => v.IsDefault)
+            .ThenBy(v => v.DisplayOrder)
+            .Select(v => new { v.Id, v.Sku, v.Barcode, v.IsDefault })
+            .ToListAsync(token);
+
+        var variantIds = rawVariants.Select(v => v.Id).ToList();
+
+        // Varyant değer kombinasyonları
+        var variantValues = await db.Set<ProductVariantValues>().AsNoTracking()
+            .Where(vv => variantIds.Contains(vv.VariantId))
+            .ToListAsync(token);
+
+        var attrIds = variantValues.Select(vv => vv.AttributeId).Distinct().ToList();
+        var valueIds = variantValues.Select(vv => vv.AttributeValueId).Distinct().ToList();
+
+        // Özellik adları
+        var attrs = await db.Set<ProductAttributes>().AsNoTracking()
+            .Where(a => attrIds.Contains(a.Id))
+            .Select(a => new { a.Id, a.Name, a.DisplayOrder })
+            .ToListAsync(token);
+        var attrNames = attrs.ToDictionary(a => a.Id, a => a);
+
+        // Değer adları + renk
+        var vals = await db.Set<ProductAttributeValues>().AsNoTracking()
+            .Where(av => valueIds.Contains(av.Id))
+            .Select(av => new { av.Id, av.AttributeId, av.Value, av.ColorHex, av.DisplayOrder })
+            .ToListAsync(token);
+        var valInfo = vals.ToDictionary(v => v.Id, v => v);
+
+        // Varyant modeli kur
+        _variants = rawVariants.Select(v => new VariantInfo
+        {
+            VariantId = v.Id,
+            Sku = v.Sku,
+            Barcode = v.Barcode,
+            IsDefault = v.IsDefault,
+            ValuePairs = variantValues
+                .Where(vv => vv.VariantId == v.Id)
+                .Select(vv => (vv.AttributeId, vv.AttributeValueId))
+                .ToList()
+        }).ToList();
+
+        // Varsayılan varyantı seç
+        _selectedVariant = _variants.FirstOrDefault(v => v.IsDefault) ?? _variants.FirstOrDefault();
+
+        // Seçili varyant değerlerini başlangıç olarak işaretle
+        _selectedAttributeValues.Clear();
+        if (_selectedVariant != null)
+            foreach (var (aId, vId) in _selectedVariant.ValuePairs)
+                _selectedAttributeValues[aId] = vId;
+
+        // Varyant özellik gruplarını (seçiciler) oluştur
+        _variantAttributes = attrIds
+            .Select(aId =>
+            {
+                var groupValues = variantValues
+                    .Where(vv => vv.AttributeId == aId)
+                    .Select(vv => vv.AttributeValueId)
+                    .Distinct()
+                    .Select(vId => valInfo.TryGetValue(vId, out var vi)
+                        ? new VariantValueItem { ValueId = vId, ValueName = vi.Value, ColorHex = vi.ColorHex, DisplayOrder = vi.DisplayOrder }
+                        : new VariantValueItem { ValueId = vId, ValueName = "—" })
+                    .OrderBy(x => x.DisplayOrder)
+                    .ToList();
+
+                return new VariantAttributeGroup
+                {
+                    AttributeId = aId,
+                    AttributeName = attrNames.TryGetValue(aId, out var an) ? (an.Name ?? "Özellik") : "Özellik",
+                    DisplayOrder = attrNames.TryGetValue(aId, out var an2) ? an2.DisplayOrder : 0,
+                    Values = groupValues
+                };
+            })
+            .Where(g => g.Values.Any())
+            .OrderBy(g => g.DisplayOrder)
+            .ToList();
+    }
+
+    // ─── GÖRSELLER ───────────────────────────────────────────────
+    private async Task LoadImagesAsync(_ApplicationConnectionDb db, Guid productId, CancellationToken token)
+    {
+        var images = new List<string>();
+
+        // Kapak görseli
+        if (_product?.CoverMediaId != null)
+        {
+            var coverUrl = await db.Set<Data.Media>().AsNoTracking()
+                .Where(m => m.Id == _product.CoverMediaId.Value && m.IsDeletedStatu != true)
+                .Select(m => m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? m.FileUrl)
+                .FirstOrDefaultAsync(token);
+            if (!string.IsNullOrEmpty(coverUrl)) images.Add(coverUrl);
+        }
+
+        // Genel galeri (ItemGallery)
+        var galleryItems = await db.Set<ItemGallery>().AsNoTracking()
+            .Where(ig => ig.ItemId == productId &&
+                         ig.IsDelete != true &&
+                         (ig.ItemType == "Product" || ig.ItemType == "ProductGallery"))
+            .OrderBy(ig => ig.ItemAddDate)
+            .Select(ig => ig.MediaId)
+            .ToListAsync(token);
+
+        var galleryMediaIds = galleryItems.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        if (galleryMediaIds.Any())
+        {
+            var galleryMedia = await db.Set<Data.Media>().AsNoTracking()
+                .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? m.FileUrl ?? "", token);
+
+            // Sıra korunarak ekle
+            foreach (var gid in galleryItems.Where(id => id.HasValue).Select(id => id!.Value))
+                if (galleryMedia.TryGetValue(gid, out var url) && !string.IsNullOrEmpty(url) && !images.Contains(url))
+                    images.Add(url);
+        }
+
+        // Varyant görsel grupları (değer bazlı kapak görselleri)
+        var variantGroups = await db.Set<ProductImageVariantGroups>().AsNoTracking()
+            .Where(g => g.ProductId == productId)
+            .Select(g => new { g.AttributeValueId, g.CoverMediaId })
+            .ToListAsync(token);
+
+        _variantGroupCovers.Clear();
+        var groupMediaIds = variantGroups.Where(g => g.CoverMediaId.HasValue).Select(g => g.CoverMediaId!.Value).Distinct().ToList();
+        if (groupMediaIds.Any())
+        {
+            var groupMedia = await db.Set<Data.Media>().AsNoTracking()
+                .Where(m => groupMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? m.FileUrl ?? "", token);
+
+            foreach (var g in variantGroups)
+                if (g.CoverMediaId.HasValue && groupMedia.TryGetValue(g.CoverMediaId.Value, out var url))
+                    _variantGroupCovers[g.AttributeValueId] = g.CoverMediaId; // Değer -> medya eşlemesi (URL aşağıda)
+        }
+
+        _baseImages = images;
+        _displayImages = images.Any() ? new List<string>(images) : new List<string>();
+        _activeImageIndex = 0;
+    }
+
+    // ─── SPESİFİKASYONLAR ────────────────────────────────────────
+    private async Task LoadSpecificationsAsync(_ApplicationConnectionDb db, Guid productId, CancellationToken token)
+    {
+        var specs = await db.Set<ProductSpecifications>().AsNoTracking()
+            .Where(s => s.ProductId == productId)
+            .OrderBy(s => s.DisplayOrder)
+            .ToListAsync(token);
+
+        // Tanımlı özellik/değer adlarını çöz
+        var attrIds = specs.Where(s => s.AttributeId.HasValue).Select(s => s.AttributeId!.Value).Distinct().ToList();
+        var valIds = specs.Where(s => s.AttributeValueId.HasValue).Select(s => s.AttributeValueId!.Value).Distinct().ToList();
+
+        var attrNames = attrIds.Any()
+            ? await db.Set<ProductAttributes>().AsNoTracking()
+                .Where(a => attrIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => (Name: a.Name, Unit: a.Unit), token)
+            : new Dictionary<Guid, (string? Name, string? Unit)>();
+
+        var valNames = valIds.Any()
+            ? await db.Set<ProductAttributeValues>().AsNoTracking()
+                .Where(v => valIds.Contains(v.Id))
+                .ToDictionaryAsync(v => v.Id, v => v.Value, token)
+            : new Dictionary<Guid, string?>();
+
+        _specifications = specs.Select(s =>
+        {
+            string name;
+            string value;
+
+            if (s.AttributeId.HasValue && attrNames.TryGetValue(s.AttributeId.Value, out var an))
+            {
+                name = an.Name ?? s.CustomName ?? "—";
+                if (s.AttributeValueId.HasValue && valNames.TryGetValue(s.AttributeValueId.Value, out var vn))
+                    value = vn ?? s.CustomValue ?? "—";
+                else
+                    value = s.CustomValue ?? "—";
+                if (!string.IsNullOrEmpty(an.Unit)) value = $"{value} {an.Unit}";
+            }
+            else
+            {
+                name = s.CustomName ?? "—";
+                value = s.CustomValue ?? "—";
+            }
+
+            return new SpecRow { Name = name, Value = value };
+        }).ToList();
+    }
+
+    // ─── SEÇİLİ VARYANT → FİYAT & STOK ───────────────────────────
+    private async Task RefreshSelectedVariantDataAsync(_ApplicationConnectionDb db, CancellationToken token)
+    {
+        if (_selectedVariant == null)
+        {
+            _currentPrice = null; _otherCurrencyPrices.Clear();
+            _currentStockQty = 0; _hasStockData = false;
+            return;
+        }
+
+        var variantId = _selectedVariant.VariantId;
+
+        // Fiyatlar (güncel: EffectiveTo == null)
+        var prices = await db.Set<ProductPrices>().AsNoTracking()
+            .Where(pp => pp.VariantId == variantId && pp.EffectiveTo == null)
+            .Select(pp => new PriceInfo
+            {
+                Currency = pp.Currency,
+                Price = pp.Price,
+                DiscountedPrice = pp.DiscountedPrice
+            })
+            .ToListAsync(token);
+
+        // Önce TRY, yoksa ilk para birimi
+        _currentPrice = prices.FirstOrDefault(p => p.Currency == "TRY") ?? prices.FirstOrDefault();
+        _otherCurrencyPrices = prices.Where(p => p != _currentPrice).ToList();
+
+        _currentDiscountPercent = 0;
+        if (_currentPrice != null && _currentPrice.DiscountedPrice.HasValue &&
+            _currentPrice.DiscountedPrice < _currentPrice.Price && _currentPrice.Price > 0)
+        {
+            _currentDiscountPercent = (int)Math.Round(100 - (_currentPrice.DiscountedPrice.Value / _currentPrice.Price * 100));
+        }
+
+        // Stok (tüm depoların toplamı)
+        var stockRows = await db.Set<ProductStocks>().AsNoTracking()
+            .Where(s => s.VariantId == variantId)
+            .Select(s => new { s.Quantity, s.TrackStock, s.MaxOrderQuantity })
+            .ToListAsync(token);
+
+        _hasStockData = stockRows.Any(s => s.TrackStock);
+        _currentStockQty = stockRows.Where(s => s.TrackStock).Sum(s => s.Quantity);
+        _maxOrderQty = stockRows.Where(s => s.MaxOrderQuantity.HasValue).Select(s => s.MaxOrderQuantity).Min();
+
+        // Adet sınırını kontrol et
+        if (_maxOrderQty.HasValue && _quantity > _maxOrderQty.Value) _quantity = _maxOrderQty.Value;
+        if (_quantity < 1) _quantity = 1;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // VARYANT SEÇİMİ
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task SelectVariantValue(Guid attributeId, Guid valueId)
+    {
+        _selectedAttributeValues[attributeId] = valueId;
+
+        // Seçili değerlere tam uyan varyantı bul
+        var match = _variants.FirstOrDefault(v =>
+            _selectedAttributeValues.All(sel =>
+                v.ValuePairs.Any(pair => pair.AttributeId == sel.Key && pair.AttributeValueId == sel.Value)));
+
+        // Tam eşleşme yoksa, en çok eşleşen varyanta düş
+        if (match == null)
+        {
+            match = _variants
+                .OrderByDescending(v => v.ValuePairs.Count(pair =>
+                    _selectedAttributeValues.TryGetValue(pair.AttributeId, out var sv) && sv == pair.AttributeValueId))
+                .FirstOrDefault();
+
+            // Seçimi bu varyanta hizala
+            if (match != null)
+            {
+                foreach (var (aId, vId) in match.ValuePairs)
+                    _selectedAttributeValues[aId] = vId;
+            }
+        }
+
+        _selectedVariant = match;
+
+        // Görsel grup kapağı varsa onu öne al
+        ApplyVariantImage(valueId);
+
+        // Fiyat & stok yenile
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            await RefreshSelectedVariantDataAsync(db, token);
+        }
+        catch (Exception ex) { await LogError("SelectVariantValue", ex); }
+
+        StateHasChanged();
+    }
+
+    private void ApplyVariantImage(Guid valueId)
+    {
+        // Bu değerin görsel grubu varsa, ilgili görseli aktif görsel olarak göster
+        if (_variantGroupCovers.TryGetValue(valueId, out var mediaId) && mediaId.HasValue)
+        {
+            // _displayImages temel görsellerle aynı; varyant kapağını bulup index'i ona kaydırırız.
+            // (Görsel URL'leri base set içinde olduğundan, ilk görseli sıfıra çekmek yeterli.)
+            _activeImageIndex = 0;
+        }
+    }
+
+    private string GetSelectedValueName(Guid attributeId)
+    {
+        if (!_selectedAttributeValues.TryGetValue(attributeId, out var valueId)) return "";
+        var grp = _variantAttributes.FirstOrDefault(a => a.AttributeId == attributeId);
+        return grp?.Values.FirstOrDefault(v => v.ValueId == valueId)?.ValueName ?? "";
+    }
+
+    private bool IsCombinationAvailable(Guid attributeId, Guid valueId)
+    {
+        // Bu (özellik=değer) seçildiğinde, diğer seçili özelliklerle birlikte
+        // en az bir varyant kombinasyonu oluşabiliyor mu?
+        var hypothetical = new Dictionary<Guid, Guid>(_selectedAttributeValues) { [attributeId] = valueId };
+
+        return _variants.Any(v =>
+            hypothetical.All(sel =>
+                v.ValuePairs.Any(pair => pair.AttributeId == sel.Key && pair.AttributeValueId == sel.Value)));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ADET
+    // ═══════════════════════════════════════════════════════════════
+
+    private void ChangeQuantity(int delta)
+    {
+        var next = _quantity + delta;
+        if (next < 1) return;
+        if (_maxOrderQty.HasValue && next > _maxOrderQty.Value) return;
+        if (_hasStockData && next > _currentStockQty) return;
+        _quantity = next;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // AKSİYONLAR — BackEnd kodlaması Hüseyin tarafından yapılacak
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task OnAddToCart()
+    {
+        // TODO (Hüseyin): Sepete ekleme back-end mantığı
+        await Notify("success", "Sepet", $"{_quantity} adet ürün sepete eklendi!");
+    }
+
+    private async Task OnQuickBuy()
+    {
+        // TODO (Hüseyin): Hızlı satın alma akışı
+        await Notify("info", "Hızlı Alış", "Ödeme adımına yönlendiriliyorsunuz…");
+    }
+
+    private async Task ToggleFavorite()
+    {
+        _isFavorite = !_isFavorite;
+        await Notify(_isFavorite ? "success" : "info", "Favoriler",
+            _isFavorite ? "Ürün favorilere eklendi!" : "Ürün favorilerden çıkarıldı.");
+        // TODO (Hüseyin): Favori kaydı back-end
+    }
+
+    private async Task ToggleCompare()
+    {
+        _isCompared = !_isCompared;
+        await Notify(_isCompared ? "warning" : "info", "Karşılaştırma",
+            _isCompared ? "Ürün karşılaştırma listesine eklendi." : "Karşılaştırmadan çıkarıldı.");
+        // TODO (Hüseyin): Karşılaştırma listesi back-end
+    }
+
+    private async Task ToggleRecommendation()
+    {
+        _isCompared = !_isCompared;
+        await Notify(_isCompared ? "warning" : "info", "Tavsiye",
+            _isCompared ? "Ürün tavsiye listesine eklendi." : "Tavsiye edilecek.");
+        // TODO (Hüseyin): Karşılaştırma listesi back-end
+    }
+
+    private async Task ToggleAskTheSeller()
+    {
+        _isCompared = !_isCompared;
+        await Notify(_isCompared ? "warning" : "info", "Satıcıya Sor",
+            _isCompared ? "Ürün karşılaştırma listesine eklendi." : "Satıcıya soru soruldu.");
+        // TODO (Hüseyin): Karşılaştırma listesi back-end
+    }
+
+    private async Task ToggleIsOnSale()
+    {
+        _isCompared = !_isCompared;
+        await Notify(_isCompared ? "warning" : "info", "İndirim",
+            _isCompared ? "Ürün karşılaştırma listesine eklendi." : "İndirimdeyken haber verilecek");
+        // TODO (Hüseyin): Karşılaştırma listesi back-end
+    }
+
+    private async Task OpenShareModal() => await ShowModal("ShareModal");
+
+    private async Task OpenStoreModal() => await ShowModal("StoreDetailModal");
+
+    private async Task CopyToClipboard(string text)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            await Notify("success", "Kopyalandı", "Link panoya kopyalandı.");
+        }
+        catch { }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval", $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+
+    private static string CurrencySymbol(string? currency) => currency?.ToUpperInvariant() switch
+    {
+        "TRY" => "₺",
+        "USD" => "$",
+        "EUR" => "€",
+        "AZN" => "₼",
+        "GBP" => "£",
+        _ => "₺"
+    };
+
+    // FullDescription HTML içerebilir; basit güvenlik için script/iframe etiketlerini temizle.
+    private static string SanitizeDescription(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return string.Empty;
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(
+            html, @"<\s*(script|iframe|object|embed|style)[^>]*>.*?<\s*/\s*\1\s*>",
+            string.Empty,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned, @"on\w+\s*=\s*""[^""]*""", string.Empty,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return cleaned;
+    }
+
+    // ─── DTO / Yardımcı Modeller ─────────────────────────────────
+    private class VariantInfo
+    {
+        public Guid VariantId { get; set; }
+        public string? Sku { get; set; }
+        public string? Barcode { get; set; }
+        public bool IsDefault { get; set; }
+        public List<(Guid AttributeId, Guid AttributeValueId)> ValuePairs { get; set; } = new();
+    }
+
+    private class VariantAttributeGroup
+    {
+        public Guid AttributeId { get; set; }
+        public string AttributeName { get; set; } = "Özellik";
+        public int DisplayOrder { get; set; }
+        public List<VariantValueItem> Values { get; set; } = new();
+    }
+
+    private class VariantValueItem
+    {
+        public Guid ValueId { get; set; }
+        public string ValueName { get; set; } = "—";
+        public string? ColorHex { get; set; }
+        public int DisplayOrder { get; set; }
+    }
+
+    private class PriceInfo
+    {
+        public string? Currency { get; set; }
+        public decimal Price { get; set; }
+        public decimal? DiscountedPrice { get; set; }
+    }
+
+    private class SpecRow
+    {
+        public string Name { get; set; } = "—";
+        public string Value { get; set; } = "—";
+    }
+}

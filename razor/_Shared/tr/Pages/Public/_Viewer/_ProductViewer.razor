@@ -400,10 +400,6 @@ else
                                 disabled="@(_hasStockData && _currentStockQty <= 0)">
                             <i class="fa fa-shopping-cart me-2"></i>Sepete Ekle
                         </button>
-                        <button class="btn btn-success btn-lg flex-fill" @onclick="OnQuickBuy"
-                                disabled="@(_hasStockData && _currentStockQty <= 0)">
-                            <i class="fa fa-bolt me-2"></i>Hemen Al
-                        </button>
                     </div>
                 }
    
@@ -455,7 +451,22 @@ else
                     <button class="btn btn-secondary btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleIsOnSale">
                         <i class="fa fa-bell-o me-2"></i>Fiyat Düşünce Haber Ver
                     </button>
-                </div>        
+                </div>   
+                
+                @* ─── AKSİYON BUTONLARI ─── *@
+                @if (string.Equals(p.ProductType, "External", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(p.ExternalUrl))
+                {
+                }
+                else
+                {
+                    <div class="d-grid gap-2 d-md-flex mb-3">
+                        <button class="btn btn-success btn-lg flex-fill" @onclick="OnQuickBuy"
+                                disabled="@(_hasStockData && _currentStockQty <= 0)">
+                            <i class="fa fa-bolt me-2"></i>Hemen Al
+                        </button>
+                    </div>
+                }
+
             </div>
         </div>
 

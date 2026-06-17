@@ -1,0 +1,1943 @@
+﻿@* ============================================================
+   TemplateList.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ Sistem öznitelik şablonları yönetimi (yalnızca admin)
+   ✅ TEK DOSYA — tüm sorgular doğrudan IDbContextFactory ile
+   ✅ Server-side sayfalama + arama (Skip/Take DB tarafında)
+   ✅ Server-side kategori autocomplete (debounce + top 25)
+   ✅ Sistem özniteliği autocomplete (UserId==null && StoreId==null)
+   ✅ Versiyonlama (immutable): yayındaki sürüm güncellenmez,
+       yeni satır = aynı TemplateGroupId, Version + 1
+   ✅ Toplu işlemler: Yayınla / Pasife Al / Ortak Kategori Ata
+   ✅ Hiç ayrı sayfa yok — her şey modal & offcanvas üzerinde
+   ✅ GlobalStateHub broadcast + TakeLogs ile aksiyon loglama
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Product
+@using data._Shared
+@using Data
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    // Bu alanı kesinlikle SİLME. Global state'den dil bilgisini alıp yönlendirme için gereklidir.
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/AttributeTemplate/List/", true);
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",      "Ana Sayfa",   "/"),
+        ("fa fa-cogs",      "Yönetim",     "javascript:void(0)"),
+        ("fa fa-list-alt",  PAGE_TITLE,    "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <button class="btn btn-info btn-sm" @onclick="OpenCreateModal" disabled="@_isLoading">
+        <i class="fa fa-plus me-sm-1"></i>
+        <span class="d-none d-sm-inline">Yeni Şablon</span>
+    </button>
+
+    <button class="btn btn-light btn-sm" @onclick="RefreshAsync" disabled="@_isLoading">
+        <i class="fa fa-refresh me-sm-1 @(_isLoading ? "fa-spin" : "")"></i>
+        <span class="d-none d-sm-inline">Yenile</span>
+    </button>
+
+    <div class="vr mx-1"></div>
+    <span class="badge bg-light text-light">
+        <i class="fa fa-list-alt me-1"></i>@_totalCount şablon
+    </span>
+
+    @if (_selected.Count > 0)
+    {
+        <div class="vr mx-1"></div>
+        <span class="badge bg-info text-dark">
+            <i class="fa fa-check-square-o me-1"></i>@_selected.Count seçili
+        </span>
+
+        @* ─── Toplu işlem menüsü ─── *@
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-success" @onclick="BulkPublishAsync" disabled="@_isLoading">
+                <i class="fa fa-bullhorn me-1"></i>Toplu Yayınla
+            </button>
+            <button class="btn btn-outline-warning" @onclick="BulkDeactivateAsync" disabled="@_isLoading">
+                <i class="fa fa-pause me-1"></i>Toplu Pasife Al
+            </button>
+            <button class="btn btn-outline-info" @onclick="OpenBulkCategoryModal" disabled="@_isLoading">
+                <i class="fa fa-sitemap me-1"></i>Toplu Kategori Ata
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="ClearSelection">
+                <i class="fa fa-times me-1"></i>Seçimi Temizle
+            </button>
+        </div>
+    }
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Şablon adı veya açıklamada ara..."
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && _totalCount == 0)
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">Şablon kaydı bulunmuyor.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width:2.5rem;">
+                        <input type="checkbox"
+                               class="form-check-input"
+                               checked="@_isPageAllSelected"
+                               @onchange="ToggleSelectAllPage"
+                               title="Bu sayfadakileri seç" />
+                    </th>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Şablon</th>
+                    <th class="text-center d-none d-md-table-cell" style="width:5rem;">Sürüm</th>
+                    <th class="text-center d-none d-lg-table-cell" style="width:6rem;">Öznitelik</th>
+                    <th class="text-center d-none d-lg-table-cell" style="width:6rem;">Kategori</th>
+                    <th class="text-center" style="width:7rem;">Durum</th>
+                    <th class="text-end" style="min-width:13rem;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var t in _pagedItems)
+                {
+                    var sel = _selected.Contains(t.Id);
+                    <tr class="@(sel ? "table-active" : "")">
+                        <td>
+                            <input type="checkbox"
+                                   class="form-check-input"
+                                   checked="@sel"
+                                   @onchange="@(e => ToggleRowSelection(t.Id, e))" />
+                        </td>
+                        <td class="d-none d-md-table-cell text-light small">@(rowNo++)</td>
+                        <td class="text-truncate" style="max-width:24rem;">
+                            <div class="fw-semibold text-light">
+                                <i class="fa fa-cubes text-info me-1"></i>
+                                @(string.IsNullOrWhiteSpace(t.Name) ? "— (isimsiz)" : t.Name)
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(t.Description))
+                            {
+                                <div class="small text-light text-truncate">@t.Description</div>
+                            }
+                        </td>
+                        <td class="text-center d-none d-md-table-cell">
+                            <span class="badge bg-transparent border border-info text-info" title="Toplam @t.TotalVersions sürüm">
+                                v@t.Version
+                            </span>
+                        </td>
+                        <td class="text-center d-none d-lg-table-cell">
+                            <span class="badge bg-transparent border border-secondary text-light">
+                                <i class="fa fa-tags me-1"></i>@t.ItemCount
+                            </span>
+                        </td>
+                        <td class="text-center d-none d-lg-table-cell">
+                            <span class="badge bg-transparent border border-secondary text-light">
+                                <i class="fa fa-sitemap me-1"></i>@t.CategoryCount
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            @if (t.IsPublished)
+                            {
+                                <span class="badge bg-success bg-opacity-25 border border-success text-success">
+                                    <i class="fa fa-check me-1"></i>Yayında
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning bg-opacity-25 border border-warning text-warning">
+                                    <i class="fa fa-pencil me-1"></i>Taslak
+                                </span>
+                            }
+                            @if (!t.IsActive)
+                            {
+                                <div class="small text-danger mt-1"><i class="fa fa-ban me-1"></i>pasif</div>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-info" title="Düzenle"
+                                        @onclick="() => OpenEditModal(t)">
+                                    <i class="fa fa-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-info" title="Kategoriler"
+                                        @onclick="() => OpenCategoryPanel(t)">
+                                    <i class="fa fa-sitemap"></i>
+                                </button>
+                                <button class="btn btn-outline-success" title="Yayınla"
+                                        disabled="@t.IsPublished"
+                                        @onclick="() => PublishOneAsync(t)">
+                                    <i class="fa fa-bullhorn"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" title="@(t.IsActive ? "Pasife Al" : "Aktif Et")"
+                                        @onclick="() => ToggleActiveAsync(t)">
+                                    <i class="fa @(t.IsActive ? "fa-pause" : "fa-play")"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" title="Sil (tüm sürümler)"
+                                        @onclick="() => OpenDeleteModal(t)">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama (pencereli) ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_totalCount şablon
+            <span class="text-light"> · Sayfa @_currentPage / @_totalPages</span>
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0 flex-nowrap">
+                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(1)" title="İlk sayfa">
+                                <i class="fa fa-angle-double-left"></i>
+                            </button>
+                        </li>
+                        <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_currentPage - 1)" title="Önceki">
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                        </li>
+
+                        @if (_pageWindow.First() > 1)
+                        {
+                            <li class="page-item disabled d-none d-sm-block">
+                                <span class="page-link bg-dark text-light border-secondary">…</span>
+                            </li>
+                        }
+
+                        @foreach (var pg in _pageWindow)
+                        {
+                            <li class="page-item @(_currentPage == pg ? "active" : "")">
+                                <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary"
+                                        @onclick="() => GoToPage(pg)">
+                                    @pg
+                                </button>
+                            </li>
+                        }
+
+                        @if (_pageWindow.Last() < _totalPages)
+                        {
+                            <li class="page-item disabled d-none d-sm-block">
+                                <span class="page-link bg-dark text-light border-secondary">…</span>
+                            </li>
+                        }
+
+                        <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_currentPage + 1)" title="Sonraki">
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </li>
+                        <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                            <button class="page-link bg-dark text-light border-secondary"
+                                    @onclick="() => GoToPage(_totalPages)" title="Son sayfa">
+                                <i class="fa fa-angle-double-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+
+                <div class="input-group input-group-sm" style="width:9.5rem;">
+                    <input type="number" min="1" max="@_totalPages"
+                           class="form-control bg-dark text-light border-secondary text-center"
+                           placeholder="Sayfa"
+                           value="@_jumpToPage"
+                           @oninput="OnJumpInput"
+                           @onkeydown="OnJumpKeyDown" />
+                    <button class="btn btn-outline-light border-secondary" @onclick="JumpToPage" title="Git">
+                        <i class="fa fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Yeni Şablon / Düzenle (ortak)
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="EditorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content bg-dark border border-info"
+             style="box-shadow:0 0 10px rgba(13,202,240,0.35); backdrop-filter: blur(6px);">
+
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-info mb-0">
+                    <i class="fa @(_editorIsNew ? "fa-plus" : "fa-pencil") me-1"></i>
+                    @(_editorIsNew ? "Yeni Şablon" : "Şablonu Düzenle")
+                    @if (!_editorIsNew && _editorOriginalIsPublished)
+                    {
+                        <span class="badge bg-warning bg-opacity-25 border border-warning text-warning ms-2 small">
+                            <i class="fa fa-code-fork me-1"></i>Kayıtta yeni sürüm oluşacak (v@(_editorNextVersion))
+                        </span>
+                    }
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-white-50 small mb-1">
+                            <i class="fa fa-tag me-1"></i>Şablon Adı
+                        </label>
+                        <input type="text" class="form-control bg-transparent text-light border-secondary"
+                               @bind="_editorName" placeholder="Örn: Televizyon" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label text-white-50 small mb-1">
+                            <i class="fa fa-info-circle me-1"></i>Açıklama
+                        </label>
+                        <input type="text" class="form-control bg-transparent text-light border-secondary"
+                               @bind="_editorDescription" placeholder="Kısa açıklama" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label text-white-50 small mb-1">
+                            <i class="fa fa-sticky-note-o me-1"></i>Sürüm Notu
+                            <span class="text-light">(bu sürümde neyi değiştirdin?)</span>
+                        </label>
+                        <input type="text" class="form-control bg-transparent text-light border-secondary"
+                               @bind="_editorVersionNotes" placeholder="Örn: HDR özelliği eklendi" />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="swActive"
+                                   @bind="_editorIsActive" />
+                            <label class="form-check-label text-light" for="swActive">
+                                Aktif (yeni ürünlerde kullanılabilsin)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="swPublish"
+                                   @bind="_editorPublishNow" />
+                            <label class="form-check-label text-light" for="swPublish">
+                                Hemen yayınla (kaydederken IsPublished = true)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="border-secondary my-3" />
+
+                @* ─── Öznitelikler (sistem) ─── *@
+                <h6 class="text-info mb-2">
+                    <i class="fa fa-list-ul me-1"></i>Şablon Öznitelikleri
+                    <span class="badge bg-transparent border border-secondary text-light small ms-2">
+                        @_editorItems.Count adet
+                    </span>
+                </h6>
+
+                <div class="position-relative mb-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-transparent border-secondary text-white">
+                            <i class="fa fa-search"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control bg-transparent text-light border-secondary"
+                               placeholder="Sistem özniteliği ara ve seç (Renk, Boyut, Marka...)"
+                               value="@_attrSearchTerm"
+                               @oninput="OnAttrSearchInput"
+                               @onfocus="OnAttrSearchFocus" />
+                    </div>
+                    @if (_attrSearchOpen && _attrSearchResults.Count > 0)
+                    {
+                        <div class="position-absolute w-100 mt-1 bg-dark border border-info rounded-2 shadow"
+                             style="z-index:1080; max-height:18rem; overflow:auto;">
+                            @foreach (var a in _attrSearchResults)
+                            {
+                                <button type="button"
+                                        class="btn btn-sm text-start w-100 text-light border-bottom border-secondary rounded-0"
+                                        @onclick="() => AddAttributeToEditor(a)">
+                                    <i class="fa fa-plus-circle text-info me-2"></i>
+                                    @a.Name
+                                    @if (!string.IsNullOrWhiteSpace(a.InputType))
+                                    {
+                                        <span class="badge bg-transparent border border-secondary text-light small ms-2">
+                                            @a.InputType
+                                        </span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(a.Unit))
+                                    {
+                                        <span class="badge bg-transparent border border-secondary text-light small ms-1">
+                                            @a.Unit
+                                        </span>
+                                    }
+                                    @if (a.IsFilterable)
+                                    {
+                                        <span class="badge bg-transparent border border-info text-info small ms-1" title="Filtrelenebilir">
+                                            <i class="fa fa-filter"></i>
+                                        </span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (_editorItems.Count == 0)
+                {
+                    <div class="text-light small fst-italic px-2 py-3 border border-secondary rounded-2 bg-black bg-opacity-25">
+                        Henüz öznitelik eklenmedi. Yukarıdaki arama kutusundan sistem özniteliği seç.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive rounded-2 border border-secondary">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th style="width:3rem;">#</th>
+                                    <th>Öznitelik</th>
+                                    <th class="d-none d-md-table-cell" style="width:7rem;">Tip</th>
+                                    <th class="text-center" style="width:6rem;">Zorunlu</th>
+                                    <th class="text-center" style="width:8rem;">Varyant Öner</th>
+                                    <th class="text-end" style="width:5rem;">Sil</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var (item, idx) in _editorItems.Select((x, i) => (x, i)))
+                                {
+                                    <tr>
+                                        <td class="text-light small">@(idx + 1)</td>
+                                        <td class="text-light">
+                                            @item.AttributeName
+                                            @if (!string.IsNullOrWhiteSpace(item.Unit))
+                                            {
+                                                <span class="text-light small ms-1">(@item.Unit)</span>
+                                            }
+                                        </td>
+                                        <td class="d-none d-md-table-cell">
+                                            <span class="badge bg-transparent border border-secondary text-light small">
+                                                @(item.InputType ?? "—")
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="form-check-input"
+                                                   checked="@item.IsRequired"
+                                                   @onchange="@(e => item.IsRequired = (bool)(e.Value ?? false))" />
+                                        </td>
+                                        <td class="text-center">
+                                            <input type="checkbox" class="form-check-input"
+                                                   checked="@item.IsVariantSuggested"
+                                                   @onchange="@(e => item.IsVariantSuggested = (bool)(e.Value ?? false))" />
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => RemoveAttributeFromEditor(item)">
+                                                <i class="fa fa-times"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-info py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-info btn-sm" @onclick="SaveEditorAsync" disabled="@_isSaving">
+                    <i class="fa @(_isSaving ? "fa-spinner fa-spin" : "fa-save") me-1"></i>
+                    Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   OFFCANVAS — Kategori Yönetimi (tek grup)
+   ═══════════════════════════════════════════ *@
+<div class="offcanvas offcanvas-end bg-dark text-light border-start border-info"
+     tabindex="-1" id="CategoryOffcanvas" style="width:32rem; box-shadow:0 0 10px rgba(13,202,240,0.35);">
+
+    <div class="offcanvas-header border-bottom border-info py-2">
+        <h6 class="offcanvas-title text-info mb-0">
+            <i class="fa fa-sitemap me-1"></i>
+            Kategoriler
+            @if (_catPanelTarget != null)
+            {
+                <span class="text-light small ms-2">— @_catPanelTarget.Name</span>
+            }
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+        <div class="position-relative mb-3">
+            <label class="form-label text-white-50 small mb-1">
+                <i class="fa fa-search me-1"></i>Kategori Ara (yazmaya başla)
+            </label>
+            <input type="text"
+                   class="form-control form-control-sm bg-transparent text-light border-secondary"
+                   placeholder="Örn: Televizyon, Bilgisayar..."
+                   value="@_catSearchTerm"
+                   @oninput="OnCatSearchInput" />
+
+            @if (_catSearchOpen && _catSearchResults.Count > 0)
+            {
+                <div class="position-absolute w-100 mt-1 bg-dark border border-info rounded-2 shadow"
+                     style="z-index:1080; max-height:20rem; overflow:auto;">
+                    @foreach (var c in _catSearchResults)
+                    {
+                        var already = _catAssigned.Any(x => x.Id == c.Id);
+                        <button type="button"
+                                class="btn btn-sm text-start w-100 text-light border-bottom border-secondary rounded-0"
+                                disabled="@already"
+                                @onclick="() => AssignCategoryAsync(c)">
+                            <i class="fa @(already ? "fa-check text-success" : "fa-plus-circle text-info") me-2"></i>
+                            @c.Path
+                        </button>
+                    }
+                </div>
+            }
+            <small class="text-light fst-italic">
+                Sunucu tarafında ilk @CAT_TAKE eşleşmeyi getirir. Daha hassas için yazıyı zenginleştir.
+            </small>
+        </div>
+
+        <h6 class="text-info mt-3 mb-2">
+            <i class="fa fa-check-square-o me-1"></i>Atanmış Kategoriler
+            <span class="badge bg-transparent border border-secondary text-light small ms-1">
+                @_catAssigned.Count
+            </span>
+        </h6>
+
+        @if (_catAssigned.Count == 0)
+        {
+            <div class="text-light small fst-italic px-2 py-3 border border-secondary rounded-2 bg-black bg-opacity-25">
+                Bu şablona atanmış kategori yok.
+            </div>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var c in _catAssigned)
+                {
+                    <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center">
+                        <span class="text-light small">
+                            <i class="fa fa-folder-open-o text-info me-1"></i>@c.Path
+                        </span>
+                        <button class="btn btn-sm btn-outline-danger"
+                                @onclick="() => RemoveCategoryAsync(c)">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Toplu Kategori Ata
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="BulkCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-info"
+             style="box-shadow:0 0 10px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-info mb-0">
+                    <i class="fa fa-sitemap me-1"></i>Toplu Kategori Atama
+                    <span class="badge bg-info text-dark ms-2 small">@_selected.Count şablon</span>
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-light small mb-2">
+                    Seçilen şablon gruplarına aşağıdan eklenecek kategorilerin <strong>tamamı</strong> toplu olarak
+                    atanır. Halihazırda eşleşmiş olanlar atlanır (idempotent).
+                </p>
+
+                <div class="position-relative mb-3">
+                    <label class="form-label text-white-50 small mb-1">
+                        <i class="fa fa-search me-1"></i>Kategori Ara
+                    </label>
+                    <input type="text"
+                           class="form-control form-control-sm bg-transparent text-light border-secondary"
+                           placeholder="Yazmaya başla..."
+                           value="@_bulkCatSearchTerm"
+                           @oninput="OnBulkCatSearchInput" />
+
+                    @if (_bulkCatSearchOpen && _bulkCatSearchResults.Count > 0)
+                    {
+                        <div class="position-absolute w-100 mt-1 bg-dark border border-info rounded-2 shadow"
+                             style="z-index:1080; max-height:18rem; overflow:auto;">
+                            @foreach (var c in _bulkCatSearchResults)
+                            {
+                                var already = _bulkCatPicked.Any(x => x.Id == c.Id);
+                                <button type="button"
+                                        class="btn btn-sm text-start w-100 text-light border-bottom border-secondary rounded-0"
+                                        disabled="@already"
+                                        @onclick="() => AddBulkCategory(c)">
+                                    <i class="fa @(already ? "fa-check text-success" : "fa-plus-circle text-info") me-2"></i>
+                                    @c.Path
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <h6 class="text-info mb-2">
+                    <i class="fa fa-cubes me-1"></i>Eklenecek Kategoriler
+                    <span class="badge bg-transparent border border-secondary text-light small ms-1">
+                        @_bulkCatPicked.Count
+                    </span>
+                </h6>
+
+                @if (_bulkCatPicked.Count == 0)
+                {
+                    <div class="text-light small fst-italic px-2 py-3 border border-secondary rounded-2 bg-black bg-opacity-25">
+                        Henüz kategori seçilmedi.
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var c in _bulkCatPicked)
+                        {
+                            <span class="badge bg-transparent border border-info text-light">
+                                <i class="fa fa-folder-open-o text-info me-1"></i>@c.Path
+                                <button class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                        @onclick="() => _bulkCatPicked.Remove(c)">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-info py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-info btn-sm" @onclick="ApplyBulkCategoryAsync"
+                        disabled="@(_bulkCatPicked.Count == 0 || _isSaving)">
+                    <i class="fa @(_isSaving ? "fa-spinner fa-spin" : "fa-check") me-1"></i>
+                    Tümüne Uygula
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Silme onayı
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 10px rgba(220,53,69,0.35);">
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash me-1"></i>Şablon Grubunu Sil
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                @if (_deleteTarget != null)
+                {
+                    <p class="text-light mb-2">
+                        <strong>@_deleteTarget.Name</strong> şablonunu (toplam @_deleteTarget.TotalVersions sürüm)
+                        soft-delete ile silmek üzeresin. Bu işlem grubun TÜM sürümlerini etkiler.
+                    </p>
+                    <p class="text-warning small mb-0">
+                        <i class="fa fa-exclamation-triangle me-1"></i>
+                        Bu şablona bağlı ürünler etkilenmez; yalnızca yeni ürünlerde görünmez olur.
+                    </p>
+                }
+            </div>
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" @onclick="ConfirmDeleteAsync" disabled="@_isSaving">
+                    <i class="fa @(_isSaving ? "fa-spinner fa-spin" : "fa-trash") me-1"></i>
+                    Evet, Sil
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Öznitelik Şablonları";
+    private const string ENTITY_NAME = "AttributeTemplates";
+    private const int SEARCH_DELAY = 400;
+    private const int PAGE_SIZE = 10;
+    private const int PAGE_WINDOW = 5;
+    private const int CAT_TAKE = 25;
+    private const int ATTR_TAKE = 25;
+    private const int BULK_CHUNK = 500;
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+    private bool _isLoading;
+    private bool _isSaving;
+    private Notification? _notificationRef;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+    private CancellationTokenSource? _attrSearchCts;
+    private CancellationTokenSource? _catSearchCts;
+    private CancellationTokenSource? _bulkCatSearchCts;
+
+    // ─── Liste durumu ─────────────────────────────────────────────
+    private string _searchTerm = string.Empty;
+    private int _totalCount;
+    private int _totalPages = 1;
+    private int _currentPage = 1;
+    private int? _jumpToPage;
+    private List<int> _pageWindow = new() { 1 };
+    private List<TemplateRow> _pagedItems = new();
+
+    // ─── Seçim ────────────────────────────────────────────────────
+    private readonly HashSet<Guid> _selected = new();
+    private bool _isPageAllSelected =>
+        _pagedItems.Count > 0 && _pagedItems.All(x => _selected.Contains(x.Id));
+
+    // ─── Editor modal durumu ──────────────────────────────────────
+    private bool _editorIsNew = true;
+    private bool _editorOriginalIsPublished;
+    private int _editorNextVersion = 1;
+    private Guid? _editorTemplateGroupId;
+    private string? _editorName;
+    private string? _editorDescription;
+    private string? _editorVersionNotes;
+    private bool _editorIsActive = true;
+    private bool _editorPublishNow;
+    private List<EditorItem> _editorItems = new();
+
+    // ─── Öznitelik araması (editor içi) ───────────────────────────
+    private string _attrSearchTerm = string.Empty;
+    private bool _attrSearchOpen;
+    private List<AttributeLookup> _attrSearchResults = new();
+
+    // ─── Kategori paneli (tek grup) ───────────────────────────────
+    private TemplateRow? _catPanelTarget;
+    private string _catSearchTerm = string.Empty;
+    private bool _catSearchOpen;
+    private List<CategoryLookup> _catSearchResults = new();
+    private List<CategoryLookup> _catAssigned = new();
+
+    // ─── Toplu kategori ata modal ─────────────────────────────────
+    private string _bulkCatSearchTerm = string.Empty;
+    private bool _bulkCatSearchOpen;
+    private List<CategoryLookup> _bulkCatSearchResults = new();
+    private List<CategoryLookup> _bulkCatPicked = new();
+
+    // ─── Silme modal hedefi ───────────────────────────────────────
+    private TemplateRow? _deleteTarget;
+
+    // ══════════════════════════════════════════════════════════════
+    // DTO sınıfları (sayfa içine gömülü)
+    // ══════════════════════════════════════════════════════════════
+
+    private class TemplateRow
+    {
+        public Guid Id { get; set; }                  // En yüksek sürümün Id'si
+        public Guid TemplateGroupId { get; set; }
+        public int Version { get; set; }
+        public int TotalVersions { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public bool IsPublished { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? PublishedAt { get; set; }
+        public int CategoryCount { get; set; }
+        public int ItemCount { get; set; }
+    }
+
+    private class CategoryLookup
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+        public string? DepartmentName { get; set; }
+        public string Path { get; set; } = string.Empty;
+    }
+
+    private class AttributeLookup
+    {
+        public Guid Id { get; set; }
+        public string? Name { get; set; }
+        public string? InputType { get; set; }
+        public string? Unit { get; set; }
+        public bool IsFilterable { get; set; }
+    }
+
+    private class EditorItem
+    {
+        public Guid AttributeId { get; set; }
+        public string? AttributeName { get; set; }
+        public string? InputType { get; set; }
+        public string? Unit { get; set; }
+        public bool IsRequired { get; set; }
+        public bool IsVariantSuggested { get; set; }
+        public int DisplayOrder { get; set; }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+        await LoadPageAsync(1);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+        _attrSearchCts?.Dispose();
+        _catSearchCts?.Dispose();
+        _bulkCatSearchCts?.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+        await InvokeAsync(async () =>
+        {
+            await LoadPageAsync(_currentPage);
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // LİSTE YÜKLEME — sunucu tarafı sayfalama & arama
+    // Grup başına en yüksek sürümü çeker + kategori/öznitelik sayımlarını
+    // tek seferde batched olarak alır (N+1 yok)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadPageAsync(int page, bool debounce = false)
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (debounce)
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested)
+                return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            var search = string.IsNullOrWhiteSpace(_searchTerm)
+                ? null
+                : _searchTerm.Trim();
+
+            var baseQuery = db.AttributeTemplates
+                .AsNoTracking()
+                .Where(t => t.IsDeleted == null || t.IsDeleted.IsDeletedStatu != true);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                baseQuery = baseQuery.Where(t =>
+                    (t.Name != null && t.Name.Contains(search)) ||
+                    (t.Description != null && t.Description.Contains(search)));
+            }
+
+            // Her grup için en yüksek versiyon ve toplam versiyon sayısı
+            var latestVersions = baseQuery
+                .GroupBy(x => x.TemplateGroupId)
+                .Select(g => new
+                {
+                    TemplateGroupId = g.Key,
+                    MaxVersion = g.Max(x => x.Version),
+                    TotalVersions = g.Count()
+                });
+
+            // Maksimum versiyondaki kayıtları geri al
+            var grouped =
+                from lv in latestVersions
+                join t in baseQuery
+                    on new
+                    {
+                        lv.TemplateGroupId,
+                        Version = lv.MaxVersion
+                    }
+                    equals new
+                    {
+                        t.TemplateGroupId,
+                        Version = t.Version
+                    }
+                select new
+                {
+                    GroupId = lv.TemplateGroupId,
+                    Top = t,
+                    TotalVersions = lv.TotalVersions
+                };
+
+            _totalCount = await grouped.CountAsync(token);
+
+            _totalPages = Math.Max(
+                1,
+                (int)Math.Ceiling(_totalCount / (double)PAGE_SIZE)
+            );
+
+            _currentPage = Math.Clamp(page, 1, _totalPages);
+
+            BuildPageWindow();
+
+            var pageData = await grouped
+                .OrderByDescending(x => x.Top.CreatedAt)
+                .Skip((_currentPage - 1) * PAGE_SIZE)
+                .Take(PAGE_SIZE)
+                .ToListAsync(token);
+
+            var groupIds = pageData
+                .Select(x => x.GroupId)
+                .Distinct()
+                .ToList();
+
+            var versionIds = pageData
+                .Select(x => x.Top.Id)
+                .Distinct()
+                .ToList();
+
+            var categoryCounts = await db.AttributeTemplateCategories
+                .AsNoTracking()
+                .Where(c => groupIds.Contains(c.TemplateGroupId))
+                .GroupBy(c => c.TemplateGroupId)
+                .Select(g => new
+                {
+                    GroupId = g.Key,
+                    Cnt = g.Count()
+                })
+                .ToDictionaryAsync(
+                    x => x.GroupId,
+                    x => x.Cnt,
+                    token);
+
+            var itemCounts = await db.AttributeTemplateItems
+                .AsNoTracking()
+                .Where(i => versionIds.Contains(i.TemplateId))
+                .GroupBy(i => i.TemplateId)
+                .Select(g => new
+                {
+                    TemplateId = g.Key,
+                    Cnt = g.Count()
+                })
+                .ToDictionaryAsync(
+                    x => x.TemplateId,
+                    x => x.Cnt,
+                    token);
+
+            _pagedItems = pageData
+                .Select(x => new TemplateRow
+                {
+                    Id = x.Top.Id,
+                    TemplateGroupId = x.GroupId,
+                    Version = x.Top.Version,
+                    TotalVersions = x.TotalVersions,
+
+                    Name = x.Top.Name,
+                    Description = x.Top.Description,
+
+                    IsPublished = x.Top.IsPublished,
+                    IsActive = x.Top.IsActive,
+
+                    CreatedAt = x.Top.CreatedAt,
+                    PublishedAt = x.Top.PublishedAt,
+
+                    CategoryCount = categoryCounts.TryGetValue(
+                        x.GroupId,
+                        out var cc)
+                            ? cc
+                            : 0,
+
+                    ItemCount = itemCounts.TryGetValue(
+                        x.Top.Id,
+                        out var ic)
+                            ? ic
+                            : 0
+                })
+                .ToList();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadPage", ex);
+                await Notify(
+                    "danger",
+                    "Hata",
+                    $"Detay: {ex.Message}");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+    private void BuildPageWindow()
+    {
+        int start = Math.Max(1, _currentPage - PAGE_WINDOW / 2);
+        int end = Math.Min(_totalPages, start + PAGE_WINDOW - 1);
+        start = Math.Max(1, end - PAGE_WINDOW + 1);
+        _pageWindow = Enumerable.Range(start, end - start + 1).ToList();
+    }
+
+    private async Task GoToPage(int page)
+    {
+        _jumpToPage = null;
+        await LoadPageAsync(page);
+    }
+
+    private void OnJumpInput(ChangeEventArgs e) =>
+        _jumpToPage = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+
+    private async Task JumpToPage()
+    {
+        if (_jumpToPage is int p) await GoToPage(p);
+    }
+
+    private async Task OnJumpKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or "NumpadEnter") await JumpToPage();
+    }
+
+    private async Task RefreshAsync() => await LoadPageAsync(_currentPage);
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        await LoadPageAsync(1, debounce: true);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        await LoadPageAsync(1);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // SEÇİM / TOPLU İŞLEMLER
+    // ══════════════════════════════════════════════════════════════
+
+    private void ToggleRowSelection(Guid id, ChangeEventArgs e)
+    {
+        var on = (bool)(e.Value ?? false);
+        if (on) _selected.Add(id);
+        else _selected.Remove(id);
+    }
+
+    private void ToggleSelectAllPage(ChangeEventArgs e)
+    {
+        var on = (bool)(e.Value ?? false);
+        if (on)
+            foreach (var t in _pagedItems) _selected.Add(t.Id);
+        else
+            foreach (var t in _pagedItems) _selected.Remove(t.Id);
+    }
+
+    private void ClearSelection() => _selected.Clear();
+
+    private async Task BulkPublishAsync()
+    {
+        if (_selected.Count == 0) return;
+        try
+        {
+            _isLoading = true; StateHasChanged();
+
+            var ids = _selected.ToList();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var rows = await db.AttributeTemplates
+                .Where(t => ids.Contains(t.Id))
+                .ToListAsync(_cts.Token);
+
+            var now = DateTime.UtcNow;
+            foreach (var r in rows)
+            {
+                r.IsPublished = true;
+                r.PublishedAt ??= now;
+            }
+            await db.SaveChangesAsync(_cts.Token);
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "BulkDeactivate", "message", $"{rows.Count} sürüm pasifleştirildi");
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Notify("success", "Tamam", $"{rows.Count} şablon yayınlandı.");
+            ClearSelection();
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkPublish", ex);
+            await Notify("danger", "Hata", "Toplu yayınlama sırasında sorun oluştu.");
+        }
+        finally { _isLoading = false; StateHasChanged(); }
+    }
+
+    private async Task BulkDeactivateAsync()
+    {
+        if (_selected.Count == 0) return;
+        try
+        {
+            _isLoading = true; StateHasChanged();
+
+            var ids = _selected.ToList();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var rows = await db.AttributeTemplates
+                .Where(t => ids.Contains(t.Id))
+                .ToListAsync(_cts.Token);
+
+            foreach (var r in rows) r.IsActive = false;
+            await db.SaveChangesAsync(_cts.Token);
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "BulkDeactivate", "message", $"{rows.Count} sürüm pasifleştirildi");
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Notify("success", "Tamam", $"{rows.Count} şablon pasife alındı.");
+            ClearSelection();
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkDeactivate", ex);
+            await Notify("danger", "Hata", "Toplu pasifleştirme sırasında sorun oluştu.");
+        }
+        finally { _isLoading = false; StateHasChanged(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // EDITOR — Yeni / Düzenle (ortak modal)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenCreateModal()
+    {
+        _editorIsNew = true;
+        _editorOriginalIsPublished = false;
+        _editorNextVersion = 1;
+        _editorTemplateGroupId = null;
+        _editorName = string.Empty;
+        _editorDescription = string.Empty;
+        _editorVersionNotes = string.Empty;
+        _editorIsActive = true;
+        _editorPublishNow = false;
+        _editorItems.Clear();
+        _attrSearchTerm = string.Empty;
+        _attrSearchResults.Clear();
+        _attrSearchOpen = false;
+
+        await ShowModal("EditorModal");
+    }
+
+    private async Task OpenEditModal(TemplateRow t)
+    {
+        _editorIsNew = false;
+        _editorOriginalIsPublished = t.IsPublished;
+        _editorNextVersion = t.Version + 1;
+        _editorTemplateGroupId = t.TemplateGroupId;
+        _editorName = t.Name;
+        _editorDescription = t.Description;
+        _editorVersionNotes = string.Empty;
+        _editorIsActive = t.IsActive;
+        _editorPublishNow = false;
+        _attrSearchTerm = string.Empty;
+        _attrSearchResults.Clear();
+        _attrSearchOpen = false;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var items = await db.AttributeTemplateItems
+                .AsNoTracking()
+                .Where(i => i.TemplateId == t.Id)
+                .OrderBy(i => i.DisplayOrder)
+                .ToListAsync(_cts.Token);
+
+            // Öznitelik bilgilerini tek seferde çek (N+1'siz)
+            var attrIds = items.Select(i => i.AttributeId).Distinct().ToList();
+            var attrMap = await db.ProductAttributes
+                .AsNoTracking()
+                .Where(a => attrIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.Name, a.InputType, a.Unit })
+                .ToDictionaryAsync(x => x.Id, x => x, _cts.Token);
+
+            _editorItems = items.Select(i =>
+            {
+                attrMap.TryGetValue(i.AttributeId, out var info);
+                return new EditorItem
+                {
+                    AttributeId = i.AttributeId,
+                    AttributeName = info?.Name ?? "(silinmiş öznitelik)",
+                    InputType = info?.InputType,
+                    Unit = info?.Unit,
+                    IsRequired = i.IsRequired,
+                    IsVariantSuggested = i.IsVariantSuggested,
+                    DisplayOrder = i.DisplayOrder
+                };
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            await LogError("OpenEditModal", ex);
+            _editorItems = new();
+        }
+
+        await ShowModal("EditorModal");
+    }
+
+    // ─── Sistem özniteliği autocomplete (UserId==null && StoreId==null) ──
+    private async Task OnAttrSearchInput(ChangeEventArgs e)
+    {
+        _attrSearchTerm = e.Value?.ToString() ?? string.Empty;
+        _attrSearchOpen = true;
+        await DoAttrSearchAsync(debounce: true);
+    }
+
+    private async Task OnAttrSearchFocus()
+    {
+        _attrSearchOpen = true;
+        if (_attrSearchResults.Count == 0)
+            await DoAttrSearchAsync(debounce: false);
+    }
+
+    private async Task DoAttrSearchAsync(bool debounce)
+    {
+        _attrSearchCts?.Cancel();
+        _attrSearchCts?.Dispose();
+        _attrSearchCts = new CancellationTokenSource();
+        var token = _attrSearchCts.Token;
+
+        try
+        {
+            if (debounce) await Task.Delay(SEARCH_DELAY, token);
+            if (token.IsCancellationRequested) return;
+
+            var exclude = _editorItems.Select(x => x.AttributeId).ToList();
+            var s = string.IsNullOrWhiteSpace(_attrSearchTerm) ? null : _attrSearchTerm.Trim();
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            // Yalnızca SİSTEM öznitelikleri: UserId==null && StoreId==null
+            // ve aktif olanlar + soft-delete'i atla
+            var q = db.ProductAttributes
+                .AsNoTracking()
+                .Where(a => a.UserId == null && a.StoreId == null)
+                .Where(a => a.IsActive)
+                .Where(a => a.IsDeleted == null || a.IsDeleted.IsDeletedStatu != true);
+
+            if (s != null)
+                q = q.Where(a =>
+                    (a.Name != null && a.Name.Contains(s)) ||
+                    (a.Code != null && a.Code.Contains(s)));
+
+            if (exclude.Count > 0)
+                q = q.Where(a => !exclude.Contains(a.Id));
+
+            _attrSearchResults = await q
+                .OrderBy(a => a.DisplayOrder)
+                .ThenBy(a => a.Name)
+                .Take(ATTR_TAKE)
+                .Select(a => new AttributeLookup
+                {
+                    Id = a.Id,
+                    Name = a.Name,
+                    InputType = a.InputType,
+                    Unit = a.Unit,
+                    IsFilterable = a.IsFilterable
+                })
+                .ToListAsync(token);
+
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { await LogError("AttrSearch", ex); }
+    }
+
+    private void AddAttributeToEditor(AttributeLookup a)
+    {
+        if (_editorItems.Any(x => x.AttributeId == a.Id)) return;
+        _editorItems.Add(new EditorItem
+        {
+            AttributeId = a.Id,
+            AttributeName = a.Name,
+            InputType = a.InputType,
+            Unit = a.Unit,
+            IsRequired = false,
+            IsVariantSuggested = false,
+            DisplayOrder = _editorItems.Count
+        });
+        _attrSearchTerm = string.Empty;
+        _attrSearchResults.Clear();
+        _attrSearchOpen = false;
+    }
+
+    private void RemoveAttributeFromEditor(EditorItem item)
+    {
+        _editorItems.Remove(item);
+        for (int i = 0; i < _editorItems.Count; i++) _editorItems[i].DisplayOrder = i;
+    }
+
+    /// <summary>
+    /// Kaydeder. Yayındaki bir sürüm düzenleniyorsa ASLA güncellemez,
+    /// aynı TemplateGroupId ile Version+1 olarak YENİ satır ekler.
+    /// </summary>
+    private async Task SaveEditorAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_editorName))
+        {
+            await Notify("warning", "Eksik", "Şablon adı boş olamaz.");
+            return;
+        }
+
+        try
+        {
+            _isSaving = true; StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // ── Güvence: yalnızca SİSTEM öznitelikleri (UserId==null && StoreId==null) ──
+            if (_editorItems.Count > 0)
+            {
+                var attrIds = _editorItems.Select(i => i.AttributeId).Distinct().ToList();
+                var validCount = await db.ProductAttributes
+                    .AsNoTracking()
+                    .CountAsync(a => attrIds.Contains(a.Id)
+                                  && a.UserId == null
+                                  && a.StoreId == null, _cts.Token);
+
+                if (validCount != attrIds.Count)
+                {
+                    await Notify("warning", "Doğrulama",
+                        "Şablona yalnızca sistem öznitelikleri eklenebilir (satıcıya özel olanlar kabul edilmez).");
+                    return;
+                }
+            }
+
+            // ── Grup ve sürüm belirle ──
+            Guid groupId;
+            int nextVersion;
+
+            if (_editorTemplateGroupId is Guid existingGroup)
+            {
+                var maxVer = await db.AttributeTemplates
+                    .AsNoTracking()
+                    .Where(t => t.TemplateGroupId == existingGroup)
+                    .MaxAsync(t => (int?)t.Version, _cts.Token) ?? 0;
+
+                groupId = existingGroup;
+                nextVersion = maxVer + 1;
+            }
+            else
+            {
+                groupId = Guid.NewGuid();
+                nextVersion = 1;
+            }
+
+            var now = DateTime.UtcNow;
+
+            var newVersion = new AttributeTemplates
+            {
+                Id = Guid.NewGuid(),
+                TemplateGroupId = groupId,
+                Version = nextVersion,
+                Name = _editorName,
+                Description = _editorDescription,
+                VersionNotes = _editorVersionNotes,
+                IsPublished = _editorPublishNow,
+                IsActive = _editorIsActive,
+                CreatedByUserId = use?.Id,
+                CreatedAt = now,
+                PublishedAt = _editorPublishNow ? now : null,
+                IsDeleted = new IsDeleted()
+            };
+
+            db.AttributeTemplates.Add(newVersion);
+
+            if (_editorItems.Count > 0)
+            {
+                var itemRows = _editorItems.Select((x, i) => new AttributeTemplateItems
+                {
+                    Id = Guid.NewGuid(),
+                    TemplateId = newVersion.Id,
+                    AttributeId = x.AttributeId,
+                    IsRequired = x.IsRequired,
+                    IsVariantSuggested = x.IsVariantSuggested,
+                    DisplayOrder = i
+                });
+                db.AttributeTemplateItems.AddRange(itemRows);
+            }
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE,
+                _editorIsNew ? "CreateTemplate" : "NewTemplateVersion",
+                "message", $"GroupId={groupId}, Version={nextVersion}");
+
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await HideModal("EditorModal");
+            await Notify("success", "Tamam",
+                _editorIsNew ? "Şablon oluşturuldu." : $"Yeni sürüm (v{nextVersion}) kaydedildi.");
+
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("SaveEditor", ex);
+            await Notify("danger", "Hata", "Şablon kaydedilirken sorun oluştu.");
+        }
+        finally
+        {
+            _isSaving = false; StateHasChanged();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // SATIR AKSİYONLARI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task PublishOneAsync(TemplateRow t)
+    {
+        try
+        {
+            _isLoading = true; StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var row = await db.AttributeTemplates.FirstOrDefaultAsync(x => x.Id == t.Id, _cts.Token);
+            if (row != null)
+            {
+                row.IsPublished = true;
+                row.PublishedAt ??= DateTime.UtcNow;
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Publish", "message", $"{t.Id}");
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Notify("success", "Tamam", $"\"{t.Name}\" yayınlandı.");
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("Publish", ex);
+            await Notify("danger", "Hata", "Yayınlama sırasında sorun oluştu.");
+        }
+        finally { _isLoading = false; StateHasChanged(); }
+    }
+
+    private async Task ToggleActiveAsync(TemplateRow t)
+    {
+        try
+        {
+            _isLoading = true; StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var row = await db.AttributeTemplates.FirstOrDefaultAsync(x => x.Id == t.Id, _cts.Token);
+            if (row != null)
+            {
+                row.IsActive = !t.IsActive;
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, t.IsActive ? "Deactivate" : "Activate", "message", $"{t.Id}");
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("ToggleActive", ex);
+            await Notify("danger", "Hata", "Durum değiştirilirken sorun oluştu.");
+        }
+        finally { _isLoading = false; StateHasChanged(); }
+    }
+
+    private async Task OpenDeleteModal(TemplateRow t)
+    {
+        _deleteTarget = t;
+        await ShowModal("DeleteModal");
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_deleteTarget == null) return;
+        try
+        {
+            _isSaving = true; StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var versions = await db.AttributeTemplates
+                .Where(x => x.TemplateGroupId == _deleteTarget.TemplateGroupId)
+                .ToListAsync(_cts.Token);
+
+            var now = DateTime.UtcNow;
+            foreach (var v in versions)
+            {
+                v.IsDeleted ??= new IsDeleted();
+                v.IsDeleted.IsDeletedStatu = true;
+                v.IsDeleted.DeletedAtDate = now;
+            }
+            await db.SaveChangesAsync(_cts.Token);
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "SoftDeleteGroup", "message", $"{_deleteTarget.TemplateGroupId}");
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await HideModal("DeleteModal");
+            await Notify("success", "Tamam", "Şablon grubu silindi.");
+            _deleteTarget = null;
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteGroup", ex);
+            await Notify("danger", "Hata", "Silme sırasında sorun oluştu.");
+        }
+        finally { _isSaving = false; StateHasChanged(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // KATEGORİ PANELİ (tek grup) — server-side autocomplete
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenCategoryPanel(TemplateRow t)
+    {
+        _catPanelTarget = t;
+        _catSearchTerm = string.Empty;
+        _catSearchResults.Clear();
+        _catSearchOpen = false;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var catIds = await db.AttributeTemplateCategories
+                .AsNoTracking()
+                .Where(c => c.TemplateGroupId == t.TemplateGroupId)
+                .Select(c => c.CategoryId)
+                .ToListAsync(_cts.Token);
+
+            if (catIds.Count > 0)
+            {
+                var cats = await db.CategoriesTr
+                    .AsNoTracking()
+                    .Where(c => catIds.Contains(c.Id))
+                    .Select(c => new { c.Id, c.Name, c.DepartmentName })
+                    .ToListAsync(_cts.Token);
+
+                _catAssigned = cats.Select(c => new CategoryLookup
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    DepartmentName = c.DepartmentName,
+                    Path = string.IsNullOrWhiteSpace(c.DepartmentName)
+                        ? (c.Name ?? string.Empty)
+                        : $"{c.DepartmentName} › {c.Name}"
+                }).OrderBy(x => x.Path).ToList();
+            }
+            else
+            {
+                _catAssigned = new();
+            }
+        }
+        catch (Exception ex)
+        {
+            await LogError("LoadGroupCats", ex);
+            _catAssigned = new();
+        }
+
+        await ShowOffcanvas("CategoryOffcanvas");
+    }
+
+    private async Task OnCatSearchInput(ChangeEventArgs e)
+    {
+        _catSearchTerm = e.Value?.ToString() ?? string.Empty;
+        _catSearchOpen = true;
+
+        _catSearchCts?.Cancel();
+        _catSearchCts?.Dispose();
+        _catSearchCts = new CancellationTokenSource();
+        var token = _catSearchCts.Token;
+
+        try
+        {
+            await Task.Delay(SEARCH_DELAY, token);
+            if (token.IsCancellationRequested) return;
+
+            _catSearchResults = await SearchCategoriesAsync(_catSearchTerm, token);
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { await LogError("CatSearch", ex); }
+    }
+
+    /// <summary>
+    /// Server-side kategori autocomplete — DB tarafında Contains + Take(25).
+    /// Milyonlarca kategori için tüm ağacı yüklemeden çalışır.
+    /// </summary>
+    private async Task<List<CategoryLookup>> SearchCategoriesAsync(string? term, CancellationToken token)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(token);
+
+        var q = db.CategoriesTr.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            var s = term.Trim();
+            q = q.Where(c =>
+                (c.Name != null && c.Name.Contains(s)) ||
+                (c.DepartmentName != null && c.DepartmentName.Contains(s)));
+        }
+
+        var rows = await q
+            .OrderBy(c => c.DepartmentName)
+            .ThenBy(c => c.Name)
+            .Take(CAT_TAKE)
+            .Select(c => new { c.Id, c.Name, c.DepartmentName })
+            .ToListAsync(token);
+
+        return rows.Select(c => new CategoryLookup
+        {
+            Id = c.Id,
+            Name = c.Name,
+            DepartmentName = c.DepartmentName,
+            Path = string.IsNullOrWhiteSpace(c.DepartmentName)
+                ? (c.Name ?? string.Empty)
+                : $"{c.DepartmentName} › {c.Name}"
+        }).ToList();
+    }
+
+    private async Task AssignCategoryAsync(CategoryLookup c)
+    {
+        if (_catPanelTarget == null) return;
+        if (_catAssigned.Any(x => x.Id == c.Id)) return;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // İdempotent — zaten varsa atla
+            var exists = await db.AttributeTemplateCategories
+                .AsNoTracking()
+                .AnyAsync(x => x.TemplateGroupId == _catPanelTarget.TemplateGroupId
+                            && x.CategoryId == c.Id, _cts.Token);
+
+            if (!exists)
+            {
+                db.AttributeTemplateCategories.Add(new AttributeTemplateCategories
+                {
+                    Id = Guid.NewGuid(),
+                    TemplateGroupId = _catPanelTarget.TemplateGroupId,
+                    CategoryId = c.Id,
+                    CreatedAt = DateTime.UtcNow
+                });
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            _catAssigned.Add(c);
+            _catAssigned = _catAssigned.OrderBy(x => x.Path).ToList();
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "AssignCategory",
+                "message", $"Group={_catPanelTarget.TemplateGroupId}, Cat={c.Id}");
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("AssignCategory", ex);
+            await Notify("danger", "Hata", "Kategori atanırken sorun oluştu.");
+        }
+    }
+
+    private async Task RemoveCategoryAsync(CategoryLookup c)
+    {
+        if (_catPanelTarget == null) return;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var row = await db.AttributeTemplateCategories
+                .FirstOrDefaultAsync(x => x.TemplateGroupId == _catPanelTarget.TemplateGroupId
+                                       && x.CategoryId == c.Id, _cts.Token);
+            if (row != null)
+            {
+                db.AttributeTemplateCategories.Remove(row);
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            _catAssigned.RemoveAll(x => x.Id == c.Id);
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "RemoveCategory",
+                "message", $"Group={_catPanelTarget.TemplateGroupId}, Cat={c.Id}");
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("RemoveCategory", ex);
+            await Notify("danger", "Hata", "Kategori kaldırılırken sorun oluştu.");
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU KATEGORİ ATA MODAL
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenBulkCategoryModal()
+    {
+        _bulkCatSearchTerm = string.Empty;
+        _bulkCatSearchResults.Clear();
+        _bulkCatSearchOpen = false;
+        _bulkCatPicked.Clear();
+        await ShowModal("BulkCategoryModal");
+    }
+
+    private async Task OnBulkCatSearchInput(ChangeEventArgs e)
+    {
+        _bulkCatSearchTerm = e.Value?.ToString() ?? string.Empty;
+        _bulkCatSearchOpen = true;
+
+        _bulkCatSearchCts?.Cancel();
+        _bulkCatSearchCts?.Dispose();
+        _bulkCatSearchCts = new CancellationTokenSource();
+        var token = _bulkCatSearchCts.Token;
+
+        try
+        {
+            await Task.Delay(SEARCH_DELAY, token);
+            if (token.IsCancellationRequested) return;
+
+            _bulkCatSearchResults = await SearchCategoriesAsync(_bulkCatSearchTerm, token);
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { await LogError("BulkCatSearch", ex); }
+    }
+
+    private void AddBulkCategory(CategoryLookup c)
+    {
+        if (_bulkCatPicked.Any(x => x.Id == c.Id)) return;
+        _bulkCatPicked.Add(c);
+    }
+
+    /// <summary>
+    /// Seçili tüm şablon gruplarına seçili tüm kategorileri toplu enjekte eder.
+    /// İdempotent — zaten mevcut olan eşleşmeleri atlar, yalnızca eksikleri ekler.
+    /// 500'lük chunk'larla yazar (büyük seçim güvencesi).
+    /// </summary>
+    private async Task ApplyBulkCategoryAsync()
+    {
+        if (_selected.Count == 0 || _bulkCatPicked.Count == 0) return;
+
+        try
+        {
+            _isSaving = true; StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // Seçili sürüm Id'lerinden TemplateGroupId çıkar
+            var groupIds = _pagedItems
+                .Where(x => _selected.Contains(x.Id))
+                .Select(x => x.TemplateGroupId)
+                .Distinct()
+                .ToList();
+
+            // Sayfa dışı seçim varsa DB'den de tamamla
+            var missingIds = _selected
+                .Where(id => _pagedItems.All(x => x.Id != id))
+                .ToList();
+            if (missingIds.Count > 0)
+            {
+                var extra = await db.AttributeTemplates
+                    .AsNoTracking()
+                    .Where(t => missingIds.Contains(t.Id))
+                    .Select(t => t.TemplateGroupId)
+                    .ToListAsync(_cts.Token);
+                groupIds = groupIds.Concat(extra).Distinct().ToList();
+            }
+
+            var catIds = _bulkCatPicked.Select(c => c.Id).Distinct().ToList();
+
+            // Mevcut eşleşmeleri çek
+            var existing = await db.AttributeTemplateCategories
+                .AsNoTracking()
+                .Where(c => groupIds.Contains(c.TemplateGroupId) && catIds.Contains(c.CategoryId))
+                .Select(c => new { c.TemplateGroupId, c.CategoryId })
+                .ToListAsync(_cts.Token);
+
+            var existingSet = existing.Select(e => (e.TemplateGroupId, e.CategoryId)).ToHashSet();
+
+            var now = DateTime.UtcNow;
+            var toAdd = new List<AttributeTemplateCategories>();
+            foreach (var g in groupIds)
+                foreach (var c in catIds)
+                    if (!existingSet.Contains((g, c)))
+                        toAdd.Add(new AttributeTemplateCategories
+                        {
+                            Id = Guid.NewGuid(),
+                            TemplateGroupId = g,
+                            CategoryId = c,
+                            CreatedAt = now
+                        });
+
+            int added = 0;
+            for (int i = 0; i < toAdd.Count; i += BULK_CHUNK)
+            {
+                var slice = toAdd.Skip(i).Take(BULK_CHUNK).ToList();
+                db.AttributeTemplateCategories.AddRange(slice);
+                await db.SaveChangesAsync(_cts.Token);
+                added += slice.Count;
+            }
+
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "BulkAssignCategory",
+                "message", $"{groupIds.Count} grup × {catIds.Count} kategori → {added} yeni satır");
+
+            StateHub.NotifyDataChanged(ENTITY_NAME);
+            await HideModal("BulkCategoryModal");
+            await Notify("success", "Tamam", $"{added} yeni kategori ataması yapıldı.");
+            ClearSelection();
+            await LoadPageAsync(_currentPage);
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkAssignCategory", ex);
+            await Notify("danger", "Hata", "Toplu kategori atama sırasında sorun oluştu.");
+        }
+        finally { _isSaving = false; StateHasChanged(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task ShowOffcanvas(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Offcanvas(document.getElementById('{id}')).show()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

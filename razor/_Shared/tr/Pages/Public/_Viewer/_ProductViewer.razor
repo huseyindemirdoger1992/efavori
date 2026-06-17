@@ -96,11 +96,11 @@ else
     foreach (var bc in _breadcrumbCategories)
         roads.Add(("null", bc.Name ?? "—", "javascript:void(0)"));
     @*roads.Add(("null", p.Name?.Length > 40 ? p.Name.Substring(0, 40) + "…" : p.Name ?? "Ürün", "javascript:void(0)"));*@
-    <div class="container-xxl pt-3">
+    <div class="container-fluid pt-3">
         <razor._Shared.BreadCrumbLinksUrl roads="roads" />
     </div>
 
-    <div class="container-xxl pb-5">
+    <div class="container-fluid pb-5">
         <div class="row g-4">
 
             @* ═══════════════════════════════════════════════════════

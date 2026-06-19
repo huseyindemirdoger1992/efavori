@@ -175,7 +175,7 @@ try
             options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromDays(7);
 
             // E-ticaret gibi yoğun veri trafiğinde mesaj boyutunu sınırla (opsiyonel)
-            options.DetailedErrors = b.Environment.IsDevelopment();
+            options.DetailedErrors = b.Environment.IsDevelopment(); 
             options.DisconnectedCircuitMaxRetained = 999999; // Aynı anda kaç kopuk devre RAM'de beklesin?
         });
     }

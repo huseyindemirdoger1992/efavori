@@ -31,6 +31,7 @@
 @using data
 @using data._Shared
 @using data._Product
+@using data._Product.ProductHistory
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -102,6 +103,37 @@ else
 
     <div class="container-fluid pb-5">
         <div class="row g-4">
+
+
+            @* ─── 3. AKSİYONLAR (Text-Light Özellikli) ─── *@
+            <div class="col-lg-12">
+                <div class="btn-group w-100" role="group" aria-label="Ürün Aksiyonları">
+                    <button class="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center text-dark" @onclick="ToggleFavorite">
+                        <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-muted") me-2"></i>Favori
+                    </button>
+
+                    <button class="btn btn-outline-info btn-sm d-flex align-items-center justify-content-center text-light" @onclick="ToggleCompare">
+                        <i class="fa fa-exchange text-light me-2"></i>Karşılaştır
+                    </button>
+
+                    <button class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center text-light" @onclick="OpenShareModal">
+                        <i class="fa fa-share-alt text-light me-2"></i>Paylaş
+                    </button>
+
+                    <button class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center text-light" @onclick="ToggleRecommendation">
+                        <i class="fa fa-users text-light me-2"></i>Tavsiye Et
+                    </button>
+
+                    <button class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center text-dark" @onclick="ToggleAskTheSeller">
+                        <i class="fa fa-comments-o text-dark me-2"></i>Satıcıya Sor
+                    </button>
+
+                    <button class="btn btn-outline-dark btn-sm d-flex align-items-center justify-content-center text-light" @onclick="ToggleIsOnSale">
+                        <i class="fa fa-bell-o text-light me-2"></i>Fiyat Düşünce Haber Ver
+                    </button>
+                </div>
+            </div>
+
 
             @* ═══════════════════════════════════════════════════════
                SOL: GÖRSEL GALERİ (sticky)
@@ -213,7 +245,7 @@ else
             @* ═══════════════════════════════════════════════════════
                SAĞ: ÜRÜN BİLGİLERİ + SATIN ALMA
                ═══════════════════════════════════════════════════════ *@
-            <div class="col-lg-7">
+            <div class="col-lg-5">
 
                 @* Marka + Mağaza *@
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
@@ -364,109 +396,84 @@ else
                     }
                 }
 
-                @* ─── ADET SEÇİCİ ─── *@
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <span class="text-light small fw-semibold">Adet:</span>
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-secondary btn-sm" @onclick="() => ChangeQuantity(-1)"
-                                disabled="@(_quantity <= 1)">
-                            <i class="fa fa-minus"></i>
-                        </button>
-                        <span class="btn btn-outline-secondary btn-sm disabled text-light" style="min-width:48px;">@_quantity</span>
-                        <button class="btn btn-secondary btn-sm" @onclick="() => ChangeQuantity(1)"
-                                disabled="@(_maxOrderQty.HasValue && _quantity >= _maxOrderQty.Value)">
-                            <i class="fa fa-plus"></i>
-                        </button>
+                <div class="d-flex flex-column gap-4 mb-3">
+
+                    @* ─── 1. ANA AKSİYONLAR VE ADET SEÇİCİ ─── *@
+                    <div class="d-flex flex-column flex-md-row align-items-stretch gap-3">
+
+                        @* Adet Seçici (Karakter sayısına göre duyarlı ve genişleyebilen yapı) *@
+                        <div class="d-flex flex-column justify-content-center">
+                            <div class="input-group input-group" style="min-width: 16px; max-width: 200px;">
+                                <button class="btn btn-outline-secondary text-light" type="button" @onclick="() => ChangeQuantity(-1)" disabled="@(_quantity <= 1)">
+                                    <i class="fa fa-minus"></i>
+                                </button>
+                                <input type="text" class="form-control text-center fw-bold bg-light text-dark px-2" value="@_quantity" style="min-width: 32px;" />
+                                <button class="btn btn-outline-secondary text-light" type="button" @onclick="() => ChangeQuantity(1)" disabled="@(_maxOrderQty.HasValue && _quantity >= _maxOrderQty.Value)">
+                                    <i class="fa fa-plus"></i>
+                                </button>
+                            </div>
+                            @if (_maxOrderQty.HasValue)
+                            {
+                                <span class="text-muted small mt-1 text-center">(En fazla @_maxOrderQty)</span>
+                            }
+                        </div>
+
+                        @* Ana Butonlar *@
+                        <div class="flex-grow-1 d-flex flex-column flex-sm-row gap-2">
+                            @if (string.Equals(p.ProductType, "External", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(p.ExternalUrl))
+                            {
+                                <a href="@p.ExternalUrl" target="_blank" rel="noopener" class="btn btn-primary btn-lg w-100 shadow-sm d-flex align-items-center justify-content-center text-light">
+                                    <i class="fa fa-external-link me-2"></i>@(string.IsNullOrEmpty(p.ExternalButtonText) ? "Satıcıya Git" : p.ExternalButtonText)
+                                </a>
+                            }
+                            else
+                            {
+                                @* Sepete Ekle *@
+                                <button class="btn btn-primary flex-fill shadow-sm d-flex align-items-center justify-content-center text-light" @onclick="OnAddToCart" disabled="@(_hasStockData && _currentStockQty <= 0)">
+                                    <i class="fa fa-shopping-cart me-2"></i>Sepete Ekle
+                                </button>
+
+                                @* Hemen Al *@
+                                <button class="btn btn-success flex-fill shadow-sm d-flex align-items-center justify-content-center text-light" @onclick="OnQuickBuy" disabled="@(_hasStockData && _currentStockQty <= 0)">
+                                    <i class="fa fa-bolt me-2"></i>Hemen Al
+                                </button>
+                            }
+                        </div>
                     </div>
-                    @if (_maxOrderQty.HasValue)
-                    {
-                        <span class="text- light small">(En fazla @_maxOrderQty adet)</span>
-                    }
+
+
+
+
                 </div>
+            </div>
+            <div class="col-lg-2">
 
-                                @* ─── AKSİYON BUTONLARI ─── *@
-                @if (string.Equals(p.ProductType, "External", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(p.ExternalUrl))
-                {
-                    @* Harici ürün *@
-                    <a href="@p.ExternalUrl" target="_blank" rel="noopener"
-                       class="btn btn-warning btn-lg w-100 mb-2">
-                        <i class="fa fa-external-link me-2"></i>@(string.IsNullOrEmpty(p.ExternalButtonText) ? "Satıcıya Git" : p.ExternalButtonText)
-                    </a>
-                }
-                else
-                {
-                    <div class="d-grid gap-2 d-md-flex mb-3">
-                        <button class="btn btn-info btn-lg flex-fill" @onclick="OnAddToCart"
-                                disabled="@(_hasStockData && _currentStockQty <= 0)">
-                            <i class="fa fa-shopping-cart me-2"></i>Sepete Ekle
-                        </button>
-                    </div>
-                }
-   
+                <p>Bu alana ileriki tarihlerde ürün analiz raporları gelmesi için planlama yapılıyor.</p>
 
-                @* ─── GÜVEN ROZETLERİ ─── *@
-                <div class="row g-2 text-center mb-3">
-                    <div class="col-4">
-                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-2 h-100">
-                            <i class="fa fa-truck fa-lg text-info d-block mb-1"></i>
-                            <span class="text-light" style="font-size:.72rem;">Hızlı Kargo</span>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-2 h-100">
-                            <i class="fa fa-shield fa-lg text-info d-block mb-1"></i>
-                            <span class="text-light" style="font-size:.72rem;">Güvenli Ödeme</span>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-2 h-100">
-                            <i class="fa fa-undo fa-lg text-info d-block mb-1"></i>
-                            <span class="text-light" style="font-size:.72rem;">Kolay İade</span>
-                        </div>
-                    </div>
+            </div>
+        </div>
+
+
+        @* ─── 2. GÜVEN ROZETLERİ ─── *@
+        <div class="row g-2 text-center mt-5">
+
+            <div class="col-4">
+                <div class="bg-light rounded-3 p-3 h-100 border border-light shadow-sm d-flex flex-column align-items-center justify-content-center">
+                    <i class="fa fa-truck fa-2x text-primary mb-2"></i>
+                    <span class="text-dark small fw-medium">Hızlı Kargo</span>
                 </div>
-
-                @* İkincil aksiyonlar *@
-                <div class="d-flex flex-wrap gap-2 mb-3">
-                    <button class="btn btn-danger btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleFavorite">
-                        <i class="fa @(_isFavorite ? "fa-heart" : "fa-heart-o") me-2"></i>Favori
-                    </button>
-
-                    <button class="btn btn-warning btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleCompare">
-                        <i class="fa fa-exchange me-2"></i>Karşılaştır
-                    </button>
-
-                    <button class="btn btn-info btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="OpenShareModal">
-                        <i class="fa fa-share-alt me-2"></i>Paylaş
-                    </button>
-
-                    <button class="btn btn-primary btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleRecommendation">
-                        <i class="fa fa-thumbs-o-up me-2"></i>Tavsiye Et
-                    </button>
-
-                    <button class="btn btn-light btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleAskTheSeller">
-                        <i class="fa fa-comments-o me-2"></i>Satıcıya Sor
-                    </button>
-
-                    <button class="btn btn-secondary btn-sm flex-fill d-flex align-items-center justify-content-center" @onclick="ToggleIsOnSale">
-                        <i class="fa fa-bell-o me-2"></i>Fiyat Düşünce Haber Ver
-                    </button>
-                </div>   
-                
-                @* ─── AKSİYON BUTONLARI ─── *@
-                @if (string.Equals(p.ProductType, "External", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(p.ExternalUrl))
-                {
-                }
-                else
-                {
-                    <div class="d-grid gap-2 d-md-flex mb-3">
-                        <button class="btn btn-success btn-lg flex-fill" @onclick="OnQuickBuy"
-                                disabled="@(_hasStockData && _currentStockQty <= 0)">
-                            <i class="fa fa-bolt me-2"></i>Hemen Al
-                        </button>
-                    </div>
-                }
-
+            </div>
+            <div class="col-4">
+                <div class="bg-light rounded-3 p-3 h-100 border border-light shadow-sm d-flex flex-column align-items-center justify-content-center">
+                    <i class="fa fa-shield fa-2x text-primary mb-2"></i>
+                    <span class="text-dark small fw-medium">Güvenli Ödeme</span>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="bg-light rounded-3 p-3 h-100 border border-light shadow-sm d-flex flex-column align-items-center justify-content-center">
+                    <i class="fa fa-undo fa-2x text-primary mb-2"></i>
+                    <span class="text-dark small fw-medium">Kolay İade</span>
+                </div>
             </div>
         </div>
 
@@ -862,6 +869,25 @@ else
 
             // Görüntülenme logla (denetim)
             await Logger.TakeIt(use?.Id, PAGE_TITLE, "ProductView", "details", _product.Name);
+
+            // ─── Ziyaret geçmişi kaydet ───
+            try
+            {
+                var seoRecordId = await db.Set<ProductSeo>().AsNoTracking()
+                    .Where(s => s.ProductId == productId)
+                    .OrderByDescending(s => s.CreatedAt)
+                    .Select(s => (Guid?)s.Id)
+                    .FirstOrDefaultAsync(token);
+
+                db.Set<ProductHistory>().Add(new ProductHistory
+                {
+                    UserId = use?.Id,
+                    ProductId = productId,
+                    ProductSlug = seoRecordId
+                });
+                await db.SaveChangesAsync(token);
+            }
+            catch { /* Ziyaret kaydı başarısız olursa sayfa akışını bozma */ }
 
             // 2) Slug (SEO)
             _slug = await db.Set<ProductSeo>().AsNoTracking()
@@ -1431,3 +1457,4 @@ else
         public string Value { get; set; } = "—";
     }
 }
+ 

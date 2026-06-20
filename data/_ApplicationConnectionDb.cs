@@ -1,5 +1,6 @@
 ﻿using data._Product;
 using data._Product.BulkWordPressProductImport;
+using data._Product.ProductHistory;
 using data._Shared;
 using Data;
 using Microsoft.EntityFrameworkCore;
@@ -117,6 +118,7 @@ namespace data
         public DbSet<AttributeTemplateItems> AttributeTemplateItems { get; set; } = default!;
         public DbSet<AttributeTemplateCategories> AttributeTemplateCategories { get; set; } = default!;
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
+        public DbSet<ProductHistory> ProductHistory { get; set; } = default!;
 
         // Products BulkWordPressProductImport
 

@@ -19,5 +19,9 @@ namespace web.Areas.Admin.Controllers
         {
             return View();
         } 
+        public IActionResult ProductHistoryList()
+        {
+            return View();
+        } 
     }
 }

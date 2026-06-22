@@ -226,6 +226,33 @@
         }
         <div class="page-wrapper">
             <div class="page-content">
+
+
+
+
+                <div class="accordion" id="accordionWarning">
+                    <div class="accordion-item border-danger">
+                        <h2 class="accordion-header" id="headingWarning">
+                            <button class="accordion-button collapsed text-warning fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWarning" aria-expanded="false" aria-controls="collapseWarning">
+                                <i class="fa fa-exclamation-triangle me-2"></i> Önemli Bilgilendirme: Site Yapım Aşamasında
+                            </button>
+                        </h2>
+                        <div id="collapseWarning" class="accordion-collapse collapse" aria-labelledby="headingWarning" data-bs-parent="#accordionWarning">
+                            <div class="accordion-body bg-light">
+                                <div class="alert alert-white d-flex align-items-center mb-0" role="alert">
+                                    <i class="fa fa-shopping-cart fa-2x me-3"></i>
+                                    <div>
+                                        <strong>Şu an için alışveriş yapılamamaktadır.</strong><br>
+                                        Web sitemiz henüz yapım aşamasında olduğu için ticari faaliyetlere ve online ödeme işlemlerine kapalıdır. Altyapı çalışmalarımız tamamlandığında tüm özellikler aktif olacaktır. Anlayışınız için teşekkür ederiz.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
                 @RenderBody()
                 @if (use != null)
                 {

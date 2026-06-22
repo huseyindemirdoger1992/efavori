@@ -8,7 +8,9 @@
 @using Microsoft.AspNetCore.Http
 @inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 @{
-    // --- 1. DEĞİŞKEN BAŞLATMA ---
+    // ═══════════════════════════════════════════════════════════════
+    // 1. DEĞİŞKEN BAŞLATMA
+    // ═══════════════════════════════════════════════════════════════
     string BackgroundImage = "/assets/images/bg-themes/1.png";
     string lang = "en";
     string TotalLang = "en_EN";
@@ -17,7 +19,9 @@
 
     Users? use = null;
 
-    // --- 2. DİL VE VERİ ÇEKME MANTIĞI ---
+    // ═══════════════════════════════════════════════════════════════
+    // 2. DİL VE VERİ ÇEKME MANTIĞI
+    // ═══════════════════════════════════════════════════════════════
     try
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -25,8 +29,7 @@
         bool isGuid = Guid.TryParse(userIdStr, out userId);
         if (isGuid)
         {
-            // --- DURUM A: OTURUM AÇIK (GUID İLE SORGULAMA) ---
-            using (var db = new _ApplicationConnectionDb()) 
+            using (var db = new _ApplicationConnectionDb())
             {
                 use = await db.Users
                     .AsNoTracking()
@@ -42,7 +45,6 @@
                         lang = use.Language.ToLower();
                     }
 
-                    // Başarı Logu
                     try
                     {
                         using (var dbLog = new _ApplicationConnectionDb())
@@ -69,7 +71,6 @@
         }
         else
         {
-            // --- DURUM B: OTURUM KAPALI (DİL HATIRLAMA) ---
             var routeLang = ViewContext.RouteData.Values["culture"]?.ToString()?.ToLower();
             if (!string.IsNullOrEmpty(routeLang) && supportedCultures.Contains(routeLang))
             {
@@ -116,7 +117,6 @@
                     Id = Guid.NewGuid(),
                     PageNameSpaceTitle = "Layout Data Error",
                     Action = "FetchUserData_Error",
-                    // UserId = isGuid ? userId : Guid.Empty,
                     Exception = ex.Message,
                     StackTrace = ex.StackTrace,
                     Date = DateTime.UtcNow,
@@ -131,119 +131,210 @@
         }
         catch { }
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 3. SEO DEĞİŞKENLERİ (ViewData'dan dinamik besleme)
+    // ═══════════════════════════════════════════════════════════════
+
+    // --- Canonical URL: Query string olmadan, temiz path ---
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+    var canonicalPath = Context.Request.Path.ToString().TrimEnd('/');
+    if (string.IsNullOrEmpty(canonicalPath)) canonicalPath = "";
+    var canonicalUrl = ViewData["CanonicalUrl"] as string ?? $"{baseUrl}{canonicalPath}";
+
+    // --- Sayfa meta bilgileri ---
+    var pageTitle = ViewData["Title"]?.ToString() ?? "efavori.com";
+    var pageDescription = ViewData["Description"]?.ToString() ?? "efavori.com — Binlerce mağaza, milyonlarca ürün. Güvenli alışverişin adresi.";
+    var pageKeywords = ViewData["Keywords"]?.ToString() ?? "efavori, online alışveriş, pazar yeri, marketplace";
+
+    // --- Open Graph ---
+    var ogType = ViewData["OgType"]?.ToString() ?? "website";
+    var ogImage = ViewData["OgImage"]?.ToString() ?? "https://efavori.com/_files/main/logo/og-default.png";
+    var ogImageWidth = ViewData["OgImageWidth"]?.ToString() ?? "1200";
+    var ogImageHeight = ViewData["OgImageHeight"]?.ToString() ?? "630";
+
+    // --- LCP Preload (ürün sayfaları ana görseli buradan geçirir) ---
+    var preloadImage = ViewData["PreloadImage"] as string;
+
+    // --- JSON-LD (bileşenler sunucu tarafında render edip bu alana basar) ---
+    var jsonLdScript = ViewData["JsonLd"] as string;
+
+    // --- Robots override (noindex sayfalar için) ---
+    var robotsContent = ViewData["Robots"]?.ToString() ?? "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+
+    // --- hreflang için lang-locale eşlemesi ---
+    var langLocaleMap = new Dictionary<string, string>
+    {
+        { "tr", "tr-TR" }, { "en", "en-US" }, { "az", "az-AZ" },
+        { "de", "de-DE" }, { "es", "es-ES" }, { "fr", "fr-FR" },
+        { "hi", "hi-IN" }, { "pt", "pt-BR" }, { "ru", "ru-RU" },
+        { "zh", "zh-CN" }
+    };
 }
 <!doctype html>
-<html lang="@lang">
+<html lang="@langLocaleMap.GetValueOrDefault(lang, "en-US")" dir="@(lang == "hi" ? "ltr" : "ltr")">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    @* --- 1. Basic SEO and Authority --- *@
-    <title>@ViewData["Title"] | efavori.com</title>
-    <meta name="description" content="@(ViewData["Description"] ?? "Manage your favorite content securely with efavori.com.")">
-    <meta name="keywords" content="@(ViewData["Keywords"] ?? "efavori, digital management, content planning")">
+
+    @* ═══════════════════════════════════════════════════════════════
+       SEO: TEMEL META ETİKETLERİ
+       ═══════════════════════════════════════════════════════════════ *@
+    <title>@pageTitle | efavori.com</title>
+    <meta name="description" content="@pageDescription">
+    <meta name="keywords" content="@pageKeywords">
     <meta name="author" content="efavori.com">
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <link rel="canonical" href="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)" />
-    @* Multi-language support (lang variable defined above) *@
-    <link rel="alternate" hreflang="@lang" href="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)" />
-    <link rel="alternate" hreflang="x-default" href="@(Context.Request.Scheme + "://" + Context.Request.Host)/" />
-    @* --- 2. Social Media (Open Graph & Twitter) --- *@
+    <meta name="robots" content="@robotsContent">
+    <meta name="publisher" content="efavori.com">
+
+    @* ═══════════════════════════════════════════════════════════════
+       SEO: CANONICAL URL — Duplicate Content Engelleyici
+       Query string'ler (filtreler, sayfalama) temizlenerek
+       yalnızca temiz path verilir.
+       ═══════════════════════════════════════════════════════════════ *@
+    <link rel="canonical" href="@canonicalUrl" />
+
+    @* ═══════════════════════════════════════════════════════════════
+       SEO: HREFLANG — 10 Dil + x-default
+       Her sayfanın tüm dil varyasyonları arama motorlarına bildirilir.
+       URL pattern: /{lang}/... şeklinde varsayılmıştır.
+       ═══════════════════════════════════════════════════════════════ *@
+    @{
+        // Mevcut path'ten dil segmentini çıkar, temiz path elde et
+        var pathSegments = canonicalPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string langFreePath;
+        if (pathSegments.Length > 0 && supportedCultures.Contains(pathSegments[0].ToLower()))
+        {
+            langFreePath = "/" + string.Join("/", pathSegments.Skip(1));
+        }
+        else
+        {
+            langFreePath = canonicalPath;
+        }
+        if (string.IsNullOrEmpty(langFreePath)) langFreePath = "";
+    }
+    @foreach (var culture in supportedCultures)
+    {
+        var hreflangLocale = langLocaleMap.GetValueOrDefault(culture, $"{culture}-{culture.ToUpper()}");
+        var hreflangUrl = $"{baseUrl}/{culture}{langFreePath}";
+        <link rel="alternate" hreflang="@hreflangLocale" href="@hreflangUrl" />
+    }
+    <link rel="alternate" hreflang="x-default" href="@baseUrl/en@(langFreePath)" />
+
+    @* ═══════════════════════════════════════════════════════════════
+       SEO: OPEN GRAPH (Facebook, LinkedIn, WhatsApp vs.)
+       ═══════════════════════════════════════════════════════════════ *@
     <meta property="og:locale" content="@TotalLang">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="@ViewData["Title"] | efavori.com">
-    <meta property="og:description" content="@(ViewData["Description"] ?? "Manage your favorite content securely with efavori.com.")">
-    <meta property="og:url" content="@(Context.Request.Scheme + "://" + Context.Request.Host + Context.Request.Path)">
+    @foreach (var culture in supportedCultures.Where(c => c != lang))
+    {
+        var altLocale = $"{culture}_{culture.ToUpper()}";
+        <meta property="og:locale:alternate" content="@altLocale">
+    }
+    <meta property="og:type" content="@ogType">
+    <meta property="og:title" content="@pageTitle | efavori.com">
+    <meta property="og:description" content="@pageDescription">
+    <meta property="og:url" content="@canonicalUrl">
     <meta property="og:site_name" content="efavori.com">
+    <meta property="og:image" content="@ogImage">
+    <meta property="og:image:width" content="@ogImageWidth">
+    <meta property="og:image:height" content="@ogImageHeight">
+    <meta property="og:image:alt" content="@pageTitle">
+
+    @* ═══════════════════════════════════════════════════════════════
+       SEO: TWITTER CARD
+       ═══════════════════════════════════════════════════════════════ *@
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="@ViewData["Title"]">
-    <meta name="twitter:description" content="@(ViewData["Description"] ?? "efavori.com content management.")">
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <meta name="twitter:site" content="@@efavori">
+    <meta name="twitter:title" content="@pageTitle | efavori.com">
+    <meta name="twitter:description" content="@pageDescription">
+    <meta name="twitter:image" content="@ogImage">
+    <meta name="twitter:image:alt" content="@pageTitle">
+
+    @* ═══════════════════════════════════════════════════════════════
+       PERFORMANCE: DNS PREFETCH + PRECONNECT
+       ═══════════════════════════════════════════════════════════════ *@
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://www.google-analytics.com">
-    <link rel="icon" href="https://efavori.com/_files/main/logo/logo.png" type="image/png" sizes="32x32" />
-    <link rel="apple-touch-icon" href="https://efavori.com/_files/main/logo/logo.png">
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+
+    @* ═══════════════════════════════════════════════════════════════
+       PERFORMANCE: LCP PRELOAD
+       Ürün sayfalarında ana görselin gecikmesiz yüklenmesi için
+       ViewData["PreloadImage"] ile <head>'e preload enjekte edilir.
+       ═══════════════════════════════════════════════════════════════ *@
+    @if (!string.IsNullOrEmpty(preloadImage))
+    {
+        <link rel="preload" as="image" href="@preloadImage" fetchpriority="high" />
+    }
+
+    @* ═══════════════════════════════════════════════════════════════
+       FAVICON & PWA
+       ═══════════════════════════════════════════════════════════════ *@
+    <link rel="icon" href="https://efavori.com/_files/main/logo/logo.png" type="image/png" sizes="2000x2000" />
+    <link rel="icon" href="https://efavori.com/_files/main/logo/logo.png" type="image/png" sizes="2000x2000" />
+    <link rel="apple-touch-icon" href="https://efavori.com/_files/main/logo/logo.png" sizes="2000x2000">
     <meta name="theme-color" content="#0000FF">
+    <meta name="application-name" content="efavori">
+
+    @* ═══════════════════════════════════════════════════════════════
+       JSON-LD: YAPISAL VERİ (SSR)
+       Bileşenler (ProductViewer vb.) ViewData["JsonLd"] aracılığıyla
+       sunucu tarafında render edilmiş JSON-LD bloğunu bu noktaya basar.
+       Bu sayede bot'lar JS çalıştırmadan yapısal veriyi okur.
+       ═══════════════════════════════════════════════════════════════ *@
+    @if (!string.IsNullOrEmpty(jsonLdScript))
+    {
+        @Html.Raw(jsonLdScript)
+    }
+
+    @* ═══════════════════════════════════════════════════════════════
+       CSS
+       ═══════════════════════════════════════════════════════════════ *@
+
     @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
+    <!-- Google Search Console XML (gtag.js) -->
+        <meta name="google-site-verification" content="5NNGMkgIA5vY339WHPLmpN2efO1qVgj23Bf-pJjisyg" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-3S3KS4DHSF"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-3S3KS4DHSF');
+    </script>
+
 </head>
 <body class="bg-theme @(use != null && !string.IsNullOrEmpty(use.BackgroundImagePath) ? use.BackgroundImagePath : "bg-theme1")">
     <div id="page-transition-overlay"></div>
     <div class="wrapper">
-        @switch (lang)
-        {
-            case "tr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "az":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "de":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "es":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "fr":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "hi":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "pt":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "ru":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            case "zh":
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-            default:
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use != null ? use : null }))
-                ;
-                break;
-        }
+        @* ═══════════════════════════════════════════════════════════
+           SIDEBAR + HEADER — Tüm diller aynı bileşeni kullanıyor,
+           switch yerine tek çağrı ile sadeleştirildi.
+           ═══════════════════════════════════════════════════════════ *@
+        @(await Html.RenderComponentAsync<razor._Shared.tr.Sidebar.SideBarMenu>(RenderMode.Static, new { _use = use }))
+        @(await Html.RenderComponentAsync<razor._Shared.tr.Header.HeaderMenu>(RenderMode.Static, new { _use = use }))
+
         <div class="page-wrapper">
-            <div class="page-content">
-
-
-
+            <div class="page-content" role="main">
 
                 <div class="accordion" id="accordionWarning">
                     <div class="accordion-item border-danger">
                         <h2 class="accordion-header" id="headingWarning">
                             <button class="accordion-button collapsed text-warning fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWarning" aria-expanded="false" aria-controls="collapseWarning">
-                                <i class="fa fa-exclamation-triangle me-2"></i> Önemli Bilgilendirme: Site Yapım Aşamasında
+                                <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i> Önemli: Site Yapım Aşamasında
                             </button>
                         </h2>
                         <div id="collapseWarning" class="accordion-collapse collapse" aria-labelledby="headingWarning" data-bs-parent="#accordionWarning">
                             <div class="accordion-body bg-light">
                                 <div class="alert alert-white d-flex align-items-center mb-0" role="alert">
-                                    <i class="fa fa-shopping-cart fa-2x me-3"></i>
+                                    <i class="fa fa-shopping-cart fa-2x me-3" aria-hidden="true"></i>
                                     <div>
                                         <strong>Şu an için alışveriş yapılamamaktadır.</strong><br>
-                                        Web sitemiz henüz yapım aşamasında olduğu için ticari faaliyetlere ve online ödeme işlemlerine kapalıdır. Altyapı çalışmalarımız tamamlandığında tüm özellikler aktif olacaktır. Anlayışınız için teşekkür ederiz.
+                                        Web sitemiz henüz yapım aşamasında olduğu için ticari faaliyetlere ve online ödeme işlemlerine kapalıdır. Altyapı çalışmalarımız tamamlandığında tüm özellikler aktif olacaktır. Anlayışınız için teşekkür ederiz. Hedef <b>19 Ağustos 2026</b> tarihinde tüm özelliklerin aktif olmasıdır. Bu tarihe kadar siteyi test edebilir ve geri bildirimde bulunabilirsiniz.
                                     </div>
                                 </div>
                             </div>
@@ -251,25 +342,30 @@
                     </div>
                 </div>
 
-
-
                 @RenderBody()
                 @if (use != null)
                 {
                     if (use?.AccountActivationMailStatu != true)
                     {
-                        @(await Html.RenderComponentAsync<razor._Shared.tr.Header.AccountActivationMailStatu>(RenderMode.Static, new { use = use != null ? use : null }))
+                        @(await Html.RenderComponentAsync<razor._Shared.tr.Header.AccountActivationMailStatu>(RenderMode.Static, new { use = use }))
                     }
-                }                
+                }
             </div>
         </div>
         <div class="overlay toggle-icon"></div>
-        <a href="javaScript:;" class="back-to-top"><i class='bx bxs-up-arrow-alt'></i></a>
+        <a href="javaScript:;" class="back-to-top" aria-label="Sayfanın başına dön"><i class='bx bxs-up-arrow-alt' aria-hidden="true"></i></a>
+
+        @* ═══════════════════════════════════════════════════════════
+           FOOTER — Semantik <footer> etiketi zaten mevcut
+           ═══════════════════════════════════════════════════════════ *@
         <footer class="page-footer">
-            <p class="mb-0">(@lang): efavori.com © @DateTime.Now.Year. @currentFooterText</p>
+            <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText</p>
         </footer>
     </div>
 
+    @* ═══════════════════════════════════════════════════════════════
+       MODALS — Tüm diller aynı bileşeni kullanıyor, sadeleştirildi
+       ═══════════════════════════════════════════════════════════════ *@
     @switch (lang)
     {
         case "tr":

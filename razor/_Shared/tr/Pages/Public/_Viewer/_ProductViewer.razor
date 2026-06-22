@@ -254,8 +254,7 @@ else
 
                 @* Beğeni / Görüntülenme / SKU *@
                 <div class="d-flex align-items-center flex-wrap gap-3 text- light small mb-3 mt-3">
-                    <span><i class="fa fa-heart text-danger me-1"></i>@(p.Interaction?.LikeCount ?? 0) beğeni</span>
-                    <span><i class="fa fa-eye me-1"></i>@(p.Interaction?.ViewCount ?? 0) görüntülenme</span>
+                    <span><i class="fa fa-eye me-1"></i>@(p.InteractionCounts?.ViewCount ?? 0) görüntülenme</span>
                     @if (!string.IsNullOrEmpty(_selectedVariant?.Sku))
                     {
                         <span><i class="fa fa-tag me-1"></i>SKU: @_selectedVariant.Sku</span>
@@ -461,10 +460,6 @@ else
                                     <div>
                                         <div class="text-info fw-bold small">@(st.Interaction.ViewCount ?? 0)</div>
                                         <div class="text-white-50" style="font-size:.65rem;">Görüntülenme</div>
-                                    </div>
-                                    <div>
-                                        <div class="text-info fw-bold small">@(st.Interaction.LikeCount ?? 0)</div>
-                                        <div class="text-white-50" style="font-size:.65rem;">Beğeni</div>
                                     </div>
                                     <div>
                                         <div class="text-info fw-bold small">@_storeFollowerCount</div>
@@ -713,6 +708,16 @@ else
                         </button>
                     </li>
                 }
+                <li class="nav-item">
+                    <button class="nav-link @(_activeTab == "reviews" ? "active bg-dark text-info border-secondary" : "text-light")"
+                            @onclick="ActivateReviewsTab">
+                        <i class="fa fa-comments me-1"></i>Yorumlar
+                        @if (_reviewTotalCount > 0)
+                        {
+                            <span class="badge bg-info bg-opacity-25 text-info ms-1">@_reviewTotalCount</span>
+                        }
+                    </button>
+                </li>
             </ul>
 
             <div class="bg-dark bg-opacity-25 rounded-bottom-3 border border-top-0 border-secondary border-opacity-25 p-4">
@@ -793,6 +798,94 @@ else
                     <button class="btn btn-outline-info btn-sm" @onclick="OpenStoreModal">
                         <i class="fa fa-info-circle me-1"></i>Mağaza Detaylarını Gör
                     </button>
+                }
+
+                @* ═══════════════════════════════════════════════════════
+                   YORUMLAR SEKMESİ
+                   ═══════════════════════════════════════════════════════ *@
+                @if (_activeTab == "reviews")
+                {
+                    @* ─── YORUM YAZMA FORMU ─── *@
+                    @if (use != null)
+                    {
+                        <div class="mb-4">
+                            <h6 class="text-light fw-semibold mb-2">
+                                <i class="fa fa-pencil me-1 text-info"></i>Yorum Yaz
+                            </h6>
+                            <div class="d-flex gap-2">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
+                                         style="width:40px; height:40px;">
+                                        <i class="fa fa-user text-info"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <textarea class="form-control bg-dark bg-opacity-50 text-light border-secondary"
+                                              rows="3"
+                                              placeholder="Bu ürün hakkında görüşlerinizi paylaşın…"
+                                              @bind="_newReviewText"
+                                              @bind:event="oninput"
+                                              maxlength="2000"></textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <span class="text-white-50 small">@(_newReviewText?.Length ?? 0) / 2000</span>
+                                        <button class="btn btn-info btn-sm"
+                                                @onclick="SubmitNewReview"
+                                                disabled="@(string.IsNullOrWhiteSpace(_newReviewText) || _reviewSubmitting)">
+                                            @if (_reviewSubmitting)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            <i class="fa fa-paper-plane me-1"></i>Gönder
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="border-secondary" />
+                    }
+                    else
+                    {
+                        <div class="alert alert-secondary bg-dark bg-opacity-50 border-secondary text-light mb-4">
+                            <i class="fa fa-info-circle me-2 text-info"></i>
+                            Yorum yapabilmek için lütfen <strong>giriş yapın</strong>.
+                        </div>
+                    }
+
+                    @* ─── YORUM LİSTESİ ─── *@
+                    @if (_reviewsLoading)
+                    {
+                        <div class="text-center py-4">
+                            <span class="spinner-border spinner-border-sm text-info me-2"></span>
+                            <span class="text-light small">Yorumlar yükleniyor…</span>
+                        </div>
+                    }
+                    else if (!_reviewList.Any())
+                    {
+                        <div class="text-center py-4">
+                            <i class="fa fa-comment-o fa-2x text-white-50 d-block mb-2"></i>
+                            <span class="text-white-50">Henüz yorum yapılmamış. İlk yorumu siz yazın!</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Ana yorumlar (ParentReviewId == null) *@
+                        @foreach (var review in _reviewList.Where(r => r.ParentReviewId == null).OrderByDescending(r => r.CreatedAt))
+                        {
+                            @RenderReviewItem(review, 0)
+                        }
+
+                        @* Daha fazla yükle *@
+                        @if (_reviewHasMore)
+                        {
+                            <div class="text-center mt-3">
+                                <button class="btn btn-outline-secondary btn-sm"
+                                        @onclick="LoadMoreReviewsAsync"
+                                        disabled="@_reviewsLoading">
+                                    <i class="fa fa-refresh me-1"></i>Daha Fazla Yorum Yükle
+                                </button>
+                            </div>
+                        }
+                    }
                 }
             </div>
         </div>
@@ -1015,6 +1108,21 @@ else
     private bool _isFavorite;
     private bool _isCompared;
 
+    // ─── Yorumlar (ProductReview) ──────────────────────────────────
+    private List<ReviewDisplayDto> _reviewList = new();
+    private int _reviewTotalCount;
+    private bool _reviewsLoading;
+    private bool _reviewsLoaded;
+    private bool _reviewHasMore;
+    private int _reviewPage;
+    private const int REVIEW_PAGE_SIZE = 20;
+    private string? _newReviewText;
+    private bool _reviewSubmitting;
+    private Guid? _replyingToReviewId;
+    private string? _replyText;
+    private bool _replySubmitting;
+    private Guid? _deletingReviewId;
+
     // ═══════════════════════════════════════════════════════════════
     // YAŞAM DÖNGÜSÜ
     // ═══════════════════════════════════════════════════════════════
@@ -1150,7 +1258,7 @@ else
     private async Task HandleDataChanged(string entityName)
     {
         if (_disposed || _product == null) return;
-        if (entityName != "Products" && entityName != "ProductPrices" && entityName != "ProductStocks" && entityName != "Store" && entityName != "StoreShip")
+        if (entityName != "Products" && entityName != "ProductPrices" && entityName != "ProductStocks" && entityName != "Store" && entityName != "StoreShip" && entityName != "ProductReview")
             return;
         await InvokeAsync(async () => { await LoadAllAsync(); StateHasChanged(); });
     }
@@ -1158,6 +1266,7 @@ else
     // ═══════════════════════════════════════════════════════════════
     // ANA YÜKLEME
     // ═══════════════════════════════════════════════════════════════
+
 
     private async Task LoadAllAsync()
     {
@@ -1193,12 +1302,23 @@ else
                     .Select(s => (Guid?)s.Id)
                     .FirstOrDefaultAsync(token);
 
+                // 1. Geçmiş kaydını ekliyoruz
                 db.Set<ProductHistory>().Add(new ProductHistory
                 {
                     UserId = use?.Id,
                     ProductId = productId,
                     ProductSlug = seoRecordId
                 });
+
+                // 2. Products tablosundaki ilgili kaydın ViewCount değerini doğrudan UPDATE ediyoruz
+                await db.Set<Products>()
+                    .Where(p => p.Id == productId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(
+                        p => p.InteractionCounts.ViewCount,
+                        p => (p.InteractionCounts.ViewCount ?? 0) + 1
+                    ), token);
+
+                // (ExecuteUpdate zaten kendi işlemini anında veritabanına gönderir)
                 await db.SaveChangesAsync(token);
             }
             catch { /* Ziyaret kaydı başarısız olursa sayfa akışını bozma */ }
@@ -1252,6 +1372,11 @@ else
 
             // 10) Seçili varyanta göre fiyat & stok
             await RefreshSelectedVariantDataAsync(db, token);
+
+            // 11) Yorum sayısı (sekme badge için)
+            _reviewTotalCount = await db.Set<ProductReview>().AsNoTracking()
+                .CountAsync(r => r.ProductId == productId &&
+                                 (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -1382,7 +1507,7 @@ else
         {
             var coverUrl = await db.Set<Data.Media>().AsNoTracking()
                 .Where(m => m.Id == _product.CoverMediaId.Value && m.IsDeletedStatu != true)
-                .Select(m => m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? m.FileUrl)
+                .Select(m => m.FileUrl ?? m.FileUrl_Ratio_1_2 ?? m.FileUrl)
                 .FirstOrDefaultAsync(token);
             if (!string.IsNullOrEmpty(coverUrl)) images.Add(coverUrl);
         }
@@ -1401,7 +1526,7 @@ else
         {
             var galleryMedia = await db.Set<Data.Media>().AsNoTracking()
                 .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? m.FileUrl ?? "", token);
+                .ToDictionaryAsync(m => m.Id, m => m.FileUrl ?? m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? "", token);
 
             foreach (var gid in galleryItems.Where(id => id.HasValue).Select(id => id!.Value))
                 if (galleryMedia.TryGetValue(gid, out var url) && !string.IsNullOrEmpty(url) && !images.Contains(url))
@@ -1420,7 +1545,7 @@ else
         {
             var groupMedia = await db.Set<Data.Media>().AsNoTracking()
                 .Where(m => groupMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? m.FileUrl ?? "", token);
+                .ToDictionaryAsync(m => m.Id, m => m.FileUrl ?? m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? "", token);
 
             foreach (var g in variantGroups)
                 if (g.CoverMediaId.HasValue && groupMedia.TryGetValue(g.CoverMediaId.Value, out var url))
@@ -1635,6 +1760,13 @@ else
         return grp?.Values.FirstOrDefault(v => v.ValueId == valueId)?.ValueName ?? "";
     }
 
+    private string GetViewCount(Guid attributeId)
+    {
+        if (!_selectedAttributeValues.TryGetValue(attributeId, out var valueId)) return "";
+        var grp = _variantAttributes.FirstOrDefault(a => a.AttributeId == attributeId);
+        return grp?.Values.FirstOrDefault(v => v.ValueId == valueId)?.ValueName ?? "";
+    }
+
     private bool IsCombinationAvailable(Guid attributeId, Guid valueId)
     {
         var hypothetical = new Dictionary<Guid, Guid>(_selectedAttributeValues) { [attributeId] = valueId };
@@ -1820,6 +1952,503 @@ else
     }
 
     // ═══════════════════════════════════════════════════════════════
+    // YORUMLAR (ProductReview)
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task ActivateReviewsTab()
+    {
+        _activeTab = "reviews";
+        if (!_reviewsLoaded)
+            await LoadReviewsAsync();
+    }
+
+    private async Task LoadReviewsAsync()
+    {
+        if (_product == null) return;
+        _reviewsLoading = true;
+        _reviewPage = 0;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            var productId = _product.Id;
+
+            // Toplam yorum sayısı
+            _reviewTotalCount = await db.Set<ProductReview>().AsNoTracking()
+                .CountAsync(r => r.ProductId == productId &&
+                                 (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
+
+            // Ana yorumlar (sayfalı)
+            var parentReviews = await db.Set<ProductReview>().AsNoTracking()
+                .Where(r => r.ProductId == productId &&
+                            r.ParentReviewId == null &&
+                            (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
+                .OrderByDescending(r => r.CreatedAt)
+                .Skip(0)
+                .Take(REVIEW_PAGE_SIZE)
+                .ToListAsync(token);
+
+            var parentIds = parentReviews.Select(r => r.Id).ToList();
+
+            // Alt yorumlar (parent'lara ait tümü)
+            var childReviews = parentIds.Any()
+                ? await db.Set<ProductReview>().AsNoTracking()
+                    .Where(r => r.ParentReviewId != null &&
+                                parentIds.Contains(r.ParentReviewId.Value) &&
+                                (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
+                    .OrderBy(r => r.CreatedAt)
+                    .ToListAsync(token)
+                : new List<ProductReview>();
+
+            // Kullanıcı adlarını çöz
+            var userIds = parentReviews.Select(r => r.UserId)
+                .Concat(childReviews.Select(r => r.UserId))
+                .Distinct().ToList();
+
+            var userNames = userIds.Any()
+                ? await db.Set<Users>().AsNoTracking()
+                    .Where(u => userIds.Contains(u.Id))
+                    .Select(u => new { u.Id, u.FirstName, u.LastName })
+                    .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), token)
+                : new Dictionary<Guid, string>();
+
+            string ResolveName(Guid userId) =>
+                userNames.TryGetValue(userId, out var name) && !string.IsNullOrEmpty(name)
+                    ? name
+                    : "Kullanıcı";
+
+            // DTO'ya çevir
+            _reviewList = parentReviews.Select(r => new ReviewDisplayDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                UserDisplayName = ResolveName(r.UserId),
+                CommentText = r.CommentText,
+                ParentReviewId = null,
+                CreatedAt = r.CreatedAt,
+                Children = childReviews
+                    .Where(c => c.ParentReviewId == r.Id)
+                    .Select(c => new ReviewDisplayDto
+                    {
+                        Id = c.Id,
+                        UserId = c.UserId,
+                        UserDisplayName = ResolveName(c.UserId),
+                        CommentText = c.CommentText,
+                        ParentReviewId = c.ParentReviewId,
+                        CreatedAt = c.CreatedAt,
+                        Children = new()
+                    }).ToList()
+            }).ToList();
+
+            var totalParents = await db.Set<ProductReview>().AsNoTracking()
+                .CountAsync(r => r.ProductId == productId &&
+                                 r.ParentReviewId == null &&
+                                 (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
+
+            _reviewHasMore = parentReviews.Count >= REVIEW_PAGE_SIZE && (_reviewPage + 1) * REVIEW_PAGE_SIZE < totalParents;
+            _reviewsLoaded = true;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await LogError("LoadReviews", ex);
+            await Notify("danger", "Hata", "Yorumlar yüklenirken sorun oluştu.");
+        }
+        finally
+        {
+            _reviewsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMoreReviewsAsync()
+    {
+        if (_product == null || _reviewsLoading) return;
+        _reviewPage++;
+        _reviewsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            var productId = _product.Id;
+
+            var parentReviews = await db.Set<ProductReview>().AsNoTracking()
+                .Where(r => r.ProductId == productId &&
+                            r.ParentReviewId == null &&
+                            (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
+                .OrderByDescending(r => r.CreatedAt)
+                .Skip(_reviewPage * REVIEW_PAGE_SIZE)
+                .Take(REVIEW_PAGE_SIZE)
+                .ToListAsync(token);
+
+            var parentIds = parentReviews.Select(r => r.Id).ToList();
+
+            var childReviews = parentIds.Any()
+                ? await db.Set<ProductReview>().AsNoTracking()
+                    .Where(r => r.ParentReviewId != null &&
+                                parentIds.Contains(r.ParentReviewId.Value) &&
+                                (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
+                    .OrderBy(r => r.CreatedAt)
+                    .ToListAsync(token)
+                : new List<ProductReview>();
+
+            var userIds = parentReviews.Select(r => r.UserId)
+                .Concat(childReviews.Select(r => r.UserId))
+                .Distinct().ToList();
+
+            var userNames = userIds.Any()
+                ? await db.Set<Users>().AsNoTracking()
+                    .Where(u => userIds.Contains(u.Id))
+                    .Select(u => new { u.Id, u.FirstName, u.LastName })
+                    .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), token)
+                : new Dictionary<Guid, string>();
+
+            string ResolveName(Guid userId) =>
+                userNames.TryGetValue(userId, out var name) && !string.IsNullOrEmpty(name)
+                    ? name
+                    : "Kullanıcı";
+
+            var newItems = parentReviews.Select(r => new ReviewDisplayDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                UserDisplayName = ResolveName(r.UserId),
+                CommentText = r.CommentText,
+                ParentReviewId = null,
+                CreatedAt = r.CreatedAt,
+                Children = childReviews
+                    .Where(c => c.ParentReviewId == r.Id)
+                    .Select(c => new ReviewDisplayDto
+                    {
+                        Id = c.Id,
+                        UserId = c.UserId,
+                        UserDisplayName = ResolveName(c.UserId),
+                        CommentText = c.CommentText,
+                        ParentReviewId = c.ParentReviewId,
+                        CreatedAt = c.CreatedAt,
+                        Children = new()
+                    }).ToList()
+            }).ToList();
+
+            _reviewList.AddRange(newItems);
+
+            var totalParents = await db.Set<ProductReview>().AsNoTracking()
+                .CountAsync(r => r.ProductId == productId &&
+                                 r.ParentReviewId == null &&
+                                 (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
+
+            _reviewHasMore = (_reviewPage + 1) * REVIEW_PAGE_SIZE < totalParents;
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await LogError("LoadMoreReviews", ex);
+        }
+        finally
+        {
+            _reviewsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitNewReview()
+    {
+        if (use == null || _product == null || string.IsNullOrWhiteSpace(_newReviewText) || _reviewSubmitting) return;
+
+        _reviewSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            var review = new ProductReview
+            {
+                UserId = use.Id,
+                ProductId = _product.Id,
+                CommentText = _newReviewText.Trim(),
+                ParentReviewId = null,
+                IsDeleted = new IsDeleted()
+            };
+
+            db.Set<ProductReview>().Add(review);
+            await db.SaveChangesAsync(token);
+
+            // Listeye ekle (en üste)
+            var displayName = !string.IsNullOrEmpty(use.FirstName) || !string.IsNullOrEmpty(use.LastName)
+                ? $"{use.FirstName} {use.LastName}".Trim()
+                : "Kullanıcı";
+
+            _reviewList.Insert(0, new ReviewDisplayDto
+            {
+                Id = review.Id,
+                UserId = review.UserId,
+                UserDisplayName = displayName,
+                CommentText = review.CommentText,
+                ParentReviewId = null,
+                CreatedAt = review.CreatedAt,
+                Children = new()
+            });
+
+            _reviewTotalCount++;
+            _newReviewText = null;
+
+            await Notify("success", "Yorum", "Yorumunuz başarıyla eklendi!");
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewAdd", "new", _product.Name);
+        }
+        catch (Exception ex)
+        {
+            await LogError("SubmitNewReview", ex);
+            await Notify("danger", "Hata", "Yorum gönderilirken sorun oluştu.");
+        }
+        finally
+        {
+            _reviewSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SubmitReply(Guid parentReviewId)
+    {
+        if (use == null || _product == null || string.IsNullOrWhiteSpace(_replyText) || _replySubmitting) return;
+
+        _replySubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            var reply = new ProductReview
+            {
+                UserId = use.Id,
+                ProductId = _product.Id,
+                CommentText = _replyText.Trim(),
+                ParentReviewId = parentReviewId,
+                IsDeleted = new IsDeleted()
+            };
+
+            db.Set<ProductReview>().Add(reply);
+            await db.SaveChangesAsync(token);
+
+            var displayName = !string.IsNullOrEmpty(use.FirstName) || !string.IsNullOrEmpty(use.LastName)
+                ? $"{use.FirstName} {use.LastName}".Trim()
+                : "Kullanıcı";
+
+            // Parent yorumun children listesine ekle
+            var parent = _reviewList.FirstOrDefault(r => r.Id == parentReviewId);
+            parent?.Children.Add(new ReviewDisplayDto
+            {
+                Id = reply.Id,
+                UserId = reply.UserId,
+                UserDisplayName = displayName,
+                CommentText = reply.CommentText,
+                ParentReviewId = parentReviewId,
+                CreatedAt = reply.CreatedAt,
+                Children = new()
+            });
+
+            _reviewTotalCount++;
+            _replyText = null;
+            _replyingToReviewId = null;
+
+            await Notify("success", "Yanıt", "Yanıtınız başarıyla eklendi!");
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewReply", "reply", _product.Name);
+        }
+        catch (Exception ex)
+        {
+            await LogError("SubmitReply", ex);
+            await Notify("danger", "Hata", "Yanıt gönderilirken sorun oluştu.");
+        }
+        finally
+        {
+            _replySubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteReview(ReviewDisplayDto review)
+    {
+        if (use == null || _deletingReviewId != null) return;
+
+        _deletingReviewId = review.Id;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            // Soft delete — ana yorum + alt yorumları
+            var idsToDelete = new List<Guid> { review.Id };
+            if (review.Children.Any())
+                idsToDelete.AddRange(review.Children.Select(c => c.Id));
+
+            await db.Set<ProductReview>()
+                .Where(r => idsToDelete.Contains(r.Id))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(r => r.IsDeleted!.IsDeletedStatu, true)
+                    .SetProperty(r => r.IsDeleted!.DeletedAtDate, DateTime.UtcNow), token);
+
+            // Listeden kaldır
+            if (review.ParentReviewId == null)
+            {
+                _reviewList.RemoveAll(r => r.Id == review.Id);
+                _reviewTotalCount -= (1 + review.Children.Count);
+            }
+            else
+            {
+                var parent = _reviewList.FirstOrDefault(r => r.Id == review.ParentReviewId);
+                parent?.Children.RemoveAll(c => c.Id == review.Id);
+                _reviewTotalCount--;
+            }
+
+            await Notify("info", "Yorum", "Yorum başarıyla silindi.");
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewDelete", "delete", review.Id.ToString());
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteReview", ex);
+            await Notify("danger", "Hata", "Yorum silinirken sorun oluştu.");
+        }
+        finally
+        {
+            _deletingReviewId = null;
+            StateHasChanged();
+        }
+    }
+
+    private void StartReply(Guid reviewId)
+    {
+        _replyingToReviewId = _replyingToReviewId == reviewId ? null : reviewId;
+        _replyText = null;
+        StateHasChanged();
+    }
+
+    // ─── YORUM RENDER HELPER ──────────────────────────────────────
+    private RenderFragment RenderReviewItem(ReviewDisplayDto review, int depth) => __builder =>
+    {
+        var marginStart = depth > 0 ? "ms-4 ps-3 border-start border-secondary border-opacity-25" : "";
+        var isOwn = use != null && use.Id == review.UserId;
+
+        <div class="mb-3 @marginStart">
+            <div class="d-flex gap-2">
+                @* Avatar *@
+                <div class="flex-shrink-0">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center @(isOwn ? "bg-info bg-opacity-25" : "bg-secondary bg-opacity-25")"
+                         style="width:36px; height:36px;">
+                        <i class="fa fa-user @(isOwn ? "text-info" : "text-white-50")" style="font-size:.8rem;"></i>
+                    </div>
+                </div>
+
+                @* İçerik *@
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="text-light small fw-semibold">@review.UserDisplayName</span>
+                        @if (isOwn)
+                        {
+                            <span class="badge bg-info bg-opacity-25 text-info" style="font-size:.6rem;">Siz</span>
+                        }
+                        <span class="text-white-50" style="font-size:.7rem;">
+                            @FormatReviewDate(review.CreatedAt)
+                        </span>
+                    </div>
+
+                    <p class="text-light small mb-2 lh-base" style="white-space:pre-line;">@review.CommentText</p>
+
+                    @* Aksiyon butonları *@
+                    <div class="d-flex gap-2">
+                        @if (use != null && depth == 0)
+                        {
+                            <button class="btn btn-link btn-sm text-white-50 text-decoration-none p-0"
+                                    @onclick="() => StartReply(review.Id)">
+                                <i class="fa fa-reply me-1" style="font-size:.75rem;"></i>
+                                <span style="font-size:.75rem;">Yanıtla</span>
+                            </button>
+                        }
+                        @if (isOwn)
+                        {
+                            <button class="btn btn-link btn-sm text-danger text-decoration-none p-0"
+                                    @onclick="() => DeleteReview(review)"
+                                    disabled="@(_deletingReviewId == review.Id)">
+                                @if (_deletingReviewId == review.Id)
+                                {
+                                    <span class="spinner-border spinner-border-sm" style="width:.7rem; height:.7rem;"></span>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-trash-o me-1" style="font-size:.75rem;"></i>
+                                }
+                                <span style="font-size:.75rem;">Sil</span>
+                            </button>
+                        }
+                    </div>
+
+                    @* Yanıt formu *@
+                    @if (_replyingToReviewId == review.Id && use != null)
+                    {
+                        <div class="mt-2">
+                            <div class="d-flex gap-2">
+                                <textarea class="form-control form-control-sm bg-dark bg-opacity-50 text-light border-secondary"
+                                          rows="2"
+                                          placeholder="Yanıtınızı yazın…"
+                                          @bind="_replyText"
+                                          @bind:event="oninput"
+                                          maxlength="1000"></textarea>
+                            </div>
+                            <div class="d-flex gap-2 mt-1">
+                                <button class="btn btn-info btn-sm py-0 px-2"
+                                        style="font-size:.75rem;"
+                                        @onclick="() => SubmitReply(review.Id)"
+                                        disabled="@(string.IsNullOrWhiteSpace(_replyText) || _replySubmitting)">
+                                    @if (_replySubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" style="width:.6rem; height:.6rem;"></span>
+                                    }
+                                    <i class="fa fa-paper-plane me-1"></i>Gönder
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+                                        style="font-size:.75rem;"
+                                        @onclick="() => { _replyingToReviewId = null; _replyText = null; }">
+                                    İptal
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* Alt yorumlar (children) — sadece depth 0'da *@
+            @if (depth == 0 && review.Children.Any())
+            {
+                @foreach (var child in review.Children.OrderBy(c => c.CreatedAt))
+                {
+                    @RenderReviewItem(child, 1)
+                }
+            }
+        </div>
+    };
+
+    private static string FormatReviewDate(DateTime utcDate)
+    {
+        var local = utcDate.AddHours(3); // UTC+3 Türkiye
+        var diff = DateTime.UtcNow - utcDate;
+
+        if (diff.TotalMinutes < 1) return "Az önce";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} dk önce";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} saat önce";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} gün önce";
+
+        return local.ToString("dd MMM yyyy HH:mm", new CultureInfo("tr-TR"));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // AKSİYONLAR — BackEnd kodlaması Hüseyin tarafından yapılacak
     // ═══════════════════════════════════════════════════════════════
 
@@ -1837,6 +2466,33 @@ else
 
     private async Task ToggleFavorite()
     {
+        if (SelectedProduct == null) return;
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            _product = await db.Set<Products>().AsNoTracking()
+    .FirstOrDefaultAsync(x => x.Id == SelectedProduct.Id &&
+                              x.IsActive &&
+                              x.IsDeleted.IsDeletedStatu != true, token)
+           ?? SelectedProduct;
+
+            var productId = _product.Id;
+            await db.Set<Products>()
+                .Where(p => p.Id == productId)
+                .ExecuteUpdateAsync(s => s.SetProperty(
+                    p => p.InteractionCounts.FavoriteCount,
+                    p => (p.InteractionCounts.FavoriteCount ?? 0) + 1
+                ), token);
+
+            // (ExecuteUpdate zaten kendi işlemini anında veritabanına gönderir)
+            await db.SaveChangesAsync(token);
+        }
+        catch (Exception ex)
+        {
+            await LogError("FavoriteCount", ex);
+            await Notify("danger", "Hata", "Favori sayısı alınırken bir hata oluştu.");
+        }
         _isFavorite = !_isFavorite;
         await Notify(_isFavorite ? "success" : "info", "Favoriler",
             _isFavorite ? "Ürün favorilere eklendi!" : "Ürün favorilerden çıkarıldı.");
@@ -2016,6 +2672,17 @@ else
     private record WorkingHourRow(string Day, bool IsActive, TimeOnly? Start, TimeOnly? End, bool IsToday);
 
     private record SocialLink(string Platform, string Icon, string Url);
+
+    private class ReviewDisplayDto
+    {
+        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
+        public string UserDisplayName { get; set; } = "Kullanıcı";
+        public string CommentText { get; set; } = "";
+        public Guid? ParentReviewId { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<ReviewDisplayDto> Children { get; set; } = new();
+    }
 }
 
 <style>

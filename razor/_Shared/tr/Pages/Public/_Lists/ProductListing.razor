@@ -1764,9 +1764,7 @@
                     p.BrandId,
                     p.StoreId,
                     p.CoverMediaId,
-                    ViewCount = p.Interaction.ViewCount ?? 0,
-                    LikeCount = p.Interaction.LikeCount ?? 0,
-                    BookmarkCount = p.Interaction.BookmarkCount ?? 0
+                    ViewCount = p.InteractionCounts.ViewCount ?? 0,
                 })
                 .ToListAsync(token);
 
@@ -1863,7 +1861,6 @@
                     StoreId = rp.StoreId,
                     StoreName = storeNames.TryGetValue(rp.StoreId, out var sn) ? sn : null,
                     ViewCount = rp.ViewCount,
-                    LikeCount = rp.LikeCount,
                     Slug = slugs.TryGetValue(rp.Id, out var slug) ? slug : rp.Id.ToString()
                 };
 

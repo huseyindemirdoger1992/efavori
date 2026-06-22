@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260622100603_85")]
+    partial class _85
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -4665,7 +4668,7 @@ namespace data.Migrations
 
             modelBuilder.Entity("data._Product.Products", b =>
                 {
-                    b.OwnsOne("data._Shared.InteractionCounts", "InteractionCounts", b1 =>
+                    b.OwnsOne("data._Shared.InteractionCounts", "Interaction", b1 =>
                         {
                             b1.Property<Guid>("ProductsId")
                                 .HasColumnType("uniqueidentifier");
@@ -4757,7 +4760,7 @@ namespace data.Migrations
                                 .HasForeignKey("ProductsId");
                         });
 
-                    b.Navigation("InteractionCounts");
+                    b.Navigation("Interaction");
 
                     b.Navigation("IsDeleted");
 

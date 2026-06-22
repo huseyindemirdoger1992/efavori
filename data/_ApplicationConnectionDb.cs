@@ -119,6 +119,7 @@ namespace data
         public DbSet<AttributeTemplateCategories> AttributeTemplateCategories { get; set; } = default!;
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
         public DbSet<ProductHistory> ProductHistory { get; set; } = default!;
+        public DbSet<ProductReview> ProductReview { get; set; } = default!;
 
         // Products BulkWordPressProductImport
 

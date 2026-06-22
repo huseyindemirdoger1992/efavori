@@ -67,7 +67,7 @@ namespace data._Product
 
         // === Owned Type'lar ===
         public Meta? Meta { get; set; } = new();
-        public InteractionCounts? Interaction { get; set; } = new();
+        public InteractionCounts? InteractionCounts { get; set; } = new();
         public IsDeleted? IsDeleted { get; set; } = new();
     }
 }

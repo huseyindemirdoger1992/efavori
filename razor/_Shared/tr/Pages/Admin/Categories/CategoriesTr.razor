@@ -1,0 +1,1995 @@
+﻿@* ============================================================
+   CategoriesTrList.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ GlobalStateHub — anlık broadcast, debounce, RAM cache
+   ✅ TakeLogs — tüm CRUD aksiyonları loglanır
+   ✅ Ayrı Ekle / Düzenle / Sil / Taşı modalleri (modal-lg)
+   ✅ Seçilenleri Sil → önce onay modali (sayı + liste)
+   ✅ Server-side sayfalama (20.000+ kayıt performansı)
+   ✅ Lazy-load ağaç navigasyonu (tüm derinlikleri destekler)
+   ✅ Breadcrumb + derinlik göstergesi
+   ✅ DepartmentName otomatik devralma (kök atadan)
+   ✅ İstatistik kartları (toplam, kök, bu seviye, derinlik)
+   ✅ Typeahead üst kategori seçici
+   ✅ Basit, performanslı, kötü sunucuda bile binlerce kullanıcıya cevap
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",     "Ana Sayfa",        "/"),
+        ("fa fa-table",    "Kayıtlar",         "javascript:void(0)"),
+        ("fa fa-sitemap", "CategoriesTr " + PAGE_TITLE,         "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── İstatistik Kartları ─── *@
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="border border-secondary rounded p-2 bg-dark text-center">
+            <div class="text-info fw-bold fs-5">@_statTotal</div>
+            <div class="text-white-50 small">Toplam Kategori</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="border border-secondary rounded p-2 bg-dark text-center">
+            <div class="text-warning fw-bold fs-5">@_statRootCount</div>
+            <div class="text-white-50 small">Kök Kategori</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="border border-secondary rounded p-2 bg-dark text-center">
+            <div class="text-success fw-bold fs-5">@_totalCount</div>
+            <div class="text-white-50 small">
+                @if (_currentParentId != null)
+                {
+                    <span>Bu Seviyede</span>
+                }
+                else if (!string.IsNullOrWhiteSpace(_searchTerm))
+                {
+                    <span>Arama Sonucu</span>
+                }
+                else
+                {
+                    <span>Kök Seviye</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="border border-secondary rounded p-2 bg-dark text-center">
+            <div class="text-danger fw-bold fs-5">@_statMaxDepth</div>
+            <div class="text-white-50 small">Maks. Derinlik</div>
+        </div>
+    </div>
+</div>
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    <button class="btn btn-light btn-sm" @onclick="OpenAddModal" disabled="@_isLoading">
+        <i class="fa fa-plus me-sm-1"></i>
+        <span class="d-none d-sm-inline">Yeni Kategori</span>
+    </button>
+
+    @if (_selectedIds.Any())
+    {
+        <div class="vr mx-1"></div>
+        <span class="badge bg-light">@_selectedIds.Count seçili</span>
+
+        <button class="btn btn-outline-light btn-sm border-0" @onclick="ClearSelection" title="Seçimi Temizle">
+            <i class="fa fa-times"></i> Temizle
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-danger btn-sm border-0"
+                @onclick="OpenBulkDeleteModal"
+                disabled="@_isProcessing">
+            <i class="fa fa-trash"></i> Seçilenleri Sil
+        </button>
+    }
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Kategori veya departman ara..."
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── Ağaç Navigasyonu ─── *@
+<div class="d-flex align-items-center flex-wrap gap-1 mb-2 p-2 rounded border border-secondary bg-dark">
+    <button class="btn btn-sm @(_currentParentId == null && string.IsNullOrWhiteSpace(_searchTerm) ? "btn-info" : "btn-outline-info") border-0"
+            @onclick="() => NavigateToParent(null)">
+        <i class="fa fa-home me-1"></i>Kök
+    </button>
+
+    @for (int i = 0; i < _breadcrumbs.Count; i++)
+    {
+        var crumb = _breadcrumbs[i];
+        var depth = i + 1;
+        <i class="fa fa-chevron-right text-secondary small"></i>
+        <button class="btn btn-sm @(crumb.Id == _currentParentId ? "btn-info" : "btn-outline-info") border-0"
+                @onclick="() => NavigateToParent(crumb.Id)">
+            <span class="badge bg-dark border border-secondary me-1 small" style="font-size:0.65rem;">L@depth</span>
+            @crumb.Name
+        </button>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <i class="fa fa-chevron-right text-secondary small"></i>
+        <span class="badge bg-warning text-dark">
+            <i class="fa fa-search me-1"></i>"@_searchTerm"
+        </span>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">
+            @if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                <span>"@_searchTerm" ile eşleşen kategori bulunamadı.</span>
+            }
+            else
+            {
+                <span>Bu seviyede kategori bulunmuyor.</span>
+            }
+        </p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width:2rem;">
+                        <input type="checkbox" class="form-check-input"
+                               checked="@_allSelected"
+                               @onchange="ToggleSelectAll" />
+                    </th>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Kategori Adı</th>
+                    <th class="d-none d-md-table-cell">Departman</th>
+                    <th class="d-none d-lg-table-cell" style="width:5rem;">Ext.ID</th>
+                    <th class="text-center" style="width:4.5rem;">Alt</th>
+                    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                    {
+                        <th class="d-none d-md-table-cell">Konum</th>
+                    }
+                    <th class="text-end" style="width:8rem;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var item in _pagedItems)
+                {
+                    var isSelected = _selectedIds.Contains(item.Id);
+                    var childCount = GetCachedChildCount(item.Id);
+                    var depthLevel = _breadcrumbs.Count + 1;
+                    <tr class="@(isSelected ? "table-active" : "")">
+                        <td>
+                            <input type="checkbox" class="form-check-input"
+                                   checked="@isSelected"
+                                   @onchange="() => ToggleRowSelection(item.Id)" />
+                        </td>
+                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                @if (childCount > 0)
+                                {
+                                    <button class="btn btn-sm btn-outline-info border-0 p-0 px-1"
+                                            @onclick="() => NavigateToParent(item.Id)"
+                                            title="@childCount alt kategoriye git">
+                                        <i class="fa fa-folder text-warning"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-tag text-secondary" style="opacity:0.4;"></i>
+                                }
+                                <div>
+                                    <span class="fw-semibold">@item.Name</span>
+                                    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                                    {
+                                        <span class="badge bg-dark border border-secondary ms-1" style="font-size:0.6rem;">L@(GetCachedDepth(item.Id))</span>
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            @if (!string.IsNullOrWhiteSpace(item.DepartmentName))
+                            {
+                                <span class="badge bg-secondary bg-opacity-25 text-light small">@item.DepartmentName</span>
+                            }
+                            else
+                            {
+                                <span class="text-secondary small">—</span>
+                            }
+                        </td>
+                        <td class="d-none d-lg-table-cell text-secondary small">
+                            @(item.ExternalId?.ToString() ?? "—")
+                        </td>
+                        <td class="text-center">
+                            @if (childCount > 0)
+                            {
+                                <button class="btn btn-sm btn-outline-info border-0 p-0"
+                                        @onclick="() => NavigateToParent(item.Id)"
+                                        title="Alt kategorilere git">
+                                    <span class="badge bg-info">@childCount</span>
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="text-secondary small">0</span>
+                            }
+                        </td>
+                        @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                        {
+                            <td class="d-none d-md-table-cell">
+                                <small class="text-info">@GetCachedPath(item.Id)</small>
+                            </td>
+                        }
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OpenEditModal(item)" title="Düzenle">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => OpenMoveModal(item)" title="Taşı">
+                                <i class="fa fa-arrows"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => OpenDeleteModal(item)" title="Sil">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_totalCount kayıt
+            @if (_currentParentId != null)
+            {
+                <span class="text-info ms-1">(bu seviyede)</span>
+            }
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage - 1)">
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                    </li>
+
+                    @foreach (var pg in GetPageNumbers())
+                    {
+                        var p = pg;
+                        @if (p == -1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link bg-dark text-secondary border-secondary">…</span>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="page-item @(_currentPage == p ? "active" : "")">
+                                <button class="page-link @(_currentPage == p ? "" : "bg-dark text-light") border-secondary"
+                                        @onclick="() => GoToPage(p)">
+                                    @p
+                                </button>
+                            </li>
+                        }
+                    }
+
+                    <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage + 1)">
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Yeni Kategori Ekle
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="AddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-plus me-1"></i>Yeni Kategori
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_addModel != null)
+                {
+                    @* ─── Üst Kategori Bilgisi (kart) ─── *@
+                    <div class="mb-3 p-2 rounded border border-secondary bg-dark">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <small class="text-white-50 d-block"><i class="fa fa-level-up me-1"></i>Üst Kategori</small>
+                                @if (_addParentSelected != null)
+                                {
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <i class="fa fa-folder text-warning"></i>
+                                        <span class="text-light fw-semibold">@_addParentSelected.Name</span>
+                                        <small class="text-info d-none d-sm-inline">@GetCachedPath(_addParentSelected.Id)</small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-info mt-1 d-block"><i class="fa fa-home me-1"></i>Kök seviye (en üst)</span>
+                                }
+                            </div>
+                            @if (_addParentSelected != null)
+                            {
+                                <button class="btn btn-sm btn-outline-danger border-0" @onclick="ClearAddParent" title="Kök seviyeye al">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            }
+                        </div>
+
+                        @* ─── Üst Kategori Değiştir (typeahead) ─── *@
+                        <div class="position-relative mt-2">
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Farklı bir üst kategori seç..."
+                                   value="@_parentSearchTerm"
+                                   @oninput="OnParentSearchInput"
+                                   @onfocus="() => _showParentDropdown = _parentSearchResults.Any()" />
+
+                            @if (_showParentDropdown && _parentSearchResults.Any())
+                            {
+                                <div class="position-absolute w-100 border border-secondary rounded-bottom bg-dark shadow"
+                                     style="z-index:1060; max-height:200px; overflow-y:auto;">
+                                    @foreach (var cat in _parentSearchResults)
+                                    {
+                                        <button class="btn btn-sm btn-dark w-100 text-start border-0 py-1 px-2"
+                                                @onclick="() => SelectAddParent(cat)">
+                                            <i class="fa fa-folder text-warning me-1"></i>
+                                            <span>@cat.Name</span>
+                                            <small class="text-info ms-2">@GetCachedPath(cat.Id)</small>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Kategori Adı <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Yeni kategori adını giriniz"
+                                   @bind="_addModel.Name" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">
+                                <i class="fa fa-building me-1"></i>Departman Adı
+                                <i class="fa fa-magic text-info ms-1" title="Otomatik devralınır"></i>
+                            </label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="@(_autoInheritedDepartment ?? "Otomatik atanır")"
+                                   @bind="_addModel.DepartmentName" />
+                            @if (!string.IsNullOrWhiteSpace(_autoInheritedDepartment))
+                            {
+                                <small class="text-info mt-1 d-block">
+                                    <i class="fa fa-magic me-1"></i>Boş bırakırsanız otomatik: <strong>@_autoInheritedDepartment</strong>
+                                </small>
+                            }
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-external-link me-1"></i>External ID</label>
+                            <input type="number"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Opsiyonel (CSV kaynağı)"
+                                   @bind="_addModel.ExternalId" />
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-primary btn-sm"
+                        @onclick="AddAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-plus me-1"></i><span>Kategori Ekle</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Düzenle
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="EditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-edit me-1"></i>Kategori Düzenle
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_editModel != null)
+                {
+                    @* ─── Konum Bilgisi (salt okunur) ─── *@
+                    <div class="mb-3 p-2 rounded border border-secondary bg-dark">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <div>
+                                <small class="text-white-50"><i class="fa fa-sitemap me-1"></i>Konum</small>
+                                <div class="text-info mt-1 small">
+                                    @if (_editModel.ParentCategoryId != null)
+                                    {
+                                        <span>@GetCachedPath(_editModel.Id) › <strong>@_editModel.Name</strong></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa fa-home me-1"></i><strong>@_editModel.Name</strong> <span class="text-white-50">(kök)</span>
+                                    }
+                                </div>
+                            </div>
+                            <span class="badge bg-dark border border-info text-info">L@(GetCachedDepth(_editModel.Id))</span>
+                        </div>
+                        <small class="text-white-50 d-block mt-1">
+                            <i class="fa fa-info-circle me-1"></i>Konumu değiştirmek için <strong>Taşı</strong> butonunu kullanın.
+                        </small>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Kategori Adı <span class="text-danger">*</span></label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_editModel.Name" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-building me-1"></i>Departman Adı</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_editModel.DepartmentName" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-external-link me-1"></i>External ID</label>
+                            <input type="number"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   @bind="_editModel.ExternalId" />
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-warning btn-sm"
+                        @onclick="UpdateAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-1"></i><span>Değişiklikleri Kaydet</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Taşı
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="MoveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-info"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-info mb-0">
+                    <i class="fa fa-arrows me-1"></i>Kategori Taşı
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_moveTarget != null)
+                {
+                    @* ─── Kaynak ─── *@
+                    <div class="mb-3 p-2 rounded border border-warning bg-dark">
+                        <small class="text-white-50"><i class="fa fa-sign-out me-1"></i>Taşınacak Kategori</small>
+                        <div class="fw-semibold text-light mt-1">
+                            <i class="fa fa-tag text-warning me-1"></i>@_moveTarget.Name
+                            <span class="badge bg-dark border border-secondary ms-1 small" style="font-size:0.6rem;">L@(GetCachedDepth(_moveTarget.Id))</span>
+                        </div>
+                        <small class="text-info">@GetCachedPath(_moveTarget.Id)</small>
+                    </div>
+
+                    @* ─── Hedef ─── *@
+                    <div class="mb-2 p-2 rounded border border-info bg-dark">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <small class="text-white-50"><i class="fa fa-sign-in me-1"></i>Hedef Üst Kategori</small>
+                            @if (_moveParentSelected != null)
+                            {
+                                <button class="btn btn-sm btn-outline-danger border-0 p-0 px-1" @onclick="ClearMoveParent" title="Kök seviyeye taşı">
+                                    <i class="fa fa-times"></i>
+                                </button>
+                            }
+                        </div>
+
+                        @if (_moveParentSelected != null)
+                        {
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa fa-folder text-warning"></i>
+                                <span class="text-light fw-semibold">@_moveParentSelected.Name</span>
+                                <small class="text-info d-none d-sm-inline">@GetCachedPath(_moveParentSelected.Id)</small>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-info"><i class="fa fa-home me-1"></i>Kök seviye</span>
+                        }
+
+                        <div class="position-relative mt-2">
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Hedef kategori ara..."
+                                   value="@_moveParentSearchTerm"
+                                   @oninput="OnMoveParentSearchInput"
+                                   @onfocus="() => _showMoveParentDropdown = _moveParentSearchResults.Any()" />
+
+                            @if (_showMoveParentDropdown && _moveParentSearchResults.Any())
+                            {
+                                <div class="position-absolute w-100 border border-secondary rounded-bottom bg-dark shadow"
+                                     style="z-index:1060; max-height:200px; overflow-y:auto;">
+                                    @foreach (var cat in _moveParentSearchResults)
+                                    {
+                                        <button class="btn btn-sm btn-dark w-100 text-start border-0 py-1 px-2"
+                                                @onclick="() => SelectMoveParent(cat)">
+                                            <i class="fa fa-folder text-warning me-1"></i>
+                                            <span>@cat.Name</span>
+                                            <small class="text-info ms-2">@GetCachedPath(cat.Id)</small>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-info py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-info btn-sm"
+                        @onclick="MoveConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Taşınıyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-arrows me-1"></i><span>Taşı</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Sil
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>Kategori Silme
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_deleteTarget != null)
+                {
+                    <div class="mb-3 p-2 rounded border border-danger bg-dark">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fa fa-tag text-warning"></i>
+                            <div>
+                                <span class="fw-semibold text-light">@_deleteTarget.Name</span>
+                                @if (!string.IsNullOrWhiteSpace(_deleteTarget.DepartmentName))
+                                {
+                                    <span class="badge bg-secondary bg-opacity-25 text-light small ms-2">@_deleteTarget.DepartmentName</span>
+                                }
+                            </div>
+                        </div>
+                        <small class="text-info d-block mt-1">@GetCachedPath(_deleteTarget.Id)</small>
+                    </div>
+
+                    @if (_deleteChildCount > 0)
+                    {
+                        <div class="alert alert-warning py-2 small mb-0">
+                            <i class="fa fa-exclamation-triangle me-2"></i>
+                            Bu kategorinin <strong>@_deleteChildCount</strong> direkt alt kategorisi bulunmaktadır.
+                            Silme işlemi toplam <strong>@_deleteTotalDescendants</strong> kategoriyi kalıcı olarak kaldıracaktır.
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-white-50 small mb-0">Bu kategoriyi kalıcı olarak silmek istediğinizden emin misiniz?</p>
+                    }
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="DeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i>
+                        <span>@(_deleteTotalDescendants > 1 ? $"Evet, {_deleteTotalDescendants} Kategoriyi Sil" : "Evet, Sil")</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Toplu Sil
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="BulkDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>
+                    Toplu Silme — @_selectedIds.Count seçili
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-warning small mb-3">
+                    <i class="fa fa-exclamation-triangle me-1"></i>
+                    <strong>@_selectedIds.Count</strong> kategori ve tüm alt ağaçları kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                </p>
+
+                @if (_bulkDeletePreview.Any())
+                {
+                    <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
+                        <table class="table table-sm table-dark table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="small">#</th>
+                                    <th class="small">Kategori</th>
+                                    <th class="small">Departman</th>
+                                    <th class="small text-center">Alt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int n = 1;
+                                }
+                                @foreach (var item in _bulkDeletePreview)
+                                {
+                                    <tr>
+                                        <td class="small text-secondary">@(n++)</td>
+                                        <td class="small">@(item.Name ?? "—")</td>
+                                        <td class="small">@(item.DepartmentName ?? "—")</td>
+                                        <td class="small text-center">@GetCachedChildCount(item.Id)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"
+                        @onclick="() => _bulkDeletePreview.Clear()">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="BulkDeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>@_selectedIds.Count Kaydı Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Kategori Yönetimi";
+    private const string ENTITY_NAME = "CategoriesTr";
+    private const string CACHE_KEY = "CategoriesTr_List";
+    private const int SEARCH_DELAY = 400;
+    private const int PAGE_SIZE = 25;
+    private const int TYPEAHEAD_LIMIT = 15;
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+    private CancellationTokenSource? _typeaheadCts;
+
+    // ─── Yazma kilidi ─────────────────────────────────────────────
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isProcessing;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+
+    // ─── İstatistikler ────────────────────────────────────────────
+    private int _statTotal;
+    private int _statRootCount;
+    private int _statMaxDepth;
+
+    // ─── Navigasyon ──────────────────────────────────────────────
+    private int? _currentParentId;
+    private List<data.CategoriesTr> _breadcrumbs = new();
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    private List<data.CategoriesTr> _pagedItems = new();
+    private int _totalCount;
+
+    // ─── Cache ────────────────────────────────────────────────────
+    private Dictionary<int, int> _childCountCache = new();
+    private Dictionary<int, string> _pathCache = new();
+    private Dictionary<int, int> _depthCache = new();
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+
+    // ─── Ekle modal ───────────────────────────────────────────────
+    private data.CategoriesTr? _addModel;
+    private data.CategoriesTr? _addParentSelected;
+    private string _parentSearchTerm = string.Empty;
+    private List<data.CategoriesTr> _parentSearchResults = new();
+    private bool _showParentDropdown;
+    private string? _autoInheritedDepartment;
+
+    // ─── Düzenle modal ────────────────────────────────────────────
+    private data.CategoriesTr? _editModel;
+
+    // ─── Taşı modal ───────────────────────────────────────────────
+    private data.CategoriesTr? _moveTarget;
+    private data.CategoriesTr? _moveParentSelected;
+    private string _moveParentSearchTerm = string.Empty;
+    private List<data.CategoriesTr> _moveParentSearchResults = new();
+    private bool _showMoveParentDropdown;
+
+    // ─── Sil modal ────────────────────────────────────────────────
+    private data.CategoriesTr? _deleteTarget;
+    private int _deleteChildCount;
+    private int _deleteTotalDescendants;
+
+    // ─── Toplu Sil ────────────────────────────────────────────────
+    private readonly HashSet<int> _selectedIds = new();
+    private bool _allSelected;
+    private List<data.CategoriesTr> _bulkDeletePreview = new();
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+
+        await Task.WhenAll(
+            LoadDataAsync(),
+            LoadStatsAsync()
+        );
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+        _typeaheadCts?.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GLOBAL OLAY
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+
+        await InvokeAsync(async () =>
+        {
+            _childCountCache.Clear();
+            _pathCache.Clear();
+            _depthCache.Clear();
+            StateHub.ClearCache(CACHE_KEY);
+            await Task.WhenAll(LoadDataAsync(), LoadStatsAsync());
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // İSTATİSTİKLER
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadStatsAsync()
+    {
+        try
+        {
+            var stats = await StateHub.GetOrLoadAsync("CategoriesTr_Stats", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+                var total = await db.CategoriesTr.CountAsync(_cts.Token);
+                var rootCount = await db.CategoriesTr.CountAsync(x => x.ParentCategoryId == null, _cts.Token);
+
+                // Maks derinlik hesapla (BFS ile)
+                int maxDepth = 0;
+                if (total > 0)
+                {
+                    var currentLevel = await db.CategoriesTr
+                        .AsNoTracking()
+                        .Where(x => x.ParentCategoryId == null)
+                        .Select(x => x.Id)
+                        .ToListAsync(_cts.Token);
+
+                    while (currentLevel.Any() && maxDepth < 30)
+                    {
+                        maxDepth++;
+                        currentLevel = await db.CategoriesTr
+                            .AsNoTracking()
+                            .Where(x => x.ParentCategoryId != null && currentLevel.Contains(x.ParentCategoryId.Value))
+                            .Select(x => x.Id)
+                            .ToListAsync(_cts.Token);
+                    }
+                }
+
+                return new { Total = total, RootCount = rootCount, MaxDepth = maxDepth };
+            }, _cts.Token);
+
+            if (stats != null)
+            {
+                _statTotal = stats.Total;
+                _statRootCount = stats.RootCount;
+                _statMaxDepth = stats.MaxDepth;
+            }
+        }
+        catch (Exception ex) { await LogError("LoadStats", ex); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME (Server-Side Sayfalama)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadDataAsync()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            var q = db.CategoriesTr.AsNoTracking().AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                var s = _searchTerm.Trim();
+
+                // Girilen terimin sayı olup olmadığını kontrol ediyoruz
+                bool isNumeric = int.TryParse(s, out int parsedId);
+
+                q = q.Where(x =>
+                    // Metin tabanlı aramalar
+                    (x.Name != null && x.Name.Contains(s)) ||
+                    (x.DepartmentName != null && x.DepartmentName.Contains(s)) ||
+
+                    // Sayısal aramalar (Sadece aranan terim sayıysa çalışır)
+                    (isNumeric && x.Id == parsedId) ||
+                    (isNumeric && x.ExternalId == parsedId) ||
+                    (isNumeric && x.ParentCategoryId == parsedId)
+                );
+            }
+            else
+            {
+                q = _currentParentId == null
+                    ? q.Where(x => x.ParentCategoryId == null)
+                    : q.Where(x => x.ParentCategoryId == _currentParentId);
+            }
+
+            _totalCount = await q.CountAsync(token);
+            _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PAGE_SIZE));
+            _currentPage = Math.Clamp(_currentPage, 1, _totalPages);
+
+            _pagedItems = await q
+                .OrderBy(x => x.Name)
+                .Skip((_currentPage - 1) * PAGE_SIZE)
+                .Take(PAGE_SIZE)
+                .ToListAsync(token);
+
+            await LoadChildCountsAsync(db, token);
+
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+                await LoadPathsAndDepthsAsync(db, token);
+
+            _allSelected = _pagedItems.Count > 0 && _pagedItems.All(i => _selectedIds.Contains(i.Id));
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadData", ex);
+                await Notify("danger", "Hata", "Veriler yüklenirken sorun oluştu.");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task LoadChildCountsAsync(_ApplicationConnectionDb db, CancellationToken token)
+    {
+        var ids = _pagedItems.Select(x => x.Id).ToList();
+        if (!ids.Any()) return;
+
+        var counts = await db.CategoriesTr
+            .AsNoTracking()
+            .Where(x => x.ParentCategoryId != null && ids.Contains(x.ParentCategoryId.Value))
+            .GroupBy(x => x.ParentCategoryId!.Value)
+            .Select(g => new { ParentId = g.Key, Count = g.Count() })
+            .ToListAsync(token);
+
+        foreach (var c in counts)
+            _childCountCache[c.ParentId] = c.Count;
+
+        foreach (var id in ids)
+            _childCountCache.TryAdd(id, 0);
+    }
+
+    /// <summary>
+    /// Arama sonuçlarının üst yol + derinlik bilgisini toplu yükler.
+    /// </summary>
+    private async Task LoadPathsAndDepthsAsync(_ApplicationConnectionDb db, CancellationToken token)
+    {
+        var neededParentIds = new HashSet<int>();
+        foreach (var item in _pagedItems)
+        {
+            if (_pathCache.ContainsKey(item.Id)) continue;
+            if (item.ParentCategoryId != null)
+                neededParentIds.Add(item.ParentCategoryId.Value);
+        }
+
+        if (!neededParentIds.Any())
+        {
+            foreach (var item in _pagedItems)
+            {
+                _pathCache.TryAdd(item.Id, "Kök");
+                _depthCache.TryAdd(item.Id, 1);
+            }
+            return;
+        }
+
+        // Tüm parent zincirini toplu yükle (max 10 derinlik)
+        var allParents = new Dictionary<int, data.CategoriesTr>();
+        var toLoad = neededParentIds.ToList();
+        int depth = 0;
+
+        while (toLoad.Any() && depth < 10)
+        {
+            var loaded = await db.CategoriesTr
+                .AsNoTracking()
+                .Where(x => toLoad.Contains(x.Id))
+                .ToListAsync(token);
+
+            var nextLoad = new List<int>();
+            foreach (var p in loaded)
+            {
+                if (!allParents.ContainsKey(p.Id))
+                {
+                    allParents[p.Id] = p;
+                    if (p.ParentCategoryId != null && !allParents.ContainsKey(p.ParentCategoryId.Value))
+                        nextLoad.Add(p.ParentCategoryId.Value);
+                }
+            }
+            toLoad = nextLoad;
+            depth++;
+        }
+
+        foreach (var item in _pagedItems)
+        {
+            if (_pathCache.ContainsKey(item.Id)) continue;
+
+            var parts = new List<string>();
+            var currentId = item.ParentCategoryId;
+            int safe = 0;
+
+            while (currentId != null && safe < 10)
+            {
+                if (allParents.TryGetValue(currentId.Value, out var parent))
+                {
+                    parts.Insert(0, parent.Name ?? "?");
+                    currentId = parent.ParentCategoryId;
+                }
+                else break;
+                safe++;
+            }
+
+            _pathCache[item.Id] = parts.Any() ? string.Join(" › ", parts) : "Kök";
+            _depthCache[item.Id] = parts.Count + 1;
+        }
+    }
+
+    private int GetCachedChildCount(int id) =>
+        _childCountCache.TryGetValue(id, out var count) ? count : 0;
+
+    private string GetCachedPath(int id) =>
+        _pathCache.TryGetValue(id, out var path) ? path : "";
+
+    private int GetCachedDepth(int id) =>
+        _depthCache.TryGetValue(id, out var d) ? d : (_breadcrumbs.Count + 1);
+
+    // ══════════════════════════════════════════════════════════════
+    // NAVİGASYON
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task NavigateToParent(int? parentId)
+    {
+        _currentParentId = parentId;
+        _currentPage = 1;
+        _searchTerm = string.Empty;
+        _selectedIds.Clear();
+        _allSelected = false;
+
+        await BuildBreadcrumbsAsync(parentId);
+        await LoadDataAsync();
+    }
+
+    private async Task BuildBreadcrumbsAsync(int? targetId)
+    {
+        _breadcrumbs.Clear();
+        if (targetId == null) return;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var currentId = targetId;
+            int safe = 0;
+
+            while (currentId != null && safe < 15)
+            {
+                var cat = await db.CategoriesTr
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == currentId, _cts.Token);
+
+                if (cat == null) break;
+                _breadcrumbs.Insert(0, cat);
+                currentId = cat.ParentCategoryId;
+                safe++;
+            }
+        }
+        catch (Exception ex) { await LogError("BuildBreadcrumbs", ex); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // SAYFALAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1 || page > _totalPages || page == _currentPage) return;
+        _currentPage = page;
+        await LoadDataAsync();
+    }
+
+    private List<int> GetPageNumbers()
+    {
+        var pages = new List<int>();
+        if (_totalPages <= 7)
+        {
+            for (int i = 1; i <= _totalPages; i++) pages.Add(i);
+            return pages;
+        }
+
+        pages.Add(1);
+        int start = Math.Max(2, _currentPage - 2);
+        int end = Math.Min(_totalPages - 1, _currentPage + 2);
+
+        if (start > 2) pages.Add(-1);
+        for (int i = start; i <= end; i++) pages.Add(i);
+        if (end < _totalPages - 1) pages.Add(-1);
+
+        pages.Add(_totalPages);
+        return pages;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ARAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        _currentPage = 1;
+        _selectedIds.Clear();
+        _allSelected = false;
+        await LoadDataAsync();
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        _currentPage = 1;
+        await LoadDataAsync();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TYPEAHEAD — Üst Kategori Arama
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnParentSearchInput(ChangeEventArgs e)
+    {
+        _parentSearchTerm = e.Value?.ToString() ?? string.Empty;
+        await SearchParentCategoriesAsync(_parentSearchTerm, false);
+    }
+
+    private async Task OnMoveParentSearchInput(ChangeEventArgs e)
+    {
+        _moveParentSearchTerm = e.Value?.ToString() ?? string.Empty;
+        await SearchParentCategoriesAsync(_moveParentSearchTerm, true);
+    }
+
+    private async Task SearchParentCategoriesAsync(string term, bool isMove)
+    {
+        _typeaheadCts?.Cancel();
+        _typeaheadCts?.Dispose();
+        _typeaheadCts = new CancellationTokenSource();
+        var token = _typeaheadCts.Token;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(term))
+            {
+                if (isMove) { _moveParentSearchResults.Clear(); _showMoveParentDropdown = false; }
+                else { _parentSearchResults.Clear(); _showParentDropdown = false; }
+                StateHasChanged();
+                return;
+            }
+
+            await Task.Delay(300, token);
+            if (token.IsCancellationRequested) return;
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            var s = term.Trim();
+
+            var q = db.CategoriesTr.AsNoTracking()
+                .Where(x => x.Name != null && x.Name.Contains(s));
+
+            if (isMove && _moveTarget != null)
+            {
+                var excludeIds = await GetDescendantIdsAsync(db, _moveTarget.Id, token);
+                excludeIds.Add(_moveTarget.Id);
+                q = q.Where(x => !excludeIds.Contains(x.Id));
+            }
+
+            var results = await q.OrderBy(x => x.Name).Take(TYPEAHEAD_LIMIT).ToListAsync(token);
+
+            foreach (var r in results)
+            {
+                if (!_pathCache.ContainsKey(r.Id))
+                    await LoadSinglePathAsync(db, r, token);
+            }
+
+            if (isMove) { _moveParentSearchResults = results; _showMoveParentDropdown = results.Any(); }
+            else { _parentSearchResults = results; _showParentDropdown = results.Any(); }
+
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { await LogError("SearchParent", ex); }
+    }
+
+    private async Task LoadSinglePathAsync(_ApplicationConnectionDb db, data.CategoriesTr item, CancellationToken token)
+    {
+        var parts = new List<string>();
+        var currentId = item.ParentCategoryId;
+        int safe = 0;
+
+        while (currentId != null && safe < 10)
+        {
+            var parent = await db.CategoriesTr
+                .AsNoTracking()
+                .Where(x => x.Id == currentId)
+                .Select(x => new { x.Id, x.Name, x.ParentCategoryId })
+                .FirstOrDefaultAsync(token);
+
+            if (parent == null) break;
+            parts.Insert(0, parent.Name ?? "?");
+            currentId = parent.ParentCategoryId;
+            safe++;
+        }
+
+        _pathCache[item.Id] = parts.Any() ? string.Join(" › ", parts) : "Kök";
+        _depthCache[item.Id] = parts.Count + 1;
+    }
+
+    /// <summary>
+    /// Belirtilen kategorinin kök atasındaki DepartmentName'i bulur.
+    /// Eğer yoksa en üst parent'ın Name'ini döner.
+    /// </summary>
+    private async Task<string?> ResolveRootDepartmentAsync(_ApplicationConnectionDb db, int? parentId, CancellationToken token)
+    {
+        if (parentId == null) return null;
+
+        data.CategoriesTr? root = null;
+        var currentId = parentId;
+        int safe = 0;
+
+        while (currentId != null && safe < 15)
+        {
+            var cat = await db.CategoriesTr
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == currentId, token);
+
+            if (cat == null) break;
+            root = cat;
+            currentId = cat.ParentCategoryId;
+            safe++;
+        }
+
+        // Kök atanın DepartmentName'i varsa döner, yoksa Name'ini döner
+        return root?.DepartmentName ?? root?.Name;
+    }
+
+    private void SelectAddParent(data.CategoriesTr cat)
+    {
+        _addParentSelected = cat;
+        if (_addModel != null) _addModel.ParentCategoryId = cat.Id;
+        _parentSearchTerm = string.Empty;
+        _parentSearchResults.Clear();
+        _showParentDropdown = false;
+
+        // Otomatik departman devralma güncelle
+        _autoInheritedDepartment = cat.DepartmentName ?? cat.Name;
+
+        StateHasChanged();
+    }
+
+    private void ClearAddParent()
+    {
+        _addParentSelected = null;
+        if (_addModel != null) _addModel.ParentCategoryId = null;
+        _parentSearchTerm = string.Empty;
+        _autoInheritedDepartment = null;
+        StateHasChanged();
+    }
+
+    private void SelectMoveParent(data.CategoriesTr cat)
+    {
+        _moveParentSelected = cat;
+        _moveParentSearchTerm = string.Empty;
+        _moveParentSearchResults.Clear();
+        _showMoveParentDropdown = false;
+        StateHasChanged();
+    }
+
+    private void ClearMoveParent()
+    {
+        _moveParentSelected = null;
+        _moveParentSearchTerm = string.Empty;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL AÇMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenAddModal()
+    {
+        _addModel = new data.CategoriesTr { ParentCategoryId = _currentParentId };
+        _parentSearchTerm = string.Empty;
+        _parentSearchResults.Clear();
+        _showParentDropdown = false;
+
+        if (_currentParentId != null)
+        {
+            _addParentSelected = _breadcrumbs.LastOrDefault();
+            // Kök departman adını otomatik çöz
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                _autoInheritedDepartment = await ResolveRootDepartmentAsync(db, _currentParentId, _cts.Token);
+            }
+            catch { _autoInheritedDepartment = _breadcrumbs.FirstOrDefault()?.DepartmentName; }
+        }
+        else
+        {
+            _addParentSelected = null;
+            _autoInheritedDepartment = null;
+        }
+
+        await ShowModal("AddModal");
+    }
+
+    private async Task OpenEditModal(data.CategoriesTr item)
+    {
+        _editModel = new data.CategoriesTr
+        {
+            Id = item.Id,
+            Name = item.Name,
+            DepartmentName = item.DepartmentName,
+            ExternalId = item.ExternalId,
+            ParentCategoryId = item.ParentCategoryId
+        };
+
+        if (!_pathCache.ContainsKey(item.Id))
+        {
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                await LoadSinglePathAsync(db, item, _cts.Token);
+            }
+            catch { }
+        }
+
+        await ShowModal("EditModal");
+    }
+
+    private async Task OpenMoveModal(data.CategoriesTr item)
+    {
+        _moveTarget = item;
+        _moveParentSelected = null;
+        _moveParentSearchTerm = string.Empty;
+        _moveParentSearchResults.Clear();
+        _showMoveParentDropdown = false;
+
+        if (!_pathCache.ContainsKey(item.Id))
+        {
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                await LoadSinglePathAsync(db, item, _cts.Token);
+            }
+            catch { }
+        }
+
+        await ShowModal("MoveModal");
+    }
+
+    private async Task OpenDeleteModal(data.CategoriesTr item)
+    {
+        _deleteTarget = item;
+        _deleteChildCount = 0;
+        _deleteTotalDescendants = 1;
+
+        if (!_pathCache.ContainsKey(item.Id))
+        {
+            try
+            {
+                await using var db2 = await DbFactory.CreateDbContextAsync(_cts.Token);
+                await LoadSinglePathAsync(db2, item, _cts.Token);
+            }
+            catch { }
+        }
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _deleteChildCount = await db.CategoriesTr
+                .CountAsync(x => x.ParentCategoryId == item.Id, _cts.Token);
+
+            if (_deleteChildCount > 0)
+            {
+                var allDescendants = await GetDescendantIdsAsync(db, item.Id, _cts.Token);
+                _deleteTotalDescendants = allDescendants.Count + 1;
+            }
+        }
+        catch (Exception ex) { await LogError("OpenDeleteModal", ex); }
+
+        await ShowModal("DeleteModal");
+    }
+
+    private async Task OpenBulkDeleteModal()
+    {
+        if (!_selectedIds.Any()) return;
+        _bulkDeletePreview = _pagedItems.Where(x => _selectedIds.Contains(x.Id)).ToList();
+        await ShowModal("BulkDeleteModal");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Ekle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task AddAsync()
+    {
+        if (_isProcessing || _addModel == null) return;
+
+        if (string.IsNullOrWhiteSpace(_addModel.Name))
+        {
+            await Notify("warning", "Uyarı", "Kategori adı zorunludur.");
+            return;
+        }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var trimmedName = _addModel.Name!.Trim();
+
+            // Mükerrer kontrolü
+            var exists = await db.CategoriesTr.AnyAsync(x =>
+                x.ParentCategoryId == _addModel.ParentCategoryId &&
+                x.Name == trimmedName, _cts.Token);
+
+            if (exists)
+            {
+                await Notify("warning", "Uyarı", "Bu seviyede aynı isimde kategori zaten var.");
+                return;
+            }
+
+            _addModel.Name = trimmedName;
+
+            // DepartmentName otomatik devralma
+            if (string.IsNullOrWhiteSpace(_addModel.DepartmentName))
+            {
+                if (_addModel.ParentCategoryId != null)
+                {
+                    _addModel.DepartmentName = await ResolveRootDepartmentAsync(db, _addModel.ParentCategoryId, _cts.Token)
+                                               ?? trimmedName;
+                }
+                else
+                {
+                    _addModel.DepartmentName = trimmedName;
+                }
+            }
+            else
+            {
+                _addModel.DepartmentName = _addModel.DepartmentName.Trim();
+            }
+
+            db.CategoriesTr.Add(_addModel);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("AddModal");
+            _addModel = null;
+            _addParentSelected = null;
+            _autoInheritedDepartment = null;
+            _isProcessing = false;
+
+            InvalidateCaches();
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Add");
+            await Notify("success", "Başarılı", "Kategori eklendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("AddAsync", ex);
+            await Notify("danger", "Hata", "Kayıt sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Güncelle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task UpdateAsync()
+    {
+        if (_isProcessing || _editModel == null) return;
+
+        if (string.IsNullOrWhiteSpace(_editModel.Name))
+        {
+            await Notify("warning", "Uyarı", "Kategori adı zorunludur.");
+            return;
+        }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.CategoriesTr.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+
+            if (existing == null)
+            {
+                await Notify("warning", "Uyarı", "Kayıt artık mevcut değil.");
+                return;
+            }
+
+            existing.Name = _editModel.Name!.Trim();
+            existing.DepartmentName = _editModel.DepartmentName?.Trim();
+            existing.ExternalId = _editModel.ExternalId;
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("EditModal");
+            _editModel = null;
+            _isProcessing = false;
+
+            InvalidateCaches();
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
+            await Notify("success", "Başarılı", "Kategori güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("UpdateAsync", ex);
+            await Notify("danger", "Hata", "Güncelleme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Taşı
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task MoveConfirmedAsync()
+    {
+        if (_isProcessing || _moveTarget == null) return;
+
+        var newParentId = _moveParentSelected?.Id;
+
+        if (newParentId == _moveTarget.Id)
+        {
+            await Notify("warning", "Uyarı", "Kategori kendisine taşınamaz.");
+            return;
+        }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            if (newParentId != null)
+            {
+                var descendants = await GetDescendantIdsAsync(db, _moveTarget.Id, _cts.Token);
+                if (descendants.Contains(newParentId.Value))
+                {
+                    await Notify("warning", "Uyarı", "Döngüsel bağımlılık! Bir kategori kendi alt kategorisine taşınamaz.");
+                    return;
+                }
+            }
+
+            var entity = await db.CategoriesTr.FindAsync(new object[] { _moveTarget.Id }, _cts.Token);
+            if (entity == null)
+            {
+                await Notify("warning", "Uyarı", "Kayıt artık mevcut değil.");
+                return;
+            }
+
+            entity.ParentCategoryId = newParentId;
+
+            // Taşınan kategorinin DepartmentName'ini yeni kökten otomatik güncelle
+            var newDept = newParentId != null
+                ? await ResolveRootDepartmentAsync(db, newParentId, _cts.Token)
+                : entity.Name;
+
+            if (!string.IsNullOrWhiteSpace(newDept))
+                entity.DepartmentName = newDept;
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("MoveModal");
+            _moveTarget = null;
+            _moveParentSelected = null;
+            _isProcessing = false;
+
+            InvalidateCaches();
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Move");
+            await Notify("success", "Başarılı", "Kategori taşındı.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("MoveAsync", ex);
+            await Notify("danger", "Hata", "Taşıma sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Sil (alt ağaçla birlikte)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task DeleteConfirmedAsync()
+    {
+        if (_isProcessing || _deleteTarget == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var allIds = await GetDescendantIdsAsync(db, _deleteTarget.Id, _cts.Token);
+            allIds.Add(_deleteTarget.Id);
+
+            await db.CategoriesTr
+                .Where(x => allIds.Contains(x.Id))
+                .ExecuteDeleteAsync(_cts.Token);
+
+            await HideModal("DeleteModal");
+            _deleteTarget = null;
+            _isProcessing = false;
+
+            InvalidateCaches();
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"Delete ({allIds.Count})");
+            await Notify("success", "Silindi", $"{allIds.Count} kategori silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteAsync", ex);
+            await Notify("danger", "Hata", "Silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Toplu Sil
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkDeleteConfirmedAsync()
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var allIds = new HashSet<int>(_selectedIds);
+            foreach (var id in _selectedIds.ToList())
+            {
+                var descendants = await GetDescendantIdsAsync(db, id, _cts.Token);
+                foreach (var d in descendants) allIds.Add(d);
+            }
+
+            var count = allIds.Count;
+
+            await db.CategoriesTr
+                .Where(x => allIds.Contains(x.Id))
+                .ExecuteDeleteAsync(_cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+            _bulkDeletePreview.Clear();
+
+            await HideModal("BulkDeleteModal");
+            _isProcessing = false;
+
+            InvalidateCaches();
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({count})");
+            await Notify("success", "Silindi", $"{count} kategori silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkDelete", ex);
+            await Notify("danger", "Hata", "Toplu silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI: Alt Ağaç ID'leri (BFS)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task<HashSet<int>> GetDescendantIdsAsync(
+        _ApplicationConnectionDb db, int parentId, CancellationToken token)
+    {
+        var allDescendants = new HashSet<int>();
+        var currentLevel = new List<int> { parentId };
+        int safe = 0;
+
+        while (currentLevel.Any() && safe < 20)
+        {
+            var children = await db.CategoriesTr
+                .AsNoTracking()
+                .Where(x => x.ParentCategoryId != null && currentLevel.Contains(x.ParentCategoryId.Value))
+                .Select(x => x.Id)
+                .ToListAsync(token);
+
+            if (!children.Any()) break;
+
+            foreach (var c in children) allDescendants.Add(c);
+            currentLevel = children;
+            safe++;
+        }
+
+        return allDescendants;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CACHE INVALIDATION
+    // ══════════════════════════════════════════════════════════════
+
+    private void InvalidateCaches()
+    {
+        _childCountCache.Clear();
+        _pathCache.Clear();
+        _depthCache.Clear();
+        StateHub.ClearCache(CACHE_KEY);
+        StateHub.ClearCache("CategoriesTr_Stats");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU SEÇİM
+    // ══════════════════════════════════════════════════════════════
+
+    private void ToggleRowSelection(int id)
+    {
+        if (!_selectedIds.Remove(id)) _selectedIds.Add(id);
+        _allSelected = _pagedItems.Count > 0 && _pagedItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (_allSelected)
+            _selectedIds.Clear();
+        else
+            foreach (var item in _pagedItems)
+                _selectedIds.Add(item.Id);
+
+        _allSelected = _pagedItems.Count > 0 && _pagedItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedIds.Clear();
+        _allSelected = false;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

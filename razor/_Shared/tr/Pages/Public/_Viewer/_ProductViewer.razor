@@ -12,6 +12,7 @@
    - Products (ana kayıt)            → Parametre olarak gelir (SelectedProduct)
    - Brands.Id          ← Products.BrandId
    - Store.Id           ← Products.StoreId
+   - StoreShip           ← RequestorId/ReceiverId (takip/engel)
    - ProductSeo         ← ProductId (Slug, SeoTitle, SeoDescription)
    - ProductVariants    ← ProductId (varsayılan + tüm varyantlar, SKU/Barkod)
    - ProductVariantValues ← VariantId (Renk=Kırmızı, Beden=S kombinasyonları)
@@ -22,6 +23,7 @@
    - ProductCategories  ← ProductId → CategoriesTr (breadcrumb)
    - CoverMediaId       → Media (kapak görseli)
    - ItemGallery (ItemType="Product"/"ProductGallery", ItemId=ProductId) → Media (galeri)
+   - ItemGallery (ItemType="InShooting"/"OutShooting", ItemId=StoreId) → Media (mağaza galeri)
    - ProductImageVariantGroups → değer bazlı varyant görseli (CoverMediaId)
    - ProductExternalMedias ← ProductId (video, 360, döküman)
    ════════════════════════════════════════════════════════════════════════ *@
@@ -96,7 +98,6 @@ else
         };
     foreach (var bc in _breadcrumbCategories)
         roads.Add(("null", bc.Name ?? "—", "javascript:void(0)"));
-    @*roads.Add(("null", p.Name?.Length > 40 ? p.Name.Substring(0, 40) + "…" : p.Name ?? "Ürün", "javascript:void(0)"));*@
     <div class="container-fluid pt-3">
         <razor._Shared.BreadCrumbLinksUrl roads="roads" />
     </div>
@@ -107,40 +108,40 @@ else
 
             @* ─── 3. AKSİYONLAR (Text-Light Özellikli) ─── *@
             <div class="col-lg-12">
-                <div class="btn-group w-100" role="group" aria-label="Ürün Aksiyonları">
-                    <button class="btn btn-outline-light btn-sm d-flex align-items-center justify-content-center text-dark" @onclick="ToggleFavorite">
-                        <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-muted") me-2"></i>Favori
+                <div class="d-flex flex-wrap gap-2 w-100" role="group" aria-label="Ürün Aksiyonları">
+
+                    <button class="btn btn-outline-danger btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleFavorite">
+                        <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-light") me-2"></i>Favori
                     </button>
 
-                    <button class="btn btn-outline-info btn-sm d-flex align-items-center justify-content-center text-light" @onclick="ToggleCompare">
+                    <button class="btn btn-outline-info btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleCompare">
                         <i class="fa fa-exchange text-light me-2"></i>Karşılaştır
                     </button>
 
-                    <button class="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center text-light" @onclick="OpenShareModal">
+                    <button class="btn btn-outline-primary btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="OpenShareModal">
                         <i class="fa fa-share-alt text-light me-2"></i>Paylaş
                     </button>
 
-                    <button class="btn btn-outline-success btn-sm d-flex align-items-center justify-content-center text-light" @onclick="ToggleRecommendation">
+                    <button class="btn btn-outline-success btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleRecommendation">
                         <i class="fa fa-users text-light me-2"></i>Tavsiye Et
                     </button>
 
-                    <button class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center text-dark" @onclick="ToggleAskTheSeller">
-                        <i class="fa fa-comments-o text-dark me-2"></i>Satıcıya Sor
+                    <button class="btn btn-outline-warning btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleAskTheSeller">
+                        <i class="fa fa-comments-o text-light me-2"></i>Satıcıya Sor
                     </button>
 
-                    <button class="btn btn-outline-dark btn-sm d-flex align-items-center justify-content-center text-light" @onclick="ToggleIsOnSale">
+                    <button class="btn btn-outline-dark btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleIsOnSale">
                         <i class="fa fa-bell-o text-light me-2"></i>Fiyat Düşünce Haber Ver
                     </button>
                 </div>
             </div>
 
-
             @* ═══════════════════════════════════════════════════════
                SOL: GÖRSEL GALERİ (sticky)
                ═══════════════════════════════════════════════════════ *@
-            <div class="col-lg-5">
-                <div class="position-lg-sticky" style="top:80px;">
-                    <div class="row g-2">
+            <div class="col-lg-5" style="overflow:visible;">
+                <div class="position-lg-sticky" style="top:80px; overflow:visible;">
+                    <div class="row g-2" style="overflow:visible;">
 
                         @* Dikey küçük resimler (masaüstü) *@
                         @if (_displayImages.Count > 1)
@@ -164,35 +165,41 @@ else
                         }
 
                         @* Ana görsel *@
-                        <div class="@(_displayImages.Count > 1 ? "col-md-10" : "col-12")">
-                            <div class="position-relative bg-white rounded-3 overflow-hidden border border-secondary border-opacity-25"
-                                 style="aspect-ratio:1;">
-                                @if (_displayImages.Any())
-                                {
-                                    <img src="@_displayImages[_activeImageIndex]" alt="@p.Name"
-                                         class="w-100 h-100" style="object-fit:contain;" />
-                                }
-                                else
-                                {
-                                    <div class="d-flex align-items-center justify-content-center h-100 text- light bg-dark">
-                                        <i class="fa fa-picture-o fa-4x"></i>
-                                    </div>
-                                }
+                        <div class="@(_displayImages.Count > 1 ? "col-md-10" : "col-12")" style="overflow:visible;">
+                            <div class="pp-zoom-wrapper">
+                                <div class="position-relative bg-white rounded-3 overflow-hidden border border-secondary border-opacity-25"
+                                     id="ppMediaMain"
+                                     style="aspect-ratio:1;">
+                                    @if (_displayImages.Any())
+                                    {
+                                        <img src="@_displayImages[_activeImageIndex]" alt="@p.Name"
+                                             class="w-100 h-100" id="ppMainImg" style="object-fit:contain;" />
+                                        <div class="pp-zoom-lens" id="ppZoomLens"></div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex align-items-center justify-content-center h-100 text- light bg-dark">
+                                            <i class="fa fa-picture-o fa-4x"></i>
+                                        </div>
+                                    }
 
-                                @* İndirim rozeti *@
-                                @if (_currentDiscountPercent > 0)
-                                {
-                                    <span class="badge bg-danger position-absolute top-0 start-0 m-3 fs-6 px-3 py-2 rounded-pill">
-                                        %@_currentDiscountPercent İndirim
-                                    </span>
-                                }
+                                    @* İndirim rozeti *@
+                                    @if (_currentDiscountPercent > 0)
+                                    {
+                                        <span class="badge bg-danger position-absolute top-0 start-0 m-3 fs-6 px-3 py-2 rounded-pill">
+                                            %@_currentDiscountPercent İndirim
+                                        </span>
+                                    }
 
-                                @* Favori (sağ üst) *@
-                                <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm"
-                                        style="width:44px; height:44px;"
-                                        @onclick="ToggleFavorite" title="Favorilere Ekle">
-                                    <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-dark")"></i>
-                                </button>
+                                    @* Favori (sağ üst) *@
+                                    <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm"
+                                            style="width:44px; height:44px;"
+                                            @onclick="ToggleFavorite" title="Favorilere Ekle">
+                                        <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-dark")"></i>
+                                    </button>
+                                </div>
+                                @* Yakınlaştırılmış görsel paneli — masaüstünde hover ile görünür *@
+                                <div class="pp-zoom-result" id="ppZoomResult"></div>
                             </div>
 
                             @* Yatay küçük resimler (mobil) *@
@@ -243,7 +250,7 @@ else
             </div>
 
             @* ═══════════════════════════════════════════════════════
-               SAĞ: ÜRÜN BİLGİLERİ + SATIN ALMA
+               ORTA: ÜRÜN BİLGİLERİ + SATIN ALMA
                ═══════════════════════════════════════════════════════ *@
             <div class="col-lg-5">
 
@@ -401,7 +408,7 @@ else
                     @* ─── 1. ANA AKSİYONLAR VE ADET SEÇİCİ ─── *@
                     <div class="d-flex flex-column flex-md-row align-items-stretch gap-3">
 
-                        @* Adet Seçici (Karakter sayısına göre duyarlı ve genişleyebilen yapı) *@
+                        @* Adet Seçici *@
                         <div class="d-flex flex-column justify-content-center">
                             <div class="input-group input-group" style="min-width: 16px; max-width: 200px;">
                                 <button class="btn btn-outline-secondary text-light" type="button" @onclick="() => ChangeQuantity(-1)" disabled="@(_quantity <= 1)">
@@ -440,39 +447,239 @@ else
                             }
                         </div>
                     </div>
-
-
-
-
                 </div>
             </div>
+
+
+            @* ═══════════════════════════════════════════════════════
+               SAĞ: MAĞAZA BİLGİ PANELİ (col-lg-2)
+               ═══════════════════════════════════════════════════════ *@
             <div class="col-lg-2">
+                @if (_store != null)
+                {
+                    var st = _store;
+                    <div class="position-lg-sticky" style="top:80px;">
+                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-3">
 
-                <p>Bu alana ileriki tarihlerde ürün analiz raporları gelmesi için planlama yapılıyor.</p>
+                            @* ─── Mağaza Profil Görseli + Adı ─── *@
+                            <div class="text-center mb-3">
+                                @if (!string.IsNullOrEmpty(_storeProfileUrl))
+                                {
+                                    <img src="@_storeProfileUrl" alt="@st.Name"
+                                         class="rounded-circle border border-info mb-2"
+                                         style="width:72px; height:72px; object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center mx-auto mb-2"
+                                         style="width:72px; height:72px;">
+                                        <i class="fa fa-building fa-2x text-info"></i>
+                                    </div>
+                                }
+                                <h6 class="text-light mb-0 small fw-semibold">@st.Name</h6>
+                                @if (!string.IsNullOrEmpty(st.Description))
+                                {
+                                    <p class="text-white-50 mb-0" style="font-size:.7rem; line-height:1.3;">
+                                        @(st.Description.Length > 80 ? st.Description.Substring(0, 80) + "…" : st.Description)
+                                    </p>
+                                }
+                            </div>
 
+                            @* ─── Etkileşim Sayıları ─── *@
+                            @if (st.Interaction != null)
+                            {
+                                <div class="d-flex justify-content-around text-center mb-3 py-2 border-top border-bottom border-secondary border-opacity-25">
+                                    <div>
+                                        <div class="text-info fw-bold small">@(st.Interaction.ViewCount ?? 0)</div>
+                                        <div class="text-white-50" style="font-size:.65rem;">Görüntülenme</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-info fw-bold small">@(st.Interaction.LikeCount ?? 0)</div>
+                                        <div class="text-white-50" style="font-size:.65rem;">Beğeni</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-info fw-bold small">@_storeFollowerCount</div>
+                                        <div class="text-white-50" style="font-size:.65rem;">Takipçi</div>
+                                    </div>
+                                </div>
+                            }
+
+                            @* ─── Takip / Engelle Butonları ─── *@
+                            @if (use != null && st.UserId.HasValue && use.Id != st.UserId.Value)
+                            {
+                                <div class="d-flex flex-column gap-2 mb-3">
+                                    @if (_isStoreBlocked)
+                                    {
+                                        <button class="btn btn-outline-secondary btn-sm w-100"
+                                                @onclick="UnblockStore">
+                                            <i class="fa fa-ban me-1"></i>Engeli Kaldır
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn @(_isFollowingStore ? "btn-info" : "btn-outline-info") btn-sm w-100"
+                                                @onclick="ToggleFollowStore"
+                                                disabled="@_storeActionLoading">
+                                            @if (_storeActionLoading)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="fa @(_isFollowingStore ? "fa-check" : "fa-plus") me-1"></i>
+                                            }
+                                            @(_isFollowingStore ? "Takip Ediliyor" : "Mağazayı Takip Et")
+                                        </button>
+
+                                        <button class="btn btn-outline-danger btn-sm w-100"
+                                                @onclick="BlockStore"
+                                                disabled="@_storeActionLoading">
+                                            <i class="fa fa-ban me-1"></i>Engelle
+                                        </button>
+                                    }
+                                </div>
+                            }
+
+                            @* ─── Mağaza Galeri Görselleri ─── *@
+                            @if (_storeGalleryImages.Any())
+                            {
+                                <div class="mb-3">
+                                    <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
+                                        <i class="fa fa-picture-o me-1"></i>Mağaza Görselleri
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var imgUrl in _storeGalleryImages.Take(6))
+                                        {
+                                            <div class="rounded-2 overflow-hidden border border-secondary border-opacity-50"
+                                                 style="width:44px; height:44px;">
+                                                <img src="@imgUrl" alt="Mağaza görseli"
+                                                     class="w-100 h-100" style="object-fit:cover;" loading="lazy" />
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            @* ─── İletişim Bilgileri ─── *@
+                            @if (st.ContactInformation != null)
+                            {
+                                <div class="mb-3">
+                                    @if (!string.IsNullOrEmpty(st.ContactInformation.Email) && st.ContactInformation.IsActiveEmail == true)
+                                    {
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="fa fa-envelope text-info" style="font-size:.7rem; width:14px;"></i>
+                                            <a href="mailto:@st.ContactInformation.Email"
+                                               class="text-light text-decoration-none text-truncate" style="font-size:.75rem;">
+                                                @st.ContactInformation.Email
+                                            </a>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(st.ContactInformation.UserWebSite) && st.ContactInformation.IsActiveUserWebSite == true)
+                                    {
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i class="fa fa-globe text-info" style="font-size:.7rem; width:14px;"></i>
+                                            <a href="@st.ContactInformation.UserWebSite" target="_blank" rel="noopener"
+                                               class="text-light text-decoration-none text-truncate" style="font-size:.75rem;">
+                                                Web Sitesi
+                                            </a>
+                                        </div>
+                                    }
+
+                                    @* Sosyal Medya İkonları *@
+                                    @{
+                                        var socials = GetActiveSocials(st.ContactInformation);
+                                    }
+                                    @if (socials.Any())
+                                    {
+                                        <div class="d-flex flex-wrap gap-1 mt-2">
+                                            @foreach (var s in socials)
+                                            {
+                                                <a href="@s.Url" target="_blank" rel="noopener"
+                                                   class="btn btn-outline-secondary btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                                   style="width:28px; height:28px;" title="@s.Platform">
+                                                    <i class="fa @s.Icon" style="font-size:.7rem;"></i>
+                                                </a>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @* ─── Adres ─── *@
+                            @if (st.AddressInfo != null && !string.IsNullOrEmpty(st.AddressInfo.City))
+                            {
+                                <div class="mb-3">
+                                    <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
+                                        <i class="fa fa-map-marker me-1"></i>Konum
+                                    </div>
+                                    <div class="text-light" style="font-size:.75rem; line-height:1.4;">
+                                        @st.AddressInfo.City@(string.IsNullOrEmpty(st.AddressInfo.State) ? "" : $" / {st.AddressInfo.State}")@(string.IsNullOrEmpty(st.AddressInfo.Country) ? "" : $" / {st.AddressInfo.Country}")
+                                    </div>
+                                    @if (st.AddressInfo.Latitude != null && st.AddressInfo.Longitude != null)
+                                    {
+                                        var lat = st.AddressInfo.Latitude.Value.ToString(CultureInfo.InvariantCulture);
+                                        var lng = st.AddressInfo.Longitude.Value.ToString(CultureInfo.InvariantCulture);
+                                        <a href="https://www.google.com/maps/search/?api=1&query=@(lat),@(lng)"
+                                           target="_blank" rel="noopener"
+                                           class="text-info text-decoration-none" style="font-size:.7rem;">
+                                            <i class="fa fa-external-link me-1"></i>Haritada Gör
+                                        </a>
+                                    }
+                                </div>
+                            }
+
+                            @* ─── Çalışma Saatleri ─── *@
+                            @if (st.WorkingHours != null && HasAnyWorkingDay(st.WorkingHours))
+                            {
+                                <div class="mb-3">
+                                    <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
+                                        <i class="fa fa-clock-o me-1"></i>Çalışma Saatleri
+                                    </div>
+                                    <div style="font-size:.7rem; line-height:1.6;">
+                                        @foreach (var wh in GetWorkingHoursList(st.WorkingHours))
+                                        {
+                                            <div class="d-flex justify-content-between">
+                                                <span class="@(wh.IsToday ? "text-info fw-semibold" : "text-white-50")">@wh.Day</span>
+                                                <span class="@(wh.IsActive ? (wh.IsToday ? "text-info fw-semibold" : "text-light") : "text-white-50")">
+                                                    @(wh.IsActive ? $"{wh.Start:HH\\:mm} - {wh.End:HH\\:mm}" : "Kapalı")
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            @* ─── Detay Butonu ─── *@
+                            <button class="btn btn-outline-info btn-sm w-100" @onclick="OpenStoreModal">
+                                <i class="fa fa-info-circle me-1"></i>Tüm Bilgiler
+                            </button>
+                        </div>
+                    </div>
+                }
             </div>
+
         </div>
 
 
         @* ─── 2. GÜVEN ROZETLERİ ─── *@
         <div class="row g-2 text-center mt-5">
-
             <div class="col-4">
-                <div class="bg-light rounded-3 p-3 h-100 border border-light shadow-sm d-flex flex-column align-items-center justify-content-center">
-                    <i class="fa fa-truck fa-2x text-primary mb-2"></i>
-                    <span class="text-dark small fw-medium">Hızlı Kargo</span>
+                <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
+                    <i class="fa fa-truck fa-2x text-light mb-2"></i>
+                    <span class="text-light small fw-medium">Hızlı Kargo</span>
                 </div>
             </div>
             <div class="col-4">
-                <div class="bg-light rounded-3 p-3 h-100 border border-light shadow-sm d-flex flex-column align-items-center justify-content-center">
-                    <i class="fa fa-shield fa-2x text-primary mb-2"></i>
-                    <span class="text-dark small fw-medium">Güvenli Ödeme</span>
+                <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
+                    <i class="fa fa-shield fa-2x text-light mb-2"></i>
+                    <span class="text-light small fw-medium">Güvenli Ödeme</span>
                 </div>
             </div>
             <div class="col-4">
-                <div class="bg-light rounded-3 p-3 h-100 border border-light shadow-sm d-flex flex-column align-items-center justify-content-center">
-                    <i class="fa fa-undo fa-2x text-primary mb-2"></i>
-                    <span class="text-dark small fw-medium">Kolay İade</span>
+                <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
+                    <i class="fa fa-undo fa-2x text-light mb-2"></i>
+                    <span class="text-light small fw-medium">Kolay İade</span>
                 </div>
             </div>
         </div>
@@ -754,7 +961,7 @@ else
     // ─── Yaşam döngüsü ────────────────────────────────────────────
     private bool _disposed;
     private bool _loading = true;
-    private Guid _loadedProductId; // Hangi ürün için yüklediğimizi takip eder (parametre değişiminde tekrar yükleme)
+    private Guid _loadedProductId;
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _loadSemaphore = new(1, 1);
@@ -767,17 +974,27 @@ else
     private Store? _store;
     private string? _storeProfileUrl;
 
+    // ─── Mağaza Takip / Engel ─────────────────────────────────────
+    private bool _isFollowingStore;
+    private bool _isStoreBlocked;
+    private int _storeFollowerCount;
+    private bool _storeActionLoading;
+    private Guid? _storeShipId;
+
+    // ─── Mağaza Galeri ────────────────────────────────────────────
+    private List<string> _storeGalleryImages = new();
+
     // ─── Görseller ────────────────────────────────────────────────
-    private List<string> _baseImages = new();          // Kapak + genel galeri
-    private List<string> _displayImages = new();        // Ekranda gösterilen (varyant seçimine göre değişebilir)
+    private List<string> _baseImages = new();
+    private List<string> _displayImages = new();
     private int _activeImageIndex;
 
     // ─── Varyantlar ───────────────────────────────────────────────
     private List<VariantInfo> _variants = new();
     private VariantInfo? _selectedVariant;
     private List<VariantAttributeGroup> _variantAttributes = new();
-    private Dictionary<Guid, Guid> _selectedAttributeValues = new(); // AttributeId -> ValueId
-    private Dictionary<Guid, Guid?> _variantGroupCovers = new();      // AttributeValueId -> CoverMediaId (görsel grup)
+    private Dictionary<Guid, Guid> _selectedAttributeValues = new();
+    private Dictionary<Guid, Guid?> _variantGroupCovers = new();
 
     // ─── Fiyat / Stok ─────────────────────────────────────────────
     private PriceInfo? _currentPrice;
@@ -804,7 +1021,6 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        // Parametre olarak gelen ürün değiştiyse (veya ilk yükleme) verileri çek
         if (SelectedProduct != null && SelectedProduct.Id != _loadedProductId)
         {
             _loadedProductId = SelectedProduct.Id;
@@ -819,6 +1035,104 @@ else
     protected override void OnInitialized()
     {
         StateHub.OnDataChanged += HandleDataChanged;
+    }
+
+    // ─── Zoom JS Enjeksiyonu ──────────────────────────────────────
+    private bool _zoomJsInjected;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_product != null && !_zoomJsInjected)
+        {
+            _zoomJsInjected = true;
+            await JS.InvokeVoidAsync("eval", @"
+(function(){
+    if(window.__ppZoomInit) return;
+    window.__ppZoomInit = true;
+
+    function setup(){
+        var box = document.getElementById('ppMediaMain');
+        var lens = document.getElementById('ppZoomLens');
+        var result = document.getElementById('ppZoomResult');
+        if(!box || !lens || !result){ setTimeout(setup, 300); return; }
+
+        var Z = 2.5;
+        var on = false;
+
+        function mobile(){ return window.innerWidth < 992; }
+
+        box.addEventListener('mouseenter', function(){
+            if(mobile()) return;
+            var img = box.querySelector('#ppMainImg');
+            if(!img) return;
+            on = true;
+            var r = box.getBoundingClientRect();
+            var rw = result.offsetWidth || r.width;
+            var rh = result.offsetHeight || r.height;
+            lens.style.width = (rw/Z)+'px';
+            lens.style.height = (rh/Z)+'px';
+            result.style.backgroundImage = 'url('+img.src+')';
+            result.style.backgroundSize = (r.width*Z)+'px '+(r.height*Z)+'px';
+            lens.style.opacity = '1';
+            result.style.opacity = '1';
+            result.style.visibility = 'visible';
+            box.style.cursor = 'crosshair';
+        });
+
+        box.addEventListener('mousemove', function(e){
+            if(!on) return;
+            var r = box.getBoundingClientRect();
+            var lw = lens.offsetWidth, lh = lens.offsetHeight;
+            var x = e.clientX - r.left - lw/2;
+            var y = e.clientY - r.top - lh/2;
+            x = Math.max(0, Math.min(x, r.width - lw));
+            y = Math.max(0, Math.min(y, r.height - lh));
+            lens.style.transform = 'translate('+x+'px,'+y+'px)';
+            result.style.backgroundPosition = '-'+(x*Z)+'px -'+(y*Z)+'px';
+        });
+
+        box.addEventListener('mouseleave', function(){
+            on = false;
+            lens.style.opacity = '0';
+            result.style.opacity = '0';
+            result.style.visibility = 'hidden';
+            box.style.cursor = '';
+        });
+
+        var ts = {scale:1, sd:0, ss:1, pinch:false};
+        function dist(t){ var dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
+        box.addEventListener('touchstart', function(e){
+            if(!mobile()||e.touches.length<2) return;
+            e.preventDefault(); ts.pinch=true; ts.sd=dist(e.touches); ts.ss=ts.scale;
+        }, {passive:false});
+        box.addEventListener('touchmove', function(e){
+            if(!ts.pinch||e.touches.length<2) return;
+            e.preventDefault();
+            ts.scale = Math.max(1, Math.min(ts.ss*(dist(e.touches)/ts.sd), 4));
+            var img = box.querySelector('#ppMainImg');
+            if(img) img.style.transform='scale('+ts.scale+')';
+        }, {passive:false});
+        box.addEventListener('touchend', function(e){
+            if(e.touches.length<2){ ts.pinch=false; if(ts.scale<=1.05){ ts.scale=1; var img=box.querySelector('#ppMainImg'); if(img) img.style.transform=''; } }
+        });
+
+        var obs = new MutationObserver(function(muts){
+            muts.forEach(function(m){
+                if(m.type==='attributes' && m.attributeName==='src' && on){
+                    var img = box.querySelector('#ppMainImg');
+                    if(img){ var r=box.getBoundingClientRect(); result.style.backgroundImage='url('+img.src+')'; result.style.backgroundSize=(r.width*Z)+'px '+(r.height*Z)+'px'; }
+                }
+            });
+        });
+        var tgt = box.querySelector('#ppMainImg');
+        if(tgt) obs.observe(tgt, {attributes:true, attributeFilter:['src']});
+    }
+
+    setup();
+    setInterval(function(){ var el=document.getElementById('ppMediaMain'); if(el && !el.__ppZ){ el.__ppZ=true; window.__ppZoomInit=false; setup(); } }, 1000);
+})();
+");
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -836,7 +1150,7 @@ else
     private async Task HandleDataChanged(string entityName)
     {
         if (_disposed || _product == null) return;
-        if (entityName != "Products" && entityName != "ProductPrices" && entityName != "ProductStocks" && entityName != "Store")
+        if (entityName != "Products" && entityName != "ProductPrices" && entityName != "ProductStocks" && entityName != "Store" && entityName != "StoreShip")
             return;
         await InvokeAsync(async () => { await LoadAllAsync(); StateHasChanged(); });
     }
@@ -858,7 +1172,7 @@ else
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
 
-            // 1) Ürünü tazele (parametre eski olabilir; güncel veriyi DB'den al)
+            // 1) Ürünü tazele
             _product = await db.Set<Products>().AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == SelectedProduct.Id &&
                                           x.IsActive &&
@@ -867,7 +1181,7 @@ else
 
             var productId = _product.Id;
 
-            // Görüntülenme logla (denetim)
+            // Görüntülenme logla
             await Logger.TakeIt(use?.Id, PAGE_TITLE, "ProductView", "details", _product.Name);
 
             // ─── Ziyaret geçmişi kaydet ───
@@ -910,25 +1224,33 @@ else
                 .FirstOrDefaultAsync(s => s.Id == _product.StoreId, token);
             _storeProfileUrl = _store?.ProfileCoverGallery?.ProfileImagePath;
 
-            // 5) Kategori breadcrumb (birincil kategori → kök yol)
+            // 4b) Mağaza galeri görselleri
+            if (_store != null)
+                await LoadStoreGalleryAsync(db, _store.Id, token);
+
+            // 4c) Mağaza takip/engel durumu
+            if (_store != null && use != null && _store.UserId.HasValue)
+                await LoadStoreShipStatusAsync(db, token);
+
+            // 5) Kategori breadcrumb
             await LoadBreadcrumbAsync(db, productId, token);
 
             // 6) Varyantlar + değerleri
             await LoadVariantsAsync(db, productId, token);
 
-            // 7) Görseller (kapak + galeri + varyant görsel grupları)
+            // 7) Görseller
             await LoadImagesAsync(db, productId, token);
 
-            // 8) Spesifikasyonlar (teknik özellikler)
+            // 8) Spesifikasyonlar
             await LoadSpecificationsAsync(db, productId, token);
 
-            // 9) Harici medya (video/360/döküman)
+            // 9) Harici medya
             _externalMedias = await db.Set<ProductExternalMedias>().AsNoTracking()
                 .Where(em => em.ProductId == productId)
                 .OrderBy(em => em.DisplayOrder)
                 .ToListAsync(token);
 
-            // 10) Seçili varyanta göre fiyat & stok hesapla
+            // 10) Seçili varyanta göre fiyat & stok
             await RefreshSelectedVariantDataAsync(db, token);
         }
         catch (OperationCanceledException) { }
@@ -950,7 +1272,6 @@ else
     {
         _breadcrumbCategories.Clear();
 
-        // Birincil kategori (yoksa ilk kategori)
         var catId = await db.Set<ProductCategories>().AsNoTracking()
             .Where(pc => pc.ProductId == productId)
             .OrderByDescending(pc => pc.IsPrimary)
@@ -959,7 +1280,6 @@ else
 
         if (catId == null) return;
 
-        // Tüm kategorileri çek (ağaç yürüyüşü için) — küçük tablo
         var allCats = await db.Set<CategoriesTr>().AsNoTracking()
             .ToDictionaryAsync(c => c.Id, c => c, token);
 
@@ -988,7 +1308,6 @@ else
 
         var variantIds = rawVariants.Select(v => v.Id).ToList();
 
-        // Varyant değer kombinasyonları
         var variantValues = await db.Set<ProductVariantValues>().AsNoTracking()
             .Where(vv => variantIds.Contains(vv.VariantId))
             .ToListAsync(token);
@@ -996,21 +1315,18 @@ else
         var attrIds = variantValues.Select(vv => vv.AttributeId).Distinct().ToList();
         var valueIds = variantValues.Select(vv => vv.AttributeValueId).Distinct().ToList();
 
-        // Özellik adları
         var attrs = await db.Set<ProductAttributes>().AsNoTracking()
             .Where(a => attrIds.Contains(a.Id))
             .Select(a => new { a.Id, a.Name, a.DisplayOrder })
             .ToListAsync(token);
         var attrNames = attrs.ToDictionary(a => a.Id, a => a);
 
-        // Değer adları + renk
         var vals = await db.Set<ProductAttributeValues>().AsNoTracking()
             .Where(av => valueIds.Contains(av.Id))
             .Select(av => new { av.Id, av.AttributeId, av.Value, av.ColorHex, av.DisplayOrder })
             .ToListAsync(token);
         var valInfo = vals.ToDictionary(v => v.Id, v => v);
 
-        // Varyant modeli kur
         _variants = rawVariants.Select(v => new VariantInfo
         {
             VariantId = v.Id,
@@ -1023,16 +1339,13 @@ else
                 .ToList()
         }).ToList();
 
-        // Varsayılan varyantı seç
         _selectedVariant = _variants.FirstOrDefault(v => v.IsDefault) ?? _variants.FirstOrDefault();
 
-        // Seçili varyant değerlerini başlangıç olarak işaretle
         _selectedAttributeValues.Clear();
         if (_selectedVariant != null)
             foreach (var (aId, vId) in _selectedVariant.ValuePairs)
                 _selectedAttributeValues[aId] = vId;
 
-        // Varyant özellik gruplarını (seçiciler) oluştur
         _variantAttributes = attrIds
             .Select(aId =>
             {
@@ -1090,13 +1403,12 @@ else
                 .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
                 .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl_Ratio_1_4 ?? m.FileUrl ?? "", token);
 
-            // Sıra korunarak ekle
             foreach (var gid in galleryItems.Where(id => id.HasValue).Select(id => id!.Value))
                 if (galleryMedia.TryGetValue(gid, out var url) && !string.IsNullOrEmpty(url) && !images.Contains(url))
                     images.Add(url);
         }
 
-        // Varyant görsel grupları (değer bazlı kapak görselleri)
+        // Varyant görsel grupları
         var variantGroups = await db.Set<ProductImageVariantGroups>().AsNoTracking()
             .Where(g => g.ProductId == productId)
             .Select(g => new { g.AttributeValueId, g.CoverMediaId })
@@ -1112,7 +1424,7 @@ else
 
             foreach (var g in variantGroups)
                 if (g.CoverMediaId.HasValue && groupMedia.TryGetValue(g.CoverMediaId.Value, out var url))
-                    _variantGroupCovers[g.AttributeValueId] = g.CoverMediaId; // Değer -> medya eşlemesi (URL aşağıda)
+                    _variantGroupCovers[g.AttributeValueId] = g.CoverMediaId;
         }
 
         _baseImages = images;
@@ -1128,7 +1440,6 @@ else
             .OrderBy(s => s.DisplayOrder)
             .ToListAsync(token);
 
-        // Tanımlı özellik/değer adlarını çöz
         var attrIds = specs.Where(s => s.AttributeId.HasValue).Select(s => s.AttributeId!.Value).Distinct().ToList();
         var valIds = specs.Where(s => s.AttributeValueId.HasValue).Select(s => s.AttributeValueId!.Value).Distinct().ToList();
 
@@ -1168,6 +1479,61 @@ else
         }).ToList();
     }
 
+    // ─── MAĞAZA GALERİ ───────────────────────────────────────────
+    private async Task LoadStoreGalleryAsync(_ApplicationConnectionDb db, Guid storeId, CancellationToken token)
+    {
+        _storeGalleryImages.Clear();
+
+        var galleryMediaIds = await db.Set<ItemGallery>().AsNoTracking()
+            .Where(ig => ig.ItemId == storeId &&
+                         ig.IsDelete != true &&
+                         (ig.ItemType == "InShooting" || ig.ItemType == "OutShooting"))
+            .OrderBy(ig => ig.ItemAddDate)
+            .Select(ig => ig.MediaId)
+            .Take(6)
+            .ToListAsync(token);
+
+        var mediaIds = galleryMediaIds.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        if (!mediaIds.Any()) return;
+
+        var mediaUrls = await db.Set<Data.Media>().AsNoTracking()
+            .Where(m => mediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+            .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_4 ?? m.FileUrl_Ratio_1_8 ?? m.FileUrl ?? "", token);
+
+        foreach (var mid in galleryMediaIds.Where(id => id.HasValue).Select(id => id!.Value))
+            if (mediaUrls.TryGetValue(mid, out var url) && !string.IsNullOrEmpty(url))
+                _storeGalleryImages.Add(url);
+    }
+
+    // ─── MAĞAZA TAKİP/ENGEL DURUMU ──────────────────────────────
+    private async Task LoadStoreShipStatusAsync(_ApplicationConnectionDb db, CancellationToken token)
+    {
+        _isFollowingStore = false;
+        _isStoreBlocked = false;
+        _storeShipId = null;
+
+        if (use == null || _store?.UserId == null) return;
+
+        var ship = await db.Set<StoreShip>().AsNoTracking()
+            .FirstOrDefaultAsync(s => s.RequestorId == use.Id &&
+                                      s.ReceiverId == _store.UserId.Value &&
+                                      (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu != true), token);
+
+        if (ship != null)
+        {
+            _storeShipId = ship.Id;
+            _isStoreBlocked = ship.Block == true;
+            _isFollowingStore = !_isStoreBlocked && ship.Status == true;
+        }
+
+        // Toplam takipçi sayısı
+        _storeFollowerCount = await db.Set<StoreShip>().AsNoTracking()
+            .CountAsync(s => s.ReceiverId == _store.UserId.Value &&
+                             s.Status == true &&
+                             s.Block != true &&
+                             (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu != true), token);
+    }
+
     // ─── SEÇİLİ VARYANT → FİYAT & STOK ───────────────────────────
     private async Task RefreshSelectedVariantDataAsync(_ApplicationConnectionDb db, CancellationToken token)
     {
@@ -1180,7 +1546,6 @@ else
 
         var variantId = _selectedVariant.VariantId;
 
-        // Fiyatlar (güncel: EffectiveTo == null)
         var prices = await db.Set<ProductPrices>().AsNoTracking()
             .Where(pp => pp.VariantId == variantId && pp.EffectiveTo == null)
             .Select(pp => new PriceInfo
@@ -1191,7 +1556,6 @@ else
             })
             .ToListAsync(token);
 
-        // Önce TRY, yoksa ilk para birimi
         _currentPrice = prices.FirstOrDefault(p => p.Currency == "TRY") ?? prices.FirstOrDefault();
         _otherCurrencyPrices = prices.Where(p => p != _currentPrice).ToList();
 
@@ -1202,7 +1566,6 @@ else
             _currentDiscountPercent = (int)Math.Round(100 - (_currentPrice.DiscountedPrice.Value / _currentPrice.Price * 100));
         }
 
-        // Stok (tüm depoların toplamı)
         var stockRows = await db.Set<ProductStocks>().AsNoTracking()
             .Where(s => s.VariantId == variantId)
             .Select(s => new { s.Quantity, s.TrackStock, s.MaxOrderQuantity })
@@ -1212,7 +1575,6 @@ else
         _currentStockQty = stockRows.Where(s => s.TrackStock).Sum(s => s.Quantity);
         _maxOrderQty = stockRows.Where(s => s.MaxOrderQuantity.HasValue).Select(s => s.MaxOrderQuantity).Min();
 
-        // Adet sınırını kontrol et
         if (_maxOrderQty.HasValue && _quantity > _maxOrderQty.Value) _quantity = _maxOrderQty.Value;
         if (_quantity < 1) _quantity = 1;
     }
@@ -1225,12 +1587,10 @@ else
     {
         _selectedAttributeValues[attributeId] = valueId;
 
-        // Seçili değerlere tam uyan varyantı bul
         var match = _variants.FirstOrDefault(v =>
             _selectedAttributeValues.All(sel =>
                 v.ValuePairs.Any(pair => pair.AttributeId == sel.Key && pair.AttributeValueId == sel.Value)));
 
-        // Tam eşleşme yoksa, en çok eşleşen varyanta düş
         if (match == null)
         {
             match = _variants
@@ -1238,7 +1598,6 @@ else
                     _selectedAttributeValues.TryGetValue(pair.AttributeId, out var sv) && sv == pair.AttributeValueId))
                 .FirstOrDefault();
 
-            // Seçimi bu varyanta hizala
             if (match != null)
             {
                 foreach (var (aId, vId) in match.ValuePairs)
@@ -1248,10 +1607,8 @@ else
 
         _selectedVariant = match;
 
-        // Görsel grup kapağı varsa onu öne al
         ApplyVariantImage(valueId);
 
-        // Fiyat & stok yenile
         try
         {
             var token = _cts.Token;
@@ -1265,11 +1622,8 @@ else
 
     private void ApplyVariantImage(Guid valueId)
     {
-        // Bu değerin görsel grubu varsa, ilgili görseli aktif görsel olarak göster
         if (_variantGroupCovers.TryGetValue(valueId, out var mediaId) && mediaId.HasValue)
         {
-            // _displayImages temel görsellerle aynı; varyant kapağını bulup index'i ona kaydırırız.
-            // (Görsel URL'leri base set içinde olduğundan, ilk görseli sıfıra çekmek yeterli.)
             _activeImageIndex = 0;
         }
     }
@@ -1283,8 +1637,6 @@ else
 
     private bool IsCombinationAvailable(Guid attributeId, Guid valueId)
     {
-        // Bu (özellik=değer) seçildiğinde, diğer seçili özelliklerle birlikte
-        // en az bir varyant kombinasyonu oluşabiliyor mu?
         var hypothetical = new Dictionary<Guid, Guid>(_selectedAttributeValues) { [attributeId] = valueId };
 
         return _variants.Any(v =>
@@ -1303,6 +1655,168 @@ else
         if (_maxOrderQty.HasValue && next > _maxOrderQty.Value) return;
         if (_hasStockData && next > _currentStockQty) return;
         _quantity = next;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MAĞAZA TAKİP / ENGEL AKSİYONLARI
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task ToggleFollowStore()
+    {
+        if (use == null || _store?.UserId == null || _storeActionLoading) return;
+
+        _storeActionLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            if (_isFollowingStore && _storeShipId.HasValue)
+            {
+                // Takibi bırak → soft delete
+                await db.Set<StoreShip>()
+                    .Where(s => s.Id == _storeShipId.Value)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(s => s.IsDeleted!.IsDeletedStatu, true)
+                        .SetProperty(s => s.IsDeleted!.DeletedAtDate, DateTime.UtcNow), token);
+
+                _isFollowingStore = false;
+                _storeShipId = null;
+                _storeFollowerCount = Math.Max(0, _storeFollowerCount - 1);
+                await Notify("info", "Takip", "Mağaza takipten çıkarıldı.");
+            }
+            else
+            {
+                // Takip et → otomatik kabul (Status = true)
+                var newShip = new StoreShip
+                {
+                    RequestorId = use.Id,
+                    ReceiverId = _store.UserId.Value,
+                    Status = true,
+                    Block = false,
+                    ActionDate = DateTime.UtcNow,
+                    IsDeleted = new IsDeleted()
+                };
+                db.Set<StoreShip>().Add(newShip);
+                await db.SaveChangesAsync(token);
+
+                _storeShipId = newShip.Id;
+                _isFollowingStore = true;
+                _storeFollowerCount++;
+                await Notify("success", "Takip", "Mağaza takip edilmeye başlandı!");
+            }
+
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "StoreFollow",
+                _isFollowingStore ? "follow" : "unfollow", _store.Name);
+        }
+        catch (Exception ex)
+        {
+            await LogError("ToggleFollowStore", ex);
+            await Notify("danger", "Hata", "İşlem sırasında bir sorun oluştu.");
+        }
+        finally
+        {
+            _storeActionLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task BlockStore()
+    {
+        if (use == null || _store?.UserId == null || _storeActionLoading) return;
+
+        _storeActionLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            if (_storeShipId.HasValue)
+            {
+                // Mevcut kaydı güncelle
+                await db.Set<StoreShip>()
+                    .Where(s => s.Id == _storeShipId.Value)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(s => s.Block, true)
+                        .SetProperty(s => s.Status, false)
+                        .SetProperty(s => s.ActionDate, DateTime.UtcNow), token);
+            }
+            else
+            {
+                // Yeni engelleme kaydı
+                var newShip = new StoreShip
+                {
+                    RequestorId = use.Id,
+                    ReceiverId = _store.UserId.Value,
+                    Status = false,
+                    Block = true,
+                    ActionDate = DateTime.UtcNow,
+                    IsDeleted = new IsDeleted()
+                };
+                db.Set<StoreShip>().Add(newShip);
+                await db.SaveChangesAsync(token);
+                _storeShipId = newShip.Id;
+            }
+
+            _isStoreBlocked = true;
+            _isFollowingStore = false;
+            if (_storeFollowerCount > 0) _storeFollowerCount--;
+
+            await Notify("warning", "Engel", "Mağaza engellendi.");
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "StoreBlock", "block", _store.Name);
+        }
+        catch (Exception ex)
+        {
+            await LogError("BlockStore", ex);
+            await Notify("danger", "Hata", "Engelleme sırasında bir sorun oluştu.");
+        }
+        finally
+        {
+            _storeActionLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UnblockStore()
+    {
+        if (use == null || !_storeShipId.HasValue || _storeActionLoading) return;
+
+        _storeActionLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            // Engeli kaldır → kaydı soft delete (temiz başlangıç)
+            await db.Set<StoreShip>()
+                .Where(s => s.Id == _storeShipId.Value)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(s => s.IsDeleted!.IsDeletedStatu, true)
+                    .SetProperty(s => s.IsDeleted!.DeletedAtDate, DateTime.UtcNow), token);
+
+            _isStoreBlocked = false;
+            _isFollowingStore = false;
+            _storeShipId = null;
+
+            await Notify("info", "Engel", "Mağaza engeli kaldırıldı.");
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "StoreBlock", "unblock", _store?.Name);
+        }
+        catch (Exception ex)
+        {
+            await LogError("UnblockStore", ex);
+            await Notify("danger", "Hata", "İşlem sırasında bir sorun oluştu.");
+        }
+        finally
+        {
+            _storeActionLoading = false;
+            StateHasChanged();
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1326,7 +1840,6 @@ else
         _isFavorite = !_isFavorite;
         await Notify(_isFavorite ? "success" : "info", "Favoriler",
             _isFavorite ? "Ürün favorilere eklendi!" : "Ürün favorilerden çıkarıldı.");
-        // TODO (Hüseyin): Favori kaydı back-end
     }
 
     private async Task ToggleCompare()
@@ -1334,7 +1847,6 @@ else
         _isCompared = !_isCompared;
         await Notify(_isCompared ? "warning" : "info", "Karşılaştırma",
             _isCompared ? "Ürün karşılaştırma listesine eklendi." : "Karşılaştırmadan çıkarıldı.");
-        // TODO (Hüseyin): Karşılaştırma listesi back-end
     }
 
     private async Task ToggleRecommendation()
@@ -1342,7 +1854,6 @@ else
         _isCompared = !_isCompared;
         await Notify(_isCompared ? "warning" : "info", "Tavsiye",
             _isCompared ? "Ürün tavsiye listesine eklendi." : "Tavsiye edilecek.");
-        // TODO (Hüseyin): Karşılaştırma listesi back-end
     }
 
     private async Task ToggleAskTheSeller()
@@ -1350,7 +1861,6 @@ else
         _isCompared = !_isCompared;
         await Notify(_isCompared ? "warning" : "info", "Satıcıya Sor",
             _isCompared ? "Ürün karşılaştırma listesine eklendi." : "Satıcıya soru soruldu.");
-        // TODO (Hüseyin): Karşılaştırma listesi back-end
     }
 
     private async Task ToggleIsOnSale()
@@ -1358,7 +1868,6 @@ else
         _isCompared = !_isCompared;
         await Notify(_isCompared ? "warning" : "info", "İndirim",
             _isCompared ? "Ürün karşılaştırma listesine eklendi." : "İndirimdeyken haber verilecek");
-        // TODO (Hüseyin): Karşılaştırma listesi back-end
     }
 
     private async Task OpenShareModal() => await ShowModal("ShareModal");
@@ -1404,7 +1913,6 @@ else
         _ => "₺"
     };
 
-    // FullDescription HTML içerebilir; basit güvenlik için script/iframe etiketlerini temizle.
     private static string SanitizeDescription(string html)
     {
         if (string.IsNullOrWhiteSpace(html)) return string.Empty;
@@ -1416,6 +1924,54 @@ else
             cleaned, @"on\w+\s*=\s*""[^""]*""", string.Empty,
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         return cleaned;
+    }
+
+    // ─── ÇALIŞMA SAATLERİ YARDIMCI ─────────────────────────────
+    private static bool HasAnyWorkingDay(WorkingHours wh) =>
+        wh.IsActiveMonday == true || wh.IsActiveTuesday == true || wh.IsActiveWednesday == true ||
+        wh.IsActiveThursday == true || wh.IsActiveFriday == true || wh.IsActiveSaturday == true ||
+        wh.IsActiveSunday == true;
+
+    private static List<WorkingHourRow> GetWorkingHoursList(WorkingHours wh)
+    {
+        var today = (int)DateTime.Now.DayOfWeek; // 0=Pazar
+        return new List<WorkingHourRow>
+        {
+            new("Pzt", wh.IsActiveMonday == true, wh.StartTimeMonday, wh.FinishTimeMonday, today == 1),
+            new("Sal", wh.IsActiveTuesday == true, wh.StartTimeTuesday, wh.FinishTimeTuesday, today == 2),
+            new("Çar", wh.IsActiveWednesday == true, wh.StartTimeWednesday, wh.FinishTimeWednesday, today == 3),
+            new("Per", wh.IsActiveThursday == true, wh.StartTimeThursday, wh.FinishTimeThursday, today == 4),
+            new("Cum", wh.IsActiveFriday == true, wh.StartTimeFriday, wh.FinishTimeFriday, today == 5),
+            new("Cmt", wh.IsActiveSaturday == true, wh.StartTimeSaturday, wh.FinishTimeSaturday, today == 6),
+            new("Paz", wh.IsActiveSunday == true, wh.StartTimeSunday, wh.FinishTimeSunday, today == 0),
+        };
+    }
+
+    // ─── SOSYAL MEDYA YARDIMCI ──────────────────────────────────
+    private static List<SocialLink> GetActiveSocials(ContactInformation ci)
+    {
+        var list = new List<SocialLink>();
+        if (ci.IsActiveWhatsApp == true && !string.IsNullOrEmpty(ci.WhatsApp))
+            list.Add(new("WhatsApp", "fa-whatsapp", $"https://wa.me/{ci.WhatsApp}"));
+        if (ci.IsActiveInstagram == true && !string.IsNullOrEmpty(ci.Instagram))
+            list.Add(new("Instagram", "fa-instagram", $"https://instagram.com/{ci.Instagram}"));
+        if (ci.IsActiveFacebook == true && !string.IsNullOrEmpty(ci.Facebook))
+            list.Add(new("Facebook", "fa-facebook", ci.Facebook));
+        if (ci.IsActiveX == true && !string.IsNullOrEmpty(ci.X))
+            list.Add(new("X", "fa-twitter", $"https://x.com/{ci.X}"));
+        if (ci.IsActiveYouTube == true && !string.IsNullOrEmpty(ci.YouTube))
+            list.Add(new("YouTube", "fa-youtube-play", ci.YouTube));
+        if (ci.IsActiveLinkedin == true && !string.IsNullOrEmpty(ci.Linkedin))
+            list.Add(new("LinkedIn", "fa-linkedin", ci.Linkedin));
+        if (ci.IsActiveTikTok == true && !string.IsNullOrEmpty(ci.TikTok))
+            list.Add(new("TikTok", "fa-music", $"https://tiktok.com/@{ci.TikTok}"));
+        if (ci.IsActiveTelegram == true && !string.IsNullOrEmpty(ci.Telegram))
+            list.Add(new("Telegram", "fa-telegram", $"https://t.me/{ci.Telegram}"));
+        if (ci.IsActivePinterest == true && !string.IsNullOrEmpty(ci.Pinterest))
+            list.Add(new("Pinterest", "fa-pinterest", ci.Pinterest));
+        if (ci.IsActiveDiscord == true && !string.IsNullOrEmpty(ci.Discord))
+            list.Add(new("Discord", "fa-commenting", ci.Discord));
+        return list;
     }
 
     // ─── DTO / Yardımcı Modeller ─────────────────────────────────
@@ -1456,5 +2012,55 @@ else
         public string Name { get; set; } = "—";
         public string Value { get; set; } = "—";
     }
+
+    private record WorkingHourRow(string Day, bool IsActive, TimeOnly? Start, TimeOnly? End, bool IsToday);
+
+    private record SocialLink(string Platform, string Icon, string Url);
 }
- 
+
+<style>
+    /* ═══ ZOOM SİSTEMİ (Amazon/eBay Tarzı) ═══ */
+    .pp-zoom-wrapper {
+        position: relative;
+    }
+
+    .pp-zoom-lens {
+        position: absolute;
+        top: 0;
+        left: 0;
+        border: 2px solid rgba(0,0,0,.15);
+        background: rgba(255,255,255,.25);
+        backdrop-filter: blur(1px);
+        pointer-events: none;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity .15s ease;
+        will-change: transform;
+        box-shadow: 0 0 0 1px rgba(0,0,0,.06), inset 0 0 0 1px rgba(255,255,255,.3);
+    }
+
+    .pp-zoom-result {
+        position: absolute;
+        top: 0;
+        left: calc(100% + 20px);
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        background-repeat: no-repeat;
+        background-color: #ffffff;
+        border: 1px solid rgba(0,0,0,.12);
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.15), 0 4px 16px rgba(0,0,0,.08);
+        z-index: 1050;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity .2s ease, visibility .2s ease;
+    }
+
+    @@media (max-width: 991.98px) {
+        .pp-zoom-result,
+        .pp-zoom-lens {
+            display: none !important;
+        }
+    }
+</style>

@@ -9,7 +9,7 @@ namespace data
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public bool IsUser { get; set; }
-        public Guid UserStoreId { get; set; }
+        public Guid? UserStoreId { get; set; }
 
         public Guid FeaturedImage { get; set; }
         public string Title { get; set; }

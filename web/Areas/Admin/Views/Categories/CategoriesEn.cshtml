@@ -1,0 +1,199 @@
+﻿@using data
+@using System.Globalization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
+@using Microsoft.EntityFrameworkCore
+@using System.Linq
+
+@{
+    Layout = "~/Areas/_Layout.cshtml";
+
+    // --- 1. Dil belirleme ---
+    string currentLang = "en";
+    var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
+
+    // Oturum kontrolü
+    var userEmail = User.FindFirstValue(ClaimTypes.Email);
+    Users? use = null;
+
+    if (!string.IsNullOrEmpty(userEmail))
+    {
+        // Oturum açık: Veritabanından dil al
+        using (var db = new _ApplicationConnectionDb())
+        {
+            use = await db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.ContactInformation.Email == userEmail);
+
+            if (use != null && !string.IsNullOrEmpty(use.Language) && supportedCultures.Contains(use.Language.ToLower()))
+            {
+                currentLang = use.Language.ToLower();
+            }
+        }
+    }
+    else
+    {
+        // Oturum kapalı: Önce URL, sonra cookie, en son varsayılan
+        var routeLang = ViewContext.RouteData.Values["culture"]?.ToString()?.ToLower();
+        if (!string.IsNullOrEmpty(routeLang) && supportedCultures.Contains(routeLang))
+        {
+            currentLang = routeLang;
+        }
+        else
+        {
+            // Cookie'den oku
+            var httpContext = Context;
+            if (httpContext != null && httpContext.Request.Cookies.TryGetValue(".Efavori.Culture", out var cookieValue) && !string.IsNullOrEmpty(cookieValue))
+            {
+                // ASP.NET Core formatı: c=tr|uic=tr
+                var parts = cookieValue.Split('|');
+                var cPart = parts.FirstOrDefault(p => p.StartsWith("c="));
+                if (cPart != null)
+                {
+                    var langCode = cPart.Substring(2).ToLower();
+                    if (supportedCultures.Contains(langCode))
+                        currentLang = langCode;
+                }
+            }
+        }
+    }
+}
+
+@if (!User.Identity.IsAuthenticated)
+{
+    @* Oturum Açmamış*@
+    {
+        switch (currentLang)
+        {
+            case "tr":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "az":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "de":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "es":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "fr":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "hi":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "pt":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "ru":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "zh":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            default:
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+        }
+    }
+}
+else
+{
+    @* Oturum Açmış*@
+    {
+        switch (currentLang)
+        {
+            case "tr":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "az":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "de":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "es":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "fr":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "hi":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "pt":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "ru":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            case "zh":
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+            default:
+                @(await Html.RenderComponentAsync<razor._Shared.tr.Pages.Admin.Categories.CategoriesEn>(
+                                                RenderMode.Server,
+                                                new { use = (use != null ? use : null) }))
+                ;
+                break;
+        }
+    }
+}

@@ -595,15 +595,15 @@ else
                             @* Adet Seçici *@
                             <div class="d-flex flex-column justify-content-center">
                                 <div class="input-group" style="min-width: 16px; max-width: 200px;">
-                                    <button class="btn btn-outline-secondary text-light" type="button"
+                                    <button class="btn btn-light text-light" type="button"
                                             @onclick="() => ChangeQuantity(-1)" disabled="@(_quantity <= 1)"
                                             aria-label="Adeti azalt">
                                         <i class="fa fa-minus" aria-hidden="true"></i>
                                     </button>
-                                    <input type="text" class="form-control text-center fw-bold bg-light text-dark px-2"
+                                    <input type="text" class="form-control text-center fw-bold bg-light text-light px-2"
                                            value="@_quantity" style="min-width: 32px;" readonly
                                            aria-label="Adet" />
-                                    <button class="btn btn-outline-secondary text-light" type="button"
+                                    <button class="btn btn-light text-light" type="button"
                                             @onclick="() => ChangeQuantity(1)"
                                             disabled="@(_maxOrderQty.HasValue && _quantity >= _maxOrderQty.Value)"
                                             aria-label="Adeti artır">

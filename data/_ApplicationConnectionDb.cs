@@ -2,6 +2,7 @@
 using data._Product.BulkWordPressProductImport;
 using data._Product.ProductHistory;
 using data._Shared;
+using data.Articles;
 using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -69,7 +70,7 @@ namespace data
         public DbSet<States> States { get; set; } = default!;
         public DbSet<Addresses> Addresses { get; set; } = default!;
 
-        // Categories
+        // Products Categories
         public DbSet<CategoriesAz> CategoriesAz { get; set; } = default!;
         public DbSet<CategoriesDe> CategoriesDe { get; set; } = default!;
         public DbSet<CategoriesEn> CategoriesEn { get; set; } = default!;
@@ -80,6 +81,9 @@ namespace data
         public DbSet<CategoriesRu> CategoriesRu { get; set; } = default!;
         public DbSet<CategoriesTr> CategoriesTr { get; set; } = default!;
         public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
+
+        // Articles Categories
+        public DbSet<Articles.CategoriesTr> ArticlesCategoriesTr { get; set; } = default!;
 
         // Stores
         public DbSet<Store> Stores { get; set; } = default!;

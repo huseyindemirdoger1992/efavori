@@ -14,6 +14,12 @@
    ✅ Soft delete (owned IsDeleted) — fiziksel silme yok
    ✅ Bootstrap 5.3 + Font Awesome, tek dosya, code-behind yok
    ✅ GlobalSecurityProvider KULLANILMAZ (talep gereği)
+   ─────────────────────────────────────────────────────────────
+   REVİZYON EKLERİ:
+   ✅ Durum filtresi düzeltildi (Published/Draft/Bekliyor doğru eşleme)
+   ✅ Etkileşim filtreleri: Görüntülenme, Paylaşma, Tavsiye (min/max)
+   ✅ Toplu Kategori Değiştirme (derinlik gösteren ağaç seçici)
+   ✅ Toplu Stok Güncelleme (varsayılan varyant)
    ============================================================ *@
 
 @using data
@@ -61,25 +67,30 @@
     {
         <div class="vr mx-1"></div>
         <span class="badge bg-light text-dark">@_selectedIds.Count seçili</span>
-        <button class="btn btn-outline-secondary btn-sm" @onclick="ClearSelection"><i class="fa fa-times me-1"></i>Temizle</button>
+        <button class="btn btn-secondary btn-sm" @onclick="ClearSelection"><i class="fa fa-times me-1"></i>Temizle</button>
         <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-success" @onclick='() => OpenBulk("publish")' disabled="@_isProcessing"><i class="fa fa-check me-1"></i>Yayınla</button>
-            <button class="btn btn-outline-warning" @onclick='() => OpenBulk("unpublish")' disabled="@_isProcessing"><i class="fa fa-eye-slash me-1"></i>Taslağa Al</button>
-            <button class="btn btn-outline-info" @onclick='() => OpenBulk("activate")' disabled="@_isProcessing"><i class="fa fa-toggle-on me-1"></i>Aktifleştir</button>
-            <button class="btn btn-outline-dark" @onclick='() => OpenBulk("deactivate")' disabled="@_isProcessing"><i class="fa fa-toggle-off me-1"></i>Pasifleştir</button>
-            <button class="btn btn-outline-danger" @onclick='() => OpenBulk("delete")' disabled="@_isProcessing"><i class="fa fa-trash me-1"></i>Sil</button>
+            <button class="btn btn-success" @onclick='() => OpenBulk("publish")' disabled="@_isProcessing"><i class="fa fa-check me-1"></i>Yayınla</button>
+            <button class="btn btn-warning" @onclick='() => OpenBulk("unpublish")' disabled="@_isProcessing"><i class="fa fa-eye-slash me-1"></i>Taslağa Al</button>
+            <button class="btn btn-info" @onclick='() => OpenBulk("activate")' disabled="@_isProcessing"><i class="fa fa-toggle-on me-1"></i>Aktifleştir</button>
+            <button class="btn btn-dark" @onclick='() => OpenBulk("deactivate")' disabled="@_isProcessing"><i class="fa fa-toggle-off me-1"></i>Pasifleştir</button>
+            <button class="btn btn-danger" @onclick='() => OpenBulk("delete")' disabled="@_isProcessing"><i class="fa fa-trash me-1"></i>Sil</button>
+        </div>
+        <div class="vr mx-1"></div>
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-primary" @onclick="OpenBulkCategory" disabled="@_isProcessing"><i class="fa fa-folder me-1"></i>Kategori Değiştir</button>
+            <button class="btn btn-primary" @onclick="OpenBulkStock" disabled="@_isProcessing"><i class="fa fa-cubes me-1"></i>Stok Güncelle</button>
         </div>
     }
 
     <div class="ms-auto small text-light align-self-center">
-            @if (IsAdmin)
-            {
-                <span class="badge bg-danger"><i class="fa fa-shield me-1"></i>SuperAdmin · Tam Yetki</span>
-            }
-            else
-            {
-                <span class="badge bg-secondary"><i class="fa fa-user me-1"></i>Mağaza Görünümü</span>
-            }        
+        @if (IsAdmin)
+        {
+            <span class="badge bg-danger"><i class="fa fa-shield me-1"></i>SuperAdmin · Tam Yetki</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary"><i class="fa fa-user me-1"></i>Mağaza Görünümü</span>
+        }
     </div>
 </div>
 
@@ -172,7 +183,7 @@
 </div>
 
 @* ═══════════════════════════ FİLTRELER ═══════════════════════════ *@
-<div class="row g-2 mb-3">
+<div class="row g-2 mb-2">
     <div class="col-12 col-lg-2" style="margin-top:12px;">
         <div class="input-group input-group-sm">
             <span class="input-group-text"><i class="fa fa-search"></i></span>
@@ -180,7 +191,7 @@
                    value="@_searchTerm" @oninput="OnSearchInput" />
             @if (!string.IsNullOrWhiteSpace(_searchTerm))
             {
-                <button class="btn btn-outline-secondary" @onclick="ClearSearch"><i class="fa fa-times"></i></button>
+                <button class="btn btn-secondary" @onclick="ClearSearch"><i class="fa fa-times"></i></button>
             }
         </div>
     </div>
@@ -204,7 +215,6 @@
             <option value="Draft">Taslak</option>
             <option value="PendingApproval">Onay Bekliyor</option>
             <option value="Rejected">Reddedildi</option>
-            <option value="Archived">Arşiv</option>
         </select>
     </div>
 
@@ -222,6 +232,9 @@
             <option value="old">En Eski</option>
             <option value="name">İsim (A-Z)</option>
             <option value="upd">Son Güncellenen</option>
+            <option value="view_desc">En Çok Görüntülenen</option>
+            <option value="share_desc">En Çok Paylaşılan</option>
+            <option value="recommend_desc">En Çok Tavsiye Edilen</option>
         </select>
     </div>
 
@@ -236,6 +249,69 @@
                     <option value="@s.Id">@(string.IsNullOrWhiteSpace(s.Name) ? "(İsimsiz mağaza)" : s.Name)</option>
                 }
             </select>
+        </div>
+    }
+</div>
+
+@* ═══════════════════════════ GELİŞMİŞ FİLTRELER (ETKİLEŞİM) ═══════════════════════════ *@
+<div class="mb-3">
+    <button class="btn btn-link btn-sm text-decoration-none p-0" @onclick="() => _showAdvancedFilters = !_showAdvancedFilters">
+        <i class="fa @(_showAdvancedFilters ? "fa-chevron-up" : "fa-chevron-down") me-1"></i>
+        Etkileşim Filtreleri
+        @if (HasAnyInteractionFilter())
+        {
+            <span class="badge bg-info ms-1">Aktif</span>
+        }
+    </button>
+
+    @if (_showAdvancedFilters)
+    {
+        <div class="row g-2 mt-1">
+            @* Görüntülenme *@
+            <div class="col-12 col-md-4">
+                <label class="form-label small mb-1 text-light"><i class="fa fa-eye me-1"></i>Görüntülenme</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Min</span>
+                    <input type="number" class="form-control" placeholder="0" min="0"
+                           value="@_filterViewCountMin" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterViewCountMin))" />
+                    <span class="input-group-text">Max</span>
+                    <input type="number" class="form-control" placeholder="∞" min="0"
+                           value="@_filterViewCountMax" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterViewCountMax))" />
+                </div>
+            </div>
+            @* Paylaşma *@
+            <div class="col-12 col-md-4">
+                <label class="form-label small mb-1 text-light"><i class="fa fa-share-alt me-1"></i>Paylaşma</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Min</span>
+                    <input type="number" class="form-control" placeholder="0" min="0"
+                           value="@_filterShareCountMin" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterShareCountMin))" />
+                    <span class="input-group-text">Max</span>
+                    <input type="number" class="form-control" placeholder="∞" min="0"
+                           value="@_filterShareCountMax" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterShareCountMax))" />
+                </div>
+            </div>
+            @* Tavsiye Etme *@
+            <div class="col-12 col-md-4">
+                <label class="form-label small mb-1 text-light"><i class="fa fa-thumbs-up me-1"></i>Tavsiye Etme</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">Min</span>
+                    <input type="number" class="form-control" placeholder="0" min="0"
+                           value="@_filterRecommendCountMin" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterRecommendCountMin))" />
+                    <span class="input-group-text">Max</span>
+                    <input type="number" class="form-control" placeholder="∞" min="0"
+                           value="@_filterRecommendCountMax" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterRecommendCountMax))" />
+                </div>
+            </div>
+
+            @if (HasAnyInteractionFilter())
+            {
+                <div class="col-12">
+                    <button class="btn btn-secondary btn-sm" @onclick="ClearInteractionFilters">
+                        <i class="fa fa-times me-1"></i>Etkileşim Filtrelerini Temizle
+                    </button>
+                </div>
+            }
         </div>
     }
 </div>
@@ -273,6 +349,7 @@ else
                         <th class="d-none d-xl-table-cell">Mağaza</th>
                         <th class="d-none d-xl-table-cell">Yükleyen</th>
                     }
+                    <th class="text-center d-none d-lg-table-cell" title="Görüntülenme / Paylaşma / Tavsiye"><i class="fa fa-bar-chart"></i></th>
                     <th class="text-center">Durum</th>
                     <th class="d-none d-lg-table-cell">Tarih</th>
                     <th class="text-end">İşlemler</th>
@@ -315,6 +392,14 @@ else
                             <td class="d-none d-xl-table-cell small">@(_storeMap.GetValueOrDefault(r.StoreId) ?? "—")</td>
                             <td class="d-none d-xl-table-cell small">@(_userMap.GetValueOrDefault(r.UserId) ?? "—")</td>
                         }
+                        <td class="text-center d-none d-lg-table-cell text-nowrap">
+                            @{
+                                var ic = _interactionMap.GetValueOrDefault(r.Id);
+                            }
+                            <span class="small" title="Görüntülenme"><i class="fa fa-eye text-info"></i> @(ic.view)</span>
+                            <span class="small ms-1" title="Paylaşma"><i class="fa fa-share-alt text-success"></i> @(ic.share)</span>
+                            <span class="small ms-1" title="Tavsiye"><i class="fa fa-thumbs-up text-warning"></i> @(ic.recommend)</span>
+                        </td>
                         <td class="text-center text-nowrap">
                             <span class="badge @(r.PublishStatus == true ? "bg-success" : r.PublishStatus == false ? "bg-secondary" : "bg-warning text-dark")">
                                 @(r.PublishStatus == true ? "Yayında" : r.PublishStatus == false ? "Taslak" : "Bekliyor")
@@ -325,11 +410,11 @@ else
                         </td>
                         <td class="d-none d-lg-table-cell text-nowrap small text-light">@r.CreatedAt?.ToString("dd.MM.yyyy")</td>
                         <td class="text-end text-nowrap">
-                            <button class="btn btn-outline-secondary btn-sm" title="Detay" @onclick="() => OpenDetail(r.Id)"><i class="fa fa-eye"></i></button>
-                            <button class="btn btn-outline-warning btn-sm" title="Düzenle" @onclick="() => NavigateToEdit(r.Id)"><i class="fa fa-edit"></i></button>
+                            <button class="btn btn-secondary btn-sm" title="Detay" @onclick="() => OpenDetail(r.Id)"><i class="fa fa-eye"></i></button>
+                            <button class="btn btn-warning btn-sm" title="Düzenle" @onclick="() => NavigateToEdit(r.Id)"><i class="fa fa-edit"></i></button>
                             @if (IsAdmin || r.UserId == use?.Id)
                             {
-                                <button class="btn btn-outline-danger btn-sm" title="Sil" @onclick="() => OpenDelete(r)"><i class="fa fa-trash"></i></button>
+                                <button class="btn btn-danger btn-sm" title="Sil" @onclick="() => OpenDelete(r)"><i class="fa fa-trash"></i></button>
                             }
                         </td>
                     </tr>
@@ -407,6 +492,14 @@ else
                                     <tr><th class="text-light">Toplam Stok</th><td>@_detail.TotalStock</td></tr>
                                     <tr><th class="text-light">Marka</th><td>@(_detail.BrandName ?? "—")</td></tr>
                                     <tr><th class="text-light">Kategoriler</th><td>@(_detail.Categories.Any() ? string.Join(", ", _detail.Categories) : "—")</td></tr>
+                                    <tr>
+                                        <th class="text-light">Etkileşimler</th>
+                                        <td>
+                                            <i class="fa fa-eye text-info"></i> @_detail.ViewCount
+                                            <i class="fa fa-share-alt text-success ms-2"></i> @_detail.ShareCount
+                                            <i class="fa fa-thumbs-up text-warning ms-2"></i> @_detail.RecommendCount
+                                        </td>
+                                    </tr>
                                     @if (IsAdmin)
                                     {
                                         <tr><th class="text-light">Mağaza</th><td>@(_detail.StoreName ?? "—")</td></tr>
@@ -425,7 +518,7 @@ else
                 }
             </div>
             <div class="modal-footer py-2">
-                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>
     </div>
@@ -440,7 +533,7 @@ else
                 <p class="mb-0">"<b>@_deleteTarget?.Name</b>" ürününü silmek istediğinize emin misiniz? (Soft delete — kayıt arşivlenir)</p>
             </div>
             <div class="modal-footer py-2">
-                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
                 <button class="btn btn-danger btn-sm" @onclick="DeleteConfirmed" disabled="@_isProcessing">
                     @if (_isProcessing)
                     {
@@ -462,13 +555,136 @@ else
                 <p class="mb-0">Seçili <b>@_selectedIds.Count</b> ürüne <b>@BulkActionText(_bulkAction)</b> işlemi uygulanacak. Onaylıyor musunuz?</p>
             </div>
             <div class="modal-footer py-2">
-                <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
                 <button class="btn btn-primary btn-sm" @onclick="ApplyBulk" disabled="@_isProcessing">
                     @if (_isProcessing)
                     {
                         <i class="fa fa-spinner fa-spin me-1"></i>
                     }
                     <span>Uygula</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════ TOPLU KATEGORİ DEĞİŞTİRME MODAL ═══════════════════════════ *@
+<div class="modal fade" id="bulkCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0"><i class="fa fa-folder-open me-1"></i>Toplu Kategori Değiştir</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-light mb-2">
+                    Seçili <b>@_selectedIds.Count</b> ürünün ana kategorisi aşağıda seçeceğiniz kategori ile değiştirilecektir.
+                </p>
+
+                @if (_categoryTreeLoading)
+                {
+                    <div class="text-center py-3"><i class="fa fa-spinner fa-spin fa-lg text-info"></i></div>
+                }
+                else
+                {
+                    @* Arama kutusu *@
+                    <div class="input-group input-group-sm mb-2">
+                        <span class="input-group-text"><i class="fa fa-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Kategori ara..."
+                               value="@_categorySearchTerm" @oninput="OnCategorySearchInput" />
+                        @if (!string.IsNullOrWhiteSpace(_categorySearchTerm))
+                        {
+                            <button class="btn btn-secondary" @onclick='() => { _categorySearchTerm = ""; }'>
+                                <i class="fa fa-times"></i>
+                            </button>
+                        }
+                    </div>
+
+                    @* Seçili kategori göstergesi *@
+                    @if (_selectedCategoryId.HasValue)
+                    {
+                        <div class="alert alert-info py-1 px-2 small mb-2">
+                            <i class="fa fa-check-circle me-1"></i>Seçilen: <b>@_selectedCategoryPath</b>
+                        </div>
+                    }
+
+                    @* Kategori ağacı listesi *@
+                    <div style="max-height:360px;overflow-y:auto;" class="border rounded p-1">
+                        @{
+                            var filteredCategories = GetFilteredCategories();
+                        }
+                        @if (!filteredCategories.Any())
+                        {
+                            <div class="text-center py-3 text-light small">Kategori bulunamadı.</div>
+                        }
+                        else
+                        {
+                            @foreach (var cat in filteredCategories)
+                            {
+                                var isSelected = _selectedCategoryId == cat.Id;
+                                <div class="d-flex align-items-center px-2 py-1 rounded @(isSelected ? "bg-primary bg-opacity-10 border border-primary" : "border border-transparent")"
+                                     role="button" @onclick="() => SelectCategory(cat)"
+                                     style="margin-left:@(cat.Depth * 20)px;">
+                                    <i class="fa @(cat.HasChildren ? "fa-folder text-warning" : "fa-file-o text-light") me-2 small"></i>
+                                    <span class="small @(isSelected ? "fw-bold text-primary" : "")">@cat.Name</span>
+                                    <span class="badge bg-light text-light ms-auto small" style="font-size:0.65rem;">Seviye @(cat.Depth + 1)</span>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button class="btn btn-primary btn-sm" @onclick="ApplyBulkCategory" disabled="@(_isProcessing || !_selectedCategoryId.HasValue)">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i>
+                    }
+                    <span>Kategoriyi Uygula</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════ TOPLU STOK GÜNCELLEME MODAL ═══════════════════════════ *@
+<div class="modal fade" id="bulkStockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0"><i class="fa fa-cubes me-1"></i>Toplu Stok Güncelle</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-light mb-2">
+                    Seçili <b>@_selectedIds.Count</b> ürünün varsayılan varyantının stok adedi aşağıdaki değer ile güncellenecektir.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label small">Yeni Stok Adedi</label>
+                    <input type="number" class="form-control" min="0" @bind="_bulkStockQuantity" />
+                </div>
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="stockMode" id="stockModeSet"
+                               checked="@(_bulkStockMode == "set")" @onchange='() => _bulkStockMode = "set"' />
+                        <label class="form-check-label small" for="stockModeSet">Değeri ata (üzerine yaz)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="stockMode" id="stockModeAdd"
+                               checked="@(_bulkStockMode == "add")" @onchange='() => _bulkStockMode = "add"' />
+                        <label class="form-check-label small" for="stockModeAdd">Mevcut stoğa ekle</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
+                <button class="btn btn-primary btn-sm" @onclick="ApplyBulkStock" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i>
+                    }
+                    <span>Stoku Güncelle</span>
                 </button>
             </div>
         </div>
@@ -516,6 +732,15 @@ else
     private string _sort = "new";
     private CancellationTokenSource? _searchCts;
 
+    // ─────────────── Etkileşim Filtreleri ───────────────
+    private bool _showAdvancedFilters;
+    private int? _filterViewCountMin;
+    private int? _filterViewCountMax;
+    private int? _filterShareCountMin;
+    private int? _filterShareCountMax;
+    private int? _filterRecommendCountMin;
+    private int? _filterRecommendCountMax;
+
     // ─────────────── Sayfa-içi toplu lookup'lar (N+1 yok) ───────────────
     private readonly Dictionary<Guid, string> _coverMap = new();   // CoverMediaId → FileUrl
     private readonly Dictionary<Guid, string> _brandMap = new();   // BrandId → Ad
@@ -524,6 +749,7 @@ else
     private readonly Dictionary<Guid, string> _skuMap = new();     // ProductId → varsayılan SKU
     private readonly Dictionary<Guid, int> _stockMap = new();      // ProductId → toplam stok
     private readonly Dictionary<Guid, (decimal price, decimal? disc, string cur)> _priceMap = new();
+    private readonly Dictionary<Guid, (int view, int share, int recommend)> _interactionMap = new(); // Etkileşim sayaçları
 
     // ─────────────── Seçim (toplu işlem) ───────────────
     private readonly HashSet<Guid> _selectedIds = new();
@@ -537,6 +763,17 @@ else
     private ProductRow? _deleteTarget;
     private DetailVm? _detail;
     private bool _detailLoading;
+
+    // ─────────────── Toplu Kategori Değiştirme ───────────────
+    private List<CategoryNode> _categoryTree = new();
+    private string _categorySearchTerm = string.Empty;
+    private int? _selectedCategoryId;
+    private string _selectedCategoryPath = string.Empty;
+    private bool _categoryTreeLoading;
+
+    // ─────────────── Toplu Stok Güncelleme ───────────────
+    private int _bulkStockQuantity;
+    private string _bulkStockMode = "set"; // "set" veya "add"
 
     private const string NoImage = "https://efavori.com/_files/main/NoImage.png";
 
@@ -663,7 +900,7 @@ else
         var q = db.Products.AsNoTracking()
             .Where(p => p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true);
 
-        // ROL: admin değilse yalnızca kendi ürünleri (gerçek projede aktif Store.Id ile de daraltılabilir)
+        // ROL: admin değilse yalnızca kendi ürünleri
         if (!IsAdmin)
         {
             var uid = use?.Id ?? Guid.Empty;
@@ -674,16 +911,41 @@ else
             q = q.Where(p => p.StoreId == sid);
         }
 
+        // Arama (ad veya SKU)
         if (!string.IsNullOrWhiteSpace(_searchTerm))
         {
             var term = _searchTerm.Trim();
-            // Ad VEYA varsayılan varyant SKU eşleşmesi
             q = q.Where(p => (p.Name != null && p.Name.Contains(term))
                 || db.ProductVariants.Any(v => v.ProductId == p.Id && v.Sku != null && v.Sku.Contains(term)));
         }
 
-        if (!string.IsNullOrEmpty(_filterType)) q = q.Where(p => p.ProductType == _filterType);
-        if (!string.IsNullOrEmpty(_filterStatus)) q = q.Where(p => p.PublishStatus == true);
+        // Ürün tipi
+        if (!string.IsNullOrEmpty(_filterType))
+            q = q.Where(p => p.ProductType == _filterType);
+
+        // ── DURUM FİLTRESİ (DÜZELTİLDİ) ──
+        // PublishStatus: true=Yayında, false=Taslak, null=Onay Bekliyor
+        // IsApprovedByAdmin: true=Onaylı, false=Reddedildi, null=Bekliyor
+        if (!string.IsNullOrEmpty(_filterStatus))
+        {
+            switch (_filterStatus)
+            {
+                case "Published":
+                    q = q.Where(p => p.PublishStatus == true);
+                    break;
+                case "Draft":
+                    q = q.Where(p => p.PublishStatus == false);
+                    break;
+                case "PendingApproval":
+                    q = q.Where(p => p.PublishStatus == null);
+                    break;
+                case "Rejected":
+                    q = q.Where(p => p.IsApprovedByAdmin == false);
+                    break;
+            }
+        }
+
+        // Aktiflik
         if (_filterActive == "active") q = q.Where(p => p.IsActive);
         else if (_filterActive == "passive") q = q.Where(p => !p.IsActive);
 
@@ -694,6 +956,22 @@ else
         else if (_filterAiStat == "status_true") q = q.Where(p => p.AiContentStatus == true);
         else if (_filterAiStat == "status_false") q = q.Where(p => p.AiContentStatus == false);
 
+        // ── ETKİLEŞİM FİLTRELERİ ──
+        if (_filterViewCountMin.HasValue)
+            q = q.Where(p => (p.InteractionCounts != null ? p.InteractionCounts.ViewCount : 0) >= _filterViewCountMin.Value);
+        if (_filterViewCountMax.HasValue)
+            q = q.Where(p => (p.InteractionCounts != null ? p.InteractionCounts.ViewCount : 0) <= _filterViewCountMax.Value);
+
+        if (_filterShareCountMin.HasValue)
+            q = q.Where(p => (p.InteractionCounts != null ? p.InteractionCounts.ShareCount : 0) >= _filterShareCountMin.Value);
+        if (_filterShareCountMax.HasValue)
+            q = q.Where(p => (p.InteractionCounts != null ? p.InteractionCounts.ShareCount : 0) <= _filterShareCountMax.Value);
+
+        if (_filterRecommendCountMin.HasValue)
+            q = q.Where(p => (p.InteractionCounts != null ? p.InteractionCounts.RecommendCount : 0) >= _filterRecommendCountMin.Value);
+        if (_filterRecommendCountMax.HasValue)
+            q = q.Where(p => (p.InteractionCounts != null ? p.InteractionCounts.RecommendCount : 0) <= _filterRecommendCountMax.Value);
+
         return q;
     }
 
@@ -702,6 +980,9 @@ else
         "old" => q.OrderBy(p => p.CreatedAt).ThenBy(p => p.Id),
         "name" => q.OrderBy(p => p.Name).ThenBy(p => p.Id),
         "upd" => q.OrderByDescending(p => p.UpdatedAt ?? p.CreatedAt).ThenBy(p => p.Id),
+        "view_desc" => q.OrderByDescending(p => p.InteractionCounts != null ? p.InteractionCounts.ViewCount ?? 0 : 0).ThenBy(p => p.Id),
+        "share_desc" => q.OrderByDescending(p => p.InteractionCounts != null ? p.InteractionCounts.ShareCount ?? 0 : 0).ThenBy(p => p.Id),
+        "recommend_desc" => q.OrderByDescending(p => p.InteractionCounts != null ? p.InteractionCounts.RecommendCount ?? 0 : 0).ThenBy(p => p.Id),
         _ => q.OrderByDescending(p => p.CreatedAt).ThenBy(p => p.Id)
     };
 
@@ -709,7 +990,7 @@ else
     private async Task LoadRelatedLookups(_ApplicationConnectionDb db, List<ProductRow> rows)
     {
         _coverMap.Clear(); _brandMap.Clear(); _storeMap.Clear(); _userMap.Clear();
-        _skuMap.Clear(); _stockMap.Clear(); _priceMap.Clear();
+        _skuMap.Clear(); _stockMap.Clear(); _priceMap.Clear(); _interactionMap.Clear();
         if (!rows.Any()) return;
 
         var ids = rows.Select(r => r.Id).ToList();
@@ -757,6 +1038,18 @@ else
             _priceMap[grp.Key] = (chosen.Price, chosen.DiscountedPrice, chosen.Currency ?? prefCur);
         }
 
+        // Etkileşim sayaçları (Products.Interaction owned type → doğrudan Products tablosundan)
+        var interactions = await db.Products.AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .Select(p => new
+            {
+                p.Id,
+                View = p.InteractionCounts != null ? p.InteractionCounts.ViewCount ?? 0 : 0,
+                Share = p.InteractionCounts != null ? p.InteractionCounts.ShareCount ?? 0 : 0,
+                Recommend = p.InteractionCounts != null ? p.InteractionCounts.RecommendCount ?? 0 : 0
+            }).ToListAsync(_cts.Token);
+        foreach (var i in interactions) _interactionMap[i.Id] = (i.View, i.Share, i.Recommend);
+
         // SuperAdmin: mağaza + yükleyen adları
         if (IsAdmin)
         {
@@ -801,8 +1094,38 @@ else
 
     private async Task OnStatCardClicked(string stat)
     {
-        // Aynı karta tekrar tıklanırsa "Toplam Ürün"e (filtresiz) döner
         _filterAiStat = (_filterAiStat == stat) ? "" : stat;
+        _page = 1;
+        await LoadPageAsync(recount: true);
+    }
+
+    // ── Etkileşim filtre olayları ──
+    private async Task OnInteractionFilterChanged(ChangeEventArgs e, string field)
+    {
+        int? val = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        switch (field)
+        {
+            case nameof(_filterViewCountMin): _filterViewCountMin = val; break;
+            case nameof(_filterViewCountMax): _filterViewCountMax = val; break;
+            case nameof(_filterShareCountMin): _filterShareCountMin = val; break;
+            case nameof(_filterShareCountMax): _filterShareCountMax = val; break;
+            case nameof(_filterRecommendCountMin): _filterRecommendCountMin = val; break;
+            case nameof(_filterRecommendCountMax): _filterRecommendCountMax = val; break;
+        }
+        _page = 1;
+        await LoadPageAsync(recount: true);
+    }
+
+    private bool HasAnyInteractionFilter()
+        => _filterViewCountMin.HasValue || _filterViewCountMax.HasValue
+        || _filterShareCountMin.HasValue || _filterShareCountMax.HasValue
+        || _filterRecommendCountMin.HasValue || _filterRecommendCountMax.HasValue;
+
+    private async Task ClearInteractionFilters()
+    {
+        _filterViewCountMin = null; _filterViewCountMax = null;
+        _filterShareCountMin = null; _filterShareCountMax = null;
+        _filterRecommendCountMin = null; _filterRecommendCountMax = null;
         _page = 1;
         await LoadPageAsync(recount: true);
     }
@@ -818,7 +1141,7 @@ else
         if (page > _totalPages) page = _totalPages;
         if (page == _page) return;
         _page = page;
-        await LoadPageAsync(recount: false); // toplam değişmedi → yeniden sayma (hız)
+        await LoadPageAsync(recount: false);
     }
 
     private async Task OnJumpPage(ChangeEventArgs e)
@@ -864,7 +1187,6 @@ else
             var ids = _selectedIds.ToList();
             var now = DateTime.UtcNow;
 
-            // Büyük seçimlerde belleği şişirmemek için 500'lük parçalar halinde işle
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
             foreach (var chunk in Chunk(ids, 500))
             {
@@ -905,10 +1227,300 @@ else
         }
     }
 
+    // ═══════════════════════ TOPLU KATEGORİ DEĞİŞTİRME ═══════════════════════
+    private async Task OpenBulkCategory()
+    {
+        if (!IsAdmin || !_selectedIds.Any()) return;
+        _selectedCategoryId = null;
+        _selectedCategoryPath = string.Empty;
+        _categorySearchTerm = string.Empty;
+
+        // Kategori ağacını yükle (henüz yüklenmemişse)
+        if (!_categoryTree.Any())
+        {
+            _categoryTreeLoading = true;
+            await ShowModal("bulkCategoryModal");
+            StateHasChanged();
+            await LoadCategoryTree();
+            _categoryTreeLoading = false;
+            StateHasChanged();
+        }
+        else
+        {
+            await ShowModal("bulkCategoryModal");
+        }
+    }
+
+    private async Task LoadCategoryTree()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var allCats = await db.CategoriesTr.AsNoTracking()
+                .OrderBy(c => c.DepartmentName).ThenBy(c => c.Name)
+                .Select(c => new CatRaw { Id = c.Id, Name = c.Name ?? "(İsimsiz)", DepartmentName = c.DepartmentName, ParentCategoryId = c.ParentCategoryId })
+                .ToListAsync(_cts.Token);
+
+            // Ağaç yapısını oluştur
+            var lookup = allCats.ToLookup(c => c.ParentCategoryId);
+            _categoryTree.Clear();
+
+            // Önce kök düğümleri bul (ParentCategoryId == null)
+            var roots = allCats.Where(c => c.ParentCategoryId == null).ToList();
+            foreach (var root in roots)
+            {
+                BuildTreeRecursive(root.Id, root.Name, root.DepartmentName, 0, lookup);
+            }
+        }
+        catch (Exception ex) { await LogError("LoadCategoryTree", ex); }
+    }
+
+    private void BuildTreeRecursive(int id, string name, string? deptName, int depth,
+        ILookup<int?, CatRaw> lookup)
+    {
+        var displayName = depth == 0 && !string.IsNullOrWhiteSpace(deptName)
+            ? $"{deptName} > {name}"
+            : name;
+
+        var children = lookup[id];
+        _categoryTree.Add(new CategoryNode
+        {
+            Id = id,
+            Name = displayName,
+            Depth = depth,
+            HasChildren = children.Any(),
+            ParentCategoryId = null
+        });
+
+        foreach (var child in children)
+        {
+            BuildTreeRecursive(child.Id, child.Name, child.DepartmentName, depth + 1, lookup);
+        }
+    }
+
+    private List<CategoryNode> GetFilteredCategories()
+    {
+        if (string.IsNullOrWhiteSpace(_categorySearchTerm))
+            return _categoryTree;
+
+        var term = _categorySearchTerm.Trim().ToLowerInvariant();
+        return _categoryTree.Where(c => c.Name.ToLowerInvariant().Contains(term)).ToList();
+    }
+
+    private void OnCategorySearchInput(ChangeEventArgs e)
+    {
+        _categorySearchTerm = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private void SelectCategory(CategoryNode cat)
+    {
+        _selectedCategoryId = cat.Id;
+        // Tam yolu oluştur: üst kategorileri bul
+        _selectedCategoryPath = BuildCategoryPath(cat.Id);
+    }
+
+    private string BuildCategoryPath(int catId)
+    {
+        // Ağaçta bu düğümün adını bul
+        var node = _categoryTree.FirstOrDefault(c => c.Id == catId);
+        return node?.Name ?? catId.ToString();
+    }
+
+    private async Task ApplyBulkCategory()
+    {
+        if (!IsAdmin || _isProcessing || !_selectedIds.Any() || !_selectedCategoryId.HasValue) return;
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            var ids = _selectedIds.ToList();
+            var catId = _selectedCategoryId.Value;
+            var now = DateTime.UtcNow;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            foreach (var chunk in Chunk(ids, 500))
+            {
+                // Mevcut primary kategori kayıtlarını bul
+                var existingPrimaries = await db.ProductCategories
+                    .Where(pc => chunk.Contains(pc.ProductId) && pc.IsPrimary)
+                    .ToListAsync(_cts.Token);
+
+                // Ürünlerin mevcut primary'lerini sil
+                db.ProductCategories.RemoveRange(existingPrimaries);
+
+                // Yeni primary kategori ata
+                foreach (var pid in chunk)
+                {
+                    db.ProductCategories.Add(new ProductCategories
+                    {
+                        Id = Guid.NewGuid(),
+                        ProductId = pid,
+                        CategoryId = catId,
+                        IsPrimary = true,
+                        CreatedAt = now
+                    });
+                }
+
+                // Ürünlerin UpdatedAt güncelle
+                var products = await db.Products.Where(p => chunk.Contains(p.Id)).ToListAsync(_cts.Token);
+                foreach (var p in products) p.UpdatedAt = now;
+
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await HideModal("bulkCategoryModal");
+            var count = ids.Count;
+            ClearSelection();
+            _isProcessing = false;
+
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkCategory ({count}) → CatId:{catId}");
+            await Notify("success", "Tamamlandı", $"{count} ürünün ana kategorisi '{_selectedCategoryPath}' olarak değiştirildi.");
+            await LoadPageAsync(recount: true);
+        }
+        catch (Exception ex)
+        {
+            await LogError("ApplyBulkCategory", ex);
+            await Notify("danger", "Hata", "Toplu kategori değişimi sırasında bir sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ═══════════════════════ TOPLU STOK GÜNCELLEME ═══════════════════════
+    private async Task OpenBulkStock()
+    {
+        if (!IsAdmin || !_selectedIds.Any()) return;
+        _bulkStockQuantity = 0;
+        _bulkStockMode = "set";
+        await ShowModal("bulkStockModal");
+    }
+
+    private async Task ApplyBulkStock()
+    {
+        if (!IsAdmin || _isProcessing || !_selectedIds.Any()) return;
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            var ids = _selectedIds.ToList();
+            var now = DateTime.UtcNow;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            foreach (var chunk in Chunk(ids, 500))
+            {
+                // Varsayılan varyantları bul
+                var defaultVariants = await db.ProductVariants.AsNoTracking()
+                    .Where(v => chunk.Contains(v.ProductId) && v.IsDefault
+                        && (v.IsDeleted == null || v.IsDeleted.IsDeletedStatu != true))
+                    .Select(v => new { v.Id, v.ProductId })
+                    .ToListAsync(_cts.Token);
+
+                var variantIds = defaultVariants.Select(v => v.Id).ToList();
+
+                // Mevcut stok kayıtlarını bul
+                var existingStocks = await db.ProductStocks
+                    .Where(s => variantIds.Contains(s.VariantId))
+                    .ToListAsync(_cts.Token);
+
+                var existingVariantIds = existingStocks.Select(s => s.VariantId).ToHashSet();
+
+                foreach (var dv in defaultVariants)
+                {
+                    var stockRecord = existingStocks.FirstOrDefault(s => s.VariantId == dv.Id);
+                    if (stockRecord != null)
+                    {
+                        // Mevcut kaydı güncelle
+                        if (_bulkStockMode == "set")
+                            stockRecord.Quantity = _bulkStockQuantity;
+                        else
+                            stockRecord.Quantity += _bulkStockQuantity;
+
+                        stockRecord.UpdatedAt = now;
+                    }
+                    else
+                    {
+                        // Varsayılan depoyu bul (ürünün mağazasına ait)
+                        var product = await db.Products.AsNoTracking()
+                            .Where(p => p.Id == dv.ProductId)
+                            .Select(p => new { p.StoreId })
+                            .FirstOrDefaultAsync(_cts.Token);
+
+                        var warehouseId = Guid.Empty;
+                        if (product != null)
+                        {
+                            var wh = await db.Warehouse.AsNoTracking()
+                                .Where(w => w.StoreId == product.StoreId && w.IsDefault
+                                    && (w.IsDeleted == null || w.IsDeleted.IsDeletedStatu != true))
+                                .Select(w => w.Id)
+                                .FirstOrDefaultAsync(_cts.Token);
+                            if (wh != Guid.Empty) warehouseId = wh;
+                            else
+                            {
+                                // Mağazanın herhangi bir deposu
+                                warehouseId = await db.Warehouse.AsNoTracking()
+                                    .Where(w => w.StoreId == product.StoreId
+                                        && (w.IsDeleted == null || w.IsDeleted.IsDeletedStatu != true))
+                                    .Select(w => w.Id)
+                                    .FirstOrDefaultAsync(_cts.Token);
+                            }
+                        }
+
+                        // Yeni stok kaydı oluştur (depo bulunsa)
+                        if (warehouseId != Guid.Empty)
+                        {
+                            db.ProductStocks.Add(new ProductStocks
+                            {
+                                Id = Guid.NewGuid(),
+                                ProductId = dv.ProductId,
+                                VariantId = dv.Id,
+                                WarehouseId = warehouseId,
+                                Quantity = _bulkStockQuantity,
+                                TrackStock = true,
+                                StockStatus = _bulkStockQuantity > 0 ? "InStock" : "OutOfStock",
+                                UpdatedAt = now
+                            });
+                        }
+                    }
+                }
+
+                // Ürünlerin UpdatedAt güncelle
+                var products2 = await db.Products.Where(p => chunk.Contains(p.Id)).ToListAsync(_cts.Token);
+                foreach (var p in products2) p.UpdatedAt = now;
+
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await HideModal("bulkStockModal");
+            var count = ids.Count;
+            ClearSelection();
+            _isProcessing = false;
+
+            var modeText = _bulkStockMode == "set" ? "olarak atandı" : "kadar eklendi";
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkStock:{_bulkStockMode} ({count}) → {_bulkStockQuantity}");
+            await Notify("success", "Tamamlandı", $"{count} ürünün stok değeri {_bulkStockQuantity} {modeText}.");
+            await LoadPageAsync(recount: true);
+        }
+        catch (Exception ex)
+        {
+            await LogError("ApplyBulkStock", ex);
+            await Notify("danger", "Hata", "Toplu stok güncelleme sırasında bir sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
     // ═══════════════════════ TEKLİ SİL ═══════════════════════
     private async Task OpenDelete(ProductRow r)
     {
-        if (!(IsAdmin || r.UserId == use?.Id)) return; // yetki
+        if (!(IsAdmin || r.UserId == use?.Id)) return;
         _deleteTarget = r;
         await ShowModal("deleteModal");
     }
@@ -971,7 +1583,10 @@ else
                 IsActive = p.IsActive,
                 ShortDescription = p.ShortDescription,
                 CreatedAt = p.CreatedAt,
-                CoverUrl = NoImage
+                CoverUrl = NoImage,
+                ViewCount = p.InteractionCounts?.ViewCount ?? 0,
+                ShareCount = p.InteractionCounts?.ShareCount ?? 0,
+                RecommendCount = p.InteractionCounts?.RecommendCount ?? 0
             };
 
             if (p.CoverMediaId.HasValue)
@@ -1063,26 +1678,6 @@ else
         _ => t ?? "—"
     };
 
-    private string PublishBadge(string? s) => s switch
-    {
-        "Published" => "bg-success",
-        "Draft" => "bg-secondary",
-        "PendingApproval" => "bg-warning text-dark",
-        "Rejected" => "bg-danger",
-        "Archived" => "bg-dark",
-        _ => "bg-secondary"
-    };
-
-    private string PublishText(string? s) => s switch
-    {
-        "Published" => "Yayında",
-        "Draft" => "Taslak",
-        "PendingApproval" => "Onay Bekliyor",
-        "Rejected" => "Reddedildi",
-        "Archived" => "Arşiv",
-        _ => s ?? "—"
-    };
-
     private string BulkActionText(string a) => a switch
     {
         "delete" => "Silme",
@@ -1164,5 +1759,25 @@ else
         public List<string> Gallery { get; set; } = new();
         public string? StoreName { get; set; }
         public string? UploaderName { get; set; }
+        public int ViewCount { get; set; }
+        public int ShareCount { get; set; }
+        public int RecommendCount { get; set; }
+    }
+
+    private sealed class CategoryNode
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public int Depth { get; set; }
+        public bool HasChildren { get; set; }
+        public int? ParentCategoryId { get; set; }
+    }
+
+    private sealed class CatRaw
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? DepartmentName { get; set; }
+        public int? ParentCategoryId { get; set; }
     }
 }

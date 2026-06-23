@@ -38,7 +38,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace web.Areas.Sitemap
+namespace web.Areas.Sitemap.Products
 {
     [Area("Sitemap")]
     [Route("/Sitemap/[controller]/[action]")]

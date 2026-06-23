@@ -16,6 +16,8 @@ using razor._Shared.tr.Media;
 using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using web.Areas.Sitemap;
+
 
 // ============================================================================
 // STARTUP ERROR HANDLING - Production Resilient
@@ -175,7 +177,7 @@ try
             options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromDays(7);
 
             // E-ticaret gibi yoğun veri trafiğinde mesaj boyutunu sınırla (opsiyonel)
-            options.DetailedErrors = b.Environment.IsDevelopment(); 
+            options.DetailedErrors = b.Environment.IsDevelopment();
             options.DisconnectedCircuitMaxRetained = 999999; // Aynı anda kaç kopuk devre RAM'de beklesin?
         });
     }

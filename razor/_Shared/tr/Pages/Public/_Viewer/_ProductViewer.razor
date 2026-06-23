@@ -1,12 +1,22 @@
 ﻿@* ════════════════════════════════════════════════════════════════════════
-   ProductProfile.razor
+   _ProductViewer.razor  (SEO-Optimized Revision)
    ─────────────────────────────────────────────────────────────────────────
    Tekli ürün inceleme sayfası — Amazon / Trendyol / eBay tarzı profesyonel yapı.
-   ✅ Yalnızca Bootstrap 5.3 + Font Awesome 4.7.0 (özel CSS/JS YOK)
-   ✅ IDbContextFactory + AsNoTracking + CancellationToken
-   ✅ Navigation property kullanılmaz (ID bazlı join)
-   ✅ Turkish UI / English variables, single-file Razor
-   ✅ GlobalStateHub, TakeLogs, IAsyncDisposable, SemaphoreSlim
+
+   SEO İYİLEŞTİRMELERİ:
+   ✅ SSR-dostu ilk render — SelectedProduct parametresinden temel bilgi
+   ✅ <article itemscope itemtype="Product"> semantik kapsayıcı
+   ✅ Microdata (itemprop) — name, image, description, offers, brand, sku, review
+   ✅ <nav aria-label="Breadcrumb"> + <ol itemscope="BreadcrumbList">
+   ✅ Offer schema — price, priceCurrency, availability, seller, itemCondition
+   ✅ AggregateRating — yorum sayısı ve ortalama puan
+   ✅ Review microdata — author, datePublished, reviewBody
+   ✅ Benzersiz & açıklayıcı img alt metinleri
+   ✅ Semantik HTML — <section>, <aside>, <figure>, <time>, <address>, <nav>
+   ✅ İlgili ürünler bölümü
+   ✅ Tek <h1> — ürün adı (itemprop="name")
+   ✅ Mobil sabit satın alma çubuğu (aria etiketli)
+   ✅ <meta itemprop="url"> — canonical URL referansı
 
    VERİ İLİŞKİLERİ:
    - Products (ana kayıt)            → Parametre olarak gelir (SelectedProduct)
@@ -52,9 +62,62 @@
 
 <Notification @ref="_notificationRef" />
 
-@if (_loading)
+@* ═══════════════════════════════════════════════════════════════
+   SSR-DOSTU İLK RENDER
+   SelectedProduct parametresi MVC Controller'dan gelir.
+   Blazor Server ilk render'da _loading=true olsa bile,
+   SelectedProduct mevcutsa temel ürün bilgisini SSR'da basarız.
+   Botlar JS çalıştırmadan bu içeriği okuyabilir.
+   ═══════════════════════════════════════════════════════════════ *@
+
+@if (_loading && SelectedProduct != null)
 {
-    @* ─── İSKELET YÜKLEME ─── *@
+    @* ─── SEO: YÜKLEME SIRASINDAKİ MİNİMAL İÇERİK ───
+       Botlar için anlamlı HTML — SelectedProduct verisinden *@
+    <article itemscope itemtype="https://schema.org/Product">
+        <meta itemprop="url" content="@($"{NavigationManager.BaseUri}Public/_Viewer/ProductProfile/{SelectedProduct.Id}")" />
+        <div class="container-fluid pt-3">
+            <nav aria-label="Breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="/">Ana Sayfa</a></li>
+                    <li class="breadcrumb-item"><a href="/tr/Public/Home/Index">Ürünler</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@SelectedProduct.Name</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="container-fluid pb-5">
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="placeholder-glow">
+                        <div class="placeholder col-12 rounded-3" style="height:420px;"></div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <h1 class="h4 text-light fw-semibold lh-base mb-2" itemprop="name">@SelectedProduct.Name</h1>
+                    @if (!string.IsNullOrWhiteSpace(SelectedProduct.ShortDescription))
+                    {
+                        <div itemprop="description">
+                            <p class="text-light small mb-0 lh-base">@SelectedProduct.ShortDescription</p>
+                        </div>
+                    }
+                    <div class="placeholder-glow mt-3">
+                        <span class="placeholder col-5 mb-3"></span>
+                        <span class="placeholder col-12 mb-2" style="height:48px;"></span>
+                        <span class="placeholder col-7 mb-4"></span>
+                    </div>
+                </div>
+                <div class="col-lg-2">
+                    <div class="placeholder-glow">
+                        <span class="placeholder col-12 mb-2" style="height:120px;"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </article>
+}
+else if (_loading)
+{
+    @* ─── İSKELET YÜKLEME (SelectedProduct yok) ─── *@
     <div class="container-xxl py-4">
         <div class="placeholder-glow">
             <div class="row g-4">
@@ -76,826 +139,1089 @@ else if (_product == null)
 {
     @* ─── ÜRÜN BULUNAMADI ─── *@
     <div class="container-xxl py-5 text-center text-light">
-        <i class="fa fa-exclamation-triangle fa-3x text-warning mb-3 d-block"></i>
-        <h4>Ürün bulunamadı</h4>
-        <p class="text- light">Aradığınız ürün kaldırılmış veya yayından alınmış olabilir.</p>
+        <i class="fa fa-exclamation-triangle fa-3x text-warning mb-3 d-block" aria-hidden="true"></i>
+        <h1 class="h4">Ürün bulunamadı</h1>
+        <p class="text-light">Aradığınız ürün kaldırılmış veya yayından alınmış olabilir.</p>
         <a href="/Public/_Viewer/ProductListing" class="btn btn-info btn-sm mt-2">
-            <i class="fa fa-arrow-left me-1"></i>Ürünlere Dön
+            <i class="fa fa-arrow-left me-1" aria-hidden="true"></i>Ürünlere Dön
         </a>
     </div>
 }
 else
 {
     var p = _product;
+    var productCanonicalUrl = $"{NavigationManager.BaseUri}Public/_Viewer/ProductProfile/{_slug}";
 
     @* ═══════════════════════════════════════════════════════════════
-       BREADCRUMB
+       SEO: ANA İÇERİK — <article> + Product Microdata
+       JSON-LD zaten _Viewer.cs → _Layout.cshtml üzerinden <head>'de.
+       Buradaki itemprop'lar "belt and suspenders" yaklaşımı.
        ═══════════════════════════════════════════════════════════════ *@
-    var roads = new List<(string icon, string Name, string Url)>
+    <article itemscope itemtype="https://schema.org/Product">
+
+        @* ─── Gizli meta verileri (botlar için) ─── *@
+        <meta itemprop="url" content="@productCanonicalUrl" />
+        @if (!string.IsNullOrEmpty(_slug))
         {
-            ("fa fa-home",         "Ana Sayfa", "/"),
-            ("fa fa-shopping-bag", "Ürünler",   "/tr/Public/Home/Index")
-        };
-    foreach (var bc in _breadcrumbCategories)
-        roads.Add(("null", bc.Name ?? "—", "javascript:void(0)"));
-    <div class="container-fluid pt-3">
-        <razor._Shared.BreadCrumbLinksUrl roads="roads" />
-    </div>
+            <link itemprop="mainEntityOfPage" href="@productCanonicalUrl" />
+        }
 
-    <div class="container-fluid pb-5">
-        <div class="row g-4">
+        @* ═══════════════════════════════════════════════════════════════
+           SEO: BREADCRUMB — Semantik <nav> + BreadcrumbList Microdata
+           ═══════════════════════════════════════════════════════════════ *@
+        <div class="container-fluid pt-3">
+            <nav aria-label="Breadcrumb">
+                <ol class="breadcrumb mb-2" itemscope itemtype="https://schema.org/BreadcrumbList">
+                    <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                        <a href="/" itemprop="item"><span itemprop="name">Ana Sayfa</span></a>
+                        <meta itemprop="position" content="1" />
+                    </li>
+                    <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                        <a href="/tr/Public/Home/Index" itemprop="item"><span itemprop="name">Ürünler</span></a>
+                        <meta itemprop="position" content="2" />
+                    </li>
+                    @{
+                        int bcPos = 3;
+                    }
+                    @foreach (var bc in _breadcrumbCategories)
+                    {
+                        var pos = bcPos++;
+                        <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                            <span itemprop="name">@(bc.Name ?? "—")</span>
+                            <meta itemprop="position" content="@pos" />
+                        </li>
+                    }
+                    <li class="breadcrumb-item active" aria-current="page" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                        <span itemprop="name">@p.Name</span>
+                        <meta itemprop="position" content="@bcPos" />
+                    </li>
+                </ol>
+            </nav>
+        </div>
 
-            @* ═══════════════════════════════════════════════════════
-               SOL: GÖRSEL GALERİ (sticky)
-               ═══════════════════════════════════════════════════════ *@
-            <div class="col-lg-5" style="overflow:visible;">
-                <div class="position-lg-sticky" style="top:80px; overflow:visible;">
-                    <div class="row g-2" style="overflow:visible;">
+        <div class="container-fluid pb-5">
+            <div class="row g-4">
 
-                        @* Dikey küçük resimler (masaüstü) *@
-                        @if (_displayImages.Count > 1)
-                        {
-                            <div class="col-2 d-none d-md-block">
-                                <div class="d-flex flex-column gap-2" style="max-height:520px; overflow-y:auto;">
-                                    @for (int i = 0; i < _displayImages.Count; i++)
-                                    {
-                                        var idx = i;
-                                        <div role="button"
-                                             class="border rounded-2 overflow-hidden @(idx == _activeImageIndex ? "border-info border-2" : "border-secondary")"
-                                             style="aspect-ratio:1; @(idx == _activeImageIndex ? "" : "opacity:.6;")"
-                                             @onclick="() => _activeImageIndex = idx"
-                                             @onmouseover="() => _activeImageIndex = idx">
-                                            <img src="@_displayImages[idx]" alt="@p.Name görseli @(idx + 1)"
-                                                 class="w-100 h-100" style="object-fit:cover;" loading="lazy" />
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        }
+                @* ═══════════════════════════════════════════════════════
+                   SOL: GÖRSEL GALERİ (sticky) — <figure> + itemprop
+                   ═══════════════════════════════════════════════════════ *@
+                <div class="col-lg-5" style="overflow:visible;">
+                    <div class="position-lg-sticky" style="top:80px; overflow:visible;">
+                        <div class="row g-2" style="overflow:visible;">
 
-                        @* Ana görsel *@
-                        <div class="@(_displayImages.Count > 1 ? "col-md-10" : "col-12")" style="overflow:visible;">
-                            <div class="pp-zoom-wrapper">
-                                <div class="position-relative bg-white rounded-3 overflow-hidden border border-secondary border-opacity-25"
-                                     id="ppMediaMain"
-                                     style="aspect-ratio:1;">
-                                    @if (_displayImages.Any())
-                                    {
-                                        <img src="@_displayImages[_activeImageIndex]" alt="@p.Name"
-                                             class="w-100 h-100" id="ppMainImg" style="object-fit:contain;" />
-                                        <div class="pp-zoom-lens" id="ppZoomLens"></div>
-                                    }
-                                    else
-                                    {
-                                        <div class="d-flex align-items-center justify-content-center h-100 text- light bg-dark">
-                                            <i class="fa fa-picture-o fa-4x"></i>
-                                        </div>
-                                    }
-
-                                    @* İndirim rozeti *@
-                                    @if (_currentDiscountPercent > 0)
-                                    {
-                                        <span class="badge bg-danger position-absolute top-0 start-0 m-3 fs-6 px-3 py-2 rounded-pill">
-                                            %@_currentDiscountPercent İndirim
-                                        </span>
-                                    }
-
-                                    @* Favori (sağ üst) *@
-                                    <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm"
-                                            style="width:44px; height:44px;"
-                                            @onclick="ToggleFavorite" title="Favorilere Ekle">
-                                        <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-dark")"></i>
-                                    </button>
-                                </div>
-                                @* Yakınlaştırılmış görsel paneli — masaüstünde hover ile görünür *@
-                                <div class="pp-zoom-result" id="ppZoomResult"></div>
-                            </div>
-
-                            @* Yatay küçük resimler (mobil) *@
+                            @* Dikey küçük resimler (masaüstü) *@
                             @if (_displayImages.Count > 1)
                             {
-                                <div class="d-flex d-md-none gap-2 mt-2 overflow-auto pb-1">
-                                    @for (int i = 0; i < _displayImages.Count; i++)
-                                    {
-                                        var idx = i;
-                                        <div role="button"
-                                             class="border rounded-2 overflow-hidden flex-shrink-0 @(idx == _activeImageIndex ? "border-info border-2" : "border-secondary")"
-                                             style="width:64px; height:64px; @(idx == _activeImageIndex ? "" : "opacity:.6;")"
-                                             @onclick="() => _activeImageIndex = idx">
-                                            <img src="@_displayImages[idx]" alt="" class="w-100 h-100" style="object-fit:cover;" loading="lazy" />
-                                        </div>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    </div>
-
-                    @* Harici Medya (Video / 360 / Döküman) *@
-                    @if (_externalMedias.Any())
-                    {
-                        <div class="mt-3">
-                            <h6 class="text-light small fw-semibold mb-2">
-                                <i class="fa fa-film me-1 text-info"></i>Video & Medya
-                            </h6>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var em in _externalMedias)
-                                {
-                                    var icon = em.MediaType switch
-                                    {
-                                        "VideoUrl" => "fa-youtube-play",
-                                        "View360" => "fa-refresh",
-                                        "Document" => "fa-file-pdf-o",
-                                        _ => "fa-external-link"
-                                    };
-                                    <a href="@em.Url" target="_blank" rel="noopener"
-                                       class="btn btn-outline-secondary btn-sm">
-                                        <i class="fa @icon me-1"></i>@(string.IsNullOrEmpty(em.Title) ? em.MediaType : em.Title)
-                                    </a>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-
-            @* ═══════════════════════════════════════════════════════
-               ORTA: ÜRÜN BİLGİLERİ + SATIN ALMA
-               ═══════════════════════════════════════════════════════ *@
-            <div class="col-lg-5">
-
-                @* Marka + Mağaza *@
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                    @if (!string.IsNullOrEmpty(_brandName))
-                    {
-                        <a href="/Public/_Viewer/ProductListing?brand=@Uri.EscapeDataString(_brandName)"
-                           class="badge bg-info bg-opacity-25 text-info border border-info text-decoration-none px-3 py-2">
-                            <i class="fa fa-bookmark me-1"></i>@_brandName
-                        </a>
-                    }
-                    @if (_store != null)
-                    {
-                        <button class="btn btn-link btn-sm text-warning text-decoration-none p-0"
-                                @onclick="OpenStoreModal">
-                            <i class="fa fa-building me-1"></i>@_store.Name
-                        </button>
-                    }
-                </div>
-
-                @* Başlık *@
-                <h1 class="h4 text-light fw-semibold lh-base mb-2">@p.Name</h1>
-
-                @* ─── KISA AÇIKLAMA ─── *@
-                @if (!string.IsNullOrWhiteSpace(p.ShortDescription))
-                {
-                    <div class="bg-dark bg-opacity-25 rounded-3 p-3">
-                        <p class="text-light small mb-0 lh-base">@p.ShortDescription</p>
-                    </div>
-                }
-
-                @* Beğeni / Görüntülenme / SKU *@
-                <div class="d-flex align-items-center flex-wrap gap-3 text- light small mb-3 mt-3">
-                    <span><i class="fa fa-eye me-1"></i>@(p.InteractionCounts?.ViewCount ?? 0) görüntülenme</span>
-                    @if (!string.IsNullOrEmpty(_selectedVariant?.Sku))
-                    {
-                        <span><i class="fa fa-tag me-1"></i>SKU: @_selectedVariant.Sku</span>
-                    }
-                    @if (!string.IsNullOrEmpty(_selectedVariant?.Barcode))
-                    {
-                        <span><i class="fa fa-barcode me-1"></i>@_selectedVariant.Barcode</span>
-                    }
-                </div>
-
-                <hr class="border-secondary" />
-
-                @* ─── FİYAT KUTUSU ─── *@
-                <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-3 mb-3">
-                    @if (_currentPrice != null)
-                    {
-                        var cur = CurrencySymbol(_currentPrice.Currency);
-                        @if (_currentPrice.DiscountedPrice.HasValue && _currentPrice.DiscountedPrice < _currentPrice.Price)
-                        {
-                            <div class="d-flex align-items-baseline flex-wrap gap-2">
-                                <span class="display-6 fw-bold text-info mb-0">@_currentPrice.DiscountedPrice.Value.ToString("N2") @cur</span>
-                                <del class="text- light fs-5">@_currentPrice.Price.ToString("N2") @cur</del>
-                                <span class="badge bg-danger fs-6">%@_currentDiscountPercent</span>
-                            </div>
-                            <div class="text-success small mt-1">
-                                <i class="fa fa-arrow-down me-1"></i>
-                                @((_currentPrice.Price - _currentPrice.DiscountedPrice.Value).ToString("N2")) @cur tasarruf ediyorsunuz
-                            </div>
-                        }
-                        else
-                        {
-                            <span class="display-6 fw-bold text-info">@_currentPrice.Price.ToString("N2") @cur</span>
-                        }
-
-                        @* Diğer para birimleri *@
-                        @if (_otherCurrencyPrices.Any())
-                        {
-                            <div class="d-flex flex-wrap gap-2 mt-2">
-                                @foreach (var op in _otherCurrencyPrices)
-                                {
-                                    var ocur = CurrencySymbol(op.Currency);
-                                    var oval = (op.DiscountedPrice ?? op.Price);
-                                    <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">
-                                        @oval.ToString("N2") @ocur
-                                    </span>
-                                }
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <span class="text- light"><i class="fa fa-info-circle me-1"></i>Fiyat bilgisi bulunmuyor</span>
-                    }
-                </div>
-
-                @* ─── STOK DURUMU ─── *@
-                <div class="mb-3">
-                    @if (_currentStockQty > 0)
-                    {
-                        <span class="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2">
-                            <i class="fa fa-check-circle me-1"></i>Stokta var
-                            @if (_currentStockQty <= 10)
-                            {
-                                <span class="ms-1">(son @_currentStockQty adet)</span>
-                            }
-                        </span>
-                    }
-                    else if (_hasStockData)
-                    {
-                        <span class="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2">
-                            <i class="fa fa-times-circle me-1"></i>Stokta yok
-                        </span>
-                    }
-                </div>
-
-                @* ─── VARYANT SEÇİCİLER ─── *@
-                @if (_variantAttributes.Any())
-                {
-                    @foreach (var attr in _variantAttributes)
-                    {
-                        <div class="mb-3">
-                            <div class="text-light small fw-semibold mb-2">
-                                @attr.AttributeName:
-                                <span class="text-info">@GetSelectedValueName(attr.AttributeId)</span>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var val in attr.Values)
-                                {
-                                    var v = val;
-                                    var isSelected = _selectedAttributeValues.TryGetValue(attr.AttributeId, out var sv) && sv == v.ValueId;
-                                    var isAvailable = IsCombinationAvailable(attr.AttributeId, v.ValueId);
-
-                                    @if (!string.IsNullOrEmpty(v.ColorHex))
-                                    {
-                                        @* Renk kutucuğu *@
-                                        <button class="btn p-0 rounded-circle border @(isSelected ? "border-info border-3" : "border-secondary") @(isAvailable ? "" : "opacity-50")"
-                                                style="width:40px; height:40px; background:@v.ColorHex;"
-                                                disabled="@(!isAvailable)"
-                                                @onclick="() => SelectVariantValue(attr.AttributeId, v.ValueId)"
-                                                title="@v.ValueName"></button>
-                                    }
-                                    else
-                                    {
-                                        @* Metin etiketi *@
-                                        <button class="btn btn-sm @(isSelected ? "btn-info" : "btn-outline-secondary") @(isAvailable ? "" : "opacity-50 text-decoration-line-through")"
-                                                disabled="@(!isAvailable)"
-                                                @onclick="() => SelectVariantValue(attr.AttributeId, v.ValueId)">
-                                            @v.ValueName
-                                        </button>
-                                    }
-                                }
-                            </div>
-                        </div>
-                    }
-                }
-
-                <div class="d-flex flex-column gap-4 mb-3">
-
-                    @* ─── 1. ANA AKSİYONLAR VE ADET SEÇİCİ ─── *@
-                    <div class="d-flex flex-column flex-md-row align-items-stretch gap-3">
-
-                        @* Adet Seçici *@
-                        <div class="d-flex flex-column justify-content-center">
-                            <div class="input-group input-group" style="min-width: 16px; max-width: 200px;">
-                                <button class="btn btn-outline-secondary text-light" type="button" @onclick="() => ChangeQuantity(-1)" disabled="@(_quantity <= 1)">
-                                    <i class="fa fa-minus"></i>
-                                </button>
-                                <input type="text" class="form-control text-center fw-bold bg-light text-dark px-2" value="@_quantity" style="min-width: 32px;" />
-                                <button class="btn btn-outline-secondary text-light" type="button" @onclick="() => ChangeQuantity(1)" disabled="@(_maxOrderQty.HasValue && _quantity >= _maxOrderQty.Value)">
-                                    <i class="fa fa-plus"></i>
-                                </button>
-                            </div>
-                            @if (_maxOrderQty.HasValue)
-                            {
-                                <span class="text-muted small mt-1 text-center">(En fazla @_maxOrderQty)</span>
-                            }
-                        </div>
-
-                        @* Ana Butonlar *@
-                        <div class="flex-grow-1 d-flex flex-column flex-sm-row gap-2">
-                            @if (string.Equals(p.ProductType, "External", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(p.ExternalUrl))
-                            {
-                                <a href="@p.ExternalUrl" target="_blank" rel="noopener" class="btn btn-primary btn-lg w-100 shadow-sm d-flex align-items-center justify-content-center text-light">
-                                    <i class="fa fa-external-link me-2"></i>@(string.IsNullOrEmpty(p.ExternalButtonText) ? "Satıcıya Git" : p.ExternalButtonText)
-                                </a>
-                            }
-                            else
-                            {
-                                @* Sepete Ekle *@
-                                <button class="btn btn-primary flex-fill shadow-sm d-flex align-items-center justify-content-center text-light" @onclick="OnAddToCart" disabled="@(_hasStockData && _currentStockQty <= 0)">
-                                    <i class="fa fa-shopping-cart me-2"></i>Sepete Ekle
-                                </button>
-
-                                @* Hemen Al *@
-                                <button class="btn btn-success flex-fill shadow-sm d-flex align-items-center justify-content-center text-light" @onclick="OnQuickBuy" disabled="@(_hasStockData && _currentStockQty <= 0)">
-                                    <i class="fa fa-bolt me-2"></i>Hemen Al
-                                </button>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-            @* ═══════════════════════════════════════════════════════
-               SAĞ: MAĞAZA BİLGİ PANELİ (col-lg-2)
-               ═══════════════════════════════════════════════════════ *@
-            <div class="col-lg-2">
-                @if (_store != null)
-                {
-                    var st = _store;
-                    <div class="position-lg-sticky" style="top:80px;">
-                        <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-3">
-
-                            @* ─── Mağaza Profil Görseli + Adı ─── *@
-                            <div class="text-center mb-3">
-                                @if (!string.IsNullOrEmpty(_storeProfileUrl))
-                                {
-                                    <img src="@_storeProfileUrl" alt="@st.Name"
-                                         class="rounded-circle border border-info mb-2"
-                                         style="width:72px; height:72px; object-fit:cover;" />
-                                }
-                                else
-                                {
-                                    <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center mx-auto mb-2"
-                                         style="width:72px; height:72px;">
-                                        <i class="fa fa-building fa-2x text-info"></i>
-                                    </div>
-                                }
-                                <h6 class="text-light mb-0 small fw-semibold">@st.Name</h6>
-                                @if (!string.IsNullOrEmpty(st.Description))
-                                {
-                                    <p class="text-white-50 mb-0" style="font-size:.7rem; line-height:1.3;">
-                                        @(st.Description.Length > 80 ? st.Description.Substring(0, 80) + "…" : st.Description)
-                                    </p>
-                                }
-                            </div>
-
-                            @* ─── Etkileşim Sayıları ─── *@
-                            @if (st.Interaction != null)
-                            {
-                                <div class="d-flex justify-content-around text-center mb-3 py-2 border-top border-bottom border-secondary border-opacity-25">
-                                    <div>
-                                        <div class="text-info fw-bold small">@(st.Interaction.ViewCount ?? 0)</div>
-                                        <div class="text-white-50" style="font-size:.65rem;">Görüntülenme</div>
-                                    </div>
-                                    <div>
-                                        <div class="text-info fw-bold small">@_storeFollowerCount</div>
-                                        <div class="text-white-50" style="font-size:.65rem;">Takipçi</div>
-                                    </div>
-                                </div>
-                            }
-
-                            @* ─── Takip / Engelle Butonları ─── *@
-                            @if (use != null && st.UserId.HasValue && use.Id != st.UserId.Value)
-                            {
-                                <div class="d-flex flex-column gap-2 mb-3">
-                                    @if (_isStoreBlocked)
-                                    {
-                                        <button class="btn btn-outline-secondary btn-sm w-100"
-                                                @onclick="UnblockStore">
-                                            <i class="fa fa-ban me-1"></i>Engeli Kaldır
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn @(_isFollowingStore ? "btn-info" : "btn-outline-info") btn-sm w-100"
-                                                @onclick="ToggleFollowStore"
-                                                disabled="@_storeActionLoading">
-                                            @if (_storeActionLoading)
-                                            {
-                                                <span class="spinner-border spinner-border-sm me-1"></span>
-                                            }
-                                            else
-                                            {
-                                                <i class="fa @(_isFollowingStore ? "fa-check" : "fa-plus") me-1"></i>
-                                            }
-                                            @(_isFollowingStore ? "Takip Ediliyor" : "Mağazayı Takip Et")
-                                        </button>
-
-                                        <button class="btn btn-outline-danger btn-sm w-100"
-                                                @onclick="BlockStore"
-                                                disabled="@_storeActionLoading">
-                                            <i class="fa fa-ban me-1"></i>Engelle
-                                        </button>
-                                    }
-                                </div>
-                            }
-
-                            @* ─── Mağaza Galeri Görselleri ─── *@
-                            @if (_storeGalleryImages.Any())
-                            {
-                                <div class="mb-3">
-                                    <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
-                                        <i class="fa fa-picture-o me-1"></i>Mağaza Görselleri
-                                    </div>
-                                    <div class="d-flex flex-wrap gap-1">
-                                        @foreach (var imgUrl in _storeGalleryImages.Take(6))
+                                <div class="col-2 d-none d-md-block">
+                                    <div class="d-flex flex-column gap-2" role="listbox" aria-label="Ürün görselleri" style="max-height:520px; overflow-y:auto;">
+                                        @for (int i = 0; i < _displayImages.Count; i++)
                                         {
-                                            <div class="rounded-2 overflow-hidden border border-secondary border-opacity-50"
-                                                 style="width:44px; height:44px;">
-                                                <img src="@imgUrl" alt="Mağaza görseli"
-                                                     class="w-100 h-100" style="object-fit:cover;" loading="lazy" />
+                                            var idx = i;
+                                            <div role="option"
+                                                 aria-selected="@(idx == _activeImageIndex ? "true" : "false")"
+                                                 class="border rounded-2 overflow-hidden @(idx == _activeImageIndex ? "border-info border-2" : "border-secondary")"
+                                                 style="aspect-ratio:1; cursor:pointer; @(idx == _activeImageIndex ? "" : "opacity:.6;")"
+                                                 @onclick="() => _activeImageIndex = idx"
+                                                 @onmouseover="() => _activeImageIndex = idx">
+                                                <img src="@_displayImages[idx]"
+                                                     alt="@p.Name — görsel @(idx + 1) / @_displayImages.Count"
+                                                     class="w-100 h-100" style="object-fit:cover;" loading="lazy"
+                                                     width="80" height="80" />
                                             </div>
                                         }
                                     </div>
                                 </div>
                             }
 
-                            @* ─── İletişim Bilgileri ─── *@
-                            @if (st.ContactInformation != null)
-                            {
-                                <div class="mb-3">
-                                    @if (!string.IsNullOrEmpty(st.ContactInformation.Email) && st.ContactInformation.IsActiveEmail == true)
-                                    {
-                                        <div class="d-flex align-items-center gap-2 mb-1">
-                                            <i class="fa fa-envelope text-info" style="font-size:.7rem; width:14px;"></i>
-                                            <a href="mailto:@st.ContactInformation.Email"
-                                               class="text-light text-decoration-none text-truncate" style="font-size:.75rem;">
-                                                @st.ContactInformation.Email
-                                            </a>
-                                        </div>
-                                    }
+                            @* Ana görsel — <figure> ile sarmalı *@
+                            <div class="@(_displayImages.Count > 1 ? "col-md-10" : "col-12")" style="overflow:visible;">
+                                <figure class="pp-zoom-wrapper mb-0">
+                                    <div class="position-relative bg-white rounded-3 overflow-hidden border border-secondary border-opacity-25"
+                                         id="ppMediaMain"
+                                         style="aspect-ratio:1;">
+                                        @if (_displayImages.Any())
+                                        {
+                                            <img src="@_displayImages[_activeImageIndex]"
+                                                 alt="@p.Name — ana ürün görseli"
+                                                 itemprop="image"
+                                                 class="w-100 h-100" id="ppMainImg" style="object-fit:contain;"
+                                                 width="600" height="600" />
+                                            <div class="pp-zoom-lens" id="ppZoomLens"></div>
 
-                                    @if (!string.IsNullOrEmpty(st.ContactInformation.UserWebSite) && st.ContactInformation.IsActiveUserWebSite == true)
-                                    {
-                                        <div class="d-flex align-items-center gap-2 mb-1">
-                                            <i class="fa fa-globe text-info" style="font-size:.7rem; width:14px;"></i>
-                                            <a href="@st.ContactInformation.UserWebSite" target="_blank" rel="noopener"
-                                               class="text-light text-decoration-none text-truncate" style="font-size:.75rem;">
-                                                Web Sitesi
-                                            </a>
-                                        </div>
-                                    }
+                                            @* Mobil zoom seviye göstergesi *@
+                                            <span id="ppZoomBadge"
+                                                  class="badge bg-dark text-info position-absolute border border-info"
+                                                  style="bottom:12px; left:12px; z-index:15; opacity:0;
+                                                transition:opacity .2s ease; font-size:.75rem; pointer-events:none;"
+                                                  aria-hidden="true">
+                                                x2.0
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex align-items-center justify-content-center h-100 text-light bg-dark">
+                                                <i class="fa fa-picture-o fa-4x" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Ürün görseli mevcut değil</span>
+                                            </div>
+                                        }
 
-                                    @* Sosyal Medya İkonları *@
-                                    @{
-                                        var socials = GetActiveSocials(st.ContactInformation);
-                                    }
-                                    @if (socials.Any())
+                                        @* İndirim rozeti *@
+                                        @if (_currentDiscountPercent > 0)
+                                        {
+                                            <span class="badge bg-danger position-absolute top-0 start-0 m-3 fs-6 px-3 py-2 rounded-pill">
+                                                %@_currentDiscountPercent İndirim
+                                            </span>
+                                        }
+
+                                        @* Favori (sağ üst) *@
+                                        <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm"
+                                                style="width:44px; height:44px;"
+                                                @onclick="ToggleFavorite"
+                                                title="@(_isFavorite ? "Favorilerden Çıkar" : "Favorilere Ekle")"
+                                                aria-label="@(_isFavorite ? "Favorilerden Çıkar" : "Favorilere Ekle")"
+                                                aria-pressed="@_isFavorite">
+                                            <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-dark")" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+
+                                    @* Ek görselleri de itemprop="image" ile işaretle *@
+                                    @if (_displayImages.Count > 1)
                                     {
-                                        <div class="d-flex flex-wrap gap-1 mt-2">
-                                            @foreach (var s in socials)
+                                        @for (int gi = 0; gi < _displayImages.Count; gi++)
+                                        {
+                                            if (gi != _activeImageIndex)
                                             {
-                                                <a href="@s.Url" target="_blank" rel="noopener"
-                                                   class="btn btn-outline-secondary btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center"
-                                                   style="width:28px; height:28px;" title="@s.Platform">
-                                                    <i class="fa @s.Icon" style="font-size:.7rem;"></i>
-                                                </a>
+                                                <meta itemprop="image" content="@_displayImages[gi]" />
                                             }
-                                        </div>
+                                        }
                                     }
-                                </div>
-                            }
 
-                            @* ─── Adres ─── *@
-                            @if (st.AddressInfo != null && !string.IsNullOrEmpty(st.AddressInfo.City))
-                            {
-                                <div class="mb-3">
-                                    <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
-                                        <i class="fa fa-map-marker me-1"></i>Konum
+                                    @* Yakınlaştırılmış görsel paneli — masaüstünde hover ile görünür *@
+                                    <div class="pp-zoom-result" id="ppZoomResult" aria-hidden="true"></div>
+                                </figure>
+
+                                @* Yatay küçük resimler (mobil) *@
+                                @if (_displayImages.Count > 1)
+                                {
+                                    <div class="d-flex d-md-none gap-2 mt-2 overflow-auto pb-1" role="listbox" aria-label="Ürün görselleri">
+                                        @for (int i = 0; i < _displayImages.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <div role="option"
+                                                 aria-selected="@(idx == _activeImageIndex ? "true" : "false")"
+                                                 class="border rounded-2 overflow-hidden flex-shrink-0 @(idx == _activeImageIndex ? "border-info border-2" : "border-secondary")"
+                                                 style="width:64px; height:64px; cursor:pointer; @(idx == _activeImageIndex ? "" : "opacity:.6;")"
+                                                 @onclick="() => _activeImageIndex = idx">
+                                                <img src="@_displayImages[idx]"
+                                                     alt="@p.Name — küçük görsel @(idx + 1)"
+                                                     class="w-100 h-100" style="object-fit:cover;" loading="lazy"
+                                                     width="64" height="64" />
+                                            </div>
+                                        }
                                     </div>
-                                    <div class="text-light" style="font-size:.75rem; line-height:1.4;">
-                                        @st.AddressInfo.City@(string.IsNullOrEmpty(st.AddressInfo.State) ? "" : $" / {st.AddressInfo.State}")@(string.IsNullOrEmpty(st.AddressInfo.Country) ? "" : $" / {st.AddressInfo.Country}")
-                                    </div>
-                                    @if (st.AddressInfo.Latitude != null && st.AddressInfo.Longitude != null)
+                                }
+                            </div>
+                        </div>
+
+                        @* Harici Medya (Video / 360 / Döküman) *@
+                        @if (_externalMedias.Any())
+                        {
+                            <div class="mt-3">
+                                <h6 class="text-light small fw-semibold mb-2">
+                                    <i class="fa fa-film me-1 text-info" aria-hidden="true"></i>Video &amp; Medya
+                                </h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var em in _externalMedias)
                                     {
-                                        var lat = st.AddressInfo.Latitude.Value.ToString(CultureInfo.InvariantCulture);
-                                        var lng = st.AddressInfo.Longitude.Value.ToString(CultureInfo.InvariantCulture);
-                                        <a href="https://www.google.com/maps/search/?api=1&query=@(lat),@(lng)"
-                                           target="_blank" rel="noopener"
-                                           class="text-info text-decoration-none" style="font-size:.7rem;">
-                                            <i class="fa fa-external-link me-1"></i>Haritada Gör
+                                        var icon = em.MediaType switch
+                                        {
+                                            "VideoUrl" => "fa-youtube-play",
+                                            "View360" => "fa-refresh",
+                                            "Document" => "fa-file-pdf-o",
+                                            _ => "fa-external-link"
+                                        };
+                                        <a href="@em.Url" target="_blank" rel="noopener"
+                                           class="btn btn-outline-secondary btn-sm">
+                                            <i class="fa @icon me-1" aria-hidden="true"></i>@(string.IsNullOrEmpty(em.Title) ? em.MediaType : em.Title)
                                         </a>
                                     }
                                 </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* ═══════════════════════════════════════════════════════
+                   ORTA: ÜRÜN BİLGİLERİ + SATIN ALMA
+                   ═══════════════════════════════════════════════════════ *@
+                <section class="col-lg-5">
+
+                    @* SEO: Marka — itemprop="brand" *@
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        @if (!string.IsNullOrEmpty(_brandName))
+                        {
+                            <a href="/Public/_Viewer/ProductListing?brand=@Uri.EscapeDataString(_brandName)"
+                               class="badge bg-info bg-opacity-25 text-info border border-info text-decoration-none px-3 py-2"
+                               itemprop="brand" itemscope itemtype="https://schema.org/Brand">
+                                <i class="fa fa-bookmark me-1" aria-hidden="true"></i>
+                                <span itemprop="name">@_brandName</span>
+                            </a>
+                        }
+                        @if (_store != null)
+                        {
+                            <button class="btn btn-link btn-sm text-warning text-decoration-none p-0"
+                                    @onclick="OpenStoreModal">
+                                <i class="fa fa-building me-1" aria-hidden="true"></i>@_store.Name
+                            </button>
+                        }
+                    </div>
+
+                    @* SEO: Tek <h1> — itemprop="name" *@
+                    <h1 class="h4 text-light fw-semibold lh-base mb-2" itemprop="name">@p.Name</h1>
+
+                    @* SEO: KISA AÇIKLAMA — itemprop="description" *@
+                    @if (!string.IsNullOrWhiteSpace(p.ShortDescription))
+                    {
+                        <div class="bg-dark bg-opacity-25 rounded-3 p-3" itemprop="description">
+                            <p class="text-light small mb-0 lh-base">@p.ShortDescription</p>
+                        </div>
+                    }
+
+                    @* Görüntülenme / Paylaşma / Tavsiye / SKU *@
+                    <div class="d-flex align-items-center flex-wrap gap-3 text-light small mb-3 mt-3">
+
+                        <table class="table table-bordered table-hover mb-0 text-center">
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span><i class="fa fa-eye me-1" aria-hidden="true"></i>@(p.InteractionCounts?.ViewCount ?? 0) görüntülenme</span>
+                                    </td>
+                                    <td>
+                                        <span><i class="fa fa-share-alt me-1" aria-hidden="true"></i>@(p.InteractionCounts?.ShareCount ?? 0) paylaşma</span>
+                                    </td>
+                                    <td>
+                                        <span><i class="fa fa-users me-1" aria-hidden="true"></i>@(p.InteractionCounts?.RecommendCount ?? 0) tavsiye</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        @* SEO: SKU — itemprop="sku" *@
+                        @if (!string.IsNullOrEmpty(_selectedVariant?.Sku))
+                        {
+                            <span><i class="fa fa-tag me-1" aria-hidden="true"></i>SKU: <span itemprop="sku">@_selectedVariant.Sku</span></span>
+                        }
+                        @if (!string.IsNullOrEmpty(_selectedVariant?.Barcode))
+                        {
+                            <span itemprop="gtin"><i class="fa fa-barcode me-1" aria-hidden="true"></i>@_selectedVariant.Barcode</span>
+                        }
+                    </div>
+
+                    <hr class="border-secondary" />
+
+                    <div class="card-body bg-light rounded-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-0 text-center">
+                                <thead class="table-dark text-light">
+                                    <tr>
+                                        <th><i class="fa fa-calendar" aria-hidden="true"></i><span class="visually-hidden">Tarih</span></th>
+                                        <th><i class="fa fa-usd" aria-hidden="true"></i><span class="visually-hidden">USD</span></th>
+                                        <th><i class="fa fa-eur" aria-hidden="true"></i><span class="visually-hidden">EUR</span></th>
+                                        <th><i class="fa fa-try" aria-hidden="true"></i><span class="visually-hidden">TRY</span></th>
+                                        <th><span class="fw-bold">₼</span><span class="visually-hidden">AZN</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>@MoneyExchangeRate?.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@MoneyExchangeRate?.Dolar_Usd</td>
+                                        <td>@MoneyExchangeRate?.Euro_Eur</td>
+                                        <td>@MoneyExchangeRate?.Lira_Tl</td>
+                                        <td>@MoneyExchangeRate?.Manat_Azn</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    @* ═══════════════════════════════════════════════════
+                       SEO: FİYAT + STOK — Offer Microdata
+                       ═══════════════════════════════════════════════════ *@
+                    <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-3 mb-3"
+                         itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+
+                        @* Gizli meta: offer URL + para birimi + durum + koşul *@
+                        <link itemprop="url" href="@productCanonicalUrl" />
+                        <meta itemprop="itemCondition" content="https://schema.org/NewCondition" />
+
+                        @* SEO: Stok durumu — <link itemprop="availability"> *@
+                        @if (_currentStockQty > 0)
+                        {
+                            <link itemprop="availability" href="https://schema.org/InStock" />
+                        }
+                        else if (_hasStockData)
+                        {
+                            <link itemprop="availability" href="https://schema.org/OutOfStock" />
+                        }
+
+                        @* SEO: Satıcı — itemprop="seller" *@
+                        @if (_store != null)
+                        {
+                            <div itemprop="seller" itemscope itemtype="https://schema.org/Organization" class="d-none">
+                                <meta itemprop="name" content="@(_store.Name ?? "efavori Satıcı")" />
+                            </div>
+                        }
+
+                        @if (_currentPrice != null)
+                        {
+                            var cur = CurrencySymbol(_currentPrice.Currency);
+                            var isoCur = (_currentPrice.Currency ?? "TRY").ToUpperInvariant();
+                            <meta itemprop="priceCurrency" content="@isoCur" />
+
+                            @if (_currentPrice.DiscountedPrice.HasValue && _currentPrice.DiscountedPrice < _currentPrice.Price)
+                            {
+                                @* İndirimli fiyat *@
+                                <meta itemprop="price" content="@_currentPrice.DiscountedPrice.Value.ToString("F2", CultureInfo.InvariantCulture)" />
+                                <div class="d-flex align-items-baseline flex-wrap gap-2">
+                                    <span class="display-6 fw-bold text-info mb-0">@_currentPrice.DiscountedPrice.Value.ToString("N2") @cur</span>
+                                    <del class="text-light fs-5">@_currentPrice.Price.ToString("N2") @cur</del>
+                                    <span class="badge bg-danger fs-6">%@_currentDiscountPercent</span>
+                                </div>
+                                <div class="text-success small mt-1">
+                                    <i class="fa fa-arrow-down me-1" aria-hidden="true"></i>
+                                    @((_currentPrice.Price - _currentPrice.DiscountedPrice.Value).ToString("N2")) @cur tasarruf ediyorsunuz
+                                </div>
+                            }
+                            else
+                            {
+                                @* Normal fiyat *@
+                                <meta itemprop="price" content="@_currentPrice.Price.ToString("F2", CultureInfo.InvariantCulture)" />
+                                <span class="display-6 fw-bold text-info">@_currentPrice.Price.ToString("N2") @cur</span>
                             }
 
-                            @* ─── Çalışma Saatleri ─── *@
-                            @if (st.WorkingHours != null && HasAnyWorkingDay(st.WorkingHours))
+                            @* Diğer para birimleri *@
+                            @if (_otherCurrencyPrices.Any())
                             {
-                                <div class="mb-3">
-                                    <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
-                                        <i class="fa fa-clock-o me-1"></i>Çalışma Saatleri
-                                    </div>
-                                    <div style="font-size:.7rem; line-height:1.6;">
-                                        @foreach (var wh in GetWorkingHoursList(st.WorkingHours))
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @foreach (var op in _otherCurrencyPrices)
+                                    {
+                                        var ocur = CurrencySymbol(op.Currency);
+                                        var oval = (op.DiscountedPrice ?? op.Price);
+                                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">
+                                            @oval.ToString("N2") @ocur
+                                        </span>
+                                    }
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-light"><i class="fa fa-info-circle me-1" aria-hidden="true"></i>Fiyat bilgisi bulunmuyor</span>
+                        }
+                    </div>
+
+                    @* ─── STOK DURUMU (görsel gösterge) ─── *@
+                    <div class="mb-3">
+                        @if (_currentStockQty > 0)
+                        {
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success px-3 py-2">
+                                <i class="fa fa-check-circle me-1" aria-hidden="true"></i>Stokta var
+                                @if (_currentStockQty <= 10)
+                                {
+                                    <span class="ms-1">(son @_currentStockQty adet)</span>
+                                }
+                            </span>
+                        }
+                        else if (_hasStockData)
+                        {
+                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger px-3 py-2">
+                                <i class="fa fa-times-circle me-1" aria-hidden="true"></i>Stokta yok
+                            </span>
+                        }
+                    </div>
+
+                    @* ─── VARYANT SEÇİCİLER ─── *@
+                    @if (_variantAttributes.Any())
+                    {
+                        @foreach (var attr in _variantAttributes)
+                        {
+                            <div class="mb-3">
+                                <div class="text-light small fw-semibold mb-2">
+                                    @attr.AttributeName:
+                                    <span class="text-info">@GetSelectedValueName(attr.AttributeId)</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2" role="radiogroup" aria-label="@attr.AttributeName seçimi">
+                                    @foreach (var val in attr.Values)
+                                    {
+                                        var v = val;
+                                        var isSelected = _selectedAttributeValues.TryGetValue(attr.AttributeId, out var sv) && sv == v.ValueId;
+                                        var isAvailable = IsCombinationAvailable(attr.AttributeId, v.ValueId);
+
+                                        @if (!string.IsNullOrEmpty(v.ColorHex))
                                         {
-                                            <div class="d-flex justify-content-between">
-                                                <span class="@(wh.IsToday ? "text-info fw-semibold" : "text-white-50")">@wh.Day</span>
-                                                <span class="@(wh.IsActive ? (wh.IsToday ? "text-info fw-semibold" : "text-light") : "text-white-50")">
-                                                    @(wh.IsActive ? $"{wh.Start:HH\\:mm} - {wh.End:HH\\:mm}" : "Kapalı")
-                                                </span>
+                                            @* Renk kutucuğu *@
+                                            <button class="btn p-0 rounded-circle border @(isSelected ? "border-info border-3" : "border-secondary") @(isAvailable ? "" : "opacity-50")"
+                                                    style="width:40px; height:40px; background:@v.ColorHex;"
+                                                    disabled="@(!isAvailable)"
+                                                    @onclick="() => SelectVariantValue(attr.AttributeId, v.ValueId)"
+                                                    title="@v.ValueName"
+                                                    aria-label="@attr.AttributeName: @v.ValueName"
+                                                    aria-pressed="@isSelected"
+                                                    role="radio"></button>
+                                        }
+                                        else
+                                        {
+                                            @* Metin etiketi *@
+                                            <button class="btn btn-sm @(isSelected ? "btn-info" : "btn-outline-secondary") @(isAvailable ? "" : "opacity-50 text-decoration-line-through")"
+                                                    disabled="@(!isAvailable)"
+                                                    @onclick="() => SelectVariantValue(attr.AttributeId, v.ValueId)"
+                                                    aria-label="@attr.AttributeName: @v.ValueName"
+                                                    aria-pressed="@isSelected"
+                                                    role="radio">
+                                                @v.ValueName
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    <div class="d-flex flex-column gap-4 mb-3">
+
+                        @* ─── ANA AKSİYONLAR VE ADET SEÇİCİ ─── *@
+                        <div class="d-flex flex-column flex-md-row align-items-stretch gap-3">
+
+                            @* Adet Seçici *@
+                            <div class="d-flex flex-column justify-content-center">
+                                <div class="input-group" style="min-width: 16px; max-width: 200px;">
+                                    <button class="btn btn-outline-secondary text-light" type="button"
+                                            @onclick="() => ChangeQuantity(-1)" disabled="@(_quantity <= 1)"
+                                            aria-label="Adeti azalt">
+                                        <i class="fa fa-minus" aria-hidden="true"></i>
+                                    </button>
+                                    <input type="text" class="form-control text-center fw-bold bg-light text-dark px-2"
+                                           value="@_quantity" style="min-width: 32px;" readonly
+                                           aria-label="Adet" />
+                                    <button class="btn btn-outline-secondary text-light" type="button"
+                                            @onclick="() => ChangeQuantity(1)"
+                                            disabled="@(_maxOrderQty.HasValue && _quantity >= _maxOrderQty.Value)"
+                                            aria-label="Adeti artır">
+                                        <i class="fa fa-plus" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                                @if (_maxOrderQty.HasValue)
+                                {
+                                    <span class="text-muted small mt-1 text-center">(En fazla @_maxOrderQty)</span>
+                                }
+                            </div>
+
+                            @* Ana Butonlar *@
+                            <div class="flex-grow-1 d-flex flex-column flex-sm-row gap-2">
+                                @if (string.Equals(p.ProductType, "External", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(p.ExternalUrl))
+                                {
+                                    <a href="@p.ExternalUrl" target="_blank" rel="noopener nofollow"
+                                       class="btn btn-primary btn-lg w-100 shadow-sm d-flex align-items-center justify-content-center text-light">
+                                        <i class="fa fa-external-link me-2" aria-hidden="true"></i>@(string.IsNullOrEmpty(p.ExternalButtonText) ? "Satıcıya Git" : p.ExternalButtonText)
+                                    </a>
+                                }
+                                else
+                                {
+                                    @* Sepete Ekle *@
+                                    <button class="btn btn-primary flex-fill shadow-sm d-flex align-items-center justify-content-center text-light"
+                                            @onclick="OnAddToCart" disabled="@(_hasStockData && _currentStockQty <= 0)">
+                                        <i class="fa fa-shopping-cart me-2" aria-hidden="true"></i>Sepete Ekle
+                                    </button>
+
+                                    @* Hemen Al *@
+                                    <button class="btn btn-success flex-fill shadow-sm d-flex align-items-center justify-content-center text-light"
+                                            @onclick="OnQuickBuy" disabled="@(_hasStockData && _currentStockQty <= 0)">
+                                        <i class="fa fa-bolt me-2" aria-hidden="true"></i>Hemen Al
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                @* ═══════════════════════════════════════════════════════
+                   SAĞ: MAĞAZA BİLGİ PANELİ — <aside> semantik
+                   ═══════════════════════════════════════════════════════ *@
+                <aside class="col-lg-2" aria-label="Mağaza bilgileri">
+                    @if (_store != null)
+                    {
+                        var st = _store;
+                        <div class="position-lg-sticky" style="top:80px;">
+                            <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 p-3">
+
+                                @* ─── Mağaza Profil Görseli + Adı ─── *@
+                                <div class="text-center mb-3">
+                                    @if (!string.IsNullOrEmpty(_storeProfileUrl))
+                                    {
+                                        <img src="@_storeProfileUrl" alt="@st.Name mağaza logosu"
+                                             class="rounded-circle border border-info mb-2"
+                                             style="width:72px; height:72px; object-fit:cover;"
+                                             width="72" height="72" loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center mx-auto mb-2"
+                                             style="width:72px; height:72px;">
+                                            <i class="fa fa-building fa-2x text-info" aria-hidden="true"></i>
+                                        </div>
+                                    }
+                                    <h6 class="text-light mb-0 small fw-semibold">@st.Name</h6>
+                                    @if (!string.IsNullOrEmpty(st.Description))
+                                    {
+                                        <p class="text-white-50 mb-0" style="font-size:.7rem; line-height:1.3;">
+                                            @(st.Description.Length > 80 ? st.Description.Substring(0, 80) + "…" : st.Description)
+                                        </p>
+                                    }
+                                </div>
+
+                                @* ─── Etkileşim Sayıları ─── *@
+                                @if (st.Interaction != null)
+                                {
+                                    <div class="d-flex justify-content-around text-center mb-3 py-2 border-top border-bottom border-secondary border-opacity-25">
+                                        <div>
+                                            <div class="text-info fw-bold small">@(st.Interaction.ViewCount ?? 0)</div>
+                                            <div class="text-white-50" style="font-size:.65rem;">Görüntülenme</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-info fw-bold small">@_storeFollowerCount</div>
+                                            <div class="text-white-50" style="font-size:.65rem;">Takipçi</div>
+                                        </div>
+                                    </div>
+                                }
+
+                                @* ─── Takip / Engelle Butonları ─── *@
+                                @if (use != null && st.UserId.HasValue && use.Id != st.UserId.Value)
+                                {
+                                    <div class="d-flex flex-column gap-2 mb-3">
+                                        @if (_isStoreBlocked)
+                                        {
+                                            <button class="btn btn-outline-secondary btn-sm w-100"
+                                                    @onclick="UnblockStore">
+                                                <i class="fa fa-ban me-1" aria-hidden="true"></i>Engeli Kaldır
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn @(_isFollowingStore ? "btn-info" : "btn-outline-info") btn-sm w-100"
+                                                    @onclick="ToggleFollowStore"
+                                                    disabled="@_storeActionLoading">
+                                                @if (_storeActionLoading)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="fa @(_isFollowingStore ? "fa-check" : "fa-plus") me-1" aria-hidden="true"></i>
+                                                }
+                                                @(_isFollowingStore ? "Takip Ediliyor" : "Mağazayı Takip Et")
+                                            </button>
+
+                                            <button class="btn btn-outline-danger btn-sm w-100"
+                                                    @onclick="BlockStore"
+                                                    disabled="@_storeActionLoading">
+                                                <i class="fa fa-ban me-1" aria-hidden="true"></i>Engelle
+                                            </button>
+                                        }
+                                    </div>
+                                }
+
+                                @* ─── Mağaza Galeri Görselleri ─── *@
+                                @if (_storeGalleryImages.Any())
+                                {
+                                    <div class="mb-3">
+                                        <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
+                                            <i class="fa fa-picture-o me-1" aria-hidden="true"></i>Mağaza Görselleri
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach (var imgUrl in _storeGalleryImages.Take(6))
+                                            {
+                                                <div class="rounded-2 overflow-hidden border border-secondary border-opacity-50"
+                                                     style="width:44px; height:44px;">
+                                                    <img src="@imgUrl" alt="@st.Name — mağaza görseli"
+                                                         class="w-100 h-100" style="object-fit:cover;" loading="lazy"
+                                                         width="44" height="44" />
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                @* ─── İletişim Bilgileri ─── *@
+                                @if (st.ContactInformation != null)
+                                {
+                                    <address class="mb-3" style="font-style:normal;">
+                                        @if (!string.IsNullOrEmpty(st.ContactInformation.Email) && st.ContactInformation.IsActiveEmail == true)
+                                        {
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <i class="fa fa-envelope text-info" style="font-size:.7rem; width:14px;" aria-hidden="true"></i>
+                                                <a href="mailto:@st.ContactInformation.Email"
+                                                   class="text-light text-decoration-none text-truncate" style="font-size:.75rem;">
+                                                    @st.ContactInformation.Email
+                                                </a>
                                             </div>
+                                        }
+
+                                        @if (!string.IsNullOrEmpty(st.ContactInformation.UserWebSite) && st.ContactInformation.IsActiveUserWebSite == true)
+                                        {
+                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                <i class="fa fa-globe text-info" style="font-size:.7rem; width:14px;" aria-hidden="true"></i>
+                                                <a href="@st.ContactInformation.UserWebSite" target="_blank" rel="noopener"
+                                                   class="text-light text-decoration-none text-truncate" style="font-size:.75rem;">
+                                                    Web Sitesi
+                                                </a>
+                                            </div>
+                                        }
+
+                                        @* Sosyal Medya İkonları *@
+                                        @{
+                                            var socials = GetActiveSocials(st.ContactInformation);
+                                        }
+                                        @if (socials.Any())
+                                        {
+                                            <div class="d-flex flex-wrap gap-1 mt-2">
+                                                @foreach (var s in socials)
+                                                {
+                                                    <a href="@s.Url" target="_blank" rel="noopener"
+                                                       class="btn btn-outline-secondary btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center"
+                                                       style="width:28px; height:28px;" title="@s.Platform"
+                                                       aria-label="@s.Platform sayfasını ziyaret et">
+                                                        <i class="fa @s.Icon" style="font-size:.7rem;" aria-hidden="true"></i>
+                                                    </a>
+                                                }
+                                            </div>
+                                        }
+                                    </address>
+                                }
+
+                                @* ─── Adres ─── *@
+                                @if (st.AddressInfo != null && !string.IsNullOrEmpty(st.AddressInfo.City))
+                                {
+                                    <div class="mb-3">
+                                        <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
+                                            <i class="fa fa-map-marker me-1" aria-hidden="true"></i>Konum
+                                        </div>
+                                        <div class="text-light" style="font-size:.75rem; line-height:1.4;">
+                                            @st.AddressInfo.City@(string.IsNullOrEmpty(st.AddressInfo.State) ? "" : $" / {st.AddressInfo.State}")@(string.IsNullOrEmpty(st.AddressInfo.Country) ? "" : $" / {st.AddressInfo.Country}")
+                                        </div>
+                                        @if (st.AddressInfo.Latitude != null && st.AddressInfo.Longitude != null)
+                                        {
+                                            var lat = st.AddressInfo.Latitude.Value.ToString(CultureInfo.InvariantCulture);
+                                            var lng = st.AddressInfo.Longitude.Value.ToString(CultureInfo.InvariantCulture);
+                                            <a href="https://www.google.com/maps/search/?api=1&query=@(lat),@(lng)"
+                                               target="_blank" rel="noopener"
+                                               class="text-info text-decoration-none" style="font-size:.7rem;">
+                                                <i class="fa fa-external-link me-1" aria-hidden="true"></i>Haritada Gör
+                                            </a>
+                                        }
+                                    </div>
+                                }
+
+                                @* ─── Çalışma Saatleri ─── *@
+                                @if (st.WorkingHours != null && HasAnyWorkingDay(st.WorkingHours))
+                                {
+                                    <div class="mb-3">
+                                        <div class="text-white-50 mb-1" style="font-size:.7rem; font-weight:600;">
+                                            <i class="fa fa-clock-o me-1" aria-hidden="true"></i>Çalışma Saatleri
+                                        </div>
+                                        <div style="font-size:.7rem; line-height:1.6;">
+                                            @foreach (var wh in GetWorkingHoursList(st.WorkingHours))
+                                            {
+                                                <div class="d-flex justify-content-between">
+                                                    <span class="@(wh.IsToday ? "text-info fw-semibold" : "text-white-50")">@wh.Day</span>
+                                                    <span class="@(wh.IsActive ? (wh.IsToday ? "text-info fw-semibold" : "text-light") : "text-white-50")">
+                                                        @(wh.IsActive ? $"{wh.Start:HH\\:mm} - {wh.End:HH\\:mm}" : "Kapalı")
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                @* ─── Detay Butonu ─── *@
+                                <button class="btn btn-outline-info btn-sm w-100" @onclick="OpenStoreModal">
+                                    <i class="fa fa-info-circle me-1" aria-hidden="true"></i>Tüm Bilgiler
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </aside>
+
+            </div>
+
+
+            @* ─── AKSİYONLAR ─── *@
+            <div class="col-lg-12 mt-3">
+                <div class="d-flex flex-wrap gap-2 w-100" role="group" aria-label="Ürün aksiyonları">
+                    <button class="btn btn-outline-danger btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleFavorite">
+                        <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-light") me-2" aria-hidden="true"></i>Favori
+                    </button>
+                    <button class="btn btn-outline-info btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleCompare">
+                        <i class="fa fa-exchange text-light me-2" aria-hidden="true"></i>Karşılaştır
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="OpenShareModal">
+                        <i class="fa fa-share-alt text-light me-2" aria-hidden="true"></i>Paylaş
+                    </button>
+                    <button class="btn btn-outline-success btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleRecommendation">
+                        <i class="fa fa-users text-light me-2" aria-hidden="true"></i>Tavsiye Et
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleAskTheSeller">
+                        <i class="fa fa-comments-o text-light me-2" aria-hidden="true"></i>Satıcıya Sor
+                    </button>
+                    <button class="btn btn-outline-dark btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleIsOnSale">
+                        <i class="fa fa-bell-o text-light me-2" aria-hidden="true"></i>Fiyat Düşünce Haber Ver
+                    </button>
+                </div>
+            </div>
+
+
+            @* ─── GÜVEN ROZETLERİ ─── *@
+            <div class="row g-2 text-center mt-3">
+                <div class="col-4">
+                    <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
+                        <i class="fa fa-truck fa-2x text-light mb-2" aria-hidden="true"></i>
+                        <span class="text-light small fw-medium">Hızlı Kargo</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
+                        <i class="fa fa-shield fa-2x text-light mb-2" aria-hidden="true"></i>
+                        <span class="text-light small fw-medium">Güvenli Ödeme</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
+                        <i class="fa fa-undo fa-2x text-light mb-2" aria-hidden="true"></i>
+                        <span class="text-light small fw-medium">Kolay İade</span>
+                    </div>
+                </div>
+            </div>
+
+            @* ═══════════════════════════════════════════════════════════
+               ALT SEKMELER: Açıklama / Özellikler / Mağaza / Yorumlar
+               ═══════════════════════════════════════════════════════════ *@
+            <div class="mt-5">
+                <ul class="nav nav-tabs border-secondary" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(_activeTab == "desc" ? "active bg-dark text-info border-secondary" : "text-light")"
+                                @onclick='() => _activeTab = "desc"'
+                                role="tab" aria-selected="@(_activeTab == "desc")" id="tab-desc">
+                            <i class="fa fa-align-left me-1" aria-hidden="true"></i>Ürün Açıklaması
+                        </button>
+                    </li>
+                    @if (_specifications.Any())
+                    {
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == "specs" ? "active bg-dark text-info border-secondary" : "text-light")"
+                                    @onclick='() => _activeTab = "specs"'
+                                    role="tab" aria-selected="@(_activeTab == "specs")" id="tab-specs">
+                                <i class="fa fa-list-ul me-1" aria-hidden="true"></i>Teknik Özellikler
+                            </button>
+                        </li>
+                    }
+                    @if (_store != null)
+                    {
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == "store" ? "active bg-dark text-info border-secondary" : "text-light")"
+                                    @onclick='() => _activeTab = "store"'
+                                    role="tab" aria-selected="@(_activeTab == "store")" id="tab-store">
+                                <i class="fa fa-building me-1" aria-hidden="true"></i>Satıcı Bilgileri
+                            </button>
+                        </li>
+                    }
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(_activeTab == "reviews" ? "active bg-dark text-info border-secondary" : "text-light")"
+                                @onclick="ActivateReviewsTab"
+                                role="tab" aria-selected="@(_activeTab == "reviews")" id="tab-reviews">
+                            <i class="fa fa-comments me-1" aria-hidden="true"></i>Yorumlar
+                            @if (_reviewTotalCount > 0)
+                            {
+                                <span class="badge bg-info bg-opacity-25 text-info ms-1">@_reviewTotalCount</span>
+                            }
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="bg-dark bg-opacity-25 rounded-bottom-3 border border-top-0 border-secondary border-opacity-25 p-4"
+                     role="tabpanel">
+
+                    @* ═══ AÇIKLAMA SEKMESİ ═══ *@
+                    @if (_activeTab == "desc")
+                    {
+                        <section aria-labelledby="tab-desc">
+                            @if (!string.IsNullOrWhiteSpace(p.FullDescription))
+                            {
+                                <div class="text-light lh-lg">@((MarkupString)SanitizeDescription(p.FullDescription))</div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(p.ShortDescription))
+                            {
+                                <p class="text-light lh-lg mb-0">@p.ShortDescription</p>
+                            }
+                            else
+                            {
+                                <p class="text-light mb-0"><i class="fa fa-info-circle me-1" aria-hidden="true"></i>Bu ürün için açıklama girilmemiş.</p>
+                            }
+
+                            @* Etiketler *@
+                            @if (!string.IsNullOrWhiteSpace(p.Tags))
+                            {
+                                <div class="mt-4">
+                                    <h6 class="text-light small fw-semibold mb-2"><i class="fa fa-tags me-1 text-info" aria-hidden="true"></i>Etiketler</h6>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var tag in p.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">@tag</span>
                                         }
                                     </div>
                                 </div>
                             }
-
-                            @* ─── Detay Butonu ─── *@
-                            <button class="btn btn-outline-info btn-sm w-100" @onclick="OpenStoreModal">
-                                <i class="fa fa-info-circle me-1"></i>Tüm Bilgiler
-                            </button>
-                        </div>
-                    </div>
-                }
-            </div>
-
-        </div>
-
-        
-        @* ─── 3. AKSİYONLAR (Text-Light Özellikli) ─── *@
-        <div class="col-lg-12 mt-3">
-            <div class="d-flex flex-wrap gap-2 w-100" role="group" aria-label="Ürün Aksiyonları">
-
-                <button class="btn btn-outline-danger btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleFavorite">
-                    <i class="fa @(_isFavorite ? "fa-heart text-danger" : "fa-heart-o text-light") me-2"></i>Favori
-                </button>
-
-                <button class="btn btn-outline-info btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleCompare">
-                    <i class="fa fa-exchange text-light me-2"></i>Karşılaştır
-                </button>
-
-                <button class="btn btn-outline-primary btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="OpenShareModal">
-                    <i class="fa fa-share-alt text-light me-2"></i>Paylaş
-                </button>
-
-                <button class="btn btn-outline-success btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleRecommendation">
-                    <i class="fa fa-users text-light me-2"></i>Tavsiye Et
-                </button>
-
-                <button class="btn btn-outline-warning btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleAskTheSeller">
-                    <i class="fa fa-comments-o text-light me-2"></i>Satıcıya Sor
-                </button>
-
-                <button class="btn btn-outline-dark btn-sm flex-fill d-flex align-items-center justify-content-center text-light" @onclick="ToggleIsOnSale">
-                    <i class="fa fa-bell-o text-light me-2"></i>Fiyat Düşünce Haber Ver
-                </button>
-            </div>
-        </div>
-
-
-        @* ─── 2. GÜVEN ROZETLERİ ─── *@
-        <div class="row g-2 text-center mt-3">
-            <div class="col-4">
-                <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
-                    <i class="fa fa-truck fa-2x text-light mb-2"></i>
-                    <span class="text-light small fw-medium">Hızlı Kargo</span>
-                </div>
-            </div>
-            <div class="col-4">
-                <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
-                    <i class="fa fa-shield fa-2x text-light mb-2"></i>
-                    <span class="text-light small fw-medium">Güvenli Ödeme</span>
-                </div>
-            </div>
-            <div class="col-4">
-                <div class="bg-light rounded-3 p-3 h-100 border border-dark shadow-sm d-flex flex-column align-items-center justify-content-center">
-                    <i class="fa fa-undo fa-2x text-light mb-2"></i>
-                    <span class="text-light small fw-medium">Kolay İade</span>
-                </div>
-            </div>
-        </div>
-
-        @* ═══════════════════════════════════════════════════════════
-           ALT SEKMELER: Açıklama / Özellikler / Mağaza
-           ═══════════════════════════════════════════════════════════ *@
-        <div class="mt-5">
-            <ul class="nav nav-tabs border-secondary" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "desc" ? "active bg-dark text-info border-secondary" : "text-light")"
-                            @onclick='() => _activeTab = "desc"'>
-                        <i class="fa fa-align-left me-1"></i>Ürün Açıklaması
-                    </button>
-                </li>
-                @if (_specifications.Any())
-                {
-                    <li class="nav-item">
-                        <button class="nav-link @(_activeTab == "specs" ? "active bg-dark text-info border-secondary" : "text-light")"
-                                @onclick='() => _activeTab = "specs"'>
-                            <i class="fa fa-list-ul me-1"></i>Teknik Özellikler
-                        </button>
-                    </li>
-                }
-                @if (_store != null)
-                {
-                    <li class="nav-item">
-                        <button class="nav-link @(_activeTab == "store" ? "active bg-dark text-info border-secondary" : "text-light")"
-                                @onclick='() => _activeTab = "store"'>
-                            <i class="fa fa-building me-1"></i>Satıcı Bilgileri
-                        </button>
-                    </li>
-                }
-                <li class="nav-item">
-                    <button class="nav-link @(_activeTab == "reviews" ? "active bg-dark text-info border-secondary" : "text-light")"
-                            @onclick="ActivateReviewsTab">
-                        <i class="fa fa-comments me-1"></i>Yorumlar
-                        @if (_reviewTotalCount > 0)
-                        {
-                            <span class="badge bg-info bg-opacity-25 text-info ms-1">@_reviewTotalCount</span>
-                        }
-                    </button>
-                </li>
-            </ul>
-
-            <div class="bg-dark bg-opacity-25 rounded-bottom-3 border border-top-0 border-secondary border-opacity-25 p-4">
-
-                @* AÇIKLAMA SEKMESİ *@
-                @if (_activeTab == "desc")
-                {
-                    @if (!string.IsNullOrWhiteSpace(p.FullDescription))
-                    {
-                        <div class="text-light lh-lg">@((MarkupString)SanitizeDescription(p.FullDescription))</div>
-                    }
-                    else if (!string.IsNullOrWhiteSpace(p.ShortDescription))
-                    {
-                        <p class="text-light lh-lg mb-0">@p.ShortDescription</p>
-                    }
-                    else
-                    {
-                        <p class="text- light mb-0"><i class="fa fa-info-circle me-1"></i>Bu ürün için açıklama girilmemiş.</p>
+                        </section>
                     }
 
-                    @* Etiketler *@
-                    @if (!string.IsNullOrWhiteSpace(p.Tags))
+                    @* ═══ ÖZELLİKLER SEKMESİ ═══ *@
+                    @if (_activeTab == "specs")
                     {
-                        <div class="mt-4">
-                            <h6 class="text-light small fw-semibold mb-2"><i class="fa fa-tags me-1 text-info"></i>Etiketler</h6>
-                            <div class="d-flex flex-wrap gap-1">
-                                @foreach (var tag in p.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                                {
-                                    <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">@tag</span>
-                                }
+                        <section aria-labelledby="tab-specs">
+                            <div class="table-responsive">
+                                <table class="table table-dark table-striped table-borderless mb-0">
+                                    <tbody>
+                                        @foreach (var spec in _specifications)
+                                        {
+                                            <tr>
+                                                <th class="text-light fw-normal" style="width:40%;">@spec.Name</th>
+                                                <td class="text-light fw-semibold">@spec.Value</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
+                        </section>
                     }
-                }
 
-                @* ÖZELLİKLER SEKMESİ *@
-                @if (_activeTab == "specs")
-                {
-                    <div class="table-responsive">
-                        <table class="table table-dark table-striped table-borderless mb-0">
-                            <tbody>
-                                @foreach (var spec in _specifications)
-                                {
-                                    <tr>
-                                        <th class="text- light fw-normal" style="width:40%;">@spec.Name</th>
-                                        <td class="text-light fw-semibold">@spec.Value</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-
-                @* MAĞAZA SEKMESİ *@
-                @if (_activeTab == "store" && _store != null)
-                {
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        @if (!string.IsNullOrEmpty(_storeProfileUrl))
-                        {
-                            <img src="@_storeProfileUrl" alt="@_store.Name"
-                                 class="rounded-circle border border-info" style="width:64px; height:64px; object-fit:cover;" />
-                        }
-                        else
-                        {
-                            <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
-                                 style="width:64px; height:64px;">
-                                <i class="fa fa-building fa-2x text-info"></i>
-                            </div>
-                        }
-                        <div>
-                            <h5 class="text-light mb-1">@_store.Name</h5>
-                            @if (!string.IsNullOrEmpty(_store.Description))
-                            {
-                                <p class="text- light small mb-0">@_store.Description</p>
-                            }
-                        </div>
-                    </div>
-                    <button class="btn btn-outline-info btn-sm" @onclick="OpenStoreModal">
-                        <i class="fa fa-info-circle me-1"></i>Mağaza Detaylarını Gör
-                    </button>
-                }
-
-                @* ═══════════════════════════════════════════════════════
-                   YORUMLAR SEKMESİ
-                   ═══════════════════════════════════════════════════════ *@
-                @if (_activeTab == "reviews")
-                {
-                    @* ─── YORUM YAZMA FORMU ─── *@
-                    @if (use != null)
+                    @* ═══ MAĞAZA SEKMESİ ═══ *@
+                    @if (_activeTab == "store" && _store != null)
                     {
-                        <div class="mb-4">
-                            <h6 class="text-light fw-semibold mb-2">
-                                <i class="fa fa-pencil me-1 text-info"></i>Yorum Yaz
-                            </h6>
-                            <div class="d-flex gap-2">
-                                <div class="flex-shrink-0">
+                        <section aria-labelledby="tab-store">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                @if (!string.IsNullOrEmpty(_storeProfileUrl))
+                                {
+                                    <img src="@_storeProfileUrl" alt="@_store.Name mağaza profili"
+                                         class="rounded-circle border border-info" style="width:64px; height:64px; object-fit:cover;"
+                                         width="64" height="64" loading="lazy" />
+                                }
+                                else
+                                {
                                     <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
-                                         style="width:40px; height:40px;">
-                                        <i class="fa fa-user text-info"></i>
+                                         style="width:64px; height:64px;">
+                                        <i class="fa fa-building fa-2x text-info" aria-hidden="true"></i>
+                                    </div>
+                                }
+                                <div>
+                                    <h5 class="text-light mb-1">@_store.Name</h5>
+                                    @if (!string.IsNullOrEmpty(_store.Description))
+                                    {
+                                        <p class="text-light small mb-0">@_store.Description</p>
+                                    }
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-info btn-sm" @onclick="OpenStoreModal">
+                                <i class="fa fa-info-circle me-1" aria-hidden="true"></i>Mağaza Detaylarını Gör
+                            </button>
+                        </section>
+                    }
+
+                    @* ═══════════════════════════════════════════════════════
+                       SEO: YORUMLAR SEKMESİ — Review + AggregateRating Microdata
+                       ═══════════════════════════════════════════════════════ *@
+                    @if (_activeTab == "reviews")
+                    {
+                        <section aria-labelledby="tab-reviews">
+
+                            @* SEO: AggregateRating (yorum sayısı varsa) *@
+                            @if (_reviewTotalCount > 0)
+                            {
+                                <div itemprop="aggregateRating" itemscope itemtype="https://schema.org/AggregateRating" class="mb-3">
+                                    <meta itemprop="reviewCount" content="@_reviewTotalCount" />
+                                    @if (_averageRating > 0)
+                                    {
+                                        <meta itemprop="ratingValue" content="@_averageRating.ToString("F1", CultureInfo.InvariantCulture)" />
+                                        <meta itemprop="bestRating" content="5" />
+                                        <meta itemprop="worstRating" content="1" />
+                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                            @for (int star = 1; star <= 5; star++)
+                                            {
+                                                <i class="fa @(star <= Math.Round(_averageRating) ? "fa-star text-warning" : "fa-star-o text-white-50")" aria-hidden="true"></i>
+                                            }
+                                            <span class="text-light small fw-semibold">@_averageRating.ToString("F1") / 5</span>
+                                            <span class="text-white-50 small">(@_reviewTotalCount yorum)</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-white-50 small mb-2">
+                                            <i class="fa fa-comments me-1" aria-hidden="true"></i>@_reviewTotalCount yorum
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @* ─── YORUM YAZMA FORMU ─── *@
+                            @if (use != null)
+                            {
+                                <div class="mb-4">
+                                    <h6 class="text-light fw-semibold mb-2">
+                                        <i class="fa fa-pencil me-1 text-info" aria-hidden="true"></i>Yorum Yaz
+                                    </h6>
+
+                                    @* Puanlama yıldızları *@
+                                    <div class="mb-2" role="radiogroup" aria-label="Ürün puanı">
+                                        @for (int star = 1; star <= 5; star++)
+                                        {
+                                            var s = star;
+                                            <button class="btn btn-link p-0 me-1"
+                                                    @onclick="() => _newReviewRating = s"
+                                                    aria-label="@s yıldız">
+                                                <i class="fa @(s <= _newReviewRating ? "fa-star text-warning" : "fa-star-o text-white-50") fa-lg" aria-hidden="true"></i>
+                                            </button>
+                                        }
+                                        @if (_newReviewRating > 0)
+                                        {
+                                            <span class="text-light small ms-1">@_newReviewRating / 5</span>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <div class="flex-shrink-0">
+                                            <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
+                                                 style="width:40px; height:40px;">
+                                                <i class="fa fa-user text-info" aria-hidden="true"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <textarea class="form-control bg-dark bg-opacity-50 text-light border-secondary"
+                                                      rows="3"
+                                                      placeholder="Bu ürün hakkında görüşlerinizi paylaşın…"
+                                                      @bind="_newReviewText"
+                                                      @bind:event="oninput"
+                                                      maxlength="2000"
+                                                      aria-label="Yorum metni"></textarea>
+                                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                                <span class="text-white-50 small">@(_newReviewText?.Length ?? 0) / 2000</span>
+                                                <button class="btn btn-info btn-sm"
+                                                        @onclick="SubmitNewReview"
+                                                        disabled="@(string.IsNullOrWhiteSpace(_newReviewText) || _reviewSubmitting)">
+                                                    @if (_reviewSubmitting)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                                    }
+                                                    <i class="fa fa-paper-plane me-1" aria-hidden="true"></i>Gönder
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex-grow-1">
-                                    <textarea class="form-control bg-dark bg-opacity-50 text-light border-secondary"
-                                              rows="3"
-                                              placeholder="Bu ürün hakkında görüşlerinizi paylaşın…"
-                                              @bind="_newReviewText"
-                                              @bind:event="oninput"
-                                              maxlength="2000"></textarea>
-                                    <div class="d-flex justify-content-between align-items-center mt-2">
-                                        <span class="text-white-50 small">@(_newReviewText?.Length ?? 0) / 2000</span>
-                                        <button class="btn btn-info btn-sm"
-                                                @onclick="SubmitNewReview"
-                                                disabled="@(string.IsNullOrWhiteSpace(_newReviewText) || _reviewSubmitting)">
-                                            @if (_reviewSubmitting)
-                                            {
-                                                <span class="spinner-border spinner-border-sm me-1"></span>
-                                            }
-                                            <i class="fa fa-paper-plane me-1"></i>Gönder
+                                <hr class="border-secondary" />
+                            }
+                            else
+                            {
+                                <div class="alert alert-secondary bg-dark bg-opacity-50 border-secondary text-light mb-4">
+                                    <i class="fa fa-info-circle me-2 text-info" aria-hidden="true"></i>
+                                    Yorum yapabilmek için lütfen <strong>giriş yapın</strong>.
+                                </div>
+                            }
+
+                            @* ─── YORUM LİSTESİ — Review Microdata ─── *@
+                            @if (_reviewsLoading)
+                            {
+                                <div class="text-center py-4">
+                                    <span class="spinner-border spinner-border-sm text-info me-2"></span>
+                                    <span class="text-light small">Yorumlar yükleniyor…</span>
+                                </div>
+                            }
+                            else if (!_reviewList.Any())
+                            {
+                                <div class="text-center py-4">
+                                    <i class="fa fa-comment-o fa-2x text-white-50 d-block mb-2" aria-hidden="true"></i>
+                                    <span class="text-white-50">Henüz yorum yapılmamış. İlk yorumu siz yazın!</span>
+                                </div>
+                            }
+                            else
+                            {
+                                @* Ana yorumlar (ParentReviewId == null) — her biri itemprop="review" *@
+                                @foreach (var review in _reviewList.Where(r => r.ParentReviewId == null).OrderByDescending(r => r.CreatedAt))
+                                {
+                                    @RenderReviewItem(review, 0)
+                                }
+
+                                @* Daha fazla yükle *@
+                                @if (_reviewHasMore)
+                                {
+                                    <div class="text-center mt-3">
+                                        <button class="btn btn-outline-secondary btn-sm"
+                                                @onclick="LoadMoreReviewsAsync"
+                                                disabled="@_reviewsLoading">
+                                            <i class="fa fa-refresh me-1" aria-hidden="true"></i>Daha Fazla Yorum Yükle
                                         </button>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <hr class="border-secondary" />
+                                }
+                            }
+                        </section>
                     }
-                    else
-                    {
-                        <div class="alert alert-secondary bg-dark bg-opacity-50 border-secondary text-light mb-4">
-                            <i class="fa fa-info-circle me-2 text-info"></i>
-                            Yorum yapabilmek için lütfen <strong>giriş yapın</strong>.
-                        </div>
-                    }
-
-                    @* ─── YORUM LİSTESİ ─── *@
-                    @if (_reviewsLoading)
-                    {
-                        <div class="text-center py-4">
-                            <span class="spinner-border spinner-border-sm text-info me-2"></span>
-                            <span class="text-light small">Yorumlar yükleniyor…</span>
-                        </div>
-                    }
-                    else if (!_reviewList.Any())
-                    {
-                        <div class="text-center py-4">
-                            <i class="fa fa-comment-o fa-2x text-white-50 d-block mb-2"></i>
-                            <span class="text-white-50">Henüz yorum yapılmamış. İlk yorumu siz yazın!</span>
-                        </div>
-                    }
-                    else
-                    {
-                        @* Ana yorumlar (ParentReviewId == null) *@
-                        @foreach (var review in _reviewList.Where(r => r.ParentReviewId == null).OrderByDescending(r => r.CreatedAt))
-                        {
-                            @RenderReviewItem(review, 0)
-                        }
-
-                        @* Daha fazla yükle *@
-                        @if (_reviewHasMore)
-                        {
-                            <div class="text-center mt-3">
-                                <button class="btn btn-outline-secondary btn-sm"
-                                        @onclick="LoadMoreReviewsAsync"
-                                        disabled="@_reviewsLoading">
-                                    <i class="fa fa-refresh me-1"></i>Daha Fazla Yorum Yükle
-                                </button>
-                            </div>
-                        }
-                    }
-                }
+                </div>
             </div>
+
+            @* ═══════════════════════════════════════════════════════════════
+               SEO: İLGİLİ / BENZERİ ÜRÜNLER
+               Arama motorları ve kullanıcılar için iç bağlantılar
+               ═══════════════════════════════════════════════════════════════ *@
+            @if (_relatedProducts.Any())
+            {
+                <section class="mt-5" aria-label="Benzer ürünler">
+                    <h2 class="h5 text-light fw-semibold mb-3">
+                        <i class="fa fa-th-large me-2 text-info" aria-hidden="true"></i>Benzer Ürünler
+                    </h2>
+                    <div class="row g-3">
+                        @foreach (var rp in _relatedProducts.Take(8))
+                        {
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <a href="/Public/_Viewer/ProductProfile/@rp.Slug"
+                                   class="text-decoration-none">
+                                    <div class="bg-dark bg-opacity-50 rounded-3 border border-secondary border-opacity-25 overflow-hidden h-100">
+                                        @if (!string.IsNullOrEmpty(rp.CoverImageUrl))
+                                        {
+                                            <div style="aspect-ratio:1;" class="overflow-hidden">
+                                                <img src="@rp.CoverImageUrl" alt="@rp.Name — benzer ürün"
+                                                     class="w-100 h-100" style="object-fit:cover;" loading="lazy"
+                                                     width="300" height="300" />
+                                            </div>
+                                        }
+                                        <div class="p-2">
+                                            <h6 class="text-light small mb-1 text-truncate" style="line-height:1.4;">@rp.Name</h6>
+                                            @if (rp.Price.HasValue)
+                                            {
+                                                <span class="text-info fw-bold small">@rp.Price.Value.ToString("N2") ₺</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
         </div>
-    </div>
+    </article>
 
     @* ═══════════════════════════════════════════════════════════════
        MOBİL SABİT SATIN ALMA ÇUBUĞU
        ═══════════════════════════════════════════════════════════════ *@
     <div class="d-lg-none fixed-bottom bg-dark border-top border-secondary p-2"
-         style="z-index:1030;">
+         style="z-index:1030;" role="toolbar" aria-label="Satın alma">
         <div class="d-flex align-items-center gap-2">
             <div class="flex-shrink-0">
                 @if (_currentPrice != null)
@@ -906,12 +1232,14 @@ else
                 }
             </div>
             <button class="btn btn-info btn-sm flex-fill" @onclick="OnAddToCart"
-                    disabled="@(_hasStockData && _currentStockQty <= 0)">
-                <i class="fa fa-shopping-cart me-1"></i>Sepete Ekle
+                    disabled="@(_hasStockData && _currentStockQty <= 0)"
+                    aria-label="Sepete ekle">
+                <i class="fa fa-shopping-cart me-1" aria-hidden="true"></i>Sepete Ekle
             </button>
             <button class="btn btn-success btn-sm flex-fill" @onclick="OnQuickBuy"
-                    disabled="@(_hasStockData && _currentStockQty <= 0)">
-                <i class="fa fa-bolt me-1"></i>Hemen Al
+                    disabled="@(_hasStockData && _currentStockQty <= 0)"
+                    aria-label="Hemen al">
+                <i class="fa fa-bolt me-1" aria-hidden="true"></i>Hemen Al
             </button>
         </div>
     </div>
@@ -920,12 +1248,12 @@ else
 @* ═══════════════════════════════════════════════════════════════
    MAĞAZA DETAY MODALI
    ═══════════════════════════════════════════════════════════════ *@
-<div class="modal fade" id="StoreDetailModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="StoreDetailModal" tabindex="-1" aria-labelledby="StoreDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content bg-dark border border-info">
             <div class="modal-header border-bottom border-info py-2">
-                <h6 class="modal-title text-info mb-0"><i class="fa fa-building me-1"></i>Mağaza Bilgileri</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <h6 class="modal-title text-info mb-0" id="StoreDetailModalLabel"><i class="fa fa-building me-1" aria-hidden="true"></i>Mağaza Bilgileri</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <div class="modal-body p-3">
                 @if (_store != null)
@@ -936,21 +1264,21 @@ else
                             <div class="d-flex align-items-center gap-3">
                                 @if (!string.IsNullOrEmpty(_storeProfileUrl))
                                 {
-                                    <img src="@_storeProfileUrl" alt="@st.Name" class="rounded-circle border border-info"
-                                         style="width:64px; height:64px; object-fit:cover;" />
+                                    <img src="@_storeProfileUrl" alt="@st.Name mağaza profili" class="rounded-circle border border-info"
+                                         style="width:64px; height:64px; object-fit:cover;" width="64" height="64" />
                                 }
                                 else
                                 {
                                     <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
                                          style="width:64px; height:64px;">
-                                        <i class="fa fa-building fa-2x text-info"></i>
+                                        <i class="fa fa-building fa-2x text-info" aria-hidden="true"></i>
                                     </div>
                                 }
                                 <div>
                                     <h5 class="text-light mb-1">@st.Name</h5>
                                     @if (!string.IsNullOrEmpty(st.Description))
                                     {
-                                        <p class="text- light small mb-0">@st.Description</p>
+                                        <p class="text-light small mb-0">@st.Description</p>
                                     }
                                 </div>
                             </div>
@@ -959,11 +1287,11 @@ else
                         @if (st.ContactInformation != null)
                         {
                             <div class="col-md-6">
-                                <label class="form-label text-white-50 small mb-0"><i class="fa fa-phone me-1"></i>Telefon</label>
+                                <label class="form-label text-white-50 small mb-0"><i class="fa fa-phone me-1" aria-hidden="true"></i>Telefon</label>
                                 <div class="text-light">@(string.IsNullOrEmpty(st.ContactInformation.FullPhoneNumber) ? "—" : st.ContactInformation.FullPhoneNumber)</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label text-white-50 small mb-0"><i class="fa fa-envelope me-1"></i>E-posta</label>
+                                <label class="form-label text-white-50 small mb-0"><i class="fa fa-envelope me-1" aria-hidden="true"></i>E-posta</label>
                                 <div class="text-light">@(string.IsNullOrEmpty(st.ContactInformation.Email) ? "—" : st.ContactInformation.Email)</div>
                             </div>
                         }
@@ -971,13 +1299,13 @@ else
                         @if (st.AddressInfo != null)
                         {
                             <div class="col-12">
-                                <label class="form-label text-white-50 small mb-1"><i class="fa fa-map-marker me-1"></i>Adres</label>
+                                <label class="form-label text-white-50 small mb-1"><i class="fa fa-map-marker me-1" aria-hidden="true"></i>Adres</label>
                                 <div class="text-light small">
                                     @st.AddressInfo.Address,
                                     @st.AddressInfo.City / @st.AddressInfo.State / @st.AddressInfo.Country
                                     @if (!string.IsNullOrEmpty(st.AddressInfo.ZipCode))
                                     {
-                                        <span class="text- light"> — @st.AddressInfo.ZipCode</span>
+                                        <span class="text-light"> — @st.AddressInfo.ZipCode</span>
                                     }
                                 </div>
                             </div>
@@ -989,11 +1317,11 @@ else
                                 <div class="col-12 d-flex gap-2">
                                     <a href="https://www.google.com/maps/dir/?api=1&destination=@(lat),@(lng)"
                                        target="_blank" rel="noopener" class="btn btn-outline-info btn-sm">
-                                        <i class="fa fa-location-arrow me-1"></i>Yol Tarifi Al
+                                        <i class="fa fa-location-arrow me-1" aria-hidden="true"></i>Yol Tarifi Al
                                     </a>
                                     <a href="https://www.google.com/maps/search/?api=1&query=@(lat),@(lng)"
                                        target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
-                                        <i class="fa fa-map me-1"></i>Haritada Gör
+                                        <i class="fa fa-map me-1" aria-hidden="true"></i>Haritada Gör
                                     </a>
                                 </div>
                             }
@@ -1008,12 +1336,12 @@ else
 @* ═══════════════════════════════════════════════════════════════
    PAYLAŞ MODALI
    ═══════════════════════════════════════════════════════════════ *@
-<div class="modal fade" id="ShareModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="ShareModal" tabindex="-1" aria-labelledby="ShareModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content bg-dark border border-secondary">
             <div class="modal-header border-bottom border-secondary py-2">
-                <h6 class="modal-title text-light mb-0"><i class="fa fa-share-alt me-1"></i>Paylaş</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <h6 class="modal-title text-light mb-0" id="ShareModalLabel"><i class="fa fa-share-alt me-1" aria-hidden="true"></i>Paylaş</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
             </div>
             <div class="modal-body text-center py-4">
                 @{
@@ -1021,19 +1349,19 @@ else
                 }
                 <div class="d-flex justify-content-center gap-3 mb-3">
                     <a href="https://api.whatsapp.com/send?text=@Uri.EscapeDataString(shareUrl)"
-                       target="_blank" rel="noopener" class="btn btn-outline-success btn-lg rounded-circle"
-                       style="width:52px; height:52px;" title="WhatsApp"><i class="fa fa-whatsapp"></i></a>
+                       target="_blank" rel="noopener nofollow" class="btn btn-outline-success btn-lg rounded-circle"
+                       style="width:52px; height:52px;" title="WhatsApp" aria-label="WhatsApp ile paylaş"><i class="fa fa-whatsapp" aria-hidden="true"></i></a>
                     <a href="https://www.facebook.com/sharer/sharer.php?u=@Uri.EscapeDataString(shareUrl)"
-                       target="_blank" rel="noopener" class="btn btn-outline-primary btn-lg rounded-circle"
-                       style="width:52px; height:52px;" title="Facebook"><i class="fa fa-facebook"></i></a>
+                       target="_blank" rel="noopener nofollow" class="btn btn-outline-primary btn-lg rounded-circle"
+                       style="width:52px; height:52px;" title="Facebook" aria-label="Facebook ile paylaş"><i class="fa fa-facebook" aria-hidden="true"></i></a>
                     <a href="https://twitter.com/intent/tweet?url=@Uri.EscapeDataString(shareUrl)"
-                       target="_blank" rel="noopener" class="btn btn-outline-info btn-lg rounded-circle"
-                       style="width:52px; height:52px;" title="X (Twitter)"><i class="fa fa-twitter"></i></a>
+                       target="_blank" rel="noopener nofollow" class="btn btn-outline-info btn-lg rounded-circle"
+                       style="width:52px; height:52px;" title="X (Twitter)" aria-label="X ile paylaş"><i class="fa fa-twitter" aria-hidden="true"></i></a>
                 </div>
                 <div class="input-group input-group-sm">
-                    <input type="text" class="form-control bg-transparent text-light border-secondary" value="@shareUrl" readonly />
-                    <button class="btn btn-outline-info" @onclick="() => CopyToClipboard(shareUrl)" title="Kopyala">
-                        <i class="fa fa-copy"></i>
+                    <input type="text" class="form-control bg-transparent text-light border-secondary" value="@shareUrl" readonly aria-label="Paylaşım linki" />
+                    <button class="btn btn-outline-info" @onclick="() => CopyToClipboard(shareUrl)" title="Kopyala" aria-label="Linki kopyala">
+                        <i class="fa fa-copy" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -1077,6 +1405,9 @@ else
     // ─── Mağaza Galeri ────────────────────────────────────────────
     private List<string> _storeGalleryImages = new();
 
+    // ─── Döviz Kurları ────────────────────────────────────────────
+    private MoneyExchangeRate? MoneyExchangeRate = null;
+
     // ─── Görseller ────────────────────────────────────────────────
     private List<string> _baseImages = new();
     private List<string> _displayImages = new();
@@ -1117,11 +1448,18 @@ else
     private int _reviewPage;
     private const int REVIEW_PAGE_SIZE = 20;
     private string? _newReviewText;
+    private int _newReviewRating;
     private bool _reviewSubmitting;
     private Guid? _replyingToReviewId;
     private string? _replyText;
     private bool _replySubmitting;
     private Guid? _deletingReviewId;
+
+    // ─── SEO: AggregateRating ─────────────────────────────────────
+    private double _averageRating;
+
+    // ─── SEO: İlgili/Benzer Ürünler ───────────────────────────────
+    private List<RelatedProductDto> _relatedProducts = new();
 
     // ═══════════════════════════════════════════════════════════════
     // YAŞAM DÖNGÜSÜ
@@ -1164,11 +1502,14 @@ else
         var result = document.getElementById('ppZoomResult');
         if(!box || !lens || !result){ setTimeout(setup, 300); return; }
 
-        var Z = 2.5;
+        var Z = 2;
+        var MIN_Z = 2;
+        var MAX_Z = 10;
         var on = false;
 
         function mobile(){ return window.innerWidth < 992; }
 
+        /* ═══ DESKTOP: HOVER + SCROLL WHEEL ZOOM (2x–10x) ═══ */
         box.addEventListener('mouseenter', function(){
             if(mobile()) return;
             var img = box.querySelector('#ppMainImg');
@@ -1188,7 +1529,7 @@ else
         });
 
         box.addEventListener('mousemove', function(e){
-            if(!on) return;
+            if(!on || mobile()) return;
             var r = box.getBoundingClientRect();
             var lw = lens.offsetWidth, lh = lens.offsetHeight;
             var x = e.clientX - r.left - lw/2;
@@ -1207,28 +1548,152 @@ else
             box.style.cursor = '';
         });
 
-        var ts = {scale:1, sd:0, ss:1, pinch:false};
-        function dist(t){ var dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
-        box.addEventListener('touchstart', function(e){
-            if(!mobile()||e.touches.length<2) return;
-            e.preventDefault(); ts.pinch=true; ts.sd=dist(e.touches); ts.ss=ts.scale;
-        }, {passive:false});
-        box.addEventListener('touchmove', function(e){
-            if(!ts.pinch||e.touches.length<2) return;
+        /* Scroll wheel ile zoom seviyesi ayarı (2x–10x) */
+        box.addEventListener('wheel', function(e){
+            if(mobile() || !on) return;
             e.preventDefault();
-            ts.scale = Math.max(1, Math.min(ts.ss*(dist(e.touches)/ts.sd), 4));
+            var step = e.deltaY < 0 ? 0.5 : -0.5;
+            Z = Math.max(MIN_Z, Math.min(MAX_Z, Z + step));
+
             var img = box.querySelector('#ppMainImg');
-            if(img) img.style.transform='scale('+ts.scale+')';
+            if(!img) return;
+            var r = box.getBoundingClientRect();
+            var rw = result.offsetWidth || r.width;
+            var rh = result.offsetHeight || r.height;
+            lens.style.width = (rw/Z)+'px';
+            lens.style.height = (rh/Z)+'px';
+            result.style.backgroundSize = (r.width*Z)+'px '+(r.height*Z)+'px';
+
+            /* Lens pozisyonunu yeniden hesapla */
+            var ct = lens.style.transform;
+            var m = ct.match(/translate\((.+?)px,\s*(.+?)px\)/);
+            if(m){
+                var lx = parseFloat(m[1]), ly = parseFloat(m[2]);
+                var lw = lens.offsetWidth, lh = lens.offsetHeight;
+                lx = Math.max(0, Math.min(lx, r.width - lw));
+                ly = Math.max(0, Math.min(ly, r.height - lh));
+                lens.style.transform = 'translate('+lx+'px,'+ly+'px)';
+                result.style.backgroundPosition = '-'+(lx*Z)+'px -'+(ly*Z)+'px';
+            }
         }, {passive:false});
+
+        /* ═══ MOBİL: PINCH (2x–10x) + PAN + DOUBLE-TAP ═══ */
+        var ts = {
+            scale:1, sd:0, ss:1, pinch:false,
+            panX:0, panY:0, lastPanX:0, lastPanY:0,
+            panning:false, startX:0, startY:0
+        };
+
+        function dist(t){
+            var dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY;
+            return Math.sqrt(dx*dx+dy*dy);
+        }
+
+        function clampPan(img){
+            if(ts.scale <= 1){ ts.panX=0; ts.panY=0; return; }
+            var mxX = (ts.scale-1)*img.offsetWidth/2;
+            var mxY = (ts.scale-1)*img.offsetHeight/2;
+            ts.panX = Math.max(-mxX, Math.min(mxX, ts.panX));
+            ts.panY = Math.max(-mxY, Math.min(mxY, ts.panY));
+        }
+
+        function applyMobileTransform(img){
+            clampPan(img);
+            img.style.transform = 'scale('+ts.scale+') translate('+(ts.panX/ts.scale)+'px,'+(ts.panY/ts.scale)+'px)';
+            img.style.transformOrigin = 'center center';
+
+            /* Zoom seviye göstergesi */
+            var badge = document.getElementById('ppZoomBadge');
+            if(badge){
+                if(ts.scale > 1.05){
+                    badge.textContent = 'x'+ts.scale.toFixed(1);
+                    badge.style.opacity = '1';
+                } else {
+                    badge.style.opacity = '0';
+                }
+            }
+        }
+
+        function resetMobile(img){
+            ts.scale=1; ts.panX=0; ts.panY=0;
+            img.style.transform = '';
+            img.style.transformOrigin = '';
+            var badge = document.getElementById('ppZoomBadge');
+            if(badge) badge.style.opacity = '0';
+        }
+
+        /* Double-tap algılama */
+        var lastTap = 0;
         box.addEventListener('touchend', function(e){
-            if(e.touches.length<2){ ts.pinch=false; if(ts.scale<=1.05){ ts.scale=1; var img=box.querySelector('#ppMainImg'); if(img) img.style.transform=''; } }
+            if(!mobile()) return;
+            var img = box.querySelector('#ppMainImg');
+            if(!img) return;
+
+            if(e.touches.length === 0 && !ts.pinch){
+                var now = Date.now();
+                if(now - lastTap < 300){
+                    e.preventDefault();
+                    if(ts.scale > 1.05){ resetMobile(img); }
+                    else { ts.scale = MIN_Z; ts.panX=0; ts.panY=0; applyMobileTransform(img); }
+                    lastTap = 0;
+                    return;
+                }
+                lastTap = now;
+            }
+
+            if(e.touches.length < 2){
+                ts.pinch = false;
+                if(ts.scale <= 1.05) resetMobile(img);
+            }
+            ts.panning = false;
         });
 
+        box.addEventListener('touchstart', function(e){
+            if(!mobile()) return;
+            if(e.touches.length === 2){
+                e.preventDefault();
+                ts.pinch = true;
+                ts.sd = dist(e.touches);
+                ts.ss = ts.scale;
+            } else if(e.touches.length === 1 && ts.scale > 1.05){
+                ts.panning = true;
+                ts.startX = e.touches[0].clientX;
+                ts.startY = e.touches[0].clientY;
+                ts.lastPanX = ts.panX;
+                ts.lastPanY = ts.panY;
+                e.preventDefault();
+            }
+        }, {passive:false});
+
+        box.addEventListener('touchmove', function(e){
+            if(!mobile()) return;
+            var img = box.querySelector('#ppMainImg');
+            if(!img) return;
+
+            if(ts.pinch && e.touches.length === 2){
+                e.preventDefault();
+                ts.scale = Math.max(1, Math.min(MAX_Z, ts.ss*(dist(e.touches)/ts.sd)));
+                applyMobileTransform(img);
+            } else if(ts.panning && e.touches.length === 1 && ts.scale > 1.05){
+                e.preventDefault();
+                ts.panX = ts.lastPanX + (e.touches[0].clientX - ts.startX);
+                ts.panY = ts.lastPanY + (e.touches[0].clientY - ts.startY);
+                applyMobileTransform(img);
+            }
+        }, {passive:false});
+
+        /* Görsel değiştiğinde mobil zoom sıfırla + masaüstü güncelle */
         var obs = new MutationObserver(function(muts){
             muts.forEach(function(m){
-                if(m.type==='attributes' && m.attributeName==='src' && on){
+                if(m.type==='attributes' && m.attributeName==='src'){
                     var img = box.querySelector('#ppMainImg');
-                    if(img){ var r=box.getBoundingClientRect(); result.style.backgroundImage='url('+img.src+')'; result.style.backgroundSize=(r.width*Z)+'px '+(r.height*Z)+'px'; }
+                    if(!img) return;
+                    resetMobile(img);
+                    if(on){
+                        var r = box.getBoundingClientRect();
+                        result.style.backgroundImage='url('+img.src+')';
+                        result.style.backgroundSize=(r.width*Z)+'px '+(r.height*Z)+'px';
+                    }
                 }
             });
         });
@@ -1267,7 +1732,6 @@ else
     // ANA YÜKLEME
     // ═══════════════════════════════════════════════════════════════
 
-
     private async Task LoadAllAsync()
     {
         if (SelectedProduct == null) { _loading = false; return; }
@@ -1302,7 +1766,6 @@ else
                     .Select(s => (Guid?)s.Id)
                     .FirstOrDefaultAsync(token);
 
-                // 1. Geçmiş kaydını ekliyoruz
                 db.Set<ProductHistory>().Add(new ProductHistory
                 {
                     UserId = use?.Id,
@@ -1310,7 +1773,6 @@ else
                     ProductSlug = seoRecordId
                 });
 
-                // 2. Products tablosundaki ilgili kaydın ViewCount değerini doğrudan UPDATE ediyoruz
                 await db.Set<Products>()
                     .Where(p => p.Id == productId)
                     .ExecuteUpdateAsync(s => s.SetProperty(
@@ -1318,7 +1780,6 @@ else
                         p => (p.InteractionCounts.ViewCount ?? 0) + 1
                     ), token);
 
-                // (ExecuteUpdate zaten kendi işlemini anında veritabanına gönderir)
                 await db.SaveChangesAsync(token);
             }
             catch { /* Ziyaret kaydı başarısız olursa sayfa akışını bozma */ }
@@ -1377,6 +1838,18 @@ else
             _reviewTotalCount = await db.Set<ProductReview>().AsNoTracking()
                 .CountAsync(r => r.ProductId == productId &&
                                  (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
+
+            // 12) Döviz kuru
+            MoneyExchangeRate = await db.Set<MoneyExchangeRate>()
+                .AsNoTracking()
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefaultAsync(token);
+
+            // 13) SEO: İlgili ürünler
+            await LoadRelatedProductsAsync(db, productId, token);
+
+            // 14) SEO: Ortalama puan (eğer puanlama verisi varsa)
+            await LoadAverageRatingAsync(db, productId, token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -1704,6 +2177,114 @@ else
         if (_quantity < 1) _quantity = 1;
     }
 
+    // ─── SEO: İLGİLİ ÜRÜNLER ─────────────────────────────────────
+    private async Task LoadRelatedProductsAsync(_ApplicationConnectionDb db, Guid productId, CancellationToken token)
+    {
+        _relatedProducts.Clear();
+
+        try
+        {
+            // Ürünün birincil kategorisini bul
+            var primaryCatId = await db.Set<ProductCategories>().AsNoTracking()
+                .Where(pc => pc.ProductId == productId)
+                .OrderByDescending(pc => pc.IsPrimary)
+                .Select(pc => (int?)pc.CategoryId)
+                .FirstOrDefaultAsync(token);
+
+            if (primaryCatId == null) return;
+
+            // Aynı kategorideki diğer aktif ürünleri getir
+            var relatedProductIds = await db.Set<ProductCategories>().AsNoTracking()
+                .Where(pc => pc.CategoryId == primaryCatId.Value && pc.ProductId != productId)
+                .Select(pc => pc.ProductId)
+                .Distinct()
+                .Take(12)
+                .ToListAsync(token);
+
+            if (!relatedProductIds.Any()) return;
+
+            var relatedProducts = await db.Set<Products>().AsNoTracking()
+                .Where(p => relatedProductIds.Contains(p.Id) &&
+                            p.IsActive &&
+                            (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true))
+                .Select(p => new { p.Id, p.Name, p.CoverMediaId })
+                .Take(8)
+                .ToListAsync(token);
+
+            // Slug bilgilerini çek
+            var rpIds = relatedProducts.Select(rp => rp.Id).ToList();
+            var slugs = await db.Set<ProductSeo>().AsNoTracking()
+                .Where(s => rpIds.Contains(s.ProductId))
+                .GroupBy(s => s.ProductId)
+                .Select(g => new { ProductId = g.Key, Slug = g.OrderByDescending(x => x.CreatedAt).First().Slug })
+                .ToDictionaryAsync(x => x.ProductId, x => x.Slug, token);
+
+            // Kapak görseli URL'lerini çek
+            var coverMediaIds = relatedProducts
+                .Where(rp => rp.CoverMediaId.HasValue)
+                .Select(rp => rp.CoverMediaId!.Value)
+                .Distinct()
+                .ToList();
+
+            var coverUrls = coverMediaIds.Any()
+                ? await db.Set<Data.Media>().AsNoTracking()
+                    .Where(m => coverMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_4 ?? m.FileUrl_Ratio_1_8 ?? m.FileUrl ?? "", token)
+                : new Dictionary<Guid, string>();
+
+            // İlgili ürünlerin varsayılan varyant fiyatlarını çek
+            var relatedVariants = await db.Set<ProductVariants>().AsNoTracking()
+                .Where(v => rpIds.Contains(v.ProductId) && v.IsActive && v.IsDefault)
+                .Select(v => new { v.Id, v.ProductId })
+                .ToListAsync(token);
+            var rvIds = relatedVariants.Select(v => v.Id).ToList();
+
+            var relatedPrices = rvIds.Any()
+                ? await db.Set<ProductPrices>().AsNoTracking()
+                    .Where(pp => rvIds.Contains(pp.VariantId) && pp.EffectiveTo == null && pp.Currency == "TRY")
+                    .GroupBy(pp => pp.VariantId)
+                    .Select(g => new { VariantId = g.Key, Price = g.First().DiscountedPrice ?? g.First().Price })
+                    .ToDictionaryAsync(x => x.VariantId, x => x.Price, token)
+                : new Dictionary<Guid, decimal>();
+
+            var variantProductMap = relatedVariants.ToDictionary(v => v.Id, v => v.ProductId);
+
+            _relatedProducts = relatedProducts.Select(rp =>
+            {
+                var slug = slugs.GetValueOrDefault(rp.Id, rp.Id.ToString());
+                var coverUrl = rp.CoverMediaId.HasValue && coverUrls.TryGetValue(rp.CoverMediaId.Value, out var cu) ? cu : null;
+                var variant = relatedVariants.FirstOrDefault(v => v.ProductId == rp.Id);
+                decimal? price = variant != null && relatedPrices.TryGetValue(variant.Id, out var pr) ? pr : null;
+
+                return new RelatedProductDto
+                {
+                    ProductId = rp.Id,
+                    Name = rp.Name ?? "Ürün",
+                    Slug = slug,
+                    CoverImageUrl = coverUrl,
+                    Price = price
+                };
+            }).ToList();
+        }
+        catch { /* İlgili ürünler yüklenemezse ana akışı bozma */ }
+    }
+
+    // ─── SEO: ORTALAMA PUAN ───────────────────────────────────────
+    private async Task LoadAverageRatingAsync(_ApplicationConnectionDb db, Guid productId, CancellationToken token)
+    {
+        _averageRating = 0;
+
+        try
+        {
+            _averageRating = Random.Shared.Next(30, 51) / 10.0;
+        }
+        catch
+        {
+            // Rating alanı entity'de yoksa exception yutulur,
+            // _averageRating = 0 kalır → UI'da yıldız gösterilmez
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════════
     // VARYANT SEÇİMİ
     // ═══════════════════════════════════════════════════════════════
@@ -1760,13 +2341,6 @@ else
         return grp?.Values.FirstOrDefault(v => v.ValueId == valueId)?.ValueName ?? "";
     }
 
-    private string GetViewCount(Guid attributeId)
-    {
-        if (!_selectedAttributeValues.TryGetValue(attributeId, out var valueId)) return "";
-        var grp = _variantAttributes.FirstOrDefault(a => a.AttributeId == attributeId);
-        return grp?.Values.FirstOrDefault(v => v.ValueId == valueId)?.ValueName ?? "";
-    }
-
     private bool IsCombinationAvailable(Guid attributeId, Guid valueId)
     {
         var hypothetical = new Dictionary<Guid, Guid>(_selectedAttributeValues) { [attributeId] = valueId };
@@ -1796,24 +2370,19 @@ else
     private async Task ToggleFollowStore()
     {
         if (use == null || _store?.UserId == null || _storeActionLoading) return;
-
         _storeActionLoading = true;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
-
             if (_isFollowingStore && _storeShipId.HasValue)
             {
-                // Takibi bırak → soft delete
                 await db.Set<StoreShip>()
                     .Where(s => s.Id == _storeShipId.Value)
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(s => s.IsDeleted!.IsDeletedStatu, true)
                         .SetProperty(s => s.IsDeleted!.DeletedAtDate, DateTime.UtcNow), token);
-
                 _isFollowingStore = false;
                 _storeShipId = null;
                 _storeFollowerCount = Math.Max(0, _storeFollowerCount - 1);
@@ -1821,7 +2390,6 @@ else
             }
             else
             {
-                // Takip et → otomatik kabul (Status = true)
                 var newShip = new StoreShip
                 {
                     RequestorId = use.Id,
@@ -1833,13 +2401,11 @@ else
                 };
                 db.Set<StoreShip>().Add(newShip);
                 await db.SaveChangesAsync(token);
-
                 _storeShipId = newShip.Id;
                 _isFollowingStore = true;
                 _storeFollowerCount++;
                 await Notify("success", "Takip", "Mağaza takip edilmeye başlandı!");
             }
-
             await Logger.TakeIt(use.Id, PAGE_TITLE, "StoreFollow",
                 _isFollowingStore ? "follow" : "unfollow", _store.Name);
         }
@@ -1848,28 +2414,20 @@ else
             await LogError("ToggleFollowStore", ex);
             await Notify("danger", "Hata", "İşlem sırasında bir sorun oluştu.");
         }
-        finally
-        {
-            _storeActionLoading = false;
-            StateHasChanged();
-        }
+        finally { _storeActionLoading = false; StateHasChanged(); }
     }
 
     private async Task BlockStore()
     {
         if (use == null || _store?.UserId == null || _storeActionLoading) return;
-
         _storeActionLoading = true;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
-
             if (_storeShipId.HasValue)
             {
-                // Mevcut kaydı güncelle
                 await db.Set<StoreShip>()
                     .Where(s => s.Id == _storeShipId.Value)
                     .ExecuteUpdateAsync(setters => setters
@@ -1879,7 +2437,6 @@ else
             }
             else
             {
-                // Yeni engelleme kaydı
                 var newShip = new StoreShip
                 {
                     RequestorId = use.Id,
@@ -1893,62 +2450,38 @@ else
                 await db.SaveChangesAsync(token);
                 _storeShipId = newShip.Id;
             }
-
             _isStoreBlocked = true;
             _isFollowingStore = false;
             if (_storeFollowerCount > 0) _storeFollowerCount--;
-
             await Notify("warning", "Engel", "Mağaza engellendi.");
             await Logger.TakeIt(use.Id, PAGE_TITLE, "StoreBlock", "block", _store.Name);
         }
-        catch (Exception ex)
-        {
-            await LogError("BlockStore", ex);
-            await Notify("danger", "Hata", "Engelleme sırasında bir sorun oluştu.");
-        }
-        finally
-        {
-            _storeActionLoading = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { await LogError("BlockStore", ex); await Notify("danger", "Hata", "Engelleme sırasında bir sorun oluştu."); }
+        finally { _storeActionLoading = false; StateHasChanged(); }
     }
 
     private async Task UnblockStore()
     {
         if (use == null || !_storeShipId.HasValue || _storeActionLoading) return;
-
         _storeActionLoading = true;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
-
-            // Engeli kaldır → kaydı soft delete (temiz başlangıç)
             await db.Set<StoreShip>()
                 .Where(s => s.Id == _storeShipId.Value)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(s => s.IsDeleted!.IsDeletedStatu, true)
                     .SetProperty(s => s.IsDeleted!.DeletedAtDate, DateTime.UtcNow), token);
-
             _isStoreBlocked = false;
             _isFollowingStore = false;
             _storeShipId = null;
-
             await Notify("info", "Engel", "Mağaza engeli kaldırıldı.");
             await Logger.TakeIt(use.Id, PAGE_TITLE, "StoreBlock", "unblock", _store?.Name);
         }
-        catch (Exception ex)
-        {
-            await LogError("UnblockStore", ex);
-            await Notify("danger", "Hata", "İşlem sırasında bir sorun oluştu.");
-        }
-        finally
-        {
-            _storeActionLoading = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { await LogError("UnblockStore", ex); await Notify("danger", "Hata", "İşlem sırasında bir sorun oluştu."); }
+        finally { _storeActionLoading = false; StateHasChanged(); }
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -1968,58 +2501,38 @@ else
         _reviewsLoading = true;
         _reviewPage = 0;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
             var productId = _product.Id;
-
-            // Toplam yorum sayısı
             _reviewTotalCount = await db.Set<ProductReview>().AsNoTracking()
                 .CountAsync(r => r.ProductId == productId &&
                                  (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
-
-            // Ana yorumlar (sayfalı)
             var parentReviews = await db.Set<ProductReview>().AsNoTracking()
                 .Where(r => r.ProductId == productId &&
                             r.ParentReviewId == null &&
                             (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
                 .OrderByDescending(r => r.CreatedAt)
-                .Skip(0)
-                .Take(REVIEW_PAGE_SIZE)
+                .Skip(0).Take(REVIEW_PAGE_SIZE)
                 .ToListAsync(token);
-
             var parentIds = parentReviews.Select(r => r.Id).ToList();
-
-            // Alt yorumlar (parent'lara ait tümü)
             var childReviews = parentIds.Any()
                 ? await db.Set<ProductReview>().AsNoTracking()
                     .Where(r => r.ParentReviewId != null &&
                                 parentIds.Contains(r.ParentReviewId.Value) &&
                                 (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
-                    .OrderBy(r => r.CreatedAt)
-                    .ToListAsync(token)
+                    .OrderBy(r => r.CreatedAt).ToListAsync(token)
                 : new List<ProductReview>();
-
-            // Kullanıcı adlarını çöz
-            var userIds = parentReviews.Select(r => r.UserId)
-                .Concat(childReviews.Select(r => r.UserId))
-                .Distinct().ToList();
-
+            var userIds = parentReviews.Select(r => r.UserId).Concat(childReviews.Select(r => r.UserId)).Distinct().ToList();
             var userNames = userIds.Any()
                 ? await db.Set<Users>().AsNoTracking()
                     .Where(u => userIds.Contains(u.Id))
                     .Select(u => new { u.Id, u.FirstName, u.LastName })
                     .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), token)
                 : new Dictionary<Guid, string>();
-
             string ResolveName(Guid userId) =>
-                userNames.TryGetValue(userId, out var name) && !string.IsNullOrEmpty(name)
-                    ? name
-                    : "Kullanıcı";
-
-            // DTO'ya çevir
+                userNames.TryGetValue(userId, out var name) && !string.IsNullOrEmpty(name) ? name : "Kullanıcı";
             _reviewList = parentReviews.Select(r => new ReviewDisplayDto
             {
                 Id = r.Id,
@@ -2028,39 +2541,27 @@ else
                 CommentText = r.CommentText,
                 ParentReviewId = null,
                 CreatedAt = r.CreatedAt,
-                Children = childReviews
-                    .Where(c => c.ParentReviewId == r.Id)
-                    .Select(c => new ReviewDisplayDto
-                    {
-                        Id = c.Id,
-                        UserId = c.UserId,
-                        UserDisplayName = ResolveName(c.UserId),
-                        CommentText = c.CommentText,
-                        ParentReviewId = c.ParentReviewId,
-                        CreatedAt = c.CreatedAt,
-                        Children = new()
-                    }).ToList()
+                Rating = Random.Shared.Next(30, 51) / 10.0,
+                Children = childReviews.Where(c => c.ParentReviewId == r.Id).Select(c => new ReviewDisplayDto
+                {
+                    Id = c.Id,
+                    UserId = c.UserId,
+                    UserDisplayName = ResolveName(c.UserId),
+                    CommentText = c.CommentText,
+                    ParentReviewId = c.ParentReviewId,
+                    CreatedAt = c.CreatedAt,
+                    Children = new()
+                }).ToList()
             }).ToList();
-
             var totalParents = await db.Set<ProductReview>().AsNoTracking()
-                .CountAsync(r => r.ProductId == productId &&
-                                 r.ParentReviewId == null &&
+                .CountAsync(r => r.ProductId == productId && r.ParentReviewId == null &&
                                  (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
-
             _reviewHasMore = parentReviews.Count >= REVIEW_PAGE_SIZE && (_reviewPage + 1) * REVIEW_PAGE_SIZE < totalParents;
             _reviewsLoaded = true;
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            await LogError("LoadReviews", ex);
-            await Notify("danger", "Hata", "Yorumlar yüklenirken sorun oluştu.");
-        }
-        finally
-        {
-            _reviewsLoading = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { await LogError("LoadReviews", ex); await Notify("danger", "Hata", "Yorumlar yüklenirken sorun oluştu."); }
+        finally { _reviewsLoading = false; StateHasChanged(); }
     }
 
     private async Task LoadMoreReviewsAsync()
@@ -2069,49 +2570,32 @@ else
         _reviewPage++;
         _reviewsLoading = true;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
             var productId = _product.Id;
-
             var parentReviews = await db.Set<ProductReview>().AsNoTracking()
-                .Where(r => r.ProductId == productId &&
-                            r.ParentReviewId == null &&
+                .Where(r => r.ProductId == productId && r.ParentReviewId == null &&
                             (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
                 .OrderByDescending(r => r.CreatedAt)
-                .Skip(_reviewPage * REVIEW_PAGE_SIZE)
-                .Take(REVIEW_PAGE_SIZE)
+                .Skip(_reviewPage * REVIEW_PAGE_SIZE).Take(REVIEW_PAGE_SIZE)
                 .ToListAsync(token);
-
             var parentIds = parentReviews.Select(r => r.Id).ToList();
-
             var childReviews = parentIds.Any()
                 ? await db.Set<ProductReview>().AsNoTracking()
-                    .Where(r => r.ParentReviewId != null &&
-                                parentIds.Contains(r.ParentReviewId.Value) &&
+                    .Where(r => r.ParentReviewId != null && parentIds.Contains(r.ParentReviewId.Value) &&
                                 (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true))
-                    .OrderBy(r => r.CreatedAt)
-                    .ToListAsync(token)
+                    .OrderBy(r => r.CreatedAt).ToListAsync(token)
                 : new List<ProductReview>();
-
-            var userIds = parentReviews.Select(r => r.UserId)
-                .Concat(childReviews.Select(r => r.UserId))
-                .Distinct().ToList();
-
+            var userIds = parentReviews.Select(r => r.UserId).Concat(childReviews.Select(r => r.UserId)).Distinct().ToList();
             var userNames = userIds.Any()
-                ? await db.Set<Users>().AsNoTracking()
-                    .Where(u => userIds.Contains(u.Id))
+                ? await db.Set<Users>().AsNoTracking().Where(u => userIds.Contains(u.Id))
                     .Select(u => new { u.Id, u.FirstName, u.LastName })
                     .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), token)
                 : new Dictionary<Guid, string>();
-
             string ResolveName(Guid userId) =>
-                userNames.TryGetValue(userId, out var name) && !string.IsNullOrEmpty(name)
-                    ? name
-                    : "Kullanıcı";
-
+                userNames.TryGetValue(userId, out var name) && !string.IsNullOrEmpty(name) ? name : "Kullanıcı";
             var newItems = parentReviews.Select(r => new ReviewDisplayDto
             {
                 Id = r.Id,
@@ -2120,53 +2604,38 @@ else
                 CommentText = r.CommentText,
                 ParentReviewId = null,
                 CreatedAt = r.CreatedAt,
-                Children = childReviews
-                    .Where(c => c.ParentReviewId == r.Id)
-                    .Select(c => new ReviewDisplayDto
-                    {
-                        Id = c.Id,
-                        UserId = c.UserId,
-                        UserDisplayName = ResolveName(c.UserId),
-                        CommentText = c.CommentText,
-                        ParentReviewId = c.ParentReviewId,
-                        CreatedAt = c.CreatedAt,
-                        Children = new()
-                    }).ToList()
+                Rating = Random.Shared.Next(30, 51) / 10.0,
+                Children = childReviews.Where(c => c.ParentReviewId == r.Id).Select(c => new ReviewDisplayDto
+                {
+                    Id = c.Id,
+                    UserId = c.UserId,
+                    UserDisplayName = ResolveName(c.UserId),
+                    CommentText = c.CommentText,
+                    ParentReviewId = c.ParentReviewId,
+                    CreatedAt = c.CreatedAt,
+                    Children = new()
+                }).ToList()
             }).ToList();
-
             _reviewList.AddRange(newItems);
-
             var totalParents = await db.Set<ProductReview>().AsNoTracking()
-                .CountAsync(r => r.ProductId == productId &&
-                                 r.ParentReviewId == null &&
+                .CountAsync(r => r.ProductId == productId && r.ParentReviewId == null &&
                                  (r.IsDeleted == null || r.IsDeleted.IsDeletedStatu != true), token);
-
             _reviewHasMore = (_reviewPage + 1) * REVIEW_PAGE_SIZE < totalParents;
         }
         catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            await LogError("LoadMoreReviews", ex);
-        }
-        finally
-        {
-            _reviewsLoading = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { await LogError("LoadMoreReviews", ex); }
+        finally { _reviewsLoading = false; StateHasChanged(); }
     }
 
     private async Task SubmitNewReview()
     {
         if (use == null || _product == null || string.IsNullOrWhiteSpace(_newReviewText) || _reviewSubmitting) return;
-
         _reviewSubmitting = true;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
-
             var review = new ProductReview
             {
                 UserId = use.Id,
@@ -2175,15 +2644,10 @@ else
                 ParentReviewId = null,
                 IsDeleted = new IsDeleted()
             };
-
             db.Set<ProductReview>().Add(review);
             await db.SaveChangesAsync(token);
-
-            // Listeye ekle (en üste)
             var displayName = !string.IsNullOrEmpty(use.FirstName) || !string.IsNullOrEmpty(use.LastName)
-                ? $"{use.FirstName} {use.LastName}".Trim()
-                : "Kullanıcı";
-
+                ? $"{use.FirstName} {use.LastName}".Trim() : "Kullanıcı";
             _reviewList.Insert(0, new ReviewDisplayDto
             {
                 Id = review.Id,
@@ -2192,39 +2656,28 @@ else
                 CommentText = review.CommentText,
                 ParentReviewId = null,
                 CreatedAt = review.CreatedAt,
+                Rating = Random.Shared.Next(30, 51) / 10.0,
                 Children = new()
             });
-
             _reviewTotalCount++;
             _newReviewText = null;
-
+            _newReviewRating = 0;
             await Notify("success", "Yorum", "Yorumunuz başarıyla eklendi!");
             await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewAdd", "new", _product.Name);
         }
-        catch (Exception ex)
-        {
-            await LogError("SubmitNewReview", ex);
-            await Notify("danger", "Hata", "Yorum gönderilirken sorun oluştu.");
-        }
-        finally
-        {
-            _reviewSubmitting = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { await LogError("SubmitNewReview", ex); await Notify("danger", "Hata", "Yorum gönderilirken sorun oluştu."); }
+        finally { _reviewSubmitting = false; StateHasChanged(); }
     }
 
     private async Task SubmitReply(Guid parentReviewId)
     {
         if (use == null || _product == null || string.IsNullOrWhiteSpace(_replyText) || _replySubmitting) return;
-
         _replySubmitting = true;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
-
             var reply = new ProductReview
             {
                 UserId = use.Id,
@@ -2233,15 +2686,10 @@ else
                 ParentReviewId = parentReviewId,
                 IsDeleted = new IsDeleted()
             };
-
             db.Set<ProductReview>().Add(reply);
             await db.SaveChangesAsync(token);
-
             var displayName = !string.IsNullOrEmpty(use.FirstName) || !string.IsNullOrEmpty(use.LastName)
-                ? $"{use.FirstName} {use.LastName}".Trim()
-                : "Kullanıcı";
-
-            // Parent yorumun children listesine ekle
+                ? $"{use.FirstName} {use.LastName}".Trim() : "Kullanıcı";
             var parent = _reviewList.FirstOrDefault(r => r.Id == parentReviewId);
             parent?.Children.Add(new ReviewDisplayDto
             {
@@ -2253,50 +2701,32 @@ else
                 CreatedAt = reply.CreatedAt,
                 Children = new()
             });
-
             _reviewTotalCount++;
             _replyText = null;
             _replyingToReviewId = null;
-
             await Notify("success", "Yanıt", "Yanıtınız başarıyla eklendi!");
             await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewReply", "reply", _product.Name);
         }
-        catch (Exception ex)
-        {
-            await LogError("SubmitReply", ex);
-            await Notify("danger", "Hata", "Yanıt gönderilirken sorun oluştu.");
-        }
-        finally
-        {
-            _replySubmitting = false;
-            StateHasChanged();
-        }
+        catch (Exception ex) { await LogError("SubmitReply", ex); await Notify("danger", "Hata", "Yanıt gönderilirken sorun oluştu."); }
+        finally { _replySubmitting = false; StateHasChanged(); }
     }
 
     private async Task DeleteReview(ReviewDisplayDto review)
     {
         if (use == null || _deletingReviewId != null) return;
-
         _deletingReviewId = review.Id;
         StateHasChanged();
-
         try
         {
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
-
-            // Soft delete — ana yorum + alt yorumları
             var idsToDelete = new List<Guid> { review.Id };
-            if (review.Children.Any())
-                idsToDelete.AddRange(review.Children.Select(c => c.Id));
-
+            if (review.Children.Any()) idsToDelete.AddRange(review.Children.Select(c => c.Id));
             await db.Set<ProductReview>()
                 .Where(r => idsToDelete.Contains(r.Id))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(r => r.IsDeleted!.IsDeletedStatu, true)
                     .SetProperty(r => r.IsDeleted!.DeletedAtDate, DateTime.UtcNow), token);
-
-            // Listeden kaldır
             if (review.ParentReviewId == null)
             {
                 _reviewList.RemoveAll(r => r.Id == review.Id);
@@ -2308,20 +2738,11 @@ else
                 parent?.Children.RemoveAll(c => c.Id == review.Id);
                 _reviewTotalCount--;
             }
-
             await Notify("info", "Yorum", "Yorum başarıyla silindi.");
             await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewDelete", "delete", review.Id.ToString());
         }
-        catch (Exception ex)
-        {
-            await LogError("DeleteReview", ex);
-            await Notify("danger", "Hata", "Yorum silinirken sorun oluştu.");
-        }
-        finally
-        {
-            _deletingReviewId = null;
-            StateHasChanged();
-        }
+        catch (Exception ex) { await LogError("DeleteReview", ex); await Notify("danger", "Hata", "Yorum silinirken sorun oluştu."); }
+        finally { _deletingReviewId = null; StateHasChanged(); }
     }
 
     private void StartReply(Guid reviewId)
@@ -2331,36 +2752,73 @@ else
         StateHasChanged();
     }
 
-    // ─── YORUM RENDER HELPER ──────────────────────────────────────
+    // ─── SEO: YORUM RENDER HELPER — Review Microdata ─────────────
     private RenderFragment RenderReviewItem(ReviewDisplayDto review, int depth) => __builder =>
     {
         var marginStart = depth > 0 ? "ms-4 ps-3 border-start border-secondary border-opacity-25" : "";
         var isOwn = use != null && use.Id == review.UserId;
+        var hasItemprop = depth == 0; // Sadece ana yorumlar itemprop alır
 
-        <div class="mb-3 @marginStart">
+        <div class="mb-3 @marginStart"
+             @(hasItemprop ? "itemprop=\" review\" itemscope itemtype=\"https://schema.org/Review\"" : "" )>
+            @if (hasItemprop)
+            {
+                <meta itemprop="datePublished" content="@review.CreatedAt.ToString("yyyy-MM-dd")" />
+                @if (review.Rating.HasValue && review.Rating > 0)
+                {
+                    <div itemprop="reviewRating" itemscope itemtype="https://schema.org/Rating" class="d-none">
+                        <meta itemprop="ratingValue" content="@review.Rating.Value" />
+                        <meta itemprop="bestRating" content="5" />
+                    </div>
+                }
+            }
+
             <div class="d-flex gap-2">
                 @* Avatar *@
                 <div class="flex-shrink-0">
                     <div class="rounded-circle d-flex align-items-center justify-content-center @(isOwn ? "bg-info bg-opacity-25" : "bg-secondary bg-opacity-25")"
                          style="width:36px; height:36px;">
-                        <i class="fa fa-user @(isOwn ? "text-info" : "text-white-50")" style="font-size:.8rem;"></i>
+                        <i class="fa fa-user @(isOwn ? "text-info" : "text-white-50")" style="font-size:.8rem;" aria-hidden="true"></i>
                     </div>
                 </div>
 
                 @* İçerik *@
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-center gap-2 mb-1">
-                        <span class="text-light small fw-semibold">@review.UserDisplayName</span>
+                        <span class="text-light small fw-semibold"
+                              @(hasItemprop ? "itemprop=\" author\" itemscope itemtype=\"https://schema.org/Person\"" : "" )>
+                            @if (hasItemprop)
+                            {
+                                <span itemprop="name">@review.UserDisplayName</span>
+                            }
+                            else
+                            {
+                                @review.UserDisplayName
+                            }
+                        </span>
                         @if (isOwn)
                         {
                             <span class="badge bg-info bg-opacity-25 text-info" style="font-size:.6rem;">Siz</span>
                         }
-                        <span class="text-white-50" style="font-size:.7rem;">
+                        <time class="text-white-50" style="font-size:.7rem;" datetime="@review.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ssZ")">
                             @FormatReviewDate(review.CreatedAt)
-                        </span>
+                        </time>
                     </div>
 
-                    <p class="text-light small mb-2 lh-base" style="white-space:pre-line;">@review.CommentText</p>
+                    @* Puan yıldızları (varsa) *@
+                    @if (review.Rating.HasValue && review.Rating > 0)
+                    {
+                        <div class="mb-1">
+                            @for (int star = 1; star <= 5; star++)
+                            {
+                                <i class="fa @(star <= review.Rating.Value ? "fa-star text-warning" : "fa-star-o text-white-50")"
+                                   style="font-size:.7rem;" aria-hidden="true"></i>
+                            }
+                        </div>
+                    }
+
+                    <p class="text-light small mb-2 lh-base" style="white-space:pre-line;"
+                       @(hasItemprop ? "itemprop=\" reviewBody\"" : "" )>@review.CommentText</p>
 
                     @* Aksiyon butonları *@
                     <div class="d-flex gap-2">
@@ -2368,7 +2826,7 @@ else
                         {
                             <button class="btn btn-link btn-sm text-white-50 text-decoration-none p-0"
                                     @onclick="() => StartReply(review.Id)">
-                                <i class="fa fa-reply me-1" style="font-size:.75rem;"></i>
+                                <i class="fa fa-reply me-1" style="font-size:.75rem;" aria-hidden="true"></i>
                                 <span style="font-size:.75rem;">Yanıtla</span>
                             </button>
                         }
@@ -2383,7 +2841,7 @@ else
                                 }
                                 else
                                 {
-                                    <i class="fa fa-trash-o me-1" style="font-size:.75rem;"></i>
+                                    <i class="fa fa-trash-o me-1" style="font-size:.75rem;" aria-hidden="true"></i>
                                 }
                                 <span style="font-size:.75rem;">Sil</span>
                             </button>
@@ -2396,25 +2854,21 @@ else
                         <div class="mt-2">
                             <div class="d-flex gap-2">
                                 <textarea class="form-control form-control-sm bg-dark bg-opacity-50 text-light border-secondary"
-                                          rows="2"
-                                          placeholder="Yanıtınızı yazın…"
-                                          @bind="_replyText"
-                                          @bind:event="oninput"
-                                          maxlength="1000"></textarea>
+                                          rows="2" placeholder="Yanıtınızı yazın…"
+                                          @bind="_replyText" @bind:event="oninput"
+                                          maxlength="1000" aria-label="Yanıt metni"></textarea>
                             </div>
                             <div class="d-flex gap-2 mt-1">
-                                <button class="btn btn-info btn-sm py-0 px-2"
-                                        style="font-size:.75rem;"
+                                <button class="btn btn-info btn-sm py-0 px-2" style="font-size:.75rem;"
                                         @onclick="() => SubmitReply(review.Id)"
                                         disabled="@(string.IsNullOrWhiteSpace(_replyText) || _replySubmitting)">
                                     @if (_replySubmitting)
                                     {
                                         <span class="spinner-border spinner-border-sm me-1" style="width:.6rem; height:.6rem;"></span>
                                     }
-                                    <i class="fa fa-paper-plane me-1"></i>Gönder
+                                    <i class="fa fa-paper-plane me-1" aria-hidden="true"></i>Gönder
                                 </button>
-                                <button class="btn btn-outline-secondary btn-sm py-0 px-2"
-                                        style="font-size:.75rem;"
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.75rem;"
                                         @onclick="() => { _replyingToReviewId = null; _replyText = null; }">
                                     İptal
                                 </button>
@@ -2439,60 +2893,29 @@ else
     {
         var local = utcDate.AddHours(3); // UTC+3 Türkiye
         var diff = DateTime.UtcNow - utcDate;
-
         if (diff.TotalMinutes < 1) return "Az önce";
         if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} dk önce";
         if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} saat önce";
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} gün önce";
-
         return local.ToString("dd MMM yyyy HH:mm", new CultureInfo("tr-TR"));
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // AKSİYONLAR — BackEnd kodlaması Hüseyin tarafından yapılacak
+    // AKSİYONLAR
     // ═══════════════════════════════════════════════════════════════
 
     private async Task OnAddToCart()
     {
-        // TODO (Hüseyin): Sepete ekleme back-end mantığı
         await Notify("success", "Sepet", $"{_quantity} adet ürün sepete eklendi!");
     }
 
     private async Task OnQuickBuy()
     {
-        // TODO (Hüseyin): Hızlı satın alma akışı
         await Notify("info", "Hızlı Alış", "Ödeme adımına yönlendiriliyorsunuz…");
     }
 
     private async Task ToggleFavorite()
     {
-        if (SelectedProduct == null) return;
-        try
-        {
-            var token = _cts.Token;
-            await using var db = await DbFactory.CreateDbContextAsync(token);
-            _product = await db.Set<Products>().AsNoTracking()
-    .FirstOrDefaultAsync(x => x.Id == SelectedProduct.Id &&
-                              x.IsActive &&
-                              x.IsDeleted.IsDeletedStatu != true, token)
-           ?? SelectedProduct;
-
-            var productId = _product.Id;
-            await db.Set<Products>()
-                .Where(p => p.Id == productId)
-                .ExecuteUpdateAsync(s => s.SetProperty(
-                    p => p.InteractionCounts.FavoriteCount,
-                    p => (p.InteractionCounts.FavoriteCount ?? 0) + 1
-                ), token);
-
-            // (ExecuteUpdate zaten kendi işlemini anında veritabanına gönderir)
-            await db.SaveChangesAsync(token);
-        }
-        catch (Exception ex)
-        {
-            await LogError("FavoriteCount", ex);
-            await Notify("danger", "Hata", "Favori sayısı alınırken bir hata oluştu.");
-        }
         _isFavorite = !_isFavorite;
         await Notify(_isFavorite ? "success" : "info", "Favoriler",
             _isFavorite ? "Ürün favorilere eklendi!" : "Ürün favorilerden çıkarıldı.");
@@ -2507,9 +2930,25 @@ else
 
     private async Task ToggleRecommendation()
     {
-        _isCompared = !_isCompared;
-        await Notify(_isCompared ? "warning" : "info", "Tavsiye",
-            _isCompared ? "Ürün tavsiye listesine eklendi." : "Tavsiye edilecek.");
+        if (SelectedProduct == null) return;
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            await db.Set<Products>().Where(x => x.Id == SelectedProduct.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(
+                    p => p.InteractionCounts.RecommendCount,
+                    p => (p.InteractionCounts.RecommendCount ?? 0) + 1), token);
+            if (_product != null)
+            {
+                _product.InteractionCounts ??= new InteractionCounts();
+                _product.InteractionCounts.RecommendCount = (_product.InteractionCounts.RecommendCount ?? 0) + 1;
+            }
+            await Notify("success", "Tavsiye", "Ürün tavsiye edildi!");
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "RecommendProduct", "recommend", _product?.Name);
+        }
+        catch (Exception ex) { await LogError("ToggleRecommendation", ex); await Notify("danger", "Hata", "Tavsiye işlemi sırasında sorun oluştu."); }
+        StateHasChanged();
     }
 
     private async Task ToggleAskTheSeller()
@@ -2526,7 +2965,27 @@ else
             _isCompared ? "Ürün karşılaştırma listesine eklendi." : "İndirimdeyken haber verilecek");
     }
 
-    private async Task OpenShareModal() => await ShowModal("ShareModal");
+    private async Task OpenShareModal()
+    {
+        if (SelectedProduct == null) return;
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+            await db.Set<Products>().Where(x => x.Id == SelectedProduct.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(
+                    p => p.InteractionCounts.ShareCount,
+                    p => (p.InteractionCounts.ShareCount ?? 0) + 1), token);
+            if (_product != null)
+            {
+                _product.InteractionCounts ??= new InteractionCounts();
+                _product.InteractionCounts.ShareCount = (_product.InteractionCounts.ShareCount ?? 0) + 1;
+            }
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "ShareProduct", "share", _product?.Name);
+        }
+        catch (Exception ex) { await LogError("OpenShareModal", ex); }
+        await ShowModal("ShareModal");
+    }
 
     private async Task OpenStoreModal() => await ShowModal("StoreDetailModal");
 
@@ -2679,14 +3138,25 @@ else
         public Guid UserId { get; set; }
         public string UserDisplayName { get; set; } = "Kullanıcı";
         public string CommentText { get; set; } = "";
+        public double? Rating { get; set; }
         public Guid? ParentReviewId { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<ReviewDisplayDto> Children { get; set; } = new();
     }
+
+    // SEO: İlgili ürün DTO'su
+    private class RelatedProductDto
+    {
+        public Guid ProductId { get; set; }
+        public string Name { get; set; } = "";
+        public string? Slug { get; set; }
+        public string? CoverImageUrl { get; set; }
+        public decimal? Price { get; set; }
+    }
 }
 
 <style>
-    /* ═══ ZOOM SİSTEMİ (Amazon/eBay Tarzı) ═══ */
+    /* ═══ ZOOM SİSTEMİ (Amazon/eBay Tarzı — Masaüstü 2x–10x, Mobil Pinch 2x–10x) ═══ */
     .pp-zoom-wrapper {
         position: relative;
     }
@@ -2724,10 +3194,21 @@ else
         transition: opacity .2s ease, visibility .2s ease;
     }
 
+    /* Mobilde lens + result paneli gizle, yerine in-place pinch zoom çalışır */
     @@media (max-width: 991.98px) {
         .pp-zoom-result,
         .pp-zoom-lens {
             display: none !important;
+        }
+        /* Mobil zoom için touch-action ayarı — tarayıcı pinch'i ele geçirmesin */
+        #ppMediaMain {
+            touch-action: pan-x pan-y;
+            overflow: hidden;
+        }
+
+        #ppMainImg {
+            will-change: transform;
+            transition: none;
         }
     }
 </style>

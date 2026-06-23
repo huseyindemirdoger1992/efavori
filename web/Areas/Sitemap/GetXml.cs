@@ -157,7 +157,7 @@ namespace web.Areas.Sitemap
             var coverMediaMap = coverMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => coverMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             // ── 3c. Galeri görselleri toplu çek ──────────────────
@@ -178,7 +178,7 @@ namespace web.Areas.Sitemap
             var galleryMediaMap = galleryMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             var productGalleryMap = galleryItems
@@ -324,7 +324,7 @@ namespace web.Areas.Sitemap
             var coverMap = coverMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => coverMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             // ── Galeri görselleri ─────────────────────────────────
@@ -343,7 +343,7 @@ namespace web.Areas.Sitemap
             var galleryMediaMap = galleryMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl_Ratio_1_2 ?? m.FileUrl ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             var productGalleryMap = galleryItems

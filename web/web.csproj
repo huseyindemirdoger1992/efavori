@@ -24,6 +24,7 @@
 		<Folder Include="Areas\Vendor\Views\" />
 		<Folder Include="_files\" />
 		<Folder Include="_files\" />
+		<Folder Include="_files\" />
 		<Folder Include="_files\users\" />
 	</ItemGroup>
 	<ItemGroup>

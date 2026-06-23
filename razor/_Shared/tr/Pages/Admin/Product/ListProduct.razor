@@ -111,14 +111,14 @@
         </div>
     </div>
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card @(_filterAiStat == "ai_on" ? "border-success border-2 shadow-sm" : "border-0") bg-success bg-opacity-10"
+        <div class="card @(_filterAiStat == "ai_on" ? "border-light border-2 shadow-sm" : "border-0") bg-success bg-opacity-10"
              role="button" @onclick='() => OnStatCardClicked("ai_on")'>
             <div class="card-body py-2 px-3">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="fa fa-magic text-success"></i>
+                    <i class="fa fa-magic text-light"></i>
                     <div>
                         <div class="small text-light">AI Açık</div>
-                        <div class="fw-bold text-success">@_statAiManagedTrue.ToString("N0")</div>
+                        <div class="fw-bold text-light">@_statAiManagedTrue.ToString("N0")</div>
                     </div>
                 </div>
             </div>
@@ -129,10 +129,10 @@
              role="button" @onclick='() => OnStatCardClicked("ai_off")'>
             <div class="card-body py-2 px-3">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="fa fa-ban text-secondary"></i>
+                    <i class="fa fa-ban text-dark"></i>
                     <div>
                         <div class="small text-light">AI Kapalı</div>
-                        <div class="fw-bold text-secondary">@_statAiManagedFalse.ToString("N0")</div>
+                        <div class="fw-bold text-dark">@_statAiManagedFalse.ToString("N0")</div>
                     </div>
                 </div>
             </div>
@@ -184,10 +184,12 @@
 
 @* ═══════════════════════════ FİLTRELER ═══════════════════════════ *@
 <div class="row g-2 mb-2">
-    <div class="col-12 col-lg-2" style="margin-top:12px;">
+    @* ═══════════════════════════ KATEGORİ FİLTRESİ (Dropdown Select) ═══════════════════════════ *@
+
+    <div class="col-6 col-lg-2">
         <div class="input-group input-group-sm">
             <span class="input-group-text"><i class="fa fa-search"></i></span>
-            <input type="text" class="form-control" placeholder="Ürün adı veya SKU ara..."
+            <input type="text" class="form-control form-control-lg" placeholder="Ürün adı veya SKU ara..."
                    value="@_searchTerm" @oninput="OnSearchInput" />
             @if (!string.IsNullOrWhiteSpace(_searchTerm))
             {
@@ -253,16 +255,96 @@
     }
 </div>
 
+
+
+
 @* ═══════════════════════════ GELİŞMİŞ FİLTRELER (ETKİLEŞİM) ═══════════════════════════ *@
-<div class="mb-3">
-    <button class="btn btn-link btn-sm text-decoration-none p-0" @onclick="() => _showAdvancedFilters = !_showAdvancedFilters">
-        <i class="fa @(_showAdvancedFilters ? "fa-chevron-up" : "fa-chevron-down") me-1"></i>
-        Etkileşim Filtreleri
-        @if (HasAnyInteractionFilter())
-        {
-            <span class="badge bg-info ms-1">Aktif</span>
-        }
-    </button>
+<div class="mb-3 row">
+
+    <div class="col-12 col-lg-10">
+        <div class="dropdown position-relative" @onfocusout="OnFilterCatBlur">
+
+            @* Sahte Select Kutusu *@
+            <div class="form-select form-select-sm d-flex align-items-center @(_filterCategoryId.HasValue ? "border-primary" : "")"
+                 role="button" @onclick="ToggleFilterCatDropdown">
+
+                @if (_filterCatItemsLoading)
+                {
+                    <i class="fa fa-spinner fa-spin me-2 text-secondary"></i>
+                    <span class="text-secondary">Kategoriler yükleniyor...</span>
+                }
+                else if (_filterCategoryId.HasValue)
+                {
+                    <span class="text-primary text-truncate">
+                        <i class="fa fa-folder-open me-2"></i>@_filterCategoryName
+                    </span>
+                }
+                else
+                {
+                    <span class="text-secondary">
+                        <i class="fa fa-folder me-2"></i>Tüm Kategoriler
+                    </span>
+                }
+            </div>
+
+            @* Açılır Menü (Dropdown) *@
+            @if (_filterCatDropdownOpen)
+            {
+                <div class="dropdown-menu show w-100 p-0 shadow-sm mt-1 border" style="max-height: 350px; overflow-y: auto;">
+
+                    @* Sticky Arama Kutusu *@
+                    <div class="p-2 border-bottom bg-light sticky-top" style="z-index: 10;">
+                        <input type="text" class="form-control form-control-sm" placeholder="Kategori ara..."
+                               value="@_filterCatInternalSearch" @oninput="OnFilterCatInternalSearch"
+                               @onclick:stopPropagation="true" />
+                    </div>
+
+                    @* "Tümü" Seçeneği *@
+                    <div class="dropdown-item py-2 @(_filterCategoryId == null ? "active" : "")"
+                         role="button" @onclick="ClearCategoryFilter" @onclick:stopPropagation="true">
+                        <i class="fa fa-list me-2"></i>Tüm Kategoriler
+                    </div>
+
+                    @* Kategori Listesi *@
+                    @{
+                        var visibleCats = GetFilteredCatItems();
+                    }
+                    @if (!visibleCats.Any() && !_filterCatItemsLoading)
+                    {
+                        <div class="text-center py-3 small text-secondary">Sonuç bulunamadı.</div>
+                    }
+                    else
+                    {
+                        @foreach (var cat in visibleCats)
+                        {
+                            var isActive = _filterCategoryId == cat.Id;
+                            <div class="dropdown-item py-1 d-flex align-items-center @(isActive ? "active" : "")"
+                                 role="button" @onclick="() => ApplyFilterCategory(cat)" @onclick:stopPropagation="true"
+                                 style="padding-left: @(12 + cat.Depth * 16)px !important;">
+
+                                <i class="fa @(cat.HasChildren ? "fa-folder text-warning" : "fa-tag text-secondary") me-2 small" style="width: 14px; text-align: center;"></i>
+                                <span class="small text-truncate flex-grow-1" title="@cat.FullPath">@cat.Name</span>
+                                <span class="small text-secondary ms-2 flex-shrink-0">(@cat.ProductCount)</span>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-2">
+
+        <button class="btn btn-link btn-sm text-decoration-none p-0" @onclick="() => _showAdvancedFilters = !_showAdvancedFilters">
+            <i class="fa @(_showAdvancedFilters ? "fa-chevron-up" : "fa-chevron-down") me-1"></i>
+            Etkileşim Filtreleri
+            @if (HasAnyInteractionCountsFilter())
+            {
+                <span class="badge bg-info ms-1">Aktif</span>
+            }
+        </button>
+    </div>
+
 
     @if (_showAdvancedFilters)
     {
@@ -273,10 +355,10 @@
                 <div class="input-group input-group-sm">
                     <span class="input-group-text">Min</span>
                     <input type="number" class="form-control" placeholder="0" min="0"
-                           value="@_filterViewCountMin" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterViewCountMin))" />
+                           value="@_filterViewCountMin" @onchange="e => OnInteractionCountsFilterChanged(e, nameof(_filterViewCountMin))" />
                     <span class="input-group-text">Max</span>
                     <input type="number" class="form-control" placeholder="∞" min="0"
-                           value="@_filterViewCountMax" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterViewCountMax))" />
+                           value="@_filterViewCountMax" @onchange="e => OnInteractionCountsFilterChanged(e, nameof(_filterViewCountMax))" />
                 </div>
             </div>
             @* Paylaşma *@
@@ -285,10 +367,10 @@
                 <div class="input-group input-group-sm">
                     <span class="input-group-text">Min</span>
                     <input type="number" class="form-control" placeholder="0" min="0"
-                           value="@_filterShareCountMin" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterShareCountMin))" />
+                           value="@_filterShareCountMin" @onchange="e => OnInteractionCountsFilterChanged(e, nameof(_filterShareCountMin))" />
                     <span class="input-group-text">Max</span>
                     <input type="number" class="form-control" placeholder="∞" min="0"
-                           value="@_filterShareCountMax" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterShareCountMax))" />
+                           value="@_filterShareCountMax" @onchange="e => OnInteractionCountsFilterChanged(e, nameof(_filterShareCountMax))" />
                 </div>
             </div>
             @* Tavsiye Etme *@
@@ -297,17 +379,17 @@
                 <div class="input-group input-group-sm">
                     <span class="input-group-text">Min</span>
                     <input type="number" class="form-control" placeholder="0" min="0"
-                           value="@_filterRecommendCountMin" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterRecommendCountMin))" />
+                           value="@_filterRecommendCountMin" @onchange="e => OnInteractionCountsFilterChanged(e, nameof(_filterRecommendCountMin))" />
                     <span class="input-group-text">Max</span>
                     <input type="number" class="form-control" placeholder="∞" min="0"
-                           value="@_filterRecommendCountMax" @onchange="e => OnInteractionFilterChanged(e, nameof(_filterRecommendCountMax))" />
+                           value="@_filterRecommendCountMax" @onchange="e => OnInteractionCountsFilterChanged(e, nameof(_filterRecommendCountMax))" />
                 </div>
             </div>
 
-            @if (HasAnyInteractionFilter())
+            @if (HasAnyInteractionCountsFilter())
             {
                 <div class="col-12">
-                    <button class="btn btn-secondary btn-sm" @onclick="ClearInteractionFilters">
+                    <button class="btn btn-secondary btn-sm" @onclick="ClearInteractionCountsFilters">
                         <i class="fa fa-times me-1"></i>Etkileşim Filtrelerini Temizle
                     </button>
                 </div>
@@ -372,9 +454,9 @@ else
                             <img src="@CoverUrl(r)" class="rounded border" style="width:42px;height:42px;object-fit:cover;" alt="" />
                         </td>
                         <td>
-                            <div class="fw-semibold text-truncate" style="max-width:340px;" title="@r.Name">@(string.IsNullOrWhiteSpace(r.Name) ? "(İsimsiz ürün)" : r.Name)</div>
+                            <div class="fw-semibold text-truncate" style="max-width:256px;" title="@r.Name">@(string.IsNullOrWhiteSpace(r.Name) ? "(İsimsiz ürün)" : r.Name)</div>
                             <div>
-                                <span class="badge bg-light text-dark border">@TypeText(r.ProductType)</span>
+                                <span class="badge bg-light text-warning border">@TypeText(r.ProductType)</span>
                                 @if (r.IsApprovedByAdmin == true)
                                 {
                                     <span class="badge bg-success-subtle text-success"><i class="fa fa-check-circle me-1"></i>Onaylı</span>
@@ -394,7 +476,7 @@ else
                         }
                         <td class="text-center d-none d-lg-table-cell text-nowrap">
                             @{
-                                var ic = _interactionMap.GetValueOrDefault(r.Id);
+                                var ic = _InteractionCountsMap.GetValueOrDefault(r.Id);
                             }
                             <span class="small" title="Görüntülenme"><i class="fa fa-eye text-info"></i> @(ic.view)</span>
                             <span class="small ms-1" title="Paylaşma"><i class="fa fa-share-alt text-success"></i> @(ic.share)</span>
@@ -410,7 +492,7 @@ else
                         </td>
                         <td class="d-none d-lg-table-cell text-nowrap small text-light">@r.CreatedAt?.ToString("dd.MM.yyyy")</td>
                         <td class="text-end text-nowrap">
-                            <button class="btn btn-secondary btn-sm" title="Detay" @onclick="() => OpenDetail(r.Id)"><i class="fa fa-eye"></i></button>
+                            <button class="btn btn-info btn-sm" title="Detay" @onclick="() => OpenDetail(r.Id)"><i class="fa fa-eye"></i></button>
                             <button class="btn btn-warning btn-sm" title="Düzenle" @onclick="() => NavigateToEdit(r.Id)"><i class="fa fa-edit"></i></button>
                             @if (IsAdmin || r.UserId == use?.Id)
                             {
@@ -431,6 +513,7 @@ else
                 <option value="10">10 / sayfa</option>
                 <option value="100">100 / sayfa</option>
                 <option value="1000">1000 / sayfa</option>
+                <option value="10000">10000 / sayfa</option>
             </select>
         </div>
 
@@ -579,64 +662,92 @@ else
             <div class="modal-body">
                 <p class="small text-light mb-2">
                     Seçili <b>@_selectedIds.Count</b> ürünün ana kategorisi aşağıda seçeceğiniz kategori ile değiştirilecektir.
+                    Kategori bulmak için en az 2 karakter yazın.
                 </p>
 
-                @if (_categoryTreeLoading)
-                {
-                    <div class="text-center py-3"><i class="fa fa-spinner fa-spin fa-lg text-info"></i></div>
-                }
-                else
-                {
-                    @* Arama kutusu *@
-                    <div class="input-group input-group-sm mb-2">
-                        <span class="input-group-text"><i class="fa fa-search"></i></span>
-                        <input type="text" class="form-control" placeholder="Kategori ara..."
-                               value="@_categorySearchTerm" @oninput="OnCategorySearchInput" />
-                        @if (!string.IsNullOrWhiteSpace(_categorySearchTerm))
-                        {
-                            <button class="btn btn-secondary" @onclick='() => { _categorySearchTerm = ""; }'>
-                                <i class="fa fa-times"></i>
-                            </button>
-                        }
-                    </div>
-
-                    @* Seçili kategori göstergesi *@
-                    @if (_selectedCategoryId.HasValue)
+                @* Arama kutusu *@
+                <div class="input-group input-group-sm mb-2">
+                    <span class="input-group-text"><i class="fa fa-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Kategori adı yazarak arayın..."
+                           value="@_bulkCatSearchTerm" @oninput="OnBulkCatSearchInput" />
+                    @if (_bulkCatLoading)
                     {
-                        <div class="alert alert-info py-1 px-2 small mb-2">
-                            <i class="fa fa-check-circle me-1"></i>Seçilen: <b>@_selectedCategoryPath</b>
+                        <span class="input-group-text"><i class="fa fa-spinner fa-spin"></i></span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_bulkCatSearchTerm))
+                    {
+                        <button class="btn btn-secondary" @onclick='() => { _bulkCatSearchTerm = ""; _bulkCatResults.Clear(); }'>
+                            <i class="fa fa-times"></i>
+                        </button>
+                    }
+                </div>
+
+                @* Seçili kategori göstergesi *@
+                @if (_bulkSelectedCategoryId.HasValue)
+                {
+                    <div class="alert alert-info py-1 px-2 small mb-2">
+                        <i class="fa fa-check-circle me-1"></i>Seçilen: <b>@_bulkSelectedCategoryPath</b>
+                        <button class="btn btn-sm p-0 ms-1" @onclick='() => { _bulkSelectedCategoryId = null; _bulkSelectedCategoryPath = ""; }'>
+                            <i class="fa fa-times text-danger"></i>
+                        </button>
+                    </div>
+                }
+
+                @* Arama sonuçları *@
+                <div style="max-height:360px;overflow-y:auto;" class="border rounded p-1">
+                    @if (!_bulkCatResults.Any())
+                    {
+                        <div class="text-center py-3 text-light small">
+                            @if (_bulkCatLoading)
+                            {
+                                <i class="fa fa-spinner fa-spin me-1"></i> @:Aranıyor...
+                            }
+                            else if (!string.IsNullOrWhiteSpace(_bulkCatSearchTerm) && _bulkCatSearchTerm.Trim().Length >= 2)
+                            {
+                                @:Kategori bulunamadı.
+                            }
+                            else
+                            {
+                                @:Aramak için en az 2 karakter yazın.
+                            }
                         </div>
                     }
-
-                    @* Kategori ağacı listesi *@
-                    <div style="max-height:360px;overflow-y:auto;" class="border rounded p-1">
-                        @{
-                            var filteredCategories = GetFilteredCategories();
-                        }
-                        @if (!filteredCategories.Any())
+                    else
+                    {
+                        @foreach (var cat in _bulkCatResults)
                         {
-                            <div class="text-center py-3 text-light small">Kategori bulunamadı.</div>
-                        }
-                        else
-                        {
-                            @foreach (var cat in filteredCategories)
-                            {
-                                var isSelected = _selectedCategoryId == cat.Id;
-                                <div class="d-flex align-items-center px-2 py-1 rounded @(isSelected ? "bg-primary bg-opacity-10 border border-primary" : "border border-transparent")"
-                                     role="button" @onclick="() => SelectCategory(cat)"
-                                     style="margin-left:@(cat.Depth * 20)px;">
-                                    <i class="fa @(cat.HasChildren ? "fa-folder text-warning" : "fa-file-o text-light") me-2 small"></i>
+                            var isSelected = _bulkSelectedCategoryId == cat.Id;
+                            <div class="d-flex align-items-center px-2 py-1 rounded @(isSelected ? "bg-primary bg-opacity-10 border border-primary" : "border border-transparent")"
+                                 role="button" @onclick="() => SelectBulkCategory(cat)"
+                                 style="margin-left:@(cat.Depth * 16)px;">
+                                <i class="fa @(cat.HasChildren ? "fa-folder text-warning" : "fa-tag text-light") me-2 small"></i>
+                                <div class="flex-grow-1 overflow-hidden">
                                     <span class="small @(isSelected ? "fw-bold text-primary" : "")">@cat.Name</span>
-                                    <span class="badge bg-light text-light ms-auto small" style="font-size:0.65rem;">Seviye @(cat.Depth + 1)</span>
+                                    @if (!string.IsNullOrWhiteSpace(cat.FullPath) && cat.FullPath != cat.Name)
+                                    {
+                                        <div class="text-light small text-truncate" style="font-size:0.65rem;">@cat.FullPath</div>
+                                    }
                                 </div>
-                            }
+                                @if (cat.Depth + 1 == 1)
+                                {
+                                    <span class="badge bg-light text-light ms-2 small" style="font-size:0.6rem;">Seviye @(cat.Depth + 1)</span>
+                                }
+                                @if (cat.Depth + 1 == 2)
+                                {
+                                    <span class="badge bg-info text-dark ms-2 small" style="font-size:0.6rem;">Seviye @(cat.Depth + 1)</span>
+                                }
+                                @if (cat.Depth + 1 == 3)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2 small" style="font-size:0.6rem;">Seviye @(cat.Depth + 1)</span>
+                                }
+                            </div>
                         }
-                    </div>
-                }
+                    }
+                </div>
             </div>
             <div class="modal-footer py-2">
                 <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Vazgeç</button>
-                <button class="btn btn-primary btn-sm" @onclick="ApplyBulkCategory" disabled="@(_isProcessing || !_selectedCategoryId.HasValue)">
+                <button class="btn btn-primary btn-sm" @onclick="ApplyBulkCategory" disabled="@(_isProcessing || !_bulkSelectedCategoryId.HasValue)">
                     @if (_isProcessing)
                     {
                         <i class="fa fa-spinner fa-spin me-1"></i>
@@ -749,7 +860,7 @@ else
     private readonly Dictionary<Guid, string> _skuMap = new();     // ProductId → varsayılan SKU
     private readonly Dictionary<Guid, int> _stockMap = new();      // ProductId → toplam stok
     private readonly Dictionary<Guid, (decimal price, decimal? disc, string cur)> _priceMap = new();
-    private readonly Dictionary<Guid, (int view, int share, int recommend)> _interactionMap = new(); // Etkileşim sayaçları
+    private readonly Dictionary<Guid, (int view, int share, int recommend)> _InteractionCountsMap = new(); // Etkileşim sayaçları
 
     // ─────────────── Seçim (toplu işlem) ───────────────
     private readonly HashSet<Guid> _selectedIds = new();
@@ -764,12 +875,22 @@ else
     private DetailVm? _detail;
     private bool _detailLoading;
 
+    // ─────────────── Kategori Filtresi (Dropdown Select) ───────────────
+    private int? _filterCategoryId;
+    private string _filterCategoryName = string.Empty;
+    private List<CategorySearchItem> _filterCatItems = new();  // Tüm ürünlü kategoriler (tek seferde yüklenir)
+    private bool _filterCatItemsLoading;
+    private bool _filterCatItemsLoaded;
+    private bool _filterCatDropdownOpen;
+    private string _filterCatInternalSearch = string.Empty;    // Dropdown içi arama
+
     // ─────────────── Toplu Kategori Değiştirme ───────────────
-    private List<CategoryNode> _categoryTree = new();
-    private string _categorySearchTerm = string.Empty;
-    private int? _selectedCategoryId;
-    private string _selectedCategoryPath = string.Empty;
-    private bool _categoryTreeLoading;
+    private string _bulkCatSearchTerm = string.Empty;
+    private List<CategorySearchItem> _bulkCatResults = new();
+    private bool _bulkCatLoading;
+    private int? _bulkSelectedCategoryId;
+    private string _bulkSelectedCategoryPath = string.Empty;
+    private CancellationTokenSource? _bulkCatSearchCts;
 
     // ─────────────── Toplu Stok Güncelleme ───────────────
     private int _bulkStockQuantity;
@@ -791,6 +912,7 @@ else
     private async Task HandleDataChanged(string entityName)
     {
         if (_disposed || entityName != ENTITY_NAME) return;
+        _filterCatItemsLoaded = false; // Ürün değiştiğinde kategori-ürün sayıları güncellenmeli
         await InvokeAsync(async () => { await LoadAiStatsAsync(); await LoadPageAsync(recount: true); StateHasChanged(); });
     }
 
@@ -972,6 +1094,13 @@ else
         if (_filterRecommendCountMax.HasValue)
             q = q.Where(p => (p.InteractionCounts != null ? p.InteractionCounts.RecommendCount : 0) <= _filterRecommendCountMax.Value);
 
+        // ── KATEGORİ FİLTRESİ ──
+        if (_filterCategoryId.HasValue)
+        {
+            var catId = _filterCategoryId.Value;
+            q = q.Where(p => db.ProductCategories.Any(pc => pc.ProductId == p.Id && pc.CategoryId == catId));
+        }
+
         return q;
     }
 
@@ -990,7 +1119,7 @@ else
     private async Task LoadRelatedLookups(_ApplicationConnectionDb db, List<ProductRow> rows)
     {
         _coverMap.Clear(); _brandMap.Clear(); _storeMap.Clear(); _userMap.Clear();
-        _skuMap.Clear(); _stockMap.Clear(); _priceMap.Clear(); _interactionMap.Clear();
+        _skuMap.Clear(); _stockMap.Clear(); _priceMap.Clear(); _InteractionCountsMap.Clear();
         if (!rows.Any()) return;
 
         var ids = rows.Select(r => r.Id).ToList();
@@ -1038,8 +1167,8 @@ else
             _priceMap[grp.Key] = (chosen.Price, chosen.DiscountedPrice, chosen.Currency ?? prefCur);
         }
 
-        // Etkileşim sayaçları (Products.Interaction owned type → doğrudan Products tablosundan)
-        var interactions = await db.Products.AsNoTracking()
+        // Etkileşim sayaçları (Products.InteractionCounts owned type → doğrudan Products tablosundan)
+        var InteractionCountss = await db.Products.AsNoTracking()
             .Where(p => ids.Contains(p.Id))
             .Select(p => new
             {
@@ -1048,7 +1177,7 @@ else
                 Share = p.InteractionCounts != null ? p.InteractionCounts.ShareCount ?? 0 : 0,
                 Recommend = p.InteractionCounts != null ? p.InteractionCounts.RecommendCount ?? 0 : 0
             }).ToListAsync(_cts.Token);
-        foreach (var i in interactions) _interactionMap[i.Id] = (i.View, i.Share, i.Recommend);
+        foreach (var i in InteractionCountss) _InteractionCountsMap[i.Id] = (i.View, i.Share, i.Recommend);
 
         // SuperAdmin: mağaza + yükleyen adları
         if (IsAdmin)
@@ -1100,7 +1229,7 @@ else
     }
 
     // ── Etkileşim filtre olayları ──
-    private async Task OnInteractionFilterChanged(ChangeEventArgs e, string field)
+    private async Task OnInteractionCountsFilterChanged(ChangeEventArgs e, string field)
     {
         int? val = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
         switch (field)
@@ -1116,12 +1245,12 @@ else
         await LoadPageAsync(recount: true);
     }
 
-    private bool HasAnyInteractionFilter()
+    private bool HasAnyInteractionCountsFilter()
         => _filterViewCountMin.HasValue || _filterViewCountMax.HasValue
         || _filterShareCountMin.HasValue || _filterShareCountMax.HasValue
         || _filterRecommendCountMin.HasValue || _filterRecommendCountMax.HasValue;
 
-    private async Task ClearInteractionFilters()
+    private async Task ClearInteractionCountsFilters()
     {
         _filterViewCountMin = null; _filterViewCountMax = null;
         _filterShareCountMin = null; _filterShareCountMax = null;
@@ -1227,114 +1356,271 @@ else
         }
     }
 
+    // ═══════════════════════ ORTAK KATEGORİ ARAMA MOTORU (sunucu-taraflı) ═══════════════════════
+    // 100K+ kategoride RAM'e çekmez → yalnızca eşleşen sonuçları DB'den alır
+    // Ancestor zincirini batch olarak çeker → derinlik ve tam yol hesaplar
+    private async Task<List<CategorySearchItem>> SearchCategoriesAsync(
+        _ApplicationConnectionDb db, string term, bool onlyWithProducts, int maxResults = 50)
+    {
+        IQueryable<CategoriesTr> q = db.CategoriesTr.AsNoTracking();
+
+        // Arama terimi
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            var t = term.Trim();
+            q = q.Where(c => c.Name != null && c.Name.Contains(t));
+        }
+
+        // Yalnızca ürün içeren kategoriler (filtre modu)
+        if (onlyWithProducts)
+        {
+            var productQuery = db.Products.AsNoTracking()
+                .Where(p => p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true);
+            if (!IsAdmin)
+                productQuery = productQuery.Where(p => p.UserId == (use != null ? use.Id : Guid.Empty));
+
+            var catIdsWithProducts = db.ProductCategories.AsNoTracking()
+                .Where(pc => productQuery.Any(p => p.Id == pc.ProductId))
+                .Select(pc => pc.CategoryId).Distinct();
+
+            q = q.Where(c => catIdsWithProducts.Contains(c.Id));
+        }
+
+        // Sonuçları al (sınırlı)
+        var raw = await q.OrderBy(c => c.DepartmentName).ThenBy(c => c.Name).Take(maxResults)
+            .Select(c => new { c.Id, c.Name, c.DepartmentName, c.ParentCategoryId })
+            .ToListAsync(_cts.Token);
+
+        if (!raw.Any()) return new List<CategorySearchItem>();
+
+        // ── Ürün sayılarını hesapla (yalnızca onlyWithProducts modunda) ──
+        var rawIds = raw.Select(r => r.Id).ToList();
+        var productCountMap = new Dictionary<int, int>();
+        if (onlyWithProducts)
+        {
+            var productQuery2 = db.Products.AsNoTracking()
+                .Where(p => p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true);
+            if (!IsAdmin)
+                productQuery2 = productQuery2.Where(p => p.UserId == (use != null ? use.Id : Guid.Empty));
+
+            var counts = await db.ProductCategories.AsNoTracking()
+                .Where(pc => rawIds.Contains(pc.CategoryId) && productQuery2.Any(p => p.Id == pc.ProductId))
+                .GroupBy(pc => pc.CategoryId)
+                .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+                .ToListAsync(_cts.Token);
+            foreach (var c in counts) productCountMap[c.CategoryId] = c.Count;
+        }
+
+        // ── Derinlik & Tam Yol: ancestor zincirini batch olarak yükle ──
+        var parentMap = new Dictionary<int, int?>(); // Id → ParentCategoryId
+        var nameMap = new Dictionary<int, string>(); // Id → Name
+
+        foreach (var r in raw)
+        {
+            parentMap[r.Id] = r.ParentCategoryId;
+            nameMap[r.Id] = r.Name ?? "(İsimsiz)";
+        }
+
+        // Henüz yüklenmemiş parent ID'lerini topla ve iteratif olarak çek (maks ~10 seviye)
+        var missingParentIds = raw
+            .Where(r => r.ParentCategoryId.HasValue && !parentMap.ContainsKey(r.ParentCategoryId.Value))
+            .Select(r => r.ParentCategoryId!.Value).Distinct().ToList();
+
+        int safetyCounter = 0;
+        while (missingParentIds.Any() && safetyCounter++ < 15)
+        {
+            var ancestors = await db.CategoriesTr.AsNoTracking()
+                .Where(c => missingParentIds.Contains(c.Id))
+                .Select(c => new { c.Id, c.Name, c.DepartmentName, c.ParentCategoryId })
+                .ToListAsync(_cts.Token);
+
+            foreach (var a in ancestors)
+            {
+                parentMap[a.Id] = a.ParentCategoryId;
+                nameMap[a.Id] = !string.IsNullOrWhiteSpace(a.DepartmentName) && a.ParentCategoryId == null
+                    ? $"{a.DepartmentName} > {a.Name ?? "(İsimsiz)"}"
+                    : a.Name ?? "(İsimsiz)";
+            }
+
+            missingParentIds = ancestors
+                .Where(a => a.ParentCategoryId.HasValue && !parentMap.ContainsKey(a.ParentCategoryId.Value))
+                .Select(a => a.ParentCategoryId!.Value).Distinct().ToList();
+        }
+
+        // ── Alt kategorisi olup olmadığını toplu kontrol et ──
+        var hasChildrenSet = new HashSet<int>();
+        if (rawIds.Count <= 100) // Az sonuçta toplu sorgu
+        {
+            var childCheck = await db.CategoriesTr.AsNoTracking()
+                .Where(c => c.ParentCategoryId.HasValue && rawIds.Contains(c.ParentCategoryId.Value))
+                .Select(c => c.ParentCategoryId!.Value).Distinct().ToListAsync(_cts.Token);
+            hasChildrenSet = childCheck.ToHashSet();
+        }
+
+        // ── Sonuç listesini oluştur ──
+        var results = new List<CategorySearchItem>();
+        foreach (var r in raw)
+        {
+            // Tam yolu oluştur (kök → ... → bu kategori)
+            var pathParts = new List<string>();
+            int? currentId = r.Id;
+            int depth = 0;
+            while (currentId.HasValue && depth < 20)
+            {
+                if (nameMap.TryGetValue(currentId.Value, out var n))
+                    pathParts.Insert(0, n);
+                currentId = parentMap.GetValueOrDefault(currentId.Value);
+                if (currentId.HasValue) depth++;
+            }
+
+            var displayName = r.Name ?? "(İsimsiz)";
+            if (depth == 0 && !string.IsNullOrWhiteSpace(r.DepartmentName))
+                displayName = $"{r.DepartmentName} > {displayName}";
+
+            results.Add(new CategorySearchItem
+            {
+                Id = r.Id,
+                Name = displayName,
+                FullPath = string.Join(" > ", pathParts),
+                Depth = depth,
+                HasChildren = hasChildrenSet.Contains(r.Id),
+                ProductCount = productCountMap.GetValueOrDefault(r.Id)
+            });
+        }
+
+        return results.OrderBy(r => r.FullPath).ToList();
+    }
+
+    // ═══════════════════════ KATEGORİ FİLTRE SEÇİCİ (Dropdown Select) ═══════════════════════
+    // İlk açılışta ürünü olan tüm kategorileri TEK SEFERDE yükler, sonra istemci-taraflı filtreler
+    private async Task ToggleFilterCatDropdown()
+    {
+        if (_filterCatDropdownOpen)
+        {
+            _filterCatDropdownOpen = false;
+            _filterCatInternalSearch = string.Empty;
+            return;
+        }
+
+        _filterCatDropdownOpen = true;
+
+        // İlk açılışta lazy yükle
+        if (!_filterCatItemsLoaded)
+            await LoadFilterCatItems();
+    }
+
+    private async Task LoadFilterCatItems()
+    {
+        _filterCatItemsLoading = true; StateHasChanged();
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _filterCatItems = await SearchCategoriesAsync(db, term: "", onlyWithProducts: true, maxResults: 5000);
+            _filterCatItemsLoaded = true;
+        }
+        catch (Exception ex) { await LogError("LoadFilterCatItems", ex); }
+        finally { _filterCatItemsLoading = false; StateHasChanged(); }
+    }
+
+    private List<CategorySearchItem> GetFilteredCatItems()
+    {
+        if (string.IsNullOrWhiteSpace(_filterCatInternalSearch))
+            return _filterCatItems;
+
+        var term = _filterCatInternalSearch.Trim().ToLowerInvariant();
+        return _filterCatItems.Where(c => c.Name.ToLowerInvariant().Contains(term)
+            || c.FullPath.ToLowerInvariant().Contains(term)).ToList();
+    }
+
+    private void OnFilterCatInternalSearch(ChangeEventArgs e)
+    {
+        _filterCatInternalSearch = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task OnFilterCatBlur()
+    {
+        // Küçük gecikme: tıklama olayının tamamlanmasını bekle, sonra kapat
+        await Task.Delay(200);
+        _filterCatDropdownOpen = false;
+        _filterCatInternalSearch = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ApplyFilterCategory(CategorySearchItem cat)
+    {
+        _filterCategoryId = cat.Id;
+        _filterCategoryName = $"{cat.Name} ({cat.ProductCount})";
+        _filterCatDropdownOpen = false;
+        _filterCatInternalSearch = string.Empty;
+        _page = 1;
+        await LoadPageAsync(recount: true);
+    }
+
+    private async Task ClearCategoryFilter()
+    {
+        _filterCategoryId = null;
+        _filterCategoryName = string.Empty;
+        _filterCatDropdownOpen = false;
+        _filterCatInternalSearch = string.Empty;
+        _page = 1;
+        await LoadPageAsync(recount: true);
+    }
+
     // ═══════════════════════ TOPLU KATEGORİ DEĞİŞTİRME ═══════════════════════
     private async Task OpenBulkCategory()
     {
         if (!IsAdmin || !_selectedIds.Any()) return;
-        _selectedCategoryId = null;
-        _selectedCategoryPath = string.Empty;
-        _categorySearchTerm = string.Empty;
-
-        // Kategori ağacını yükle (henüz yüklenmemişse)
-        if (!_categoryTree.Any())
-        {
-            _categoryTreeLoading = true;
-            await ShowModal("bulkCategoryModal");
-            StateHasChanged();
-            await LoadCategoryTree();
-            _categoryTreeLoading = false;
-            StateHasChanged();
-        }
-        else
-        {
-            await ShowModal("bulkCategoryModal");
-        }
+        _bulkSelectedCategoryId = null;
+        _bulkSelectedCategoryPath = string.Empty;
+        _bulkCatSearchTerm = string.Empty;
+        _bulkCatResults.Clear();
+        await ShowModal("bulkCategoryModal");
     }
 
-    private async Task LoadCategoryTree()
+    private async Task OnBulkCatSearchInput(ChangeEventArgs e)
     {
+        _bulkCatSearchTerm = e.Value?.ToString() ?? string.Empty;
+
+        if (_bulkCatSearchTerm.Trim().Length < 2)
+        {
+            _bulkCatResults.Clear();
+            StateHasChanged();
+            return;
+        }
+
+        // Debounce
+        _bulkCatSearchCts?.Cancel();
+        _bulkCatSearchCts = new CancellationTokenSource();
+        var tok = _bulkCatSearchCts.Token;
+        try { await Task.Delay(300, tok); } catch { return; }
+        if (tok.IsCancellationRequested) return;
+
+        _bulkCatLoading = true; StateHasChanged();
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var allCats = await db.CategoriesTr.AsNoTracking()
-                .OrderBy(c => c.DepartmentName).ThenBy(c => c.Name)
-                .Select(c => new CatRaw { Id = c.Id, Name = c.Name ?? "(İsimsiz)", DepartmentName = c.DepartmentName, ParentCategoryId = c.ParentCategoryId })
-                .ToListAsync(_cts.Token);
-
-            // Ağaç yapısını oluştur
-            var lookup = allCats.ToLookup(c => c.ParentCategoryId);
-            _categoryTree.Clear();
-
-            // Önce kök düğümleri bul (ParentCategoryId == null)
-            var roots = allCats.Where(c => c.ParentCategoryId == null).ToList();
-            foreach (var root in roots)
-            {
-                BuildTreeRecursive(root.Id, root.Name, root.DepartmentName, 0, lookup);
-            }
+            _bulkCatResults = await SearchCategoriesAsync(db, _bulkCatSearchTerm, onlyWithProducts: false, maxResults: 50);
         }
-        catch (Exception ex) { await LogError("LoadCategoryTree", ex); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { await LogError("BulkCatSearch", ex); }
+        finally { _bulkCatLoading = false; StateHasChanged(); }
     }
 
-    private void BuildTreeRecursive(int id, string name, string? deptName, int depth,
-        ILookup<int?, CatRaw> lookup)
+    private void SelectBulkCategory(CategorySearchItem cat)
     {
-        var displayName = depth == 0 && !string.IsNullOrWhiteSpace(deptName)
-            ? $"{deptName} > {name}"
-            : name;
-
-        var children = lookup[id];
-        _categoryTree.Add(new CategoryNode
-        {
-            Id = id,
-            Name = displayName,
-            Depth = depth,
-            HasChildren = children.Any(),
-            ParentCategoryId = null
-        });
-
-        foreach (var child in children)
-        {
-            BuildTreeRecursive(child.Id, child.Name, child.DepartmentName, depth + 1, lookup);
-        }
-    }
-
-    private List<CategoryNode> GetFilteredCategories()
-    {
-        if (string.IsNullOrWhiteSpace(_categorySearchTerm))
-            return _categoryTree;
-
-        var term = _categorySearchTerm.Trim().ToLowerInvariant();
-        return _categoryTree.Where(c => c.Name.ToLowerInvariant().Contains(term)).ToList();
-    }
-
-    private void OnCategorySearchInput(ChangeEventArgs e)
-    {
-        _categorySearchTerm = e.Value?.ToString() ?? string.Empty;
-    }
-
-    private void SelectCategory(CategoryNode cat)
-    {
-        _selectedCategoryId = cat.Id;
-        // Tam yolu oluştur: üst kategorileri bul
-        _selectedCategoryPath = BuildCategoryPath(cat.Id);
-    }
-
-    private string BuildCategoryPath(int catId)
-    {
-        // Ağaçta bu düğümün adını bul
-        var node = _categoryTree.FirstOrDefault(c => c.Id == catId);
-        return node?.Name ?? catId.ToString();
+        _bulkSelectedCategoryId = cat.Id;
+        _bulkSelectedCategoryPath = cat.FullPath;
     }
 
     private async Task ApplyBulkCategory()
     {
-        if (!IsAdmin || _isProcessing || !_selectedIds.Any() || !_selectedCategoryId.HasValue) return;
+        if (!IsAdmin || _isProcessing || !_selectedIds.Any() || !_bulkSelectedCategoryId.HasValue) return;
         await _writeLock.WaitAsync(_cts.Token);
         try
         {
             _isProcessing = true; StateHasChanged();
             var ids = _selectedIds.ToList();
-            var catId = _selectedCategoryId.Value;
+            var catId = _bulkSelectedCategoryId.Value;
             var now = DateTime.UtcNow;
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
@@ -1375,7 +1661,7 @@ else
 
             await StateHub.NotifyDataChanged(ENTITY_NAME);
             await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkCategory ({count}) → CatId:{catId}");
-            await Notify("success", "Tamamlandı", $"{count} ürünün ana kategorisi '{_selectedCategoryPath}' olarak değiştirildi.");
+            await Notify("success", "Tamamlandı", $"{count} ürünün ana kategorisi '{_bulkSelectedCategoryPath}' olarak değiştirildi.");
             await LoadPageAsync(recount: true);
         }
         catch (Exception ex)
@@ -1719,6 +2005,7 @@ else
         _disposed = true;
         StateHub.OnDataChanged -= HandleDataChanged;
         _searchCts?.Cancel(); _searchCts?.Dispose();
+        _bulkCatSearchCts?.Cancel(); _bulkCatSearchCts?.Dispose();
         await _cts.CancelAsync();
         _cts.Dispose();
         _writeLock.Dispose();
@@ -1764,20 +2051,13 @@ else
         public int RecommendCount { get; set; }
     }
 
-    private sealed class CategoryNode
+    private sealed class CategorySearchItem
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";
+        public string FullPath { get; set; } = "";
         public int Depth { get; set; }
         public bool HasChildren { get; set; }
-        public int? ParentCategoryId { get; set; }
-    }
-
-    private sealed class CatRaw
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string? DepartmentName { get; set; }
-        public int? ParentCategoryId { get; set; }
+        public int ProductCount { get; set; }
     }
 }

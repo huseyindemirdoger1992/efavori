@@ -3,6 +3,7 @@ using data._Product.BulkWordPressProductImport;
 using data._Product.ProductHistory;
 using data._Shared;
 using data.Articles;
+using data.ShoppingCart;
 using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -125,7 +126,10 @@ namespace data
         public DbSet<ProductHistory> ProductHistory { get; set; } = default!;
         public DbSet<ProductReview> ProductReview { get; set; } = default!;
 
-        // Products BulkWordPressProductImport
+        // ShoppingCart
+        public DbSet<ProductCart> ProductCart { get; set; } = default!;
+
+
 
         public DbSet<ProductImportJobs> ProductImportJobs { get; set; } = default!;
         public DbSet<ProductImportMappings> ProductImportMappings { get; set; } = default!;

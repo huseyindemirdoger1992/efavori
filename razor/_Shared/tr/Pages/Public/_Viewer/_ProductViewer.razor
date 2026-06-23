@@ -483,7 +483,7 @@ else
                                 @* İndirimli fiyat *@
                                 <meta itemprop="price" content="@_currentPrice.DiscountedPrice.Value.ToString("F2", CultureInfo.InvariantCulture)" />
                                 <div class="d-flex align-items-baseline flex-wrap gap-2">
-                                    <span class="display-6 fw-bold text-info mb-0">@_currentPrice.DiscountedPrice.Value.ToString("N2") @cur</span>
+                                    <span class="display-6 fw-bold text-warning mb-0">@_currentPrice.DiscountedPrice.Value.ToString("N2") @cur</span>
                                     <del class="text-light fs-5">@_currentPrice.Price.ToString("N2") @cur</del>
                                     <span class="badge bg-danger fs-6">%@_currentDiscountPercent</span>
                                 </div>
@@ -496,7 +496,7 @@ else
                             {
                                 @* Normal fiyat *@
                                 <meta itemprop="price" content="@_currentPrice.Price.ToString("F2", CultureInfo.InvariantCulture)" />
-                                <span class="display-6 fw-bold text-info">@_currentPrice.Price.ToString("N2") @cur</span>
+                                <span class="display-6 fw-bold text-warning">@_currentPrice.Price.ToString("N2") @cur</span>
                             }
 
                             @* Diğer para birimleri *@

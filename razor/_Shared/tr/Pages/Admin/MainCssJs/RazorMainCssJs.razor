@@ -1,0 +1,1228 @@
+﻿@* ============================================================
+   CssJs.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ GlobalStateHub — anlık broadcast, debounce, RAM cache
+   ✅ TakeLogs — tüm CRUD aksiyonları loglanır
+   ✅ Ayrı Ekle / Düzenle / Sil modalleri
+   ✅ Seçilenleri Sil → önce onay modali (sayı + liste)
+   ✅ Toplu Aktif / Pasif ve Toplu Tür Değiştirme (CSS ↔ JS)
+   ✅ 5'li sayfalama
+   ✅ GlobalSecurityProvider YOK — düz metin
+   ============================================================ *@
+
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    // Bu alanı kesinlikle SİLME. Kullanılsın veya kullanılmasın, global state'den dil bilgisini almak ve yönlendirme yapmak için gereklidir.
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",     "Ana Sayfa",    "/"),
+        ("fa fa-table",    "Kayıtlar",     "javascript:void(0)"),
+        ("fa fa-code",     PAGE_TITLE,     "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    <button class="btn btn-light btn-sm" @onclick="OpenAddModal" disabled="@_isLoading">
+        <i class="fa fa-plus me-sm-1"></i>
+        <span class="d-none d-sm-inline">Yeni Kayıt</span>
+    </button>
+
+    @if (_selectedIds.Any())
+    {
+        <div class="vr mx-1"></div>
+        <span class="badge bg-light">@_selectedIds.Count seçili</span>
+
+        <button class="btn btn-outline-light btn-sm border-0" @onclick="ClearSelection" title="Seçimi Temizle">
+            <i class="fa fa-times"></i> Seçimi Temizle
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-success btn-sm border-0"
+                @onclick="() => BulkSetActiveAsync(true)"
+                disabled="@_isProcessing"
+                title="Seçilenleri Aktif Yap">
+            <i class="fa fa-toggle-on"></i> Aktif Yap
+        </button>
+
+        <button class="btn btn-outline-secondary btn-sm border-0"
+                @onclick="() => BulkSetActiveAsync(false)"
+                disabled="@_isProcessing"
+                title="Seçilenleri Pasif Yap">
+            <i class="fa fa-toggle-off"></i> Pasif Yap
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-info btn-sm border-0"
+                @onclick="() => BulkSetTypeAsync(true)"
+                disabled="@_isProcessing"
+                title="Seçilenleri CSS Yap">
+            <i class="fa fa-css3"></i> CSS Yap
+        </button>
+
+        <button class="btn btn-outline-warning btn-sm border-0"
+                @onclick="() => BulkSetTypeAsync(false)"
+                disabled="@_isProcessing"
+                title="Seçilenleri JS Yap">
+            <i class="fa fa-code"></i> JS Yap
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-danger btn-sm border-0"
+                @onclick="OpenBulkDeleteModal"
+                disabled="@_isProcessing">
+            <i class="fa fa-trash"></i> Seçilenleri Sil
+        </button>
+    }
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Ara (başlık, açıklama)"
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && !_allItems.Any())
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">Kayıt bulunmuyor.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width:2rem;">
+                        <input type="checkbox" class="form-check-input"
+                               checked="@_allSelected"
+                               @onchange="ToggleSelectAll" />
+                    </th>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Başlık</th>
+                    <th class="d-none d-lg-table-cell">Açıklama</th>
+                    <th>Tür</th>
+                    <th>Durum</th>
+                    <th class="d-none d-md-table-cell">Tarih</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var item in _pagedItems)
+                {
+                    var isSelected = _selectedIds.Contains(item.Id);
+                    <tr class="@(isSelected ? "table-active" : "")">
+                        <td>
+                            <input type="checkbox" class="form-check-input"
+                                   checked="@isSelected"
+                                   @onchange="() => ToggleRowSelection(item.Id)" />
+                        </td>
+                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
+                        <td>
+                            <div class="fw-semibold text-truncate" style="max-width:200px;" title="@item.Title">
+                                @(item.Title ?? "—")
+                            </div>
+                        </td>
+                        <td class="d-none d-lg-table-cell">
+                            <div class="text-truncate small" style="max-width:250px;" title="@item.Description">
+                                @(item.Description ?? "—")
+                            </div>
+                        </td>
+                        <td>
+                            @if (item.IsCssOrJs == true)
+                            {
+                                <span class="badge bg-info">CSS</span>
+                            }
+                            else if (item.IsCssOrJs == false)
+                            {
+                                <span class="badge bg-warning text-dark">JS</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">—</span>
+                            }
+                        </td>
+                        <td>
+                            <i class="fa @(item.IsActive == true ? "fa-toggle-on text-success" : "fa-toggle-off text-secondary")"
+                               title="@(item.IsActive == true ? "Aktif" : "Pasif")"></i>
+                        </td>
+                        <td class="d-none d-md-table-cell text-nowrap">
+                            <div class="small">@(item.GetDateTime?.ToString("dd.MM.yyyy") ?? "—") | @(item.GetDateTime?.ToString("HH:mm") ?? "")</div>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OpenEditModal(item)" title="Düzenle">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => OpenDeleteModal(item)" title="Sil">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_allItems.Count kayıt
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage - 1)">
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                    </li>
+
+                    @for (int p = 1; p <= _totalPages; p++)
+                    {
+                        var pg = p;
+                        <li class="page-item @(_currentPage == pg ? "active" : "")">
+                            <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary"
+                                    @onclick="() => GoToPage(pg)">
+                                @pg
+                            </button>
+                        </li>
+                    }
+
+                    <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage + 1)">
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Ekle
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="AddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-plus me-1"></i>Yeni CSS / JS Kaydı
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_addModel != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Başlık</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Başlık giriniz"
+                                   @bind="_addModel.Title" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-file-code-o me-1"></i>Tür</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    value="@_addTypeSelection"
+                                    @onchange="e => OnAddTypeChanged(e)">
+                                <option value="">Tür Seçiniz</option>
+                                <option value="css">Üst (Header)</option>
+                                <option value="js">Alt (Footer)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-info-circle me-1"></i>Açıklama</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Açıklama giriniz"
+                                   @bind="_addModel.Description" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-code me-1"></i>Kod İçeriği</label>
+                            <textarea class="form-control form-control-sm bg-dark text-white border-secondary font-monospace"
+                                      rows="8"
+                                      placeholder="CSS veya JS kodunu buraya yazınız"
+                                      @bind="_addModel.UserCodes"></textarea>
+
+                            <div class="mt-2 d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-info" @onclick="InsertCss">Css</button>
+                                <button type="button" class="btn btn-sm btn-outline-warning" @onclick="InsertJs">Js</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="ClearCode">Temizle</button>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-sm-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="add_chkActive" @bind="_addModel.IsActive" />
+                                <label class="form-check-label text-white-50" for="add_chkActive">Aktif</label>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-primary btn-sm"
+                        @onclick="AddAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-plus me-1"></i><span>Yeni Kayıt Ekle</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Düzenle
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="EditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(255,215,0,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-pencil me-1"></i>Kayıt Düzenle
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_editModel != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Başlık</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Başlık giriniz"
+                                   @bind="_editModel.Title" />
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-file-code-o me-1"></i>Tür</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    value="@_editTypeSelection"
+                                    @onchange="e => OnEditTypeChanged(e)">
+                                <option value="">Tür Seçiniz</option>
+                                <option value="css">CSS</option>
+                                <option value="js">JS</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-info-circle me-1"></i>Açıklama</label>
+                            <input type="text"
+                                   class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   placeholder="Açıklama giriniz"
+                                   @bind="_editModel.Description" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-code me-1"></i>Kod İçeriği</label>
+                            <textarea class="form-control form-control-sm bg-dark text-white border-secondary font-monospace"
+                                      rows="8"
+                                      placeholder="CSS veya JS kodunu buraya yazınız"
+                                      @bind="_editModel.UserCodes"></textarea>
+                        </div>
+
+                        <div class="col-12 col-sm-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="edit_chkActive" @bind="_editModel.IsActive" />
+                                <label class="form-check-label text-white-50" for="edit_chkActive">Aktif</label>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-warning btn-sm"
+                        @onclick="UpdateAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-1"></i><span>Değişiklikleri Kaydet</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Tekli Sil
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>Silme İşlemi
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-white-50 small mb-3">Bu kaydı silmek istediğinizden emin misiniz?</p>
+                @if (_deleteTarget != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Başlık</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.Title ?? "—")" disabled />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-file-code-o me-1"></i>Tür</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.IsCssOrJs == true ? "CSS" : _deleteTarget.IsCssOrJs == false ? "JS" : "—")" disabled />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-info-circle me-1"></i>Açıklama</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(_deleteTarget.Description ?? "—")" disabled />
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="DeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>Evet, Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Toplu Sil Onayı
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="BulkDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>
+                    Toplu Silme — @_selectedIds.Count kayıt seçildi
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-warning small mb-3">
+                    <i class="fa fa-exclamation-triangle me-1"></i>
+                    Aşağıdaki <strong>@_selectedIds.Count</strong> kayıt silinecek. Bu işlem geri alınamaz.
+                </p>
+
+                @if (_bulkDeletePreview.Any())
+                {
+                    <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
+                        <table class="table table-sm table-dark table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="small">#</th>
+                                    <th class="small">Başlık</th>
+                                    <th class="small">Tür</th>
+                                    <th class="small">Durum</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int n = 1;
+                                }
+                                @foreach (var item in _bulkDeletePreview)
+                                {
+                                    <tr>
+                                        <td class="small text-secondary">@(n++)</td>
+                                        <td class="small">@(item.Title ?? "—")</td>
+                                        <td class="small">
+                                            @(item.IsCssOrJs == true ? "CSS" : item.IsCssOrJs == false ? "JS" : "—")
+                                        </td>
+                                        <td class="small">
+                                            @(item.IsActive == true ? "Aktif" : "Pasif")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"
+                        @onclick="() => _bulkDeletePreview.Clear()">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="BulkDeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>@_selectedIds.Count Kaydı Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "CSS / JS Yönetimi";
+    private const string ENTITY_NAME = "MainCssJs";
+    private const string CACHE_KEY = "MainCssJs_List";
+    private const int SEARCH_DELAY = 500;
+    private const int PAGE_SIZE = 1000;
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+
+    // ─── Yazma kilidi ─────────────────────────────────────────────
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isProcessing;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    private List<MainCssJs> _allItems = new();
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private List<MainCssJs> _pagedItems = new();
+
+    // ─── Ekle modal state ─────────────────────────────────────────
+    private MainCssJs? _addModel;
+    private string _addTypeSelection = string.Empty;
+
+    // ─── Düzenle modal state ──────────────────────────────────────
+    private MainCssJs? _editModel;
+    private string _editTypeSelection = string.Empty;
+
+    // ─── Sil modal state ──────────────────────────────────────────
+    private MainCssJs? _deleteTarget;
+
+    // ─── Toplu Sil state ──────────────────────────────────────────
+    private readonly HashSet<Guid> _selectedIds = new();
+    private bool _allSelected;
+    private List<MainCssJs> _bulkDeletePreview = new();
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+
+        await LoadDataAsync(_searchTerm);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GLOBAL OLAY
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadDataAsync(_searchTerm);
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadDataAsync(string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            string cacheKey = string.IsNullOrWhiteSpace(search) ? CACHE_KEY : $"{CACHE_KEY}_{search}";
+            if (!string.IsNullOrWhiteSpace(search))
+                StateHub.ClearCache(cacheKey);
+
+            var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+                var q = db.MainCssJs.AsNoTracking().AsQueryable();
+
+                // Soft delete: silinmemiş kayıtları getir
+                q = q.Where(x => x.IsDelete == null || x.IsDelete == false);
+
+                // Arama: düz metin — DB'de LIKE çalışır
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var s = search.Trim();
+                    q = q.Where(x =>
+                        (x.Title != null && x.Title.Contains(s)) ||
+                        (x.Description != null && x.Description.Contains(s)));
+                }
+
+                return await q.OrderByDescending(x => x.GetDateTime).ToListAsync(token);
+            }, token);
+
+            if (token.IsCancellationRequested || result == null) return;
+
+            _allItems = result;
+            ApplyPaging(1);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadData", ex);
+                await Notify("danger", "Hata", "Veriler yüklenirken sorun oluştu.");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ApplyPaging(int page)
+    {
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_allItems.Count / (double)PAGE_SIZE));
+        _currentPage = Math.Clamp(page, 1, _totalPages);
+        _pagedItems = _allItems.Skip((_currentPage - 1) * PAGE_SIZE).Take(PAGE_SIZE).ToList();
+    }
+
+    private void GoToPage(int page)
+    {
+        ApplyPaging(page);
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ARAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        await LoadDataAsync(_searchTerm);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        await LoadDataAsync(null);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TÜR SEÇİMİ YARDIMCILARI (CSS / JS select → bool?)
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnAddTypeChanged(ChangeEventArgs e)
+    {
+        _addTypeSelection = e.Value?.ToString() ?? "";
+        if (_addModel != null)
+            _addModel.IsCssOrJs = _addTypeSelection == "css" ? true : _addTypeSelection == "js" ? false : null;
+    }
+
+    private void OnEditTypeChanged(ChangeEventArgs e)
+    {
+        _editTypeSelection = e.Value?.ToString() ?? "";
+        if (_editModel != null)
+            _editModel.IsCssOrJs = _editTypeSelection == "css" ? true : _editTypeSelection == "js" ? false : null;
+    }
+
+    private static string TypeBoolToString(bool? val) =>
+        val == true ? "css" : val == false ? "js" : "";
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL AÇMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenAddModal()
+    {
+        _addModel = new MainCssJs
+        {
+            Id = Guid.Empty,
+            IsActive = true,
+            GetDateTime = DateTime.UtcNow
+        };
+        _addTypeSelection = string.Empty;
+        await ShowModal("AddModal");
+    }
+
+    private async Task OpenEditModal(MainCssJs item)
+    {
+        _editModel = new MainCssJs
+        {
+            Id = item.Id,
+            Title = item.Title,
+            Description = item.Description,
+            UserCodes = item.UserCodes,
+            IsActive = item.IsActive,
+            IsCssOrJs = item.IsCssOrJs,
+            GetDateTime = item.GetDateTime
+        };
+        _editTypeSelection = TypeBoolToString(item.IsCssOrJs);
+        await ShowModal("EditModal");
+    }
+
+    private async Task OpenDeleteModal(MainCssJs item)
+    {
+        _deleteTarget = item;
+        await ShowModal("DeleteModal");
+    }
+
+    private async Task OpenBulkDeleteModal()
+    {
+        if (!_selectedIds.Any()) return;
+        _bulkDeletePreview = _allItems.Where(x => _selectedIds.Contains(x.Id)).ToList();
+        await ShowModal("BulkDeleteModal");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Ekle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task AddAsync()
+    {
+        if (_isProcessing || _addModel == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            _addModel.Id = Guid.NewGuid();
+            _addModel.GetDateTime = DateTime.UtcNow;
+            _addModel.IsDelete = false;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            db.MainCssJs.Add(_addModel);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("AddModal");
+            _addModel = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Add");
+            await Notify("success", "Başarılı", "Kayıt eklendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("AddAsync", ex);
+            await Notify("danger", "Hata", "Kayıt sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Güncelle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task UpdateAsync()
+    {
+        if (_isProcessing || _editModel == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.MainCssJs.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+
+            if (existing == null)
+            {
+                await Notify("warning", "Uyarı", "Kayıt artık mevcut değil.");
+                return;
+            }
+
+            existing.Title = _editModel.Title;
+            existing.Description = _editModel.Description;
+            existing.UserCodes = _editModel.UserCodes;
+            existing.IsActive = _editModel.IsActive;
+            existing.IsCssOrJs = _editModel.IsCssOrJs;
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("EditModal");
+            _editModel = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
+            await Notify("success", "Başarılı", "Kayıt güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("UpdateAsync", ex);
+            await Notify("danger", "Hata", "Güncelleme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Tekli Sil
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task DeleteConfirmedAsync()
+    {
+        if (_isProcessing || _deleteTarget == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var entity = await db.MainCssJs.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+
+            if (entity != null)
+            {
+                // Soft delete
+                entity.IsDelete = true;
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await HideModal("DeleteModal");
+            _deleteTarget = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
+            await Notify("success", "Silindi", "Kayıt başarıyla silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteAsync", ex);
+            await Notify("danger", "Hata", "Silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Toplu Sil
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkDeleteConfirmedAsync()
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+            var count = ids.Count;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // Soft delete
+            await db.MainCssJs
+                .Where(x => ids.Contains(x.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.IsDelete, true),
+                    _cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+            _bulkDeletePreview.Clear();
+
+            await HideModal("BulkDeleteModal");
+            _isProcessing = false;
+
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({count})");
+            await Notify("success", "Silindi", $"{count} kayıt silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkDelete", ex);
+            await Notify("danger", "Hata", "Toplu silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU İŞLEMLER — Aktif / Pasif
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkSetActiveAsync(bool active)
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+            var count = ids.Count;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            await db.MainCssJs
+                .Where(x => ids.Contains(x.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.IsActive, active),
+                    _cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+            _isProcessing = false;
+
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkSetActive ({count} → {(active ? "Aktif" : "Pasif")})");
+            await Notify("success", "Başarılı", $"{count} kayıt {(active ? "aktif" : "pasif")} yapıldı.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkSetActive", ex);
+            await Notify("danger", "Hata", "Toplu durum değiştirme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU İŞLEMLER — Tür Değiştir (CSS ↔ JS)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkSetTypeAsync(bool isCss)
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+            var count = ids.Count;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            await db.MainCssJs
+                .Where(x => ids.Contains(x.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.IsCssOrJs, isCss),
+                    _cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+            _isProcessing = false;
+
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkSetType ({count} → {(isCss ? "CSS" : "JS")})");
+            await Notify("success", "Başarılı", $"{count} kayıt {(isCss ? "CSS" : "JS")} olarak değiştirildi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkSetType", ex);
+            await Notify("danger", "Hata", "Toplu tür değiştirme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU SEÇİM
+    // ══════════════════════════════════════════════════════════════
+
+    private void ToggleRowSelection(Guid id)
+    {
+        if (!_selectedIds.Remove(id)) _selectedIds.Add(id);
+        _allSelected = _allItems.Count > 0 && _allItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (_allSelected)
+            _selectedIds.Clear();
+        else
+            foreach (var item in _allItems)
+                _selectedIds.Add(item.Id);
+
+        _allSelected = _allItems.Count > 0 && _allItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedIds.Clear();
+        _allSelected = false;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+
+    // Butonların tetikleyeceği metotlar
+    private void InsertCss()
+    {
+        _addModel.UserCodes = "<style>\nXXXXXXXXX\n</style>";
+    }
+
+    private void InsertJs()
+    {
+        _addModel.UserCodes = "<script>\nXXXXXXXXX\n</script>";
+    }
+
+    private void ClearCode()
+    {
+        _addModel.UserCodes = string.Empty;
+    }
+}

@@ -17,8 +17,7 @@ namespace data
     public class _ApplicationConnectionDb : DbContext
     {
         // CSS-JS
-        public DbSet<MainCss> MainCss { get; set; } = default!;
-        public DbSet<MainJs> MainJs { get; set; } = default!;
+        public DbSet<MainCssJs> MainCssJs { get; set; } = default!;
 
         // Deneme Tabloları
         public DbSet<TryTableSingle> TryTableSingle { get; set; } = default!;
@@ -84,7 +83,16 @@ namespace data
         public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
 
         // Articles Categories
-        public DbSet<Articles.CategoriesTr> ArticlesCategoriesTr { get; set; } = default!;
+        public DbSet<ArticlesCategoriesAz> ArticlesCategoriesAz { get; set; } = default!;
+        public DbSet<ArticlesCategoriesDe> ArticlesCategoriesDe { get; set; } = default!;
+        public DbSet<ArticlesCategoriesEn> ArticlesCategoriesEn { get; set; } = default!;
+        public DbSet<ArticlesCategoriesEs> ArticlesCategoriesEs { get; set; } = default!;
+        public DbSet<ArticlesCategoriesFr> ArticlesCategoriesFr { get; set; } = default!;
+        public DbSet<ArticlesCategoriesHi> ArticlesCategoriesHi { get; set; } = default!;
+        public DbSet<ArticlesCategoriesPt> ArticlesCategoriesPt { get; set; } = default!;
+        public DbSet<ArticlesCategoriesRu> ArticlesCategoriesRu { get; set; } = default!;
+        public DbSet<ArticlesCategoriesTr> ArticlesCategoriesTr { get; set; } = default!;
+        public DbSet<ArticlesCategoriesZh> ArticlesCategoriesZh { get; set; } = default!;
 
         // Stores
         public DbSet<Store> Stores { get; set; } = default!;

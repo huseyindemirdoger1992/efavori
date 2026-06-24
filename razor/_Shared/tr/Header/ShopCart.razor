@@ -1,49 +1,491 @@
-﻿@using data
-@code {
-    [Parameter]
-    public Users? _use { get; set; }
-}
+﻿@rendermode InteractiveServer
+
+@using System.Globalization
+@using api
+@using api.tr
+@using data
+@using data._Shared
+@using data.ShoppingCart
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@implements IAsyncDisposable
+
+<Notification @ref="notificationRef" />
+
 <li class="nav-item dropdown dropdown-large">
-	<a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-		<span class="alert-count">8</span>
-		<i class='fa fa-shopping-bag'></i>
-	</a>
-	<div class="dropdown-menu dropdown-menu-end">
-		<a href="javascript:;">
-			<div class="msg-header">
-				<p class="msg-header-title">My Cart</p>
-				<p class="msg-header-badge">10 Items</p>
-			</div>
-		</a>
-		<div class="header-message-list">
-			<a class="dropdown-item" href="javascript:;">
-				<div class="d-flex align-items-center gap-3">
-					<div class="position-relative">
-						<div class="cart-product rounded-circle bg-light">
-							<img src="/assets/images/products/11.png" class="" alt="product image">
-						</div>
-					</div>
-					<div class="flex-grow-1">
-						<h6 class="cart-product-title mb-0">Men White T-Shirt</h6>
-						<p class="cart-product-price mb-0">1 X $29.00</p>
-					</div>
-					<div class="">
-						<p class="cart-price mb-0">$250</p>
-					</div>
-					<div class="cart-product-cancel">
-						<i class="bx bx-x"></i>
-					</div>
-				</div>
-			</a>
-		</div>
-		<a href="javascript:;">
-			<div class="text-center msg-footer">
-				<div class="d-flex align-items-center justify-content-between mb-3">
-					<h5 class="mb-0">Total</h5>
-					<h5 class="mb-0 ms-auto">$489.00</h5>
-				</div>
-				<button class="btn btn-light w-100">Checkout</button>
-			</div>
-		</a>
-	</div>
+    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
+       href="#"
+       role="button"
+       data-bs-toggle="dropdown"
+       data-bs-auto-close="outside">
+        @if (_cartItems.Count > 0)
+        {
+            <span class="alert-count">@_cartItems.Sum(c => c.Quantity)</span>
+        }
+        <i class='fa fa-shopping-bag'></i>
+    </a>
+
+    <div class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 360px;">
+        <a href="javascript:;">
+            <div class="msg-header">
+                <p class="msg-header-title">Sepetim</p>
+                <p class="msg-header-badge">@_cartItems.Count Ürün</p>
+            </div>
+        </a>
+
+        <div class="header-message-list" style="max-height: 360px; overflow-y: auto;">
+            @if (_isLoading)
+            {
+                <div class="text-center py-4">
+                    <span class="spinner-border spinner-border-sm text-info"></span>
+                    <span class="text-light small ms-2">Yükleniyor…</span>
+                </div>
+            }
+            else if (!_cartItems.Any())
+            {
+                <div class="text-center py-4">
+                    <i class="fa fa-shopping-basket fa-2x text-secondary mb-2 d-block" aria-hidden="true"></i>
+                    <span class="text-light small">Sepetiniz boş</span>
+                </div>
+            }
+            else
+            {
+                @foreach (var item in _cartItems)
+                {
+                    var salePrice = GetSalePrice(item);
+                    var discount = GetDiscountAmount(item);
+                    var effectivePrice = discount > 0 ? (salePrice - discount) : salePrice;
+                    var lineTotal = effectivePrice * item.Quantity;
+                    var cur = GetCurrencySymbol();
+
+                    <div class="px-3 py-2 border-bottom" style="transition: background 0.2s;">
+                        <div class="d-flex align-items-start gap-2">
+
+                            @* ─── Ürün Görseli ─── *@
+                            <div class="flex-shrink-0">
+                                @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                                {
+                                    <a href="/Public/_Viewer/ProductProfile/@item.ProductSlug">
+                                        <img src="@item.ProductImageUrl"
+                                             alt="@item.ProductShortDescription"
+                                             class="rounded-2 border border-secondary border-opacity-25"
+                                             style="width:52px; height:52px; object-fit:cover;" />
+                                    </a>
+                                }
+                                else
+                                {
+                                    <div class="rounded-2 d-flex align-items-center justify-content-center bg-light border"
+                                         style="width:52px; height:52px;">
+                                        <i class="fa fa-picture-o text-secondary" aria-hidden="true"></i>
+                                    </div>
+                                }
+                            </div>
+
+                            @* ─── Ürün Bilgileri ─── *@
+                            <div class="flex-grow-1" style="min-width:0;">
+                                <a href="/Public/_Viewer/ProductProfile/@item.ProductSlug"
+                                   class="text-decoration-none">
+                                    <div class="fw-semibold text-light text-truncate" style="font-size: 0.8rem;">
+                                        @(item.ProductShortDescription != null && item.ProductShortDescription.Length > 36
+                                            ? item.ProductShortDescription.Substring(0, 36) + "…"
+                                            : item.ProductShortDescription)
+                                    </div>
+                                </a>
+
+                                @if (!string.IsNullOrEmpty(item.BrandName))
+                                {
+                                    <div class="text-secondary text-truncate" style="font-size: 0.65rem;">@item.BrandName</div>
+                                }
+
+                                @* ─── Fiyat Bilgisi ─── *@
+                                <div class="d-flex align-items-center gap-1 mt-1" style="font-size: 0.75rem;">
+                                    @if (discount > 0)
+                                    {
+                                        <del class="text-secondary">@salePrice.ToString("N2")</del>
+                                        <span class="text-warning fw-bold">@effectivePrice.ToString("N2") @cur</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-warning fw-bold">@salePrice.ToString("N2") @cur</span>
+                                    }
+                                </div>
+
+                                @* ─── Adet Seçici ─── *@
+                                <div class="d-flex align-items-center gap-1 mt-1">
+                                    <i class="fa fa-minus btn btn-light" aria-hidden="true" disabled="@(_isProcessing || item.Quantity <= 1)"
+                                       @onclick="() => ChangeQuantity(item.Id, -1)"
+                                       @onclick:stopPropagation="true"></i>
+                                    <span class="fw-bold text-light px-1" style="font-size: 0.75rem; min-width:20px; text-align:center;">
+                                        @item.Quantity
+                                    </span>
+                                    <i class="fa fa-plus btn btn-light" aria-hidden="true" disabled="@_isProcessing"
+                                       @onclick="() => ChangeQuantity(item.Id, 1)"
+                                       @onclick:stopPropagation="true"></i>
+                                    <span class="text-info fw-semibold ms-auto" style="font-size: 0.78rem;">
+                                        @lineTotal.ToString("N2") @cur
+                                    </span>
+                                </div>
+                            </div>
+
+                            @* ─── Sil Butonu ─── *@
+                            <div class="flex-shrink-0 ms-1">
+                                <button class="btn btn-link text-danger p-0"
+                                        style="font-size: 0.85rem; line-height:1;"
+                                        title="Sepetten Kaldır"
+                                        disabled="@_isProcessing"
+                                        @onclick="() => RemoveItem(item.Id)"
+                                        @onclick:stopPropagation="true">
+                                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        @* ─── Alt Bilgi: Toplam + Checkout ─── *@
+        <div class="px-3 py-2">
+            @if (_cartItems.Any())
+            {
+                var cur = GetCurrencySymbol();
+                var grandTotal = _cartItems.Sum(c =>
+                {
+                    var sp = GetSalePrice(c);
+                    var da = GetDiscountAmount(c);
+                    var ep = da > 0 ? (sp - da) : sp;
+                    return ep * c.Quantity;
+                });
+
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-light fw-semibold" style="font-size: 0.85rem;">Toplam</span>
+                    <span class="text-info fw-bold" style="font-size: 1rem;">@grandTotal.ToString("N2") @cur</span>
+                </div>
+                <a href="/@culture/Public/Checkout" class="btn btn-info btn-sm w-100">
+                    <i class="fa fa-credit-card me-1" aria-hidden="true"></i>Ödemeye Geç
+                </a>
+            }
+            else
+            {
+                <a href="/@culture/Public/Home/Index" class="btn btn-light btn-sm w-100">
+                    <i class="fa fa-shopping-bag me-1" aria-hidden="true"></i>Alışverişe Başla
+                </a>
+            }
+        </div>
+    </div>
 </li>
+
+
+@code {
+
+    private const string PAGE = "ShopCart";
+
+    [Parameter] public Users? use { get; set; }
+
+    string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
+
+    private readonly CancellationTokenSource _cts = new();
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private bool _isRendered;
+
+    private readonly Queue<(string type, string title, string text, string? image)> _pendingNotifications = new();
+
+    private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
+
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _isProcessing;
+
+    private List<ProductCart> _cartItems = new();
+
+    private Notification? notificationRef;
+
+    // ═══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ═══════════════════════════════════════════════════════════════
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+
+            while (_pendingNotifications.TryDequeue(out var n))
+            {
+                await ShowNotificationDirect(n.type, n.title, n.text, n.image);
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+
+        if (use is not null)
+            await LoadData();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // GLOBAL STATE BROADCAST
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing || use is null) return;
+
+        if (entityName == "ProductCart")
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadData();
+                StateHasChanged();
+            });
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task LoadData()
+    {
+        if (use is null) return;
+
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (_isLoading) return;
+            _isLoading = true;
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            _cartItems = await db.Set<ProductCart>().AsNoTracking()
+                .Where(c => c.UserId == use.Id &&
+                            (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true))
+                .OrderByDescending(c => c.CreatedDate)
+                .ToListAsync(token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Sepet verileri yüklenirken sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ADET DEĞİŞTİRME
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task ChangeQuantity(Guid cartItemId, int delta)
+    {
+        if (_isProcessing || use is null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var item = await db.Set<ProductCart>()
+                .FirstOrDefaultAsync(c => c.Id == cartItemId &&
+                                          c.UserId == use.Id &&
+                                          (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true), _cts.Token);
+
+            if (item == null)
+            {
+                await ShowNotification("warning", "Uyarı", "Sepet öğesi bulunamadı.", null);
+                return;
+            }
+
+            var newQty = item.Quantity + delta;
+            if (newQty < 1) return;
+
+            item.Quantity = newQty;
+            await db.SaveChangesAsync(_cts.Token);
+
+            // Yerel listeyi güncelle (ekstra DB sorgusu yapmadan)
+            var local = _cartItems.FirstOrDefault(c => c.Id == cartItemId);
+            if (local != null) local.Quantity = newQty;
+            StateHasChanged();
+
+            await StateHub.NotifyDataChanged("ProductCart");
+            await Logger.TakeIt(use.Id, PAGE, "ChangeQuantity", "cart", $"{cartItemId} → {newQty}");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "ChangeQuantity",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Adet güncellenirken sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ÜRÜN SİLME (Soft Delete)
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task RemoveItem(Guid cartItemId)
+    {
+        if (_isProcessing || use is null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var item = await db.Set<ProductCart>()
+                .FirstOrDefaultAsync(c => c.Id == cartItemId &&
+                                          c.UserId == use.Id, _cts.Token);
+
+            if (item == null)
+            {
+                await ShowNotification("warning", "Uyarı", "Sepet öğesi bulunamadı.", null);
+                return;
+            }
+
+            item.IsDeleted ??= new IsDeleted();
+            item.IsDeleted.IsDeletedStatu = true;
+            item.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            // Yerel listeden kaldır
+            _cartItems.RemoveAll(c => c.Id == cartItemId);
+            StateHasChanged();
+
+            await StateHub.NotifyDataChanged("ProductCart");
+            await Logger.TakeIt(use.Id, PAGE, "RemoveItem", "cart", cartItemId.ToString());
+            await ShowNotification("success", "Başarılı", "Ürün sepetten kaldırıldı.", null);
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "RemoveItem",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Ürün silinirken sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FİYAT YARDIMCILARI (Kullanıcı para birimine göre)
+    // ═══════════════════════════════════════════════════════════════
+
+    private decimal GetSalePrice(ProductCart item)
+    {
+        var currency = (use?.Currency ?? "TRY").ToUpperInvariant();
+        return currency switch
+        {
+            "USD" => item.SalePriceUsd,
+            "EUR" => item.SalePriceEur,
+            "AZN" => item.SalePriceAzn,
+            _ => item.SalePriceTry
+        };
+    }
+
+    private decimal GetDiscountAmount(ProductCart item)
+    {
+        var currency = (use?.Currency ?? "TRY").ToUpperInvariant();
+        return currency switch
+        {
+            "USD" => item.DiscountAmountUsd,
+            "EUR" => item.DiscountAmountEur,
+            "AZN" => item.DiscountAmountAzn,
+            _ => item.DiscountAmountTry
+        };
+    }
+
+    private string GetCurrencySymbol()
+    {
+        var currency = (use?.Currency ?? "TRY").ToUpperInvariant();
+        return currency switch
+        {
+            "USD" => "$",
+            "EUR" => "€",
+            "AZN" => "₼",
+            _ => "₺"
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // BİLDİRİM SİSTEMİ
+    // ═══════════════════════════════════════════════════════════════
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (_isRendered)
+        {
+            await ShowNotificationDirect(type, title, text, image);
+        }
+        else
+        {
+            _pendingNotifications.Enqueue((type, title, text, image));
+        }
+    }
+
+    private async Task ShowNotificationDirect(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

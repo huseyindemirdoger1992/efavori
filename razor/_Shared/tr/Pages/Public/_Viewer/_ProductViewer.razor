@@ -44,6 +44,7 @@
 @using data._Shared
 @using data._Product
 @using data._Product.ProductHistory
+@using data.ShoppingCart
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -491,12 +492,46 @@ else
                                     <i class="fa fa-arrow-down me-1" aria-hidden="true"></i>
                                     @((_currentPrice.Price - _currentPrice.DiscountedPrice.Value).ToString("N2")) @cur tasarruf ediyorsunuz
                                 </div>
+                                @if (_quantity > 1)
+                                {
+                                    var discountedTotal = _currentPrice.DiscountedPrice.Value * _quantity;
+                                    var originalTotal = _currentPrice.Price * _quantity;
+                                    var totalSaving = originalTotal - discountedTotal;
+                                    <div class="border-top border-secondary border-opacity-25 mt-2 pt-2">
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            <span class="text-light small">
+                                                <del>@_currentPrice.Price.ToString("N2") @cur × @_quantity = @originalTotal.ToString("N2") @cur</del>
+                                            </span>
+                                        </div>
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            <span class="text-warning small fw-semibold">
+                                                @_currentPrice.DiscountedPrice.Value.ToString("N2") @cur × @_quantity =
+                                            </span>
+                                            <span class="text-warning fw-bold fs-5">@discountedTotal.ToString("N2") @cur</span>
+                                        </div>
+                                        <div class="text-success small mt-1">
+                                            <i class="fa fa-arrow-down me-1" aria-hidden="true"></i>Toplam @totalSaving.ToString("N2") @cur tasarruf
+                                        </div>
+                                    </div>
+                                }
                             }
                             else
                             {
                                 @* Normal fiyat *@
                                 <meta itemprop="price" content="@_currentPrice.Price.ToString("F2", CultureInfo.InvariantCulture)" />
                                 <span class="display-6 fw-bold text-warning">@_currentPrice.Price.ToString("N2") @cur</span>
+                                @if (_quantity > 1)
+                                {
+                                    var normalTotal = _currentPrice.Price * _quantity;
+                                    <div class="border-top border-secondary border-opacity-25 mt-2 pt-2">
+                                        <div class="d-flex align-items-center flex-wrap gap-2">
+                                            <span class="text-light small fw-semibold">
+                                                @_currentPrice.Price.ToString("N2") @cur × @_quantity =
+                                            </span>
+                                            <span class="text-warning fw-bold fs-5">@normalTotal.ToString("N2") @cur</span>
+                                        </div>
+                                    </div>
+                                }
                             }
 
                             @* Diğer para birimleri *@
@@ -641,6 +676,8 @@ else
                                 }
                             </div>
                         </div>
+
+
                     </div>
                 </section>
 
@@ -2906,12 +2943,144 @@ else
 
     private async Task OnAddToCart()
     {
-        await Notify("success", "Sepet", $"{_quantity} adet ürün sepete eklendi!");
+        if (use == null) { await Notify("warning", "Sepet", "Sepete eklemek için giriş yapmalısınız."); return; }
+        if (_product == null || _selectedVariant == null) { await Notify("warning", "Sepet", "Ürün veya varyant bilgisi bulunamadı."); return; }
+        if (_hasStockData && _currentStockQty <= 0) { await Notify("danger", "Sepet", "Ürün stokta bulunmamaktadır."); return; }
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            var variantId = _selectedVariant.VariantId;
+
+            // ─── Mevcut sepet kaydı kontrolü (aynı ürün + varyant, silinmemiş) ───
+            var existingCartItem = await db.Set<ProductCart>()
+                .FirstOrDefaultAsync(c => c.UserId == use.Id &&
+                                          c.ProductId == _product.Id &&
+                                          c.ProductVariantId == variantId &&
+                                          (c.IsDeleted == null || c.IsDeleted.IsDeletedStatu != true), token);
+
+            if (existingCartItem != null)
+            {
+                // Zaten sepette var — sadece adeti güncelle
+                existingCartItem.Quantity += _quantity;
+                await db.SaveChangesAsync(token);
+
+                await Notify("success", "Sepet", $"Sepetteki ürün adedi {existingCartItem.Quantity} olarak güncellendi.");
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "UpdateCartQuantity", "cart", _product.Name);
+                await StateHub.NotifyDataChanged("ProductCart");
+            }
+            else
+            {
+                // ─── Tüm para birimlerindeki fiyatları çek ───
+                var allPrices = await db.Set<ProductPrices>().AsNoTracking()
+                    .Where(pp => pp.VariantId == variantId && pp.EffectiveTo == null)
+                    .Select(pp => new { pp.Currency, pp.Price, pp.DiscountedPrice })
+                    .ToListAsync(token);
+
+                var priceByCurrency = allPrices.ToDictionary(
+                    p => (p.Currency ?? "TRY").ToUpperInvariant(),
+                    p => p);
+
+                // ─── Varyant fiziksel bilgileri (ağırlık/boyut → desi) ───
+                var variantPhysical = await db.Set<ProductVariants>().AsNoTracking()
+                    .Where(v => v.Id == variantId)
+                    .Select(v => new { v.WeightKg, v.WidthCm, v.HeightCm, v.LengthCm })
+                    .FirstOrDefaultAsync(token);
+
+                // Desi hesabı: (en × boy × yükseklik) / 3000
+                decimal? desi = null;
+                if (variantPhysical?.WidthCm > 0 && variantPhysical?.HeightCm > 0 && variantPhysical?.LengthCm > 0)
+                    desi = (variantPhysical.WidthCm.Value * variantPhysical.HeightCm.Value * variantPhysical.LengthCm.Value) / 3000m;
+
+                // ─── Slug ───
+                var slug = _slug ?? _product.Id.ToString();
+
+                // ─── Kapak görseli URL ───
+                var coverImageUrl = _displayImages.Any() ? _displayImages[0] : "";
+
+                // ─── Marka adı ───
+                var brandName = _brandName ?? "";
+
+                // ─── Birincil kategori ID ───
+                var primaryCatId = _breadcrumbCategories.Any()
+                    ? _breadcrumbCategories.Last().Id
+                    : 0;
+
+                // ─── Fiyat yardımcı fonksiyonu ───
+                decimal GetSalePrice(string cur) =>
+                    priceByCurrency.TryGetValue(cur, out var pi) ? pi.Price : 0m;
+                decimal GetDiscountAmount(string cur) =>
+                    priceByCurrency.TryGetValue(cur, out var pi) && pi.DiscountedPrice.HasValue && pi.DiscountedPrice < pi.Price
+                        ? (pi.Price - pi.DiscountedPrice.Value) : 0m;
+
+                // ─── ProductCart oluştur ───
+                var cartItem = new ProductCart
+                {
+                    UserId = use.Id,
+                    StoreId = _product.StoreId,
+                    ProductId = _product.Id,
+                    ProductVariantId = variantId,
+                    ProductSlug = slug,
+                    ProductShortDescription = _product.ShortDescription ?? "",
+                    ProductImageUrl = coverImageUrl,
+                    BrandName = brandName,
+                    CategoryName = primaryCatId,
+                    SKU = _selectedVariant.Sku ?? "",
+                    Barcode = _selectedVariant.Barcode ?? "",
+
+                    // Dolar (USD)
+                    SalePriceUsd = GetSalePrice("USD"),
+                    DiscountAmountUsd = GetDiscountAmount("USD"),
+                    ShippingPriceUsd = 0, // Kargo fiyatı ileride ShippingProfile'dan hesaplanacak
+
+                    // TL (TRY)
+                    SalePriceTry = GetSalePrice("TRY"),
+                    DiscountAmountTry = GetDiscountAmount("TRY"),
+                    ShippingPriceTry = 0,
+
+                    // Euro (EUR)
+                    SalePriceEur = GetSalePrice("EUR"),
+                    DiscountAmountEur = GetDiscountAmount("EUR"),
+                    ShippingPriceEur = 0,
+
+                    // Manat (AZN)
+                    SalePriceAzn = GetSalePrice("AZN"),
+                    DiscountAmountAzn = GetDiscountAmount("AZN"),
+                    ShippingPriceAzn = 0,
+
+                    Quantity = _quantity,
+                    CouponCode = "",
+                    VatRate = 0, // KDV oranı ileride ürün/kategori bazlı ayarlanacak
+                    Weight = variantPhysical?.WeightKg,
+                    Desi = desi,
+                    DeliveryTimeText = "", // Teslimat süresi ileride ShippingProfile'dan çekilecek
+                    CustomerNote = "",
+                    CreatedDate = DateTime.UtcNow
+                };
+
+                db.Set<ProductCart>().Add(cartItem);
+                await db.SaveChangesAsync(token);
+
+                await Notify("success", "Sepet", $"{_quantity} adet ürün sepete eklendi!");
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddToCart", "cart", _product.Name);
+                await StateHub.NotifyDataChanged("ProductCart");
+            }
+        }
+        catch (Exception ex)
+        {
+            await LogError("OnAddToCart", ex);
+            await Notify("danger", "Hata", "Ürün sepete eklenirken sorun oluştu.");
+        }
+        StateHasChanged();
     }
 
     private async Task OnQuickBuy()
     {
-        await Notify("info", "Hızlı Alış", "Ödeme adımına yönlendiriliyorsunuz…");
+        await OnAddToCart();
+        if (_product != null && use != null)
+            NavigationManager.NavigateTo("/Public/Checkout", forceLoad: false);
     }
 
     private async Task ToggleFavorite()

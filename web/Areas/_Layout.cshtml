@@ -19,6 +19,10 @@
 
     Users? use = null;
 
+    // MainCssJs — Kullanıcı tanımlı CSS/JS kodları
+    List<MainCssJs> _activeCssItems = new();
+    List<MainCssJs> _activeJsItems = new();
+
     // ═══════════════════════════════════════════════════════════════
     // 2. DİL VE VERİ ÇEKME MANTIĞI
     // ═══════════════════════════════════════════════════════════════
@@ -105,6 +109,27 @@
             { "zh", "版权所有。" }
         };
         currentFooterText = footerTexts.GetValueOrDefault(lang, footerTexts["en"]);
+
+        // ═══════════════════════════════════════════════════════════════
+        // MainCssJs — Aktif ve silinmemiş CSS/JS kayıtlarını çek
+        // ═══════════════════════════════════════════════════════════════
+        try
+        {
+            using (var dbCssJs = new _ApplicationConnectionDb())
+            {
+                var allActiveCssJs = await dbCssJs.MainCssJs
+                    .AsNoTracking()
+                    .Where(x => x.IsActive == true
+                             && (x.IsDelete == null || x.IsDelete == false)
+                             && !string.IsNullOrEmpty(x.UserCodes))
+                    .OrderBy(x => x.GetDateTime)
+                    .ToListAsync();
+
+                _activeCssItems = allActiveCssJs.Where(x => x.IsCssOrJs == true).ToList();
+                _activeJsItems = allActiveCssJs.Where(x => x.IsCssOrJs == false).ToList();
+            }
+        }
+        catch { }
     }
     catch (Exception ex)
     {
@@ -295,17 +320,14 @@
        ═══════════════════════════════════════════════════════════════ *@
 
     @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
-    <!-- Google Search Console XML (gtag.js) -->
-        <meta name="google-site-verification" content="5NNGMkgIA5vY339WHPLmpN2efO1qVgj23Bf-pJjisyg" />
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-3S3KS4DHSF"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
 
-        gtag('config', 'G-3S3KS4DHSF');
-    </script>
+    @* ═══════════════════════════════════════════════════════════════
+       MainCssJs — Kullanıcı tanımlı CSS kodları
+       ═══════════════════════════════════════════════════════════════ *@
+    @foreach (var cssItem in _activeCssItems)
+    {
+        @Html.Raw(cssItem.UserCodes)
+    }
 
 </head>
 <body class="bg-theme @(use != null && !string.IsNullOrEmpty(use.BackgroundImagePath) ? use.BackgroundImagePath : "bg-theme1")">
@@ -410,6 +432,15 @@
             break;
     }
     @(await Html.RenderComponentAsync<Js>(RenderMode.Static, new { use = use != null ? use : null }))
+
+    @* ═══════════════════════════════════════════════════════════════
+       MainCssJs — Kullanıcı tanımlı JS kodları
+       ═══════════════════════════════════════════════════════════════ *@
+    @foreach (var jsItem in _activeJsItems)
+    {
+        @Html.Raw(jsItem.UserCodes)
+    }
+
     @(await Html.RenderComponentAsync<razor._Shared.Notification>(RenderMode.Server))
     <base href="~/" />
     <script src="~/_framework/blazor.server.js"></script>

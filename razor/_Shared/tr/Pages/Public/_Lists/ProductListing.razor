@@ -81,20 +81,20 @@
    MOBİL FİLTRE BUTONU
    ═══════════════════════════════════════════════════════════════ *@
 <div class="d-lg-none mb-3 d-flex gap-2">
-    <button class="btn btn-outline-info btn-sm flex-fill"
+    <button class="btn btn-outline-light btn-sm flex-fill"
             @onclick="() => _mobileFilterOpen = true">
         <i class="fa fa-sliders me-1"></i>Filtreler
         @if (HasActiveFilter())
         {
-            <span class="badge bg-info text-dark ms-1">@ActiveFilterCount()</span>
+            <span class="badge bg-light text-dark ms-1">@ActiveFilterCount()</span>
         }
     </button>
     <div class="btn-group btn-group-sm">
-        <button class="btn @(_viewMode == ViewMode.Grid ? "btn-info" : "btn-outline-secondary")"
+        <button class="btn @(_viewMode == ViewMode.Grid ? "btn-light" : "btn-outline-light")"
                 @onclick="() => _viewMode = ViewMode.Grid" title="Izgara">
             <i class="fa fa-th"></i>
         </button>
-        <button class="btn @(_viewMode == ViewMode.List ? "btn-info" : "btn-outline-secondary")"
+        <button class="btn @(_viewMode == ViewMode.List ? "btn-light" : "btn-outline-light")"
                 @onclick="() => _viewMode = ViewMode.List" title="Liste">
             <i class="fa fa-th-list"></i>
         </button>
@@ -131,53 +131,39 @@
                        @oninput="OnSearchInput" />
                 @if (!string.IsNullOrWhiteSpace(_searchTerm))
                 {
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearSearch">
+                    <button class="btn btn-outline-light btn-sm" @onclick="ClearSearch">
                         <i class="fa fa-times"></i>
                     </button>
                 }
             </div>
 
-            @* Sıralama — Revize: Mobil-dostu custom dropdown (Madde 7) *@
-            <div class="custom-sort-dropdown position-relative" @onfocusout="() => _sortDropdownOpen = false">
-                <button class="btn btn-sm bg-dark text-light border-secondary d-flex align-items-center gap-2"
-                        style="min-width:160px;"
-                        @onclick="() => _sortDropdownOpen = !_sortDropdownOpen">
-                    <i class="fa fa-sort text-info" style="font-size:.75rem;"></i>
-                    <span class="flex-fill text-start small">@GetSortLabel(_sortOrder)</span>
-                    <i class="fa fa-chevron-down text- light" style="font-size:.6rem;"></i>
-                </button>
-                @if (_sortDropdownOpen)
+            @* Sıralama — Revize: Standart Select (Madde 7) *@
+            <select class="form-select form-select-sm bg-light text-dark border-secondary"
+                    style="max-width:256px; width:100%;"
+                    value="@_sortOrder"
+                    @onchange="@(e => SelectSortOption(e.Value?.ToString()))">
+                @foreach (var opt in _sortOptions)
                 {
-                    <div class="custom-sort-menu">
-                        @foreach (var opt in _sortOptions)
-                        {
-                            var o = opt;
-                            <button class="custom-sort-item @(o.Value == _sortOrder ? "active" : "")"
-                                    @onclick="() => SelectSortOption(o.Value)">
-                                <i class="fa @o.Icon text-info me-2" style="font-size:.7rem; width:14px;"></i>
-                                @o.Label
-                            </button>
-                        }
-                    </div>
+                    <option value="@opt.Value">@opt.Label</option>
                 }
-            </div>
+            </select>
 
             @* Sonuç bilgisi *@
             <span class="text-light small ms-auto d-none d-md-inline">
                 <i class="fa fa-cubes me-1"></i>@_totalCount ürün
                 @if (_isLoading)
                 {
-                    <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+                    <i class="fa fa-spinner fa-spin ms-1 text-light"></i>
                 }
             </span>
 
             @* Görünüm (masaüstü) *@
             <div class="btn-group btn-group-sm d-none d-lg-flex">
-                <button class="btn @(_viewMode == ViewMode.Grid ? "btn-info" : "btn-outline-secondary")"
+                <button class="btn @(_viewMode == ViewMode.Grid ? "btn-light" : "btn-outline-light")"
                         @onclick="() => _viewMode = ViewMode.Grid" title="Izgara">
                     <i class="fa fa-th"></i>
                 </button>
-                <button class="btn @(_viewMode == ViewMode.List ? "btn-info" : "btn-outline-secondary")"
+                <button class="btn @(_viewMode == ViewMode.List ? "btn-light" : "btn-outline-light")"
                         @onclick="() => _viewMode = ViewMode.List" title="Liste">
                     <i class="fa fa-th-list"></i>
                 </button>
@@ -190,7 +176,7 @@
             <div class="d-flex flex-wrap gap-1 mb-3">
                 @if (_selectedCategory != null)
                 {
-                    <span class="badge bg-info bg-opacity-25 text-info border border-info">
+                    <span class="badge bg-light bg-opacity-25 text-light border border-light">
                         <i class="fa fa-folder-open me-1"></i>@_selectedCategory.Name
                         <button class="btn-close btn-close-white ms-1" style="font-size:.55rem;"
                                 @onclick="() => { _selectedCategory = null; _ = ResetAndReload(); }"></button>
@@ -236,7 +222,7 @@
                 <p class="text- light small mb-3">Arama veya filtre kriterlerinize uygun ürün bulunamadı.</p>
                 @if (HasActiveFilter())
                 {
-                    <button class="btn btn-outline-info btn-sm" @onclick="ClearAllFilters">
+                    <button class="btn btn-outline-light btn-sm" @onclick="ClearAllFilters">
                         <i class="fa fa-refresh me-1"></i>Filtreleri Temizle
                     </button>
                 }
@@ -270,7 +256,7 @@
         @if (_isLoading)
         {
             <div class="text-center py-4">
-                <div class="d-flex align-items-center justify-content-center gap-2 text-info">
+                <div class="d-flex align-items-center justify-content-center gap-2 text-light">
                     <i class="fa fa-spinner fa-spin fa-lg"></i>
                     <span class="small">Ürünler yükleniyor…</span>
                 </div>
@@ -313,10 +299,10 @@
         </div>
         <div class="offcanvas-footer border-top border-secondary p-2">
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm flex-fill" @onclick="ClearAllFilters">
+                <button class="btn btn-outline-light btn-sm flex-fill" @onclick="ClearAllFilters">
                     <i class="fa fa-eraser me-1"></i>Temizle
                 </button>
-                <button class="btn btn-info btn-sm flex-fill" @onclick="() => _mobileFilterOpen = false">
+                <button class="btn btn-light btn-sm flex-fill" @onclick="() => _mobileFilterOpen = false">
                     <i class="fa fa-check me-1"></i>Uygula (@_totalCount ürün)
                 </button>
             </div>
@@ -329,10 +315,10 @@
    ═══════════════════════════════════════════════════════════════ *@
 <div class="modal fade" id="QuickViewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border border-info"
+        <div class="modal-content border border-light"
              style="background:rgba(20,20,30,0.75); backdrop-filter:blur(12px); box-shadow:0 0 40px rgba(13,202,240,0.15);">
             <div class="modal-header border-bottom border-secondary py-2">
-                <h6 class="modal-title text-info mb-0">
+                <h6 class="modal-title text-light mb-0">
                     <i class="fa fa-eye me-1"></i>Hızlı Bakış
                 </h6>
                 <div class="btn-group shadow-sm border border-secondary rounded" role="group">
@@ -376,7 +362,7 @@
                                     @for (int i = 0; i < qp.ImageUrls.Count; i++)
                                     {
                                         var idx = i;
-                                        <div class="rounded border @(idx == _quickViewImageIndex ? "border-info" : "border-secondary") overflow-hidden flex-shrink-0"
+                                        <div class="rounded border @(idx == _quickViewImageIndex ? "border-light" : "border-secondary") overflow-hidden flex-shrink-0"
                                              style="width:56px; height:56px; cursor:pointer; opacity:@(idx == _quickViewImageIndex ? "1" : "0.6");"
                                              @onclick="() => _quickViewImageIndex = idx">
                                             <img src="@qp.ImageUrls[idx]" alt="" class="w-100 h-100" style="object-fit:cover;" />
@@ -393,8 +379,8 @@
                             @if (!string.IsNullOrEmpty(qp.StoreName))
                             {
                                 <div class="d-flex align-items-center gap-2 mb-3 p-2 rounded border border-secondary bg-dark bg-opacity-50">
-                                    <i class="fa fa-building text-info"></i>
-                                    <button class="btn btn-link btn-sm text-info text-decoration-none p-0"
+                                    <i class="fa fa-building text-light"></i>
+                                    <button class="btn btn-link btn-sm text-light text-decoration-none p-0"
                                             @onclick="() => OpenStoreModal(qp.StoreId)">
                                         @(qp.StoreName?.Length > 16 ? qp.StoreName.Substring(0, 16) + "..." : qp.StoreName)
                                     </button>
@@ -443,7 +429,7 @@
                                         ? (int)Math.Round(100 - (qp.DiscountedPrice.Value / qp.Price.Value * 100))
                                         : 0;
                                     <div class="d-flex align-items-baseline gap-2">
-                                        <span class="fs-4 fw-bold text-info">
+                                        <span class="fs-4 fw-bold text-light">
                                             @qp.DiscountedPrice?.ToString("N2") @CurrencySymbol(qp.Currency)
                                         </span>
                                         <del class="text- light">@qp.Price?.ToString("N2") @CurrencySymbol(qp.Currency)</del>
@@ -452,7 +438,7 @@
                                 }
                                 else
                                 {
-                                    <span class="fs-4 fw-bold text-info">
+                                    <span class="fs-4 fw-bold text-light">
                                         @qp.Price?.ToString("N2") @CurrencySymbol(qp.Currency)
                                     </span>
                                 }
@@ -463,7 +449,7 @@
                         @* Aksiyon Butonları — Madde 5: Sepete Ekle + Hızlı Al eklendi *@
                         <div class="col-12">
                             <div class="d-flex gap-2 flex-wrap">
-                                <button class="btn btn-info btn-sm flex-fill"
+                                <button class="btn btn-light btn-sm flex-fill"
                                         @onclick="() => OnAddToCart(qp.Id)">
                                     <i class="fa fa-shopping-cart me-1"></i>Sepete Ekle
                                 </button>
@@ -474,7 +460,7 @@
                             </div>
                             <div class="d-flex gap-2 flex-wrap mt-2">
                                 <a href="/Public/_Viewer/ProductProfile/@qp.Slug"
-                                   class="btn btn-outline-info btn-sm flex-fill">
+                                   class="btn btn-outline-light btn-sm flex-fill">
                                     <i class="fa fa-external-link me-1"></i>Ürüne Git
                                 </a>
                                 <button class="btn btn-outline-danger btn-sm" title="Favorilere Ekle"
@@ -500,10 +486,10 @@
    ═══════════════════════════════════════════════════════════════ *@
 <div class="modal fade" id="StoreDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-dark border border-info"
+        <div class="modal-content bg-dark border border-light"
              style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
-            <div class="modal-header border-bottom border-info py-2">
-                <h6 class="modal-title text-info mb-0">
+            <div class="modal-header border-bottom border-light py-2">
+                <h6 class="modal-title text-light mb-0">
                     <i class="fa fa-building me-1"></i>Mağaza Bilgileri
                 </h6>
                 <div class="btn-group shadow-sm border border-secondary rounded" role="group">
@@ -529,14 +515,14 @@
                                 @if (!string.IsNullOrEmpty(_storeProfileUrl))
                                 {
                                     <img src="@_storeProfileUrl" alt="@st.Name"
-                                         class="rounded-circle border border-info"
+                                         class="rounded-circle border border-light"
                                          style="width:64px; height:64px; object-fit:cover;" />
                                 }
                                 else
                                 {
-                                    <div class="rounded-circle bg-info bg-opacity-25 d-flex align-items-center justify-content-center"
+                                    <div class="rounded-circle bg-light bg-opacity-25 d-flex align-items-center justify-content-center"
                                          style="width:64px; height:64px;">
-                                        <i class="fa fa-building fa-2x text-info"></i>
+                                        <i class="fa fa-building fa-2x text-light"></i>
                                     </div>
                                 }
                                 <div>
@@ -601,7 +587,7 @@
                                     }
                                     <a href="https://www.google.com/maps/dir/?api=1&destination=@(lat),@(lng)"
                                        target="_blank" rel="noopener"
-                                       class="btn btn-outline-info btn-sm">
+                                       class="btn btn-outline-light btn-sm">
                                         <i class="fa fa-location-arrow me-1"></i>Yol Tarifi Al
                                     </a>
                                     <a href="https://www.google.com/maps/search/?api=1&query=@(lat),@(lng)"
@@ -613,7 +599,7 @@
                                     {
                                         <a href="@st.AddressInfo.GoogleMyBusinessAccountLink"
                                            target="_blank" rel="noopener"
-                                           class="btn btn-outline-secondary btn-sm">
+                                           class="btn btn-outline-light btn-sm">
                                             <i class="fa fa-google me-1"></i>Google İşletme
                                         </a>
                                     }
@@ -625,12 +611,12 @@
                 else if (_storeLoading)
                 {
                     <div class="text-center py-4">
-                        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+                        <i class="fa fa-spinner fa-spin fa-2x text-light"></i>
                     </div>
                 }
             </div>
-            <div class="modal-footer border-top border-info py-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            <div class="modal-footer border-top border-light py-2">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">
                     <i class="fa fa-arrow-left me-1"></i>Kapat
                 </button>
             </div>
@@ -669,7 +655,7 @@
                         </a>
                         <a href="https://twitter.com/intent/tweet?url=@Uri.EscapeDataString(shareUrl)"
                            target="_blank" rel="noopener"
-                           class="btn btn-outline-info btn-lg rounded-circle" style="width:52px; height:52px;"
+                           class="btn btn-outline-light btn-lg rounded-circle" style="width:52px; height:52px;"
                            title="X (Twitter)">
                             <i class="fa fa-twitter"></i>
                         </a>
@@ -677,7 +663,7 @@
                     <div class="input-group input-group-sm">
                         <input type="text" class="form-control bg-transparent text-light border-secondary"
                                value="@shareUrl" readonly />
-                        <button class="btn btn-outline-info" @onclick="() => CopyToClipboard(shareUrl)" title="Kopyala">
+                        <button class="btn btn-outline-light" @onclick="() => CopyToClipboard(shareUrl)" title="Kopyala">
                             <i class="fa fa-copy"></i>
                         </button>
                     </div>
@@ -700,7 +686,7 @@
                     <span class="text-light small fw-semibold">Karşılaştırma: @_compareProductIds.Count ürün</span>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary btn-sm" @onclick="() => _compareProductIds.Clear()">
+                    <button class="btn btn-outline-light btn-sm" @onclick="() => _compareProductIds.Clear()">
                         <i class="fa fa-times me-1"></i>Temizle
                     </button>
                     <button class="btn btn-warning btn-sm" disabled="@(_compareProductIds.Count < 2)">
@@ -725,7 +711,7 @@
             <div class="d-flex align-items-center justify-content-between mb-2 cursor-pointer"
                  @onclick="() => _categoryPanelOpen = !_categoryPanelOpen">
                 <span class="fw-semibold text-light small">
-                    <i class="fa fa-folder-open me-1 text-info"></i>Kategoriler
+                    <i class="fa fa-folder-open me-1 text-light"></i>Kategoriler
                 </span>
                 <i class="fa fa-chevron-@(_categoryPanelOpen ? "up" : "down") text- light small"></i>
             </div>
@@ -759,7 +745,7 @@
             <div class="d-flex align-items-center justify-content-between mb-2 cursor-pointer"
                  @onclick="() => _pricePanelOpen = !_pricePanelOpen">
                 <span class="fw-semibold text-light small">
-                    <i class="fa fa-try me-1 text-info"></i>Fiyat Aralığı
+                    <i class="fa fa-try me-1 text-light"></i>Fiyat Aralığı
                 </span>
                 <i class="fa fa-chevron-@(_pricePanelOpen ? "up" : "down") text- light small"></i>
             </div>
@@ -774,7 +760,7 @@
                            placeholder="Max" value="@_filterMaxPrice"
                            @onchange="e => { _filterMaxPrice = ParseDecimal(e); }" />
                 </div>
-                <button class="btn btn-outline-info btn-sm w-100 mt-2" @onclick="() => _ = ResetAndReload()">
+                <button class="btn btn-outline-light btn-sm w-100 mt-2" @onclick="() => _ = ResetAndReload()">
                     <i class="fa fa-check me-1"></i>Uygula
                 </button>
             }
@@ -785,7 +771,7 @@
             <div class="d-flex align-items-center justify-content-between mb-2 cursor-pointer"
                  @onclick="() => _brandPanelOpen = !_brandPanelOpen">
                 <span class="fw-semibold text-light small">
-                    <i class="fa fa-bookmark me-1 text-info"></i>Marka
+                    <i class="fa fa-bookmark me-1 text-light"></i>Marka
                 </span>
                 <i class="fa fa-chevron-@(_brandPanelOpen ? "up" : "down") text- light small"></i>
             </div>
@@ -800,7 +786,7 @@
                     @if (_brandSearching)
                     {
                         <div class="position-absolute" style="right:8px; top:50%; transform:translateY(-50%);">
-                            <i class="fa fa-spinner fa-spin text-info" style="font-size:.7rem;"></i>
+                            <i class="fa fa-spinner fa-spin text-light" style="font-size:.7rem;"></i>
                         </div>
                     }
                 </div>
@@ -983,7 +969,7 @@
         </div>
 
         @* Bilgi Alanı — Madde 10: Slug düzeltmesi *@
-        <div class="product-info p-2 flex-fill d-flex flex-column">
+        <div class="product-light p-2 flex-fill d-flex flex-column">
             @if (!string.IsNullOrEmpty(p.BrandName))
             {
                 <div class="text- light small text-truncate mb-1" style="font-size:.7rem; letter-spacing:.03em;">
@@ -1019,7 +1005,7 @@
 
             @* Madde 4: Sepete Ekle + Hızlı Al butonları *@
             <div class="mt-auto pt-2 d-flex gap-1">
-                <button class="btn btn-info btn-sm flex-fill card-action-btn"
+                <button class="btn btn-light btn-sm flex-fill card-action-btn"
                         @onclick:stopPropagation @onclick="() => OnAddToCart(p.Id)">
                     <i class="fa fa-shopping-cart me-1"></i><span class="d-none d-sm-inline">Sepete Ekle</span><span class="d-sm-none">Sepet</span>
                 </button>
@@ -1094,7 +1080,7 @@
                 </div>
                 <div class="d-flex gap-1 align-items-center">
                     @* Madde 4: Sepete Ekle + Hızlı Al butonları (liste modu) *@
-                    <button class="btn btn-info btn-sm card-action-btn"
+                    <button class="btn btn-light btn-sm card-action-btn"
                             @onclick="() => OnAddToCart(p.Id)" title="Sepete Ekle">
                         <i class="fa fa-shopping-cart me-1"></i>Sepet
                     </button>

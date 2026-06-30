@@ -432,9 +432,9 @@ else
                                         <th><span class="fw-bold">₼</span><span class="visually-hidden">AZN</span></th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody class="bg-dark text-light">
                                     <tr>
-                                        <td>@MoneyExchangeRate?.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@MoneyExchangeRate?.CreatedAt.ToString("dd.MM.yyyy")</td>
                                         <td>@MoneyExchangeRate?.Dolar_Usd</td>
                                         <td>@MoneyExchangeRate?.Euro_Eur</td>
                                         <td>@MoneyExchangeRate?.Lira_Tl</td>
@@ -492,46 +492,44 @@ else
                                     <i class="fa fa-arrow-down me-1" aria-hidden="true"></i>
                                     @((_currentPrice.Price - _currentPrice.DiscountedPrice.Value).ToString("N2")) @cur tasarruf ediyorsunuz
                                 </div>
-                                @if (_quantity > 1)
-                                {
-                                    var discountedTotal = _currentPrice.DiscountedPrice.Value * _quantity;
-                                    var originalTotal = _currentPrice.Price * _quantity;
-                                    var totalSaving = originalTotal - discountedTotal;
-                                    <div class="border-top border-secondary border-opacity-25 mt-2 pt-2">
-                                        <div class="d-flex align-items-center flex-wrap gap-2">
-                                            <span class="text-light small">
-                                                <del>@_currentPrice.Price.ToString("N2") @cur × @_quantity = @originalTotal.ToString("N2") @cur</del>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex align-items-center flex-wrap gap-2">
-                                            <span class="text-warning small fw-semibold">
-                                                @_currentPrice.DiscountedPrice.Value.ToString("N2") @cur × @_quantity =
-                                            </span>
-                                            <span class="text-warning fw-bold fs-5">@discountedTotal.ToString("N2") @cur</span>
-                                        </div>
-                                        <div class="text-success small mt-1">
-                                            <i class="fa fa-arrow-down me-1" aria-hidden="true"></i>Toplam @totalSaving.ToString("N2") @cur tasarruf
-                                        </div>
+
+                                var discountedTotal = _currentPrice.DiscountedPrice.Value * _quantity;
+                                var originalTotal = _currentPrice.Price * _quantity;
+                                var totalSaving = originalTotal - discountedTotal;
+                                <div class="border-top border-secondary border-opacity-25 mt-2 pt-2">
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <span class="text-light small">
+                                            <del>@_currentPrice.Price.ToString("N2") @cur × @_quantity = @originalTotal.ToString("N2") @cur</del>
+                                        </span>
                                     </div>
-                                }
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <span class="text-warning small fw-semibold">
+                                            @_currentPrice.DiscountedPrice.Value.ToString("N2") @cur × @_quantity =
+                                        </span>
+                                        <span class="text-warning fw-bold fs-5">@discountedTotal.ToString("N2") @cur</span>
+                                    </div>
+                                    <div class="text-success small mt-1">
+                                        <i class="fa fa-arrow-down me-1" aria-hidden="true"></i>Toplam @totalSaving.ToString("N2") @cur tasarruf
+                                    </div>
+                                </div>
+
                             }
                             else
                             {
                                 @* Normal fiyat *@
                                 <meta itemprop="price" content="@_currentPrice.Price.ToString("F2", CultureInfo.InvariantCulture)" />
                                 <span class="display-6 fw-bold text-warning">@_currentPrice.Price.ToString("N2") @cur</span>
-                                @if (_quantity > 1)
-                                {
-                                    var normalTotal = _currentPrice.Price * _quantity;
-                                    <div class="border-top border-secondary border-opacity-25 mt-2 pt-2">
-                                        <div class="d-flex align-items-center flex-wrap gap-2">
-                                            <span class="text-light small fw-semibold">
-                                                @_currentPrice.Price.ToString("N2") @cur × @_quantity =
-                                            </span>
-                                            <span class="text-warning fw-bold fs-5">@normalTotal.ToString("N2") @cur</span>
-                                        </div>
+
+                                var normalTotal = _currentPrice.Price * _quantity;
+                                <div class="border-top border-secondary border-opacity-25 mt-2 pt-2">
+                                    <div class="d-flex align-items-center flex-wrap gap-2">
+                                        <span class="text-light small fw-semibold">
+                                            @_currentPrice.Price.ToString("N2") @cur × @_quantity =
+                                        </span>
+                                        <span class="text-warning fw-bold fs-5">@normalTotal.ToString("N2") @cur</span>
                                     </div>
-                                }
+                                </div>
+
                             }
 
                             @* Diğer para birimleri *@
@@ -943,9 +941,9 @@ else
                ALT SEKMELER: Açıklama / Özellikler / Mağaza / Yorumlar
                ═══════════════════════════════════════════════════════════ *@
             <div class="mt-5">
-                <ul class="nav nav-tabs border-secondary" role="tablist">
+                <ul class="nav nav-tabs border-secondary flex-nowrap overflow-x-auto overflow-y-hidden" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link @(_activeTab == "desc" ? "active bg-dark text-info border-secondary" : "text-light")"
+                        <button class="nav-link text-nowrap @(_activeTab == "desc" ? "active bg-dark text-info border-secondary" : "text-light")"
                                 @onclick='() => _activeTab = "desc"'
                                 role="tab" aria-selected="@(_activeTab == "desc")" id="tab-desc">
                             <i class="fa fa-align-left me-1" aria-hidden="true"></i>Ürün Açıklaması
@@ -954,7 +952,7 @@ else
                     @if (_specifications.Any())
                     {
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link @(_activeTab == "specs" ? "active bg-dark text-info border-secondary" : "text-light")"
+                            <button class="nav-link text-nowrap @(_activeTab == "specs" ? "active bg-dark text-info border-secondary" : "text-light")"
                                     @onclick='() => _activeTab = "specs"'
                                     role="tab" aria-selected="@(_activeTab == "specs")" id="tab-specs">
                                 <i class="fa fa-list-ul me-1" aria-hidden="true"></i>Teknik Özellikler
@@ -964,7 +962,7 @@ else
                     @if (_store != null)
                     {
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link @(_activeTab == "store" ? "active bg-dark text-info border-secondary" : "text-light")"
+                            <button class="nav-link text-nowrap @(_activeTab == "store" ? "active bg-dark text-info border-secondary" : "text-light")"
                                     @onclick='() => _activeTab = "store"'
                                     role="tab" aria-selected="@(_activeTab == "store")" id="tab-store">
                                 <i class="fa fa-building me-1" aria-hidden="true"></i>Satıcı Bilgileri
@@ -972,7 +970,7 @@ else
                         </li>
                     }
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link @(_activeTab == "reviews" ? "active bg-dark text-info border-secondary" : "text-light")"
+                        <button class="nav-link text-nowrap @(_activeTab == "reviews" ? "active bg-dark text-info border-secondary" : "text-light")"
                                 @onclick="ActivateReviewsTab"
                                 role="tab" aria-selected="@(_activeTab == "reviews")" id="tab-reviews">
                             <i class="fa fa-comments me-1" aria-hidden="true"></i>Yorumlar
@@ -3324,60 +3322,3 @@ else
     }
 }
 
-<style>
-    /* ═══ ZOOM SİSTEMİ (Amazon/eBay Tarzı — Masaüstü 2x–10x, Mobil Pinch 2x–10x) ═══ */
-    .pp-zoom-wrapper {
-        position: relative;
-    }
-
-    .pp-zoom-lens {
-        position: absolute;
-        top: 0;
-        left: 0;
-        border: 2px solid rgba(0,0,0,.15);
-        background: rgba(255,255,255,.25);
-        backdrop-filter: blur(1px);
-        pointer-events: none;
-        z-index: 10;
-        opacity: 0;
-        transition: opacity .15s ease;
-        will-change: transform;
-        box-shadow: 0 0 0 1px rgba(0,0,0,.06), inset 0 0 0 1px rgba(255,255,255,.3);
-    }
-
-    .pp-zoom-result {
-        position: absolute;
-        top: 0;
-        left: calc(100% + 20px);
-        width: 100%;
-        aspect-ratio: 1 / 1;
-        background-repeat: no-repeat;
-        background-color: #ffffff;
-        border: 1px solid rgba(0,0,0,.12);
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0,0,0,.15), 0 4px 16px rgba(0,0,0,.08);
-        z-index: 1050;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transition: opacity .2s ease, visibility .2s ease;
-    }
-
-    /* Mobilde lens + result paneli gizle, yerine in-place pinch zoom çalışır */
-    @@media (max-width: 991.98px) {
-        .pp-zoom-result,
-        .pp-zoom-lens {
-            display: none !important;
-        }
-        /* Mobil zoom için touch-action ayarı — tarayıcı pinch'i ele geçirmesin */
-        #ppMediaMain {
-            touch-action: pan-x pan-y;
-            overflow: hidden;
-        }
-
-        #ppMainImg {
-            will-change: transform;
-            transition: none;
-        }
-    }
-</style>

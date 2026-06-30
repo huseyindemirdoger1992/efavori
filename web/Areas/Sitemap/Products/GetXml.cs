@@ -157,7 +157,7 @@ namespace web.Areas.Sitemap.Products
             var coverMediaMap = coverMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => coverMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             // ── 3c. Galeri görselleri toplu çek ──────────────────
@@ -178,7 +178,7 @@ namespace web.Areas.Sitemap.Products
             var galleryMediaMap = galleryMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             var productGalleryMap = galleryItems
@@ -324,7 +324,7 @@ namespace web.Areas.Sitemap.Products
             var coverMap = coverMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => coverMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             // ── Galeri görselleri ─────────────────────────────────
@@ -343,7 +343,7 @@ namespace web.Areas.Sitemap.Products
             var galleryMediaMap = galleryMediaIds.Any()
                 ? await _context.Set<Media>().AsNoTracking()
                     .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl  ?? m.FileUrl_Ratio_1_2 ?? "")
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl ?? m.FileUrl_Ratio_1_2 ?? "")
                 : new Dictionary<Guid, string>();
 
             var productGalleryMap = galleryItems
@@ -601,8 +601,11 @@ namespace web.Areas.Sitemap.Products
             sb.AppendLine("Disallow: /_blazor");
             sb.AppendLine("Disallow: /_framework");
             sb.AppendLine();
+            // Yalnızca gerçek XML sitemap bildirilmeli.
+            // Google Merchant feed'leri (RSS 2.0) Search Console tarafından
+            // sitemap olarak ayrıştırılamaz → "Desteklenmeyen dosya biçimi" hatası verir.
+            // Merchant feed'ler Google Merchant Center panelinden bildirilmelidir.
             sb.AppendLine($"Sitemap: {baseUrl}/sitemap.xml");
-            sb.AppendLine($"Sitemap: {baseUrl}/feed/products-index.xml");
 
             return Content(sb.ToString(), "text/plain", Encoding.UTF8);
         }

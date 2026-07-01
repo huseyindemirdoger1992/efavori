@@ -1,5 +1,6 @@
 ﻿using api;
 using api.tr;
+using api.tr.AI;
 using data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -57,6 +58,7 @@ try
 
     // Api Services
     builder.Services.AddHttpClient<AIProductKnowledgeGenerator>();
+    builder.Services.AddHttpClient<AIPostContentCreator>();
     builder.Services.AddHostedService<AllBackgroundServices>();
 
     var app = builder.Build();

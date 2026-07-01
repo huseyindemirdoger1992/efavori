@@ -31,7 +31,6 @@ namespace data
 
         // Shared
         public DbSet<Posts> Posts { get; set; } = default!;
-        public DbSet<Article> Article { get; set; } = default!;
 
 
         // Chat
@@ -81,6 +80,13 @@ namespace data
         public DbSet<CategoriesRu> CategoriesRu { get; set; } = default!;
         public DbSet<CategoriesTr> CategoriesTr { get; set; } = default!;
         public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
+
+
+        // Articles
+        public DbSet<AiTitlesForArticle> AiTitlesForArticle { get; set; } = default!;
+        public DbSet<Article> Article { get; set; } = default!;
+
+
 
         // Articles Categories
         public DbSet<ArticlesCategoriesAz> ArticlesCategoriesAz { get; set; } = default!;

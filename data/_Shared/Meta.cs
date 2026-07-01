@@ -10,10 +10,8 @@ namespace data._Shared
     public class Meta
     {
 
-        [MaxLength(70)]
         public string MetaTitle { get; set; } // Google'da görünecek başlık
 
-        [MaxLength(160)]
         public string MetaDescription { get; set; } // Arama sonuçlarındaki açıklama
 
         public string FocusKeywords { get; set; } // Virgülle ayrılmış anahtar kelimeler

@@ -1,0 +1,232 @@
+@* ============================================================
+   ArticleDetail.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ Controller'dan sadece ArticleId alır — kendi verisini bağımsız yükler
+      (controller = SEO kabuğu, component = görüntüleme + etkileşim mantığı)
+   ✅ Görüntülenme sayacı — sayfa render'ını bloklamadan arka planda artırılır
+   ✅ İlgili makaleler — internal linking (SEO'ya doğrudan fayda sağlar)
+   ✅ Sosyal paylaşım butonları
+   NOT: namespace'i projenizin gerçek Razor component klasör yapısına göre
+   düzenleyin (aşağıda örnek olarak razor.Public.Articles kullanıldı).
+   ============================================================ *@
+@using data
+@using data.Articles
+@using data._Shared
+@using Data
+@using Microsoft.EntityFrameworkCore
+@using System.Globalization
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject NavigationManager NavigationManager
+
+@if (_isLoading)
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+    </div>
+}
+else if (_article == null)
+{
+    <div class="container py-5 text-center text-light">
+        <i class="fa fa-exclamation-triangle fa-3x mb-3 d-block text-warning"></i>
+        <p>Makale bulunamadı.</p>
+        <a href="/Public/_ArticleViewer/ArticleList" class="btn btn-outline-light btn-sm mt-2">
+            <i class="fa fa-arrow-left me-1"></i>Tüm Makalelere Dön
+        </a>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+
+        @* ─── Breadcrumb (görsel — JSON-LD zaten controller tarafında SSR ediliyor) ─── *@
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="/">Ana Sayfa</a></li>
+                <li class="breadcrumb-item"><a href="/Public/_ArticleViewer/ArticleList">Makaleler</a></li>
+                <li class="breadcrumb-item active text-truncate" aria-current="page">@_article.Title</li>
+            </ol>
+        </nav>
+
+        @* ─── Başlık ─── *@
+        <h1 class="h3 text-light mb-3">@_article.Title</h1>
+
+        @* ─── Kapak Görseli ─── *@
+        @if (!string.IsNullOrEmpty(_coverImageUrl))
+        {
+            <img src="@_coverImageUrl" alt="@_article.Title" class="img-fluid rounded-3 mb-4 w-100" style="max-height:420px; object-fit:cover;" />
+        }
+
+        @* ─── Meta bilgiler ─── *@
+        <div class="d-flex flex-wrap gap-3 mb-4 small text-warning">
+            <span><i class="fa fa-calendar-o me-1"></i>@_article.CreatedAt.ToString("dd MMMM yyyy", new CultureInfo("tr-TR"))</span>
+            <span><i class="fa fa-eye me-1"></i>@(_article.Interaction?.ViewCount ?? 0) görüntülenme</span>
+            @if ((_article.Interaction?.ShareCount ?? 0) > 0)
+            {
+                <span><i class="fa fa-share-alt me-1"></i>@_article.Interaction!.ShareCount paylaşım</span>
+            }
+        </div>
+
+        @* ─── İçerik ───
+             AI/editör tarafından üretilen içerik, üretim aşamasında sınırlı bir HTML etiket
+             setiyle (h1-h3, p, ul, ol, li, strong, em, blockquote, table) doğrulanmıştır. *@
+        <article class="article-content text-light">
+            @((MarkupString)(_article.ArticleLognDescription ?? ""))
+        </article>
+
+        @* ─── Paylaş ─── *@
+        <div class="d-flex gap-2 align-items-center mt-4 pt-4 border-top border-secondary">
+            <span class="text-warning small">Paylaş:</span>
+            <a class="btn btn-sm btn-outline-light" target="_blank" rel="noopener" href="@_shareWhatsAppUrl">
+                <i class="fa fa-whatsapp"></i>
+            </a>
+            <a class="btn btn-sm btn-outline-light" target="_blank" rel="noopener" href="@_shareTwitterUrl">
+                <i class="fa fa-twitter"></i>
+            </a>
+            <a class="btn btn-sm btn-outline-light" target="_blank" rel="noopener" href="@_shareFacebookUrl">
+                <i class="fa fa-facebook"></i>
+            </a>
+        </div>
+
+        @* ─── İlgili Makaleler (internal linking → SEO'ya doğrudan fayda) ─── *@
+        @if (_relatedArticles.Any())
+        {
+            <div class="mt-5 pt-4 border-top border-secondary">
+                <h2 class="h5 text-light mb-3">İlgili Makaleler</h2>
+                <div class="row g-3">
+                    @foreach (var rel in _relatedArticles)
+                    {
+                        <div class="col-12 col-sm-6 col-md-4">
+                            <a href="@GetArticleUrl(rel)" class="text-decoration-none">
+                                <div class="card h-100 bg-dark border-secondary">
+                                    <div class="card-body">
+                                        <h3 class="h6 card-title text-light mb-0">@rel.Title</h3>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .article-content h1, .article-content h2, .article-content h3 { color: #fff; margin-top: 1.5rem; }
+    .article-content p { line-height: 1.8; }
+    .article-content table { width: 100%; }
+</style>
+
+@code {
+    [Parameter] public Guid ArticleId { get; set; }
+    [Parameter] public Users? use { get; set; }
+
+
+    private Article? _article;
+    private bool _isLoading = true;
+    private string? _coverImageUrl;
+
+    private string _shareWhatsAppUrl = "#";
+    private string _shareTwitterUrl = "#";
+    private string _shareFacebookUrl = "#";
+
+    private sealed class RelatedArticleDto
+    {
+        public Guid Id { get; set; }
+        public string? Slug { get; set; }
+        public string? Title { get; set; }
+    }
+
+    private List<RelatedArticleDto> _relatedArticles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        _article = await db.Set<Article>().AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == ArticleId
+                && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu == false));
+
+        if (_article == null)
+        {
+            _isLoading = false;
+            return;
+        }
+
+        if (_article.FeaturedImage.HasValue)
+        {
+            _coverImageUrl = await db.Set<Media>().AsNoTracking()
+                .Where(m => m.Id == _article.FeaturedImage.Value && m.IsDeletedStatu != true)
+                .Select(m => m.FileUrl_Ratio_1_2 ?? m.FileUrl)
+                .FirstOrDefaultAsync();
+        }
+
+        var slug = !string.IsNullOrWhiteSpace(_article.Slug) ? _article.Slug : _article.Id.ToString();
+        var canonicalUrl = _article.Meta?.CanonicalUrl
+            ?? $"{NavigationManager.BaseUri.TrimEnd('/')}/Public/_ArticleViewer/ArticleProfile/{slug}";
+
+        var titleForShare = _article.Title ?? "";
+        _shareWhatsAppUrl = $"https://wa.me/?text={Uri.EscapeDataString(titleForShare + " " + canonicalUrl)}";
+        _shareTwitterUrl = $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(titleForShare)}&url={Uri.EscapeDataString(canonicalUrl)}";
+        _shareFacebookUrl = $"https://www.facebook.com/sharer/sharer.php?u={Uri.EscapeDataString(canonicalUrl)}";
+
+        // ── İlgili makaleler: aynı kategori varsa öncelik, yoksa en yeni makalelerle tamamla ──
+        var relatedQuery = db.Set<Article>().AsNoTracking()
+            .Where(a => a.Id != _article.Id
+                     && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu == false));
+
+        if (_article.CategoriId.HasValue)
+            relatedQuery = relatedQuery.Where(a => a.CategoriId == _article.CategoriId);
+
+        _relatedArticles = await relatedQuery
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(6)
+            .Select(a => new RelatedArticleDto { Id = a.Id, Slug = a.Slug, Title = a.Title })
+            .ToListAsync();
+
+        if (_relatedArticles.Count < 3)
+        {
+            var excludeIds = _relatedArticles.Select(r => r.Id).Append(_article.Id).ToList();
+            var filler = await db.Set<Article>().AsNoTracking()
+                .Where(a => !excludeIds.Contains(a.Id)
+                         && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu == false))
+                .OrderByDescending(a => a.CreatedAt)
+                .Take(6 - _relatedArticles.Count)
+                .Select(a => new RelatedArticleDto { Id = a.Id, Slug = a.Slug, Title = a.Title })
+                .ToListAsync();
+            _relatedArticles.AddRange(filler);
+        }
+
+        _isLoading = false;
+
+        // Görüntülenme sayısını sayfa render'ını bloklamadan arka planda artır.
+        _ = IncrementViewCountAsync(_article.Id);
+    }
+
+    private static string GetArticleUrl(RelatedArticleDto item)
+    {
+        var slugOrId = !string.IsNullOrWhiteSpace(item.Slug) ? item.Slug : item.Id.ToString();
+        return $"/Public/_ArticleViewer/ArticleProfile/{slugOrId}";
+    }
+
+    // Hata olursa sessizce yutulur — istatistik kaybı, sayfa görüntülenmesini ASLA engellememeli.
+    private async Task IncrementViewCountAsync(Guid articleId)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var entity = await db.Set<Article>().FirstOrDefaultAsync(a => a.Id == articleId);
+            if (entity == null) return;
+
+            entity.Interaction ??= new InteractionCounts();
+            entity.Interaction.ViewCount = (entity.Interaction.ViewCount ?? 0) + 1;
+
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            // Sessizce yut — sayaç güncellemesi kritik değil, kullanıcı deneyimini etkilemesin
+        }
+    }
+}

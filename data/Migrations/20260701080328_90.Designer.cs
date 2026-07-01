@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260701080328_90")]
+    partial class _90
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -126,36 +129,6 @@ namespace data.Migrations
                     b.ToTable("Addresses");
                 });
 
-            modelBuilder.Entity("data.Articles.AiTitlesForArticle", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("AiErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool?>("AiIsOk")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("AiProcessedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("AiRetryCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreateDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AiTitlesForArticle");
-                });
-
             modelBuilder.Entity("data.Articles.Article", b =>
                 {
                     b.Property<Guid>("Id")
@@ -164,12 +137,6 @@ namespace data.Migrations
 
                     b.Property<string>("ArticleLognDescription")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("CategoriId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("FeaturedImage")
                         .HasColumnType("uniqueidentifier");
@@ -180,17 +147,8 @@ namespace data.Migrations
                     b.Property<string>("ShotDescription")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Slug")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("SourceAiTitleId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Title")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("UserStoreId")
                         .HasColumnType("uniqueidentifier");
@@ -3299,30 +3257,6 @@ namespace data.Migrations
                     b.Navigation("IsDeleted");
                 });
 
-            modelBuilder.Entity("data.Articles.AiTitlesForArticle", b =>
-                {
-                    b.OwnsOne("data._Shared.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("AiTitlesForArticleId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("AiTitlesForArticleId");
-
-                            b1.ToTable("AiTitlesForArticle");
-
-                            b1.WithOwner()
-                                .HasForeignKey("AiTitlesForArticleId");
-                        });
-
-                    b.Navigation("IsDeleted");
-                });
-
             modelBuilder.Entity("data.Articles.Article", b =>
                 {
                     b.OwnsOne("data._Shared.InteractionCounts", "Interaction", b1 =>
@@ -3381,11 +3315,13 @@ namespace data.Migrations
 
                             b1.Property<string>("MetaDescription")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(160)
+                                .HasColumnType("nvarchar(160)");
 
                             b1.Property<string>("MetaTitle")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(70)
+                                .HasColumnType("nvarchar(70)");
 
                             b1.Property<string>("OgType")
                                 .IsRequired()
@@ -3492,11 +3428,13 @@ namespace data.Migrations
 
                             b1.Property<string>("MetaDescription")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(160)
+                                .HasColumnType("nvarchar(160)");
 
                             b1.Property<string>("MetaTitle")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(70)
+                                .HasColumnType("nvarchar(70)");
 
                             b1.Property<string>("OgType")
                                 .IsRequired()
@@ -3794,11 +3732,13 @@ namespace data.Migrations
 
                             b1.Property<string>("MetaDescription")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(160)
+                                .HasColumnType("nvarchar(160)");
 
                             b1.Property<string>("MetaTitle")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(70)
+                                .HasColumnType("nvarchar(70)");
 
                             b1.Property<string>("OgType")
                                 .IsRequired()
@@ -5080,11 +5020,13 @@ namespace data.Migrations
 
                             b1.Property<string>("MetaDescription")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(160)
+                                .HasColumnType("nvarchar(160)");
 
                             b1.Property<string>("MetaTitle")
                                 .IsRequired()
-                                .HasColumnType("nvarchar(max)");
+                                .HasMaxLength(70)
+                                .HasColumnType("nvarchar(70)");
 
                             b1.Property<string>("OgType")
                                 .IsRequired()

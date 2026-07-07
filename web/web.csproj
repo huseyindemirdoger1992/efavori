@@ -39,4 +39,4 @@
 	<ItemGroup>
 		<Content Update="_files\**" CopyToPublishDirectory="Never" />
 	</ItemGroup>
-</Project>
+</Project> 

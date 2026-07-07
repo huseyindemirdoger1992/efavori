@@ -45,6 +45,7 @@ namespace data
         // === Profil Bilgileri ===
         // Şifrele ***-***-***
         public string? BackgroundImagePath { get; set; } // Web site arka plan resmi +
+        public int? LogOutTimer { get; set; } // Hareketsizlik Denetimi: Kişisel verilerinizin yetkisiz erişime karşı korunması amacıyla, sistem belirli bir süre etkileşim almadığında oturumunuzu otomatik ve güvenli bir şekilde sonlandırır. (Saniye cinsinden değer alır)
 
         // === İlişkili Tablolar ===
         public ContactInformation? ContactInformation { get; set; }

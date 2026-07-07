@@ -104,6 +104,62 @@ else if (use != null)
                 </div>
             </div>
 
+            <!-- Hareketsizlik Denetimi (LogOutTimer) -->
+
+
+
+
+            <div class="card border-0 shadow-sm bg-light mb-3">
+                <div class="card-header bg-light border-bottom">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="fa fa-clock-o me-2 text-light"></i>Zaman Aşımı Denetimi
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3 small">
+                        Kişisel verilerinizin yetkisiz erişime karşı korunması amacıyla,
+                        sistem belirli bir süre etkileşim almadığında oturumunuzu otomatik
+                        ve güvenli bir şekilde sonlandırır.
+                    </p>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-semibold">Oturum Zaman Aşımı Süresi</label>
+                            <select class="form-select"
+                                    value="@(use!.LogOutTimer?.ToString() ?? "")"
+                                    @onchange="OnLogOutTimerChanged">
+                                <option value="">Devre Dışı</option>
+                                <option value="60">1 Dakika</option>
+                                <option value="300">5 Dakika</option>
+                                <option value="600">10 Dakika</option>
+                                <option value="900">15 Dakika</option>
+                                <option value="1800">30 Dakika</option>
+                                <option value="3600">1 Saat</option>
+                                <option value="7200">2 Saat</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light border-top text-end">
+                    <button class="btn btn-dark btn-sm px-4"
+                            @onclick="SaveLogOutTimer" disabled="@_isProcessing">
+                        <i class="fa fa-save me-1"></i> Sayacı Kaydet
+                    </button>
+                </div>
+            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
             <!-- Tehlikeli Bölge -->
             <div class="card border-0 shadow-sm bg-light mb-3">
                 <div class="card-header bg-light border-bottom">
@@ -549,6 +605,40 @@ else if (use != null)
         catch (Exception ex)
         {
             await Logger.TakeIt(use?.Id, PAGE, "SavePrivacySettings",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+            await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private void OnLogOutTimerChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        use!.LogOutTimer = string.IsNullOrEmpty(val) ? null : int.Parse(val);
+    }
+
+    private async Task SaveLogOutTimer()
+    {
+        if (!await _writeLock.WaitAsync(0)) return;
+        _isProcessing = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            await db.Users.Where(u => u.Id == use!.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.LogOutTimer, use!.LogOutTimer));
+            StateHub.ClearCache("ProfileEdit_Main");
+            await ShowNotification("success", "Başarılı", "Hareketsizlik süresi güncellendi.", null);
+            await Task.Delay(3000); // 3000 milisaniye = 3 saniye bekler
+            await JS.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "SaveLogOutTimer",
                 exception: ex.Message, stackTrace: ex.StackTrace);
             await ShowNotification("danger", "Hata", "Kaydedilirken bir sorun oluştu.", null);
         }

@@ -1,10 +1,13 @@
-﻿@using System.Timers
+﻿@rendermode InteractiveServer
+
+@using System.Timers
+@using System.Globalization
 @using data
-@implements IDisposable
+@implements IAsyncDisposable
 @inject NavigationManager NavManager
 @inject IJSRuntime JS
 
-@if (_use != null)
+@if (IsActive)
 {
     <li class="nav-item dropdown dropdown-large">
         <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
@@ -18,56 +21,68 @@
     </li>
 }
 
-<script>
-    window.logoutTimerHelper = {
-        dotNetRef: null,
-        events: ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'],
-
-        handleActivity: function() {
-            if (window.logoutTimerHelper.dotNetRef) {
-                window.logoutTimerHelper.dotNetRef.invokeMethodAsync('ResetTimer');
-            }
-        },
-
-        initialize: function(dotNetReference) {
-            window.logoutTimerHelper.dotNetRef = dotNetReference;
-            window.logoutTimerHelper.events.forEach(event => {
-                document.addEventListener(event, window.logoutTimerHelper.handleActivity, true);
-            });
-        },
-
-        dispose: function() {
-            window.logoutTimerHelper.events.forEach(event => {
-                document.removeEventListener(event, window.logoutTimerHelper.handleActivity, true);
-            });
-            window.logoutTimerHelper.dotNetRef = null;
-        }
-    };
-</script>
-
 @code {
     [Parameter] public Users? _use { get; set; }
-    [Parameter] public string culture { get; set; } = "en";
 
     private Timer? _timer;
-    private int _timeLeft = 600; // 10 minutes
+    private int _timeLeft;
+    private int _initialTime;
     private DotNetObjectReference<LogOutTimer>? _objRef;
+    private bool _jsInitialized;
+    private bool _disposed;
+
+    // LogOutTimer değeri null, 0 veya negatifse bileşen tamamen pasif kalır
+    private bool IsActive => _use?.LogOutTimer is > 0;
+
+    private string culture => CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 
     private string TimeDisplay => $"{_timeLeft / 60}:{(_timeLeft % 60):D2}";
 
+    // ═══════════════════════════════════════════════════════════════
+    // LIFECYCLE
+    // ═══════════════════════════════════════════════════════════════
+
+    protected override void OnInitialized()
+    {
+        if (!IsActive) return;
+
+        _initialTime = _use!.LogOutTimer!.Value;
+        _timeLeft = _initialTime;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _use != null)
+        if (!IsActive || _jsInitialized || _disposed) return;
+
+        _jsInitialized = true;
+
+        try
         {
+            // JS fonksiyonlarını enjekte et (inline <script> Blazor'da çalışmaz)
+            await JS.InvokeVoidAsync("eval", LogoutTimerJs);
+
             _objRef = DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("logoutTimerHelper.initialize", _objRef);
+
             StartTimer();
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit zaten kapanmış — sessizce geç
+        }
+        catch (ObjectDisposedException)
+        {
+            // Component dispose olmuş
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // TIMER
+    // ═══════════════════════════════════════════════════════════════
+
     private void StartTimer()
     {
-        _timer = new Timer(1000); // Tick every 1 second
+        _timer = new Timer(1000);
         _timer.Elapsed += OnTimerElapsed;
         _timer.AutoReset = true;
         _timer.Enabled = true;
@@ -75,34 +90,54 @@
 
     private async void OnTimerElapsed(object? sender, ElapsedEventArgs e)
     {
+        if (_disposed) return;
+
         _timeLeft--;
 
         if (_timeLeft <= 0)
         {
             _timer?.Stop();
-            await InvokeAsync(() =>
+
+            try
             {
-                NavManager.NavigateTo($"/{culture}/Account/Logout", forceLoad: true);
-            });
+                await InvokeAsync(() =>
+                {
+                    NavManager.NavigateTo($"/{culture}/Account/Logout", forceLoad: true);
+                });
+            }
+            catch (ObjectDisposedException) { }
         }
         else
         {
-            await InvokeAsync(StateHasChanged);
+            try
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (ObjectDisposedException) { }
         }
     }
 
     [JSInvokable]
     public void ResetTimer()
     {
-        _timeLeft = 600; // Reset to 10 minutes
+        if (_disposed) return;
+        _timeLeft = _initialTime;
     }
 
-    public async void Dispose()
+    // ═══════════════════════════════════════════════════════════════
+    // DISPOSE
+    // ═══════════════════════════════════════════════════════════════
+
+    public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         if (_timer != null)
         {
             _timer.Elapsed -= OnTimerElapsed;
             _timer.Dispose();
+            _timer = null;
         }
 
         if (_objRef != null)
@@ -110,12 +145,61 @@
             try
             {
                 await JS.InvokeVoidAsync("logoutTimerHelper.dispose");
-                _objRef.Dispose();
             }
             catch
             {
-                // JS already disposed or not available
+                // Circuit kapalı veya JS erişilemez — sessizce geç
             }
+
+            _objRef.Dispose();
+            _objRef = null;
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // JS — Blazor component içinde <script> çalışmaz,
+    //       OnAfterRenderAsync'te eval ile enjekte ediyoruz.
+    // ═══════════════════════════════════════════════════════════════
+
+    private const string LogoutTimerJs = """
+        if (!window.logoutTimerHelper) {
+            window.logoutTimerHelper = {
+                dotNetRef: null,
+                events: ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'wheel'],
+                _throttle: null,
+
+                handleActivity: function () {
+                    // Throttle: Her 2 saniyede en fazla 1 çağrı (performans)
+                    if (window.logoutTimerHelper._throttle) return;
+                    window.logoutTimerHelper._throttle = setTimeout(function () {
+                        window.logoutTimerHelper._throttle = null;
+                    }, 2000);
+
+                    if (window.logoutTimerHelper.dotNetRef) {
+                        window.logoutTimerHelper.dotNetRef.invokeMethodAsync('ResetTimer');
+                    }
+                },
+
+                initialize: function (dotNetReference) {
+                    // Önceki dinleyicileri temizle (yeniden bağlantı durumu)
+                    window.logoutTimerHelper.dispose();
+                    window.logoutTimerHelper.dotNetRef = dotNetReference;
+                    window.logoutTimerHelper.events.forEach(function (event) {
+                        document.addEventListener(event, window.logoutTimerHelper.handleActivity, true);
+                    });
+                },
+
+                dispose: function () {
+                    window.logoutTimerHelper.events.forEach(function (event) {
+                        document.removeEventListener(event, window.logoutTimerHelper.handleActivity, true);
+                    });
+                    window.logoutTimerHelper.dotNetRef = null;
+                    if (window.logoutTimerHelper._throttle) {
+                        clearTimeout(window.logoutTimerHelper._throttle);
+                        window.logoutTimerHelper._throttle = null;
+                    }
+                }
+            };
+        }
+    """;
 }

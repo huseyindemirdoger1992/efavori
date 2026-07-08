@@ -1,13 +1,4 @@
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: AttributeTemplateCategories.cs  
- echo ```csharp  
- type "AttributeTemplateCategories.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: AttributeTemplateCategories.cs
+## Dosya: AttributeTemplateCategories.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -31,19 +22,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: AttributeTemplateItems.cs  
- echo ```csharp  
- type "AttributeTemplateItems.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: AttributeTemplateItems.cs
+## Dosya: AttributeTemplateItems.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -69,19 +50,9 @@ namespace data._Product
         public int DisplayOrder { get; set; } = 0; // Şablondaki gösterim sırası
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: AttributeTemplates.cs  
- echo ```csharp  
- type "AttributeTemplates.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: AttributeTemplates.cs
+## Dosya: AttributeTemplates.cs
 ```csharp
 using data._Shared;
 using System;
@@ -121,19 +92,9 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: Brands.cs  
- echo ```csharp  
- type "Brands.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: Brands.cs
+## Dosya: Brands.cs
 ```csharp
 using data._Shared;
 using System;
@@ -162,19 +123,9 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: MarketplaceAttributeMappings.cs  
- echo ```csharp  
- type "MarketplaceAttributeMappings.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: MarketplaceAttributeMappings.cs
+## Dosya: MarketplaceAttributeMappings.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -203,19 +154,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: MarketplaceCategoryMappings.cs  
- echo ```csharp  
- type "MarketplaceCategoryMappings.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: MarketplaceCategoryMappings.cs
+## Dosya: MarketplaceCategoryMappings.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -240,19 +181,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: Marketplaces.cs  
- echo ```csharp  
- type "Marketplaces.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: Marketplaces.cs
+## Dosya: Marketplaces.cs
 ```csharp
 using data._Shared;
 using System;
@@ -281,19 +212,9 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductAttributeMappings.cs  
- echo ```csharp  
- type "ProductAttributeMappings.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductAttributeMappings.cs
+## Dosya: ProductAttributeMappings.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -327,19 +248,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductAttributes.cs  
- echo ```csharp  
- type "ProductAttributes.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductAttributes.cs
+## Dosya: ProductAttributes.cs
 ```csharp
 using data._Shared;
 using System;
@@ -379,19 +290,9 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductAttributeValues.cs  
- echo ```csharp  
- type "ProductAttributeValues.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductAttributeValues.cs
+## Dosya: ProductAttributeValues.cs
 ```csharp
 using data._Shared;
 using System;
@@ -427,19 +328,9 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductBundleItems.cs  
- echo ```csharp  
- type "ProductBundleItems.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductBundleItems.cs
+## Dosya: ProductBundleItems.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -467,19 +358,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductCategories.cs  
- echo ```csharp  
- type "ProductCategories.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductCategories.cs
+## Dosya: ProductCategories.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -503,19 +384,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductDigitalAssets.cs  
- echo ```csharp  
- type "ProductDigitalAssets.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductDigitalAssets.cs
+## Dosya: ProductDigitalAssets.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -544,19 +415,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductExternalMedias.cs  
- echo ```csharp  
- type "ProductExternalMedias.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductExternalMedias.cs
+## Dosya: ProductExternalMedias.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -587,19 +448,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductImageVariantGroups.cs  
- echo ```csharp  
- type "ProductImageVariantGroups.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductImageVariantGroups.cs
+## Dosya: ProductImageVariantGroups.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -629,19 +480,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductImportProfiles.cs  
- echo ```csharp  
- type "ProductImportProfiles.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductImportProfiles.cs
+## Dosya: ProductImportProfiles.cs
 ```csharp
 using data._Shared;
 using System;
@@ -684,19 +525,9 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductMarketplaceListings.cs  
- echo ```csharp  
- type "ProductMarketplaceListings.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductMarketplaceListings.cs
+## Dosya: ProductMarketplaceListings.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -733,19 +564,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductPrices.cs  
- echo ```csharp  
- type "ProductPrices.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductPrices.cs
+## Dosya: ProductPrices.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -780,25 +601,16 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Kayıt tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductReview.cs  
- echo ```csharp  
- type "ProductReview.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductReview.cs
+## Dosya: ProductReview.cs
 ```csharp
 ﻿using data._Shared;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Security;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace data._Product
@@ -817,24 +629,24 @@ namespace data._Product
         // Bir değer içeriyorsa, yanıt verilen üst yorumun ID'sini tutar.
         public Guid? ParentReviewId { get; set; }
 
+        // Yapay zeka yapılan yorumu kontrol eder ve eğer koşullar sağlanıyorsa true döner. Aksi takdirde false döner.
+        public bool? ConfirmedByAi { get; set; }
+
+        // Yapay zeka eğer yorumu onaylamaz ise nedenini burada belirtir. Eğer yorum onaylanmışsa bu alan null olur.
+        public string? WhyDidAiNotApproveIt { get; set; }
+
+        // Yorumun oluşturulma tarihi
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Yorumun AI tarafından kontrol edilme tarihi. Bu tarih, yorum oluşturulduktan sonra AI tarafından kontrol edildiğinde güncellenir.
+        public DateTime? AIControlDate { get; set; }
         public IsDeleted IsDeleted { get; set; }
 
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: Products.cs  
- echo ```csharp  
- type "Products.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: Products.cs
+## Dosya: Products.cs
 ```csharp
 using data._Shared;
 using System;
@@ -908,19 +720,9 @@ namespace data._Product
         public InteractionCounts? InteractionCounts { get; set; } = new();
         public IsDeleted? IsDeleted { get; set; } = new();
     }
-}
-```
+}```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductSeo.cs  
- echo ```csharp  
- type "ProductSeo.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductSeo.cs
+## Dosya: ProductSeo.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -951,19 +753,9 @@ namespace data._Product
         public DateTime? UpdatedAt { get; set; } // Son güncelleme tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductSpecifications.cs  
- echo ```csharp  
- type "ProductSpecifications.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductSpecifications.cs
+## Dosya: ProductSpecifications.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -996,19 +788,9 @@ namespace data._Product
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductStocks.cs  
- echo ```csharp  
- type "ProductStocks.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductStocks.cs
+## Dosya: ProductStocks.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -1042,19 +824,9 @@ namespace data._Product
         public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow; // Son stok güncelleme tarihi
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductVariants.cs  
- echo ```csharp  
- type "ProductVariants.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductVariants.cs
+## Dosya: ProductVariants.cs
 ```csharp
 using data._Shared;
 using System;
@@ -1100,19 +872,9 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: ProductVariantValues.cs  
- echo ```csharp  
- type "ProductVariantValues.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: ProductVariantValues.cs
+## Dosya: ProductVariantValues.cs
 ```csharp
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -1134,19 +896,9 @@ namespace data._Product
         public Guid AttributeValueId { get; set; } // Özellik değeri (ProductAttributeValues.Id)
     }
 }
-
 ```
 
-
-C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Product>(
-echo ## File: Warehouse.cs  
- echo ```csharp  
- type "Warehouse.cs"  
- echo. 
- echo ```  
- echo.
-) 
-## File: Warehouse.cs
+## Dosya: Warehouse.cs
 ```csharp
 using data._Shared;
 using System;
@@ -1176,6 +928,248 @@ namespace data._Product
         public IsDeleted? IsDeleted { get; set; } = new(); // Silinme durumu (soft delete)
     }
 }
-
 ```
 
+## Dosya: ProductImportJobs.cs
+```csharp
+using data._Shared;
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace data._Product.BulkWordPressProductImport
+{
+    /// <summary>
+    /// İçe aktarım OTURUMU (job/run). WooCommerce "Dışa Aktar" CSV dosyasının aktarım
+    /// sürecini baştan sona temsil eder ve KALDIĞI YERDEN DEVAM (resume) yeteneğinin kalbidir.
+    ///
+    /// HAFIZA MANTIĞI:
+    ///   - SourceMediaId  → galeriden seçilen CSV dosyası (Media.Id). Sayfa kapansa bile job
+    ///                      hangi dosyayla çalıştığını hatırlar.
+    ///   - LastProcessedRowIndex → işlenen son satır. Yeniden başlatıldığında buradan devam eder.
+    ///   - FieldMappingJson / AnalysisReportJson → analiz ve alan eşleşmeleri job içinde saklanır,
+    ///     böylece kullanıcı her açışında baştan eşleştirme yapmaz.
+    ///
+    /// IDEMPOTENT/RESUMABLE: Gerçek satır-bazlı ilerleme ProductImportRows tablosunda tutulur;
+    /// bu tablo job seviyesindeki özet sayaçları ve durumu yönetir.
+    /// </summary>
+    public class ProductImportJobs
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        // === İlişkiler (ID bazlı, navigation property kullanılmaz) ===
+        public Guid UserId { get; set; }                 // İçe aktarımı başlatan kullanıcı (Users.Id)
+        public Guid StoreId { get; set; }                // Hedef mağaza (Store.Id)
+        public Guid? ProfileId { get; set; }             // İsteğe bağlı eşleme profili (ProductImportProfiles.Id)
+        public Guid SourceMediaId { get; set; }          // Galeriden seçilen kaynak CSV dosyası (Media.Id) — HAFIZA
+
+        // === Tanım ===
+        public string? Name { get; set; }                // Job adı (Örn: "Başer Elektrik - Aralık Aktarımı")
+
+        // "CSV", "WooCommerce", "Trendyol", "XML", "JSON" ... — bu akışta varsayılan WooCommerce
+        public string? SourceType { get; set; } = "WooCommerce";
+        public string? Delimiter { get; set; } = ",";    // CSV ayıracı (WooCommerce dışa aktarımı virgül kullanır)
+        public string? Encoding { get; set; } = "UTF-8"; // Karakter seti (BOM'lu UTF-8)
+
+        // === Durum Makinesi ===
+        // "Draft"     → oluşturuldu, henüz hazır değil (analiz/eşleştirme sürüyor)
+        // "Ready"     → tüm eşleştirmeler onaylandı, başlatılabilir
+        // "Running"   → aktif olarak satır işliyor
+        // "Paused"    → kullanıcı duraklattı (resume edilebilir)
+        // "Completed" → tüm satırlar işlendi
+        // "Failed"    → kurtarılamaz hata ile durdu
+        // "Cancelled" → kullanıcı iptal etti
+        public string? Status { get; set; } = "Draft";
+
+        // === Canlı Sayaçlar (Dashboard panelini besler) ===
+        public int TotalCount { get; set; } = 0;         // Toplam Ürün (CSV satır sayısı)
+        public int ImportedCount { get; set; } = 0;      // Aktarılan
+        public int FailedCount { get; set; } = 0;        // Hatalı
+        public int SkippedCount { get; set; } = 0;       // Atlanan (duplicate / kapsam dışı)
+        // Bekleyen = TotalCount - ImportedCount - FailedCount - SkippedCount (uygulama katmanında hesaplanır)
+        public decimal SuccessRate { get; set; } = 0m;   // Başarı Oranı (%) — denormalize, raporlama kolaylığı
+
+        // === Kaldığı Yerden Devam (Resume Cursor) ===
+        public int LastProcessedRowIndex { get; set; } = 0; // İşlenen son satırın sıfır-tabanlı indeksi
+        public int BatchSize { get; set; } = 500;           // Tek seferde işlenecek satır sayısı (bellek dostu)
+
+        // === Eşleşme & Analiz Hafızası (JSON) ===
+        public string? FieldMappingJson { get; set; }       // Kolon → sistem alanı eşlemeleri (onaylanmış)
+        public string? AnalysisReportJson { get; set; }     // AŞAMA-1 kolon/veri tipi/boş alan analiz raporu
+        public string? StrategyReportJson { get; set; }     // AŞAMA-13 import strateji raporu
+
+        // === Varsayılanlar (eşlenemeyen veriler için) ===
+        public Guid? DefaultWarehouseId { get; set; }       // Stok yazılacak varsayılan depo (Warehouse.Id)
+        public int? DefaultCategoryId { get; set; }         // Eşlenemeyen ürünler için varsayılan kategori (CategoriesTr.Id)
+        public string? DefaultCurrency { get; set; } = "TRY"; // CSV fiyatlarının para birimi
+
+        // === Tarih Bilgileri ===
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
+        public DateTime? StartedAt { get; set; }                    // İlk başlatılma tarihi
+        public DateTime? LastRunAt { get; set; }                    // Son batch çalıştırma tarihi
+        public DateTime? CompletedAt { get; set; }                  // Tamamlanma/iptal tarihi
+        public DateTime? UpdatedAt { get; set; }                    // Son güncelleme tarihi
+
+        public string? LastErrorMessage { get; set; }              // Job seviyesinde son kritik hata
+
+        public IsDeleted? IsDeleted { get; set; } = new();         // Silinme durumu (soft delete)
+    }
+}
+```
+.
+## Dosya: ProductImportMappings.cs
+```csharp
+using data._Shared;
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace data._Product.BulkWordPressProductImport
+{
+    /// <summary>
+    /// BİRLEŞİK EŞLEŞME HAFIZASI. WooCommerce alan/kategori/marka/özellik değerlerinin
+    /// sistemdeki karşılıklarını TEK tabloda, tip ayraçlı (MappingType) olarak saklar.
+    ///
+    /// "KATEGORİ EŞLEŞTİRME HAFIZASI" KURALI:
+    ///   Bir eşleşme yapıldıktan ve onaylandıktan sonra (IsConfirmedByUser = true) aynı kaynak
+    ///   değer tekrar kullanıcıya SORULMAZ. SourceKeyHash üzerinden hızlı sözlük araması yapılır.
+    ///
+    /// KAPSAM (JobId):
+    ///   - JobId dolu  → yalnızca o aktarıma özel eşleşme.
+    ///   - JobId null  → kullanıcı/mağaza genelinde KALICI eşleşme (sonraki aktarımlarda yeniden kullanılır).
+    ///
+    /// GÜVEN SEVİYESİ: ConfidenceLevel + ConfidenceScore ile her eşleşmenin ne kadar kesin
+    /// olduğu işaretlenir; belirsiz olanlar (Uncertain/Unmapped) kullanıcı onayına düşer.
+    /// </summary>
+    public class ProductImportMappings
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        public Guid? JobId { get; set; }   // Bağlı aktarım (ProductImportJobs.Id) — null = kalıcı/global eşleşme
+        public Guid UserId { get; set; }   // Sahip kullanıcı (Users.Id)
+        public Guid StoreId { get; set; }  // Sahip mağaza (Store.Id)
+
+        // "Field"          → CSV kolonu → sistem alanı     (Örn: "Normal fiyat" → Price)
+        // "Category"       → WooCommerce kategori yolu → CategoriesTr.Id
+        // "Brand"          → WooCommerce marka → Brands.Id
+        // "Attribute"      → WooCommerce attribute başlığı → ProductAttributes.Id (bilgi dağarcığı)
+        // "AttributeValue" → WooCommerce attribute değeri → ProductAttributeValues.Id
+        // "StockStatus"    → instock/outofstock/onbackorder → sistem stok durumu
+        // "TaxClass"       → vergi sınıfı eşlemesi
+        public string? MappingType { get; set; }
+
+        // === Kaynak (WooCommerce tarafı) ===
+        public string? SourceKey { get; set; }      // Ham kaynak değer (kolon adı / kategori yolu / marka / attribute)
+        public string? SourceKeyHash { get; set; }  // SourceKey'in normalize+hash hali — hızlı/benzersiz arama
+        public string? SourceParentKey { get; set; } // Hiyerarşik kaynaklarda üst düğüm (kategori ağacı için)
+        public int? SourceItemCount { get; set; }   // Bu kaynağa ait ürün adedi (kategori ağacı raporu: "65 ürün")
+
+        // === Hedef (sistem tarafı) ===
+        // "ProductField" | "CategoryId" | "BrandId" | "AttributeId" | "AttributeValueId" | "Literal"
+        public string? TargetType { get; set; }
+        public string? TargetValue { get; set; }    // Hedef değer (alan adı, Guid veya int — string olarak saklanır)
+        public string? TargetDisplayName { get; set; } // UI'da gösterilecek hedef adı (Örn: "Uydu Ekipmanları")
+
+        // === Güven / Onay ===
+        // "Exact"    → kesin eşleşme (Örn: Weight → WeightKg)
+        // "Likely"   → büyük olasılıkla (Örn: Normal fiyat → Price)
+        // "Uncertain"→ belirsiz, kullanıcı onayı şart (Örn: Meta: custom_field_12)
+        // "Unmapped" → henüz eşlenmedi
+        public string? ConfidenceLevel { get; set; } = "Unmapped";
+        public int ConfidenceScore { get; set; } = 0; // 0–100 güven puanı (otomatik öneri sıralaması)
+        public bool IsConfirmedByUser { get; set; } = false; // Kullanıcı onayladı mı (true → tekrar sorulmaz)
+        public bool CreateIfMissing { get; set; } = false;   // Hedef yoksa yeni oluşturulsun mu (marka/değer için)
+
+        public string? SuggestionsJson { get; set; } // Akıllı öneri listesi (JSON) — UI'da kullanıcıya sunulan adaylar
+
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
+        public DateTime? UpdatedAt { get; set; }                    // Son güncelleme tarihi
+
+        public IsDeleted? IsDeleted { get; set; } = new();          // Silinme durumu (soft delete)
+    }
+}
+```
+.
+## Dosya: ProductImportRows.cs
+```csharp
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace data._Product.BulkWordPressProductImport
+{
+    /// <summary>
+    /// SATIR BAZLI İLERLEME ve HATA RAPORU. Her CSV satırının aktarım durumunu tutar.
+    /// IDEMPOTENT ve RESUMABLE çalışmanın temelidir:
+    ///   - SourceExternalId (WooCommerce "Kimlik") benzersiz anahtardır → aynı satır iki kez
+    ///     işlenmez, DUPLICATE ürün oluşmaz. Yeniden çalıştırmada "Imported" satırlar atlanır.
+    ///   - RawRowJson, satırın HAM halini saklar (veri kaybı sigortası) → ileride yeniden işlenebilir.
+    ///
+    /// AŞAMA-12 HATA RAPORLAMA: Eksik kategori, bozuk görsel, hatalı fiyat, eksik/yinelenen SKU,
+    /// geçersiz varyasyon gibi durumlar ErrorCode/ErrorMessage ile satır seviyesinde raporlanır.
+    /// </summary>
+    public class ProductImportRows
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        public Guid JobId { get; set; }    // Bağlı aktarım (ProductImportJobs.Id)
+        public Guid UserId { get; set; }   // Sahip kullanıcı (Users.Id) — denormalize
+        public Guid StoreId { get; set; }  // Sahip mağaza (Store.Id) — denormalize
+
+        public int SourceRowIndex { get; set; }        // CSV içindeki sıfır-tabanlı satır indeksi (resume için)
+        public string? SourceExternalId { get; set; }  // WooCommerce "Kimlik" — IDEMPOTENCY anahtarı
+        public string? SourceSku { get; set; }         // Kaynak SKU (varsa)
+        public string? ParentExternalId { get; set; }  // Varyasyon ise üst ürünün Kimlik'i ("Ebeveyn")
+
+        // "simple" | "variable" | "variation" | "grouped" | "external"
+        public string? SourceProductType { get; set; }
+
+        // "Pending"   → henüz işlenmedi
+        // "Imported"  → başarıyla aktarıldı
+        // "Failed"    → hata ile sonuçlandı (ErrorCode/ErrorMessage dolu)
+        // "Skipped"   → kapsam dışı / kullanıcı atladı
+        // "Duplicate" → daha önce aktarılmış (idempotency engeli)
+        public string? RowStatus { get; set; } = "Pending";
+
+        // === Üretilen Kayıtlar (geri izleme + rollback için) ===
+        public Guid? CreatedProductId { get; set; }    // Oluşan ürün (Products.Id)
+        public Guid? CreatedVariantId { get; set; }    // Oluşan varyant (ProductVariants.Id)
+
+        // === Hata Detayı (AŞAMA-12) ===
+        // "MissingCategory" | "MissingBrand" | "BrokenImage" | "InvalidPrice" | "MissingSku"
+        // "DuplicateSku" | "InvalidVariation" | "OrphanVariation" | "MediaProcessError" | "Unknown"
+        public string? ErrorCode { get; set; }
+        public string? ErrorMessage { get; set; }      // İnsan-okur hata açıklaması
+        public string? WarningsJson { get; set; }      // Bloklamayan uyarılar (JSON) — Örn: "görsel bulunamadı, atlandı"
+
+        public string? RawRowJson { get; set; }        // Satırın ham CSV verisi (JSON) — veri kaybı sigortası
+
+        public DateTime? ProcessedAt { get; set; }     // İşlenme tarihi
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Kayıt tarihi
+    }
+}
+```
+.
+## Dosya: ProductHistory.cs
+```csharp
+﻿using data._Shared;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Text;
+
+namespace data._Product.ProductHistory
+{
+    public class ProductHistory
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid? UserId { get; set; }
+        public Guid? ProductId { get; set; }
+        public Guid? ProductSlug { get; set; }
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
+        public IsDeleted? IsDeleted { get; set; } = new(); 
+    }
+}
+```
+.

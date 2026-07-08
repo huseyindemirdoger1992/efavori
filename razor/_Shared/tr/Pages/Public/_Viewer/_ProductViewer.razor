@@ -45,6 +45,7 @@
 @using data._Product
 @using data._Product.ProductHistory
 @using data.ShoppingCart
+@using data.FavoriteCart
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -1541,8 +1542,56 @@ else
         var MIN_Z = 2;
         var MAX_Z = 10;
         var on = false;
+        var lastMX = 0, lastMY = 0; /* son fare pozisyonu (box koordinatı) */
 
         function mobile(){ return window.innerWidth < 992; }
+
+        /* ═══ EN/BOY ORANI KORUYAN GÖRSEL DİKDÖRTGENİ ═══
+           Görsel object-fit:contain ile basıldığı için, kare kutu içinde
+           gerçekte kapladığı alan (harf/sütun kutulaması hariç) bu fonksiyonla
+           hesaplanır. Zoom paneli bu orana göre boyutlanır → streç olmaz. */
+        function displayRect(img){
+            var bw = box.clientWidth, bh = box.clientHeight;
+            var nw = img.naturalWidth || 0, nh = img.naturalHeight || 0;
+            if(nw <= 0 || nh <= 0){ return {x:0, y:0, w:bw, h:bh}; }
+            var natRatio = nw/nh, boxRatio = bw/bh;
+            var w, h, x, y;
+            if(natRatio > boxRatio){        /* görsel daha geniş → üst/alt boşluk */
+                w = bw; h = bw/natRatio; x = 0; y = (bh-h)/2;
+            } else {                        /* görsel daha dar → sol/sağ boşluk */
+                h = bh; w = bh*natRatio; y = 0; x = (bw-w)/2;
+            }
+            return {x:x, y:y, w:w, h:h};
+        }
+
+        /* Lens'i görselin gerçek alanı içinde sınırla (streç/kayma önler) */
+        function clampAxis(v, min, size, lensSize){
+            if(lensSize >= size) return min + (size - lensSize)/2; /* sığmıyorsa ortala */
+            return Math.max(min, Math.min(v, min + size - lensSize));
+        }
+
+        /* Fare pozisyonuna göre lens + zoom panelini güncelle */
+        function paint(img){
+            var dr = displayRect(img);
+            var lensW = (result.offsetWidth  || box.clientWidth ) / Z;
+            var lensH = (result.offsetHeight || box.clientHeight) / Z;
+            lens.style.width  = lensW + 'px';
+            lens.style.height = lensH + 'px';
+
+            var lx = clampAxis(lastMX - lensW/2, dr.x, dr.w, lensW);
+            var ly = clampAxis(lastMY - lensH/2, dr.y, dr.h, lensH);
+            lens.style.transform = 'translate('+lx+'px,'+ly+'px)';
+
+            /* Arka planı GERÇEK en/boy oranıyla boyutla → streç yok.
+               Offset negatif olabileceği için işareti sayısal hesapla
+               (aksi halde '--5px' gibi geçersiz CSS oluşurdu). */
+            var bgX = -((lx - dr.x) * Z);
+            var bgY = -((ly - dr.y) * Z);
+            result.style.backgroundRepeat = 'no-repeat';
+            result.style.backgroundColor  = '#ffffff';
+            result.style.backgroundSize   = (dr.w*Z)+'px '+(dr.h*Z)+'px';
+            result.style.backgroundPosition = bgX+'px '+bgY+'px';
+        }
 
         /* ═══ DESKTOP: HOVER + SCROLL WHEEL ZOOM (2x–10x) ═══ */
         box.addEventListener('mouseenter', function(){
@@ -1550,13 +1599,8 @@ else
             var img = box.querySelector('#ppMainImg');
             if(!img) return;
             on = true;
-            var r = box.getBoundingClientRect();
-            var rw = result.offsetWidth || r.width;
-            var rh = result.offsetHeight || r.height;
-            lens.style.width = (rw/Z)+'px';
-            lens.style.height = (rh/Z)+'px';
             result.style.backgroundImage = 'url('+img.src+')';
-            result.style.backgroundSize = (r.width*Z)+'px '+(r.height*Z)+'px';
+            paint(img);
             lens.style.opacity = '1';
             result.style.opacity = '1';
             result.style.visibility = 'visible';
@@ -1565,14 +1609,12 @@ else
 
         box.addEventListener('mousemove', function(e){
             if(!on || mobile()) return;
+            var img = box.querySelector('#ppMainImg');
+            if(!img) return;
             var r = box.getBoundingClientRect();
-            var lw = lens.offsetWidth, lh = lens.offsetHeight;
-            var x = e.clientX - r.left - lw/2;
-            var y = e.clientY - r.top - lh/2;
-            x = Math.max(0, Math.min(x, r.width - lw));
-            y = Math.max(0, Math.min(y, r.height - lh));
-            lens.style.transform = 'translate('+x+'px,'+y+'px)';
-            result.style.backgroundPosition = '-'+(x*Z)+'px -'+(y*Z)+'px';
+            lastMX = e.clientX - r.left;
+            lastMY = e.clientY - r.top;
+            paint(img);
         });
 
         box.addEventListener('mouseleave', function(){
@@ -1589,27 +1631,9 @@ else
             e.preventDefault();
             var step = e.deltaY < 0 ? 0.5 : -0.5;
             Z = Math.max(MIN_Z, Math.min(MAX_Z, Z + step));
-
             var img = box.querySelector('#ppMainImg');
             if(!img) return;
-            var r = box.getBoundingClientRect();
-            var rw = result.offsetWidth || r.width;
-            var rh = result.offsetHeight || r.height;
-            lens.style.width = (rw/Z)+'px';
-            lens.style.height = (rh/Z)+'px';
-            result.style.backgroundSize = (r.width*Z)+'px '+(r.height*Z)+'px';
-
-            /* Lens pozisyonunu yeniden hesapla */
-            var ct = lens.style.transform;
-            var m = ct.match(/translate\((.+?)px,\s*(.+?)px\)/);
-            if(m){
-                var lx = parseFloat(m[1]), ly = parseFloat(m[2]);
-                var lw = lens.offsetWidth, lh = lens.offsetHeight;
-                lx = Math.max(0, Math.min(lx, r.width - lw));
-                ly = Math.max(0, Math.min(ly, r.height - lh));
-                lens.style.transform = 'translate('+lx+'px,'+ly+'px)';
-                result.style.backgroundPosition = '-'+(lx*Z)+'px -'+(ly*Z)+'px';
-            }
+            paint(img);
         }, {passive:false});
 
         /* ═══ MOBİL: PINCH (2x–10x) + PAN + DOUBLE-TAP ═══ */
@@ -1725,9 +1749,11 @@ else
                     if(!img) return;
                     resetMobile(img);
                     if(on){
-                        var r = box.getBoundingClientRect();
                         result.style.backgroundImage='url('+img.src+')';
-                        result.style.backgroundSize=(r.width*Z)+'px '+(r.height*Z)+'px';
+                        /* Yeni görselin en/boy oranına göre yeniden boyutla.
+                           naturalWidth henüz hazır değilse görsel yüklenince tekrar çiz. */
+                        if(img.complete && img.naturalWidth > 0){ paint(img); }
+                        else { img.addEventListener('load', function(){ if(on) paint(img); }, {once:true}); }
                     }
                 }
             });
@@ -1885,6 +1911,10 @@ else
 
             // 14) SEO: Ortalama puan (eğer puanlama verisi varsa)
             await LoadAverageRatingAsync(db, productId, token);
+
+            // 15) Favori durumu (kalp ikonu için)
+            if (_selectedVariant != null)
+                await LoadFavoriteStateAsync(db, _selectedVariant.VariantId, token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -2355,6 +2385,10 @@ else
             var token = _cts.Token;
             await using var db = await DbFactory.CreateDbContextAsync(token);
             await RefreshSelectedVariantDataAsync(db, token);
+
+            // Favori durumu varyant bazlı → seçilen varyanta göre yenile
+            if (_selectedVariant != null)
+                await LoadFavoriteStateAsync(db, _selectedVariant.VariantId, token);
         }
         catch (Exception ex) { await LogError("SelectVariantValue", ex); }
 
@@ -2971,47 +3005,8 @@ else
             }
             else
             {
-                // ─── Tüm para birimlerindeki fiyatları çek ───
-                var allPrices = await db.Set<ProductPrices>().AsNoTracking()
-                    .Where(pp => pp.VariantId == variantId && pp.EffectiveTo == null)
-                    .Select(pp => new { pp.Currency, pp.Price, pp.DiscountedPrice })
-                    .ToListAsync(token);
-
-                var priceByCurrency = allPrices.ToDictionary(
-                    p => (p.Currency ?? "TRY").ToUpperInvariant(),
-                    p => p);
-
-                // ─── Varyant fiziksel bilgileri (ağırlık/boyut → desi) ───
-                var variantPhysical = await db.Set<ProductVariants>().AsNoTracking()
-                    .Where(v => v.Id == variantId)
-                    .Select(v => new { v.WeightKg, v.WidthCm, v.HeightCm, v.LengthCm })
-                    .FirstOrDefaultAsync(token);
-
-                // Desi hesabı: (en × boy × yükseklik) / 3000
-                decimal? desi = null;
-                if (variantPhysical?.WidthCm > 0 && variantPhysical?.HeightCm > 0 && variantPhysical?.LengthCm > 0)
-                    desi = (variantPhysical.WidthCm.Value * variantPhysical.HeightCm.Value * variantPhysical.LengthCm.Value) / 3000m;
-
-                // ─── Slug ───
-                var slug = _slug ?? _product.Id.ToString();
-
-                // ─── Kapak görseli URL ───
-                var coverImageUrl = _displayImages.Any() ? _displayImages[0] : "";
-
-                // ─── Marka adı ───
-                var brandName = _brandName ?? "";
-
-                // ─── Birincil kategori ID ───
-                var primaryCatId = _breadcrumbCategories.Any()
-                    ? _breadcrumbCategories.Last().Id
-                    : 0;
-
-                // ─── Fiyat yardımcı fonksiyonu ───
-                decimal GetSalePrice(string cur) =>
-                    priceByCurrency.TryGetValue(cur, out var pi) ? pi.Price : 0m;
-                decimal GetDiscountAmount(string cur) =>
-                    priceByCurrency.TryGetValue(cur, out var pi) && pi.DiscountedPrice.HasValue && pi.DiscountedPrice < pi.Price
-                        ? (pi.Price - pi.DiscountedPrice.Value) : 0m;
+                // ─── Ortak ürün anlık görüntüsü (fiyat/fiziksel/slug/marka/kategori) ───
+                var snap = await BuildCartSnapshotAsync(db, variantId, token);
 
                 // ─── ProductCart oluştur ───
                 var cartItem = new ProductCart
@@ -3020,39 +3015,39 @@ else
                     StoreId = _product.StoreId,
                     ProductId = _product.Id,
                     ProductVariantId = variantId,
-                    ProductSlug = slug,
-                    ProductShortDescription = _product.ShortDescription ?? "",
-                    ProductImageUrl = coverImageUrl,
-                    BrandName = brandName,
-                    CategoryName = primaryCatId,
-                    SKU = _selectedVariant.Sku ?? "",
-                    Barcode = _selectedVariant.Barcode ?? "",
+                    ProductSlug = snap.Slug,
+                    ProductShortDescription = snap.ShortDescription,
+                    ProductImageUrl = snap.CoverImageUrl,
+                    BrandName = snap.BrandName,
+                    CategoryName = snap.CategoryId,
+                    SKU = snap.Sku,
+                    Barcode = snap.Barcode,
 
                     // Dolar (USD)
-                    SalePriceUsd = GetSalePrice("USD"),
-                    DiscountAmountUsd = GetDiscountAmount("USD"),
+                    SalePriceUsd = snap.SalePriceUsd,
+                    DiscountAmountUsd = snap.DiscountUsd,
                     ShippingPriceUsd = 0, // Kargo fiyatı ileride ShippingProfile'dan hesaplanacak
 
                     // TL (TRY)
-                    SalePriceTry = GetSalePrice("TRY"),
-                    DiscountAmountTry = GetDiscountAmount("TRY"),
+                    SalePriceTry = snap.SalePriceTry,
+                    DiscountAmountTry = snap.DiscountTry,
                     ShippingPriceTry = 0,
 
                     // Euro (EUR)
-                    SalePriceEur = GetSalePrice("EUR"),
-                    DiscountAmountEur = GetDiscountAmount("EUR"),
+                    SalePriceEur = snap.SalePriceEur,
+                    DiscountAmountEur = snap.DiscountEur,
                     ShippingPriceEur = 0,
 
                     // Manat (AZN)
-                    SalePriceAzn = GetSalePrice("AZN"),
-                    DiscountAmountAzn = GetDiscountAmount("AZN"),
+                    SalePriceAzn = snap.SalePriceAzn,
+                    DiscountAmountAzn = snap.DiscountAzn,
                     ShippingPriceAzn = 0,
 
                     Quantity = _quantity,
                     CouponCode = "",
                     VatRate = 0, // KDV oranı ileride ürün/kategori bazlı ayarlanacak
-                    Weight = variantPhysical?.WeightKg,
-                    Desi = desi,
+                    Weight = snap.Weight,
+                    Desi = snap.Desi,
                     DeliveryTimeText = "", // Teslimat süresi ileride ShippingProfile'dan çekilecek
                     CustomerNote = "",
                     CreatedDate = DateTime.UtcNow
@@ -3081,11 +3076,198 @@ else
             NavigationManager.NavigateTo("/Public/Checkout", forceLoad: false);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // ORTAK ÜRÜN ANLIK GÖRÜNTÜSÜ (ProductCart + FavoriteProductCart)
+    // Fiyat / fiziksel / slug / marka / kategori alanlarını tek yerden üretir.
+    // ═══════════════════════════════════════════════════════════════
+    private async Task<CartSnapshot> BuildCartSnapshotAsync(_ApplicationConnectionDb db, Guid variantId, CancellationToken token)
+    {
+        // ─── Tüm para birimlerindeki fiyatları çek ───
+        var allPrices = await db.Set<ProductPrices>().AsNoTracking()
+            .Where(pp => pp.VariantId == variantId && pp.EffectiveTo == null)
+            .Select(pp => new { pp.Currency, pp.Price, pp.DiscountedPrice })
+            .ToListAsync(token);
+
+        var priceByCurrency = allPrices.ToDictionary(
+            p => (p.Currency ?? "TRY").ToUpperInvariant(),
+            p => p);
+
+        // ─── Varyant fiziksel bilgileri (ağırlık/boyut → desi) ───
+        var variantPhysical = await db.Set<ProductVariants>().AsNoTracking()
+            .Where(v => v.Id == variantId)
+            .Select(v => new { v.WeightKg, v.WidthCm, v.HeightCm, v.LengthCm })
+            .FirstOrDefaultAsync(token);
+
+        // Desi hesabı: (en × boy × yükseklik) / 3000
+        decimal? desi = null;
+        if (variantPhysical?.WidthCm > 0 && variantPhysical?.HeightCm > 0 && variantPhysical?.LengthCm > 0)
+            desi = (variantPhysical.WidthCm.Value * variantPhysical.HeightCm.Value * variantPhysical.LengthCm.Value) / 3000m;
+
+        decimal GetSalePrice(string cur) =>
+            priceByCurrency.TryGetValue(cur, out var pi) ? pi.Price : 0m;
+        decimal GetDiscountAmount(string cur) =>
+            priceByCurrency.TryGetValue(cur, out var pi) && pi.DiscountedPrice.HasValue && pi.DiscountedPrice < pi.Price
+                ? (pi.Price - pi.DiscountedPrice.Value) : 0m;
+
+        return new CartSnapshot
+        {
+            Slug = _slug ?? _product!.Id.ToString(),
+            ShortDescription = _product?.ShortDescription ?? "",
+            CoverImageUrl = _displayImages.Any() ? _displayImages[0] : "",
+            BrandName = _brandName ?? "",
+            CategoryId = _breadcrumbCategories.Any() ? _breadcrumbCategories.Last().Id : 0,
+            Sku = _selectedVariant?.Sku ?? "",
+            Barcode = _selectedVariant?.Barcode ?? "",
+            SalePriceUsd = GetSalePrice("USD"),
+            DiscountUsd = GetDiscountAmount("USD"),
+            SalePriceTry = GetSalePrice("TRY"),
+            DiscountTry = GetDiscountAmount("TRY"),
+            SalePriceEur = GetSalePrice("EUR"),
+            DiscountEur = GetDiscountAmount("EUR"),
+            SalePriceAzn = GetSalePrice("AZN"),
+            DiscountAzn = GetDiscountAmount("AZN"),
+            Weight = variantPhysical?.WeightKg,
+            Desi = desi
+        };
+    }
+
+    // ─── Aktif favori durumunu yükle (LoadAllAsync sonunda çağrılır) ───
+    private async Task LoadFavoriteStateAsync(_ApplicationConnectionDb db, Guid variantId, CancellationToken token)
+    {
+        if (use == null || _product == null) { _isFavorite = false; return; }
+
+        _isFavorite = await db.Set<FavoriteProductCart>().AsNoTracking()
+            .AnyAsync(f => f.UserId == use.Id &&
+                           f.ProductId == _product.Id &&
+                           f.ProductVariantId == variantId &&
+                           (f.IsDeleted == null || f.IsDeleted.IsDeletedStatu != true), token);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FAVORİLERE EKLE / ÇIKAR  →  FavoriteProductCart
+    // Aynı ürün+varyant kaydı varsa soft-delete ile açılıp kapatılır,
+    // yoksa yeni kayıt oluşturulur (sepet ile aynı anlık görüntü verisi).
+    // ═══════════════════════════════════════════════════════════════
     private async Task ToggleFavorite()
     {
-        _isFavorite = !_isFavorite;
-        await Notify(_isFavorite ? "success" : "info", "Favoriler",
-            _isFavorite ? "Ürün favorilere eklendi!" : "Ürün favorilerden çıkarıldı.");
+        if (use == null) { await Notify("warning", "Favoriler", "Favorilere eklemek için giriş yapmalısınız."); return; }
+        if (_product == null || _selectedVariant == null) { await Notify("warning", "Favoriler", "Ürün veya varyant bilgisi bulunamadı."); return; }
+
+        try
+        {
+            var token = _cts.Token;
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            var variantId = _selectedVariant.VariantId;
+
+            // Mevcut kaydı (silinmiş dahil) getir — geri açabilmek için tracking gerekli
+            var existingFav = await db.Set<FavoriteProductCart>()
+                .FirstOrDefaultAsync(f => f.UserId == use.Id &&
+                                          f.ProductId == _product.Id &&
+                                          f.ProductVariantId == variantId, token);
+
+            bool currentlyActive = existingFav != null &&
+                                   (existingFav.IsDeleted == null || existingFav.IsDeleted.IsDeletedStatu != true);
+
+            if (currentlyActive)
+            {
+                // ─── Favoriden çıkar (soft delete) ───
+                existingFav!.IsDeleted ??= new();
+                existingFav.IsDeleted.IsDeletedStatu = true;
+                await db.SaveChangesAsync(token);
+
+                _isFavorite = false;
+                await Notify("info", "Favoriler", "Ürün favorilerden çıkarıldı.");
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "RemoveFavorite", "favorite", _product.Name);
+            }
+            else if (existingFav != null)
+            {
+                // ─── Daha önce çıkarılmış kaydı geri getir + güncel bilgiyle tazele ───
+                var snap = await BuildCartSnapshotAsync(db, variantId, token);
+
+                existingFav.IsDeleted = new(); // IsDeletedStatu varsayılan false → aktif
+                existingFav.StoreId = _product.StoreId;
+                existingFav.ProductSlug = snap.Slug;
+                existingFav.ProductShortDescription = snap.ShortDescription;
+                existingFav.ProductImageUrl = snap.CoverImageUrl;
+                existingFav.BrandName = snap.BrandName;
+                existingFav.CategoryName = snap.CategoryId;
+                existingFav.SKU = snap.Sku;
+                existingFav.Barcode = snap.Barcode;
+                existingFav.SalePriceUsd = snap.SalePriceUsd; existingFav.DiscountAmountUsd = snap.DiscountUsd;
+                existingFav.SalePriceTry = snap.SalePriceTry; existingFav.DiscountAmountTry = snap.DiscountTry;
+                existingFav.SalePriceEur = snap.SalePriceEur; existingFav.DiscountAmountEur = snap.DiscountEur;
+                existingFav.SalePriceAzn = snap.SalePriceAzn; existingFav.DiscountAmountAzn = snap.DiscountAzn;
+                existingFav.Quantity = Math.Max(1, _quantity);
+                existingFav.Weight = snap.Weight;
+                existingFav.Desi = snap.Desi;
+                existingFav.CreatedDate = DateTime.UtcNow;
+                await db.SaveChangesAsync(token);
+
+                _isFavorite = true;
+                await Notify("success", "Favoriler", "Ürün favorilere eklendi!");
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddFavorite", "favorite", _product.Name);
+            }
+            else
+            {
+                // ─── Yeni favori kaydı oluştur ───
+                var snap = await BuildCartSnapshotAsync(db, variantId, token);
+
+                var favItem = new FavoriteProductCart
+                {
+                    UserId = use.Id,
+                    StoreId = _product.StoreId,
+                    ProductId = _product.Id,
+                    ProductVariantId = variantId,
+                    ProductSlug = snap.Slug,
+                    ProductShortDescription = snap.ShortDescription,
+                    ProductImageUrl = snap.CoverImageUrl,
+                    BrandName = snap.BrandName,
+                    CategoryName = snap.CategoryId,
+                    SKU = snap.Sku,
+                    Barcode = snap.Barcode,
+
+                    SalePriceUsd = snap.SalePriceUsd,
+                    DiscountAmountUsd = snap.DiscountUsd,
+                    ShippingPriceUsd = 0,
+                    SalePriceTry = snap.SalePriceTry,
+                    DiscountAmountTry = snap.DiscountTry,
+                    ShippingPriceTry = 0,
+                    SalePriceEur = snap.SalePriceEur,
+                    DiscountAmountEur = snap.DiscountEur,
+                    ShippingPriceEur = 0,
+                    SalePriceAzn = snap.SalePriceAzn,
+                    DiscountAmountAzn = snap.DiscountAzn,
+                    ShippingPriceAzn = 0,
+
+                    Quantity = Math.Max(1, _quantity),
+                    CouponCode = "",
+                    VatRate = 0,
+                    Weight = snap.Weight,
+                    Desi = snap.Desi,
+                    DeliveryTimeText = "",
+                    CustomerNote = "",
+                    CreatedDate = DateTime.UtcNow
+                };
+
+                db.Set<FavoriteProductCart>().Add(favItem);
+                await db.SaveChangesAsync(token);
+
+                _isFavorite = true;
+                await Notify("success", "Favoriler", "Ürün favorilere eklendi!");
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddFavorite", "favorite", _product.Name);
+            }
+
+            // Favori açılır menüsü / rozetleri gerçek zamanlı güncelle
+            await StateHub.NotifyDataChanged("FavoriteProductCart");
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            await LogError("ToggleFavorite", ex);
+            await Notify("danger", "Hata", "Favori işlemi sırasında sorun oluştu.");
+        }
+        StateHasChanged();
     }
 
     private async Task ToggleCompare()
@@ -3293,6 +3475,28 @@ else
     {
         public string Name { get; set; } = "—";
         public string Value { get; set; } = "—";
+    }
+
+    // Sepet + Favori kaydı için ortak anlık görüntü (fiyat/fiziksel/meta)
+    private sealed class CartSnapshot
+    {
+        public string Slug { get; set; } = "";
+        public string ShortDescription { get; set; } = "";
+        public string CoverImageUrl { get; set; } = "";
+        public string BrandName { get; set; } = "";
+        public int CategoryId { get; set; }
+        public string Sku { get; set; } = "";
+        public string Barcode { get; set; } = "";
+        public decimal SalePriceUsd { get; set; }
+        public decimal DiscountUsd { get; set; }
+        public decimal SalePriceTry { get; set; }
+        public decimal DiscountTry { get; set; }
+        public decimal SalePriceEur { get; set; }
+        public decimal DiscountEur { get; set; }
+        public decimal SalePriceAzn { get; set; }
+        public decimal DiscountAzn { get; set; }
+        public decimal? Weight { get; set; }
+        public decimal? Desi { get; set; }
     }
 
     private record WorkingHourRow(string Day, bool IsActive, TimeOnly? Start, TimeOnly? End, bool IsToday);

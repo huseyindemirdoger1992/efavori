@@ -29,6 +29,7 @@
 		<Folder Include="_files\" />
 		<Folder Include="_files\" />
 		<Folder Include="_files\" />
+		<Folder Include="_files\" />
 		<Folder Include="_files\users\" />
 	</ItemGroup>
 	<ItemGroup>

@@ -3,6 +3,7 @@ using data._Product.BulkWordPressProductImport;
 using data._Product.ProductHistory;
 using data._Shared;
 using data.Articles;
+using data.FavoriteCart;
 using data.ShoppingCart;
 using Data;
 using Microsoft.EntityFrameworkCore;
@@ -142,6 +143,10 @@ namespace data
 
         // ShoppingCart
         public DbSet<ProductCart> ProductCart { get; set; } = default!;
+
+
+        // FavoriteCart
+        public DbSet<FavoriteProductCart> FavoriteProductCart { get; set; } = default!;
 
 
 

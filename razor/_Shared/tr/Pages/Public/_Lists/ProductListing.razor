@@ -1703,8 +1703,8 @@
 
                 query = query.Where(p =>
                     (p.Name != null && p.Name.Contains(search)) ||
-                    (p.ShortDescription != null && p.ShortDescription.Contains(search)) ||
-                    (p.FullDescription != null && p.FullDescription.Contains(search)) ||
+                    // (p.ShortDescription != null && p.ShortDescription.Contains(search)) ||
+                    // (p.FullDescription != null && p.FullDescription.Contains(search)) ||
                     (p.Tags != null && p.Tags.Contains(search)) ||
                     (p.BrandId != null && matchingBrandIds.Contains(p.BrandId.Value)) ||
                     matchingVariantProductIds.Contains(p.Id));

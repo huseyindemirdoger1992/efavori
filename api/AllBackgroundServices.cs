@@ -35,7 +35,7 @@ namespace api
         // ════════════════════════════════════════════════════════════
 
         // Ana döngü tetiklenme sıklığı (döviz kuru + AI ürün içerik burada kontrol edilir)
-        private static readonly TimeSpan Interval = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
         // AI ürün içerik üretimi — retry üst limiti (bu sayıya ulaşan ürün tekrar denenmez)
         private const int MaxAiRetry = 3;

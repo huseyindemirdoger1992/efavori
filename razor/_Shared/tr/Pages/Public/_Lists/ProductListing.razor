@@ -1511,6 +1511,34 @@
     // ─── Parametre ────────────────────────────────────────────────
     [Parameter] public Users? use { get; set; }
 
+    // ─── Çoklu Dil ────────────────────────────────────────────────
+    // Language.razor ile aynı mantık: önce kullanıcı tercihi (use.Language),
+    // yoksa URL'nin ilk segmenti. Desteklenmeyen değerde "tr"ye düşer.
+    // Ürünler YALNIZCA seçili dilde ProductTranslations kaydı olanlardan gelir.
+    private static readonly string[] SupportedCultures =
+        { "tr", "az", "de", "en", "es", "fr", "hi", "pt", "ru", "zh" };
+    private const string DEFAULT_LANG = "tr";
+
+    private string _langCode = DEFAULT_LANG;
+
+    private string ResolveLanguage()
+    {
+        if (!string.IsNullOrWhiteSpace(use?.Language) &&
+            SupportedCultures.Contains(use!.Language!.ToLowerInvariant()))
+            return use.Language.ToLowerInvariant();
+
+        try
+        {
+            var uri = new Uri(NavigationManager.Uri);
+            var seg = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (seg.Length > 0 && SupportedCultures.Contains(seg[0].ToLowerInvariant()))
+                return seg[0].ToLowerInvariant();
+        }
+        catch { }
+
+        return DEFAULT_LANG;
+    }
+
     // ─── Yaşam döngüsü ──────────────────────────────────────────
     private bool _disposed;
     private bool _isInitialized;
@@ -1604,6 +1632,8 @@
     {
         if (_disposed || _isInitialized) return;
         _isInitialized = true;
+
+        _langCode = ResolveLanguage();
 
         StateHub.OnDataChanged += HandleDataChanged;
 
@@ -1701,11 +1731,20 @@
                     .Distinct()
                     .ToListAsync(token);
 
+                // İçerik araması SADECE seçili dildeki ProductTranslations üzerinde yapılır.
+                var matchingTranslationProductIds = await db.Set<ProductTranslations>().AsNoTracking()
+                    .Where(t => t.LanguageCode == _langCode)
+                    .Where(t => t.IsDeleted.IsDeletedStatu != true)
+                    .Where(t => (t.Name != null && t.Name.Contains(search)) ||
+                                (t.ShortDescription != null && t.ShortDescription.Contains(search)) ||
+                                (t.FullDescription != null && t.FullDescription.Contains(search)) ||
+                                (t.Tags != null && t.Tags.Contains(search)))
+                    .Select(t => t.ProductId)
+                    .Distinct()
+                    .ToListAsync(token);
+
                 query = query.Where(p =>
-                    (p.Name != null && p.Name.Contains(search)) ||
-                    // (p.ShortDescription != null && p.ShortDescription.Contains(search)) ||
-                    // (p.FullDescription != null && p.FullDescription.Contains(search)) ||
-                    (p.Tags != null && p.Tags.Contains(search)) ||
+                    matchingTranslationProductIds.Contains(p.Id) ||
                     (p.BrandId != null && matchingBrandIds.Contains(p.BrandId.Value)) ||
                     matchingVariantProductIds.Contains(p.Id));
             }
@@ -1732,6 +1771,14 @@
                     query = query.Where(p => p.BrandId == brandId.Value);
             }
 
+            // ─── DİL FİLTRESİ ─────────────────────────────────────────────
+            // Yalnızca o an seçili dilde ProductTranslations kaydı olan ürünler listelenir.
+            query = query.Where(p =>
+                db.Set<ProductTranslations>()
+                  .Any(t => t.ProductId == p.Id &&
+                            t.LanguageCode == _langCode &&
+                            t.IsDeleted.IsDeletedStatu != true));
+
             if (!isNextBatch)
             {
                 _totalCount = await query.CountAsync(token);
@@ -1745,8 +1792,6 @@
                 .Select(p => new
                 {
                     p.Id,
-                    p.Name,
-                    p.ShortDescription,
                     p.BrandId,
                     p.StoreId,
                     p.CoverMediaId,
@@ -1764,6 +1809,16 @@
 
             var productIds = rawProducts.Select(p => p.Id).ToList();
             var storeIds = rawProducts.Select(p => p.StoreId).Distinct().ToList();
+
+            // ─── ÇEVİRİLER — Seçili dildeki içerik ────────────────────────
+            var translationMap = (await db.Set<ProductTranslations>().AsNoTracking()
+                    .Where(t => productIds.Contains(t.ProductId) &&
+                                t.LanguageCode == _langCode &&
+                                t.IsDeleted.IsDeletedStatu != true)
+                    .Select(t => new { t.ProductId, t.Name, t.ShortDescription })
+                    .ToListAsync(token))
+                .GroupBy(t => t.ProductId)
+                .ToDictionary(g => g.Key, g => g.First());
             var brandIds = rawProducts.Where(p => p.BrandId.HasValue).Select(p => p.BrandId!.Value).Distinct().ToList();
 
             var storesList = await db.Set<Store>().AsNoTracking()
@@ -1838,11 +1893,13 @@
             var newProducts = new List<ProductCardDto>();
             foreach (var rp in rawProducts)
             {
+                translationMap.TryGetValue(rp.Id, out var trx);
+
                 var dto = new ProductCardDto
                 {
                     Id = rp.Id,
-                    Name = rp.Name ?? "—",
-                    ShortDescription = rp.ShortDescription,
+                    Name = string.IsNullOrWhiteSpace(trx?.Name) ? "—" : trx!.Name!,
+                    ShortDescription = trx?.ShortDescription,
                     BrandName = rp.BrandId.HasValue && brandNames.TryGetValue(rp.BrandId.Value, out var bn) ? bn : null,
                     StoreId = rp.StoreId,
                     StoreName = storeNames.TryGetValue(rp.StoreId, out var sn) ? sn : null,

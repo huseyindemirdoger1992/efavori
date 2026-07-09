@@ -58,7 +58,7 @@ try
 
     // Api Services
     builder.Services.AddHttpClient<AIProductKnowledgeGenerator>();
-    builder.Services.AddHttpClient<AIPostContentCreator>();
+    builder.Services.AddHttpClient<AIProductTranslationGeneratorTurkishToEnglish>();
     builder.Services.AddHostedService<AllBackgroundServices>();
 
     var app = builder.Build();

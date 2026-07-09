@@ -74,6 +74,70 @@ namespace web.Areas.Public.Controllers
                 var productId = product.Id;
 
                 // ═══════════════════════════════════════════════════════
+                // 1b. AKTİF DİL ÇÖZÜMÜ (_Layout.cshtml ile aynı zincir)
+                //     Öncelik: route culture segmenti → cookie → varsayılan
+                //     Talep 1: Dil İngilizce ise <head> bilgileri İngilizce gelmeli.
+                // ═══════════════════════════════════════════════════════
+                var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
+                string currentLang = "tr";
+
+                // Route segmentinden dil (ör. /en/Public/_Viewer/ProductProfile/...)
+                var routeCulture = RouteData.Values["culture"]?.ToString()?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(routeCulture))
+                {
+                    // Route değeri yoksa path'in ilk segmentine bak
+                    var firstSeg = Request.Path.Value?
+                        .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                        .FirstOrDefault()?.ToLowerInvariant();
+                    if (!string.IsNullOrEmpty(firstSeg) && supportedCultures.Contains(firstSeg))
+                        routeCulture = firstSeg;
+                }
+
+                if (!string.IsNullOrEmpty(routeCulture) && supportedCultures.Contains(routeCulture))
+                {
+                    currentLang = routeCulture;
+                }
+                else if (Request.Cookies.TryGetValue(".Efavori.Culture", out var cultureCookie) && !string.IsNullOrEmpty(cultureCookie))
+                {
+                    var cParts = cultureCookie.Split('|');
+                    var cPart = cParts.FirstOrDefault(p => p.StartsWith("c="));
+                    if (cPart != null)
+                    {
+                        var cCode = cPart.Substring(2).ToLowerInvariant();
+                        if (supportedCultures.Contains(cCode))
+                            currentLang = cCode;
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════
+                // 1c. ÇEVİRİ YÜKLE (ProductTranslations sidecar)
+                //     Aktif dil "tr" değilse ve o dilde çeviri varsa,
+                //     ürünün görünen metinleri (ad/açıklama/etiket) çeviriden gelir.
+                //     Çeviri yoksa Türkçe ana kayda düşülür (graceful fallback).
+                // ═══════════════════════════════════════════════════════
+                string localizedName = product.Name ?? "";
+                string localizedShortDesc = product.ShortDescription ?? "";
+                string localizedTags = product.Tags ?? product.AiOriginalTags ?? "";
+
+                if (currentLang != "tr")
+                {
+                    var translation = db.Set<ProductTranslations>().AsNoTracking()
+                        .FirstOrDefault(t => t.ProductId == productId &&
+                                             t.LanguageCode == currentLang &&
+                                             t.IsDeleted.IsDeletedStatu != true);
+
+                    if (translation != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(translation.Name))
+                            localizedName = translation.Name;
+                        if (!string.IsNullOrWhiteSpace(translation.ShortDescription))
+                            localizedShortDesc = translation.ShortDescription;
+                        if (!string.IsNullOrWhiteSpace(translation.Tags))
+                            localizedTags = translation.Tags;
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════
                 // 2. İLİŞKİSEL VERİLERİ ÇEK (tek seferde)
                 // ═══════════════════════════════════════════════════════
 
@@ -271,18 +335,23 @@ namespace web.Areas.Public.Controllers
                     ? seo.CanonicalUrl
                     : $"{baseUrl}/Public/_Viewer/ProductProfile/{slug}";
 
-                // --- Title: SeoTitle > Product.Name ---
-                var rawTitle = !string.IsNullOrEmpty(seo.SeoTitle)
-                    ? seo.SeoTitle
-                    : product.Name ?? "Ürün Detayı";
+                // --- Title: (dil tr ise) SeoTitle > Product.Name ; (dil tr değilse) çeviri adı > Product.Name ---
+                // ProductSeo.SeoTitle Türkçe olduğu için yabancı dilde çeviri adını önceliklendiriyoruz.
+                var rawTitle = currentLang == "tr"
+                    ? (!string.IsNullOrEmpty(seo.SeoTitle) ? seo.SeoTitle : (localizedName != "" ? localizedName : "Ürün Detayı"))
+                    : (localizedName != "" ? localizedName : (!string.IsNullOrEmpty(seo.SeoTitle) ? seo.SeoTitle : "Ürün Detayı"));
 
                 // Sadece ilk harfleri büyük yapar, tamamen büyük harf karmaşasını önler
                 var pageTitle = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(rawTitle.ToLower());
 
-                // --- Description: SeoDescription > ShortDescription (max 160 karakter) ---
-                var rawDescription = !string.IsNullOrEmpty(seo.SeoDescription)
-                    ? seo.SeoDescription
-                    : product.ShortDescription ?? $"{product.Name} — efavori.com'da en uygun fiyatlarla.";
+                // --- Description: (dil tr ise) SeoDescription > ShortDescription ; (dil tr değilse) çeviri açıklaması öncelikli ---
+                var rawDescription = currentLang == "tr"
+                    ? (!string.IsNullOrEmpty(seo.SeoDescription)
+                        ? seo.SeoDescription
+                        : (localizedShortDesc != "" ? localizedShortDesc : $"{localizedName} — efavori.com'da en uygun fiyatlarla."))
+                    : (localizedShortDesc != ""
+                        ? localizedShortDesc
+                        : (!string.IsNullOrEmpty(seo.SeoDescription) ? seo.SeoDescription : $"{localizedName} — efavori.com"));
 
                 var pageDescription = rawDescription;
                 if (pageDescription.Length > 160)
@@ -293,10 +362,10 @@ namespace web.Areas.Public.Controllers
                     pageDescription = (lastSpace > 0 ? truncated.Substring(0, lastSpace) : truncated) + "...";
                 }
 
-                // --- Keywords: SeoKeywords > Tags > AiOriginalTags ---
-                var pageKeywords = !string.IsNullOrEmpty(seo.SeoKeywords)
-                    ? seo.SeoKeywords
-                    : product.Tags ?? product.AiOriginalTags ?? "";
+                // --- Keywords: (dil tr ise) SeoKeywords > Tags ; (dil tr değilse) çeviri etiketleri öncelikli ---
+                var pageKeywords = currentLang == "tr"
+                    ? (!string.IsNullOrEmpty(seo.SeoKeywords) ? seo.SeoKeywords : localizedTags)
+                    : (localizedTags != "" ? localizedTags : (seo.SeoKeywords ?? ""));
 
                 // --- OG Image: Kapak görseli tam URL ---
                 var ogImageUrl = !string.IsNullOrEmpty(coverImageUrl)
@@ -371,7 +440,7 @@ namespace web.Areas.Public.Controllers
                 {
                     @type = "ListItem",
                     position = bcPosition,
-                    name = product.Name ?? "Ürün",
+                    name = localizedName != "" ? localizedName : "Ürün",
                     item = canonicalUrl
                 });
 
@@ -492,7 +561,7 @@ namespace web.Areas.Public.Controllers
                 {
                     ["@context"] = "https://schema.org",
                     ["@type"] = "Product",
-                    ["name"] = product.Name,
+                    ["name"] = localizedName,
                     ["url"] = canonicalUrl,
                     ["description"] = rawDescription, // Tam açıklama (kısaltılmamış)
                     ["brand"] = !string.IsNullOrEmpty(brandName) ? new { @type = "Brand", name = brandName } : null
@@ -710,7 +779,7 @@ namespace web.Areas.Public.Controllers
                         var variantProduct = new Dictionary<string, object?>
                         {
                             ["@type"] = "Product",
-                            ["name"] = product.Name,
+                            ["name"] = localizedName,
                             ["offers"] = vOffer
                         };
 

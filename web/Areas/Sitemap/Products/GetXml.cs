@@ -51,7 +51,7 @@ namespace web.Areas.Sitemap.Products
 
         // _Viewer route'larıyla birebir eşleşen diller
         private static readonly string[] SupportedLangs =
-            { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
+            { "tr", "en"/*, "az", "de", "es", "fr", "hi", "pt", "ru", "zh"*/ };
 
         public GetXml(_ApplicationConnectionDb context)
         {

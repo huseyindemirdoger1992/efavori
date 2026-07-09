@@ -1,8 +1,7 @@
-﻿using data;
+﻿using api.tr.AI;
+using data;
 using data._Product;
-using data.Articles;
 using data._Shared;
-using api.tr.AI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,8 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,47 +27,27 @@ namespace api
         private static readonly HttpClient _httpClient = new HttpClient();
 
         // ════════════════════════════════════════════════════════════
-        //  AYARLAR — tüm sıklık ve limit değerleri buradan yönetilir.
-        //  Başka hiçbir yerde bu değerleri elle değiştirmeyin.
+        //  AYARLAR — sıklık ve limit değerleri buradan yönetilir.
+        //  Her görev KENDİ aralığında, birbirinden bağımsız çalışır.
+        //  İstediğiniz süreyi doğrudan buraya yazın.
         // ════════════════════════════════════════════════════════════
 
-        // Ana döngü tetiklenme sıklığı (döviz kuru + AI ürün içerik burada kontrol edilir)
-        private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
+        // Döviz kuru çekme sıklığı
+        private static readonly TimeSpan ExchangeRateInterval = TimeSpan.FromMinutes(1);
 
-        // AI ürün içerik üretimi — retry üst limiti (bu sayıya ulaşan ürün tekrar denenmez)
+        // AI ürün içerik üretimi — tetiklenme sıklığı
+        private static readonly TimeSpan AiProductInterval = TimeSpan.FromSeconds(10);
+
+        // AI ürün çevirisi — tetiklenme sıklığı (her 10 sn'de 1 ürün)
+        private static readonly TimeSpan AiTranslationInterval = TimeSpan.FromSeconds(10);
+
+        // Hedef çeviri dili
+        private const string TargetTranslationLanguage = "en";
+
+        // AI retry üst limiti (bu sayıya ulaşan kayıt tekrar denenmez)
         private const int MaxAiRetry = 3;
 
-        // AI makale içerik üretimi — tetiklenme sıklığı ve retry üst limiti
-        private static readonly TimeSpan ArticleAiInterval = TimeSpan.FromMinutes(30);
-        private const int MaxArticleAiRetry = 3;
-
-        // Her makale üretiminden sonra kuyruğa eklenecek yeni başlıkta ZORUNLU olarak yer alacak telefon numarası.
-        // Numarayı değiştirmek isterseniz SADECE burayı güncelleyin — başka hiçbir yerde sabit numara yoktur.
-        private const string ContactPhoneNumber = "+905302342580";
-
-        // Yeni başlık üretiminde dönülecek bölgeler (Düzce merkez + ilçeleri)
-        private static readonly string[] DuzceBolgeleri =
-        {
-            "Düzce Merkez", "Akçakoca", "Cumayeri", "Çilimli", "Gölyaka", "Gümüşova", "Kaynaşlı", "Yığılca"
-        };
-
-        // Yeni başlık üretiminde dönülecek hizmet kategorileri
-        private static readonly string[] HizmetKategorileri =
-        {
-            "Boya ve badana",
-            "Kırım ve yıkım işleri",
-            "Tamirat ve tadilat",
-            "Su tesisatı",
-            "Su kaçağı tespiti ve tamiri"
-        };
-
         // ════════════════════════════════════════════════════════════
-
-        private DateTime _lastArticleAiRunUtc = DateTime.MinValue;
-
-        // Bölge/hizmet kombinasyonlarını sırayla (round-robin) dolaşmak için sayaç.
-        // Rastgele seçim yerine sıralı dönüş kullanılıyor ki tüm kombinasyonlar dengeli şekilde kapsansın.
-        private int _titleRotationCounter = 0;
 
         public AllBackgroundServices(
             IServiceScopeFactory scopeFactory,
@@ -84,32 +61,55 @@ namespace api
 
         protected override async Task ExecuteAsync(CancellationToken durdurmaSinyali)
         {
-            _logger.LogInformation("AllBackgroundServices başlatıldı (10 sn aralık — Kur + AI Ürün İçerik + AI Makale İçerik).");
+            _logger.LogInformation("AllBackgroundServices başlatıldı (Kur + AI Ürün İçerik + AI Çeviri).");
 
-            using var timer = new PeriodicTimer(Interval);
+            // Her görev kendi bağımsız döngüsünde çalışır — biri diğerini bekletmez, kilitlenme olmaz.
+            var exchangeRateLoop = RunLoopAsync(
+                "Döviz Kuru",
+                ExchangeRateInterval,
+                FetchAndSaveExchangeRatesAsync,
+                durdurmaSinyali);
+
+            var aiProductLoop = RunLoopAsync(
+                "AI Ürün İçerik",
+                AiProductInterval,
+                ProcessNextAiProductAsync,
+                durdurmaSinyali);
+
+            var aiTranslationLoop = RunLoopAsync(
+                "AI Çeviri",
+                AiTranslationInterval,
+                ProcessNextAiTranslationAsync,
+                durdurmaSinyali);
+
+            await Task.WhenAll(exchangeRateLoop, aiProductLoop, aiTranslationLoop);
+
+            _logger.LogInformation("AllBackgroundServices Durduruldu.");
+        }
+
+        /// <summary>
+        /// Verilen görevi kendi aralığında sonsuz döngüde çalıştırır.
+        /// Bir görevdeki gecikme/hata diğer görevleri ETKİLEMEZ.
+        /// </summary>
+        private async Task RunLoopAsync(
+            string taskName,
+            TimeSpan interval,
+            Func<CancellationToken, Task> job,
+            CancellationToken durdurmaSinyali)
+        {
+            using var timer = new PeriodicTimer(interval);
 
             try
             {
                 while (await timer.WaitForNextTickAsync(durdurmaSinyali))
                 {
-                    // Görevleri paralel değil sıralı çalıştırıyoruz — DB baskısını düşük tutmak için
-                    await FetchAndSaveExchangeRatesAsync(durdurmaSinyali);
-                    await ProcessNextAiProductAsync(durdurmaSinyali);
-
-                    // 10 sn'lik ana döngüyü bozmadan, 30 dakikada bir makale üretimini tetikle
-                    if (DateTime.UtcNow - _lastArticleAiRunUtc >= ArticleAiInterval)
-                    {
-                        _lastArticleAiRunUtc = DateTime.UtcNow;
-                        await ProcessNextAiArticleAsync(durdurmaSinyali);
-                    }
+                    await job(durdurmaSinyali);
                 }
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("Arka plan görevi durdurma sinyali aldı.");
+                _logger.LogInformation("{Task} görevi durdurma sinyali aldı.", taskName);
             }
-
-            _logger.LogInformation("AllBackgroundServices Durduruldu.");
         }
 
         // ──────────────────────────────────────────────
@@ -276,265 +276,158 @@ namespace api
         }
 
         // ──────────────────────────────────────────────
-        //  AI MAKALE İÇERİK ÜRETİMİ (30 dk'da 1 başlık)
+        //  AI ÜRÜN ÇEVİRİSİ  (tr → en, Tick başına maks 1 ürün)
+        //
+        //  Akış:
+        //   1) ProductTranslations tablosunda "tr" olup, aynı ProductId için
+        //      henüz "en" kaydı bulunmayan (veya hata alıp retry hakkı kalan)
+        //      bir kayıt bul.
+        //   2) tr içerikleri AI ile en'e çevir.
+        //   3) Çeviriyi AYNI ProductId ile yeni bir "en" ProductTranslations
+        //      kaydı olarak yaz (veya var olan hatalı en kaydını güncelle).
         // ──────────────────────────────────────────────
-        private async Task ProcessNextAiArticleAsync(CancellationToken cancellationToken)
+        private async Task ProcessNextAiTranslationAsync(CancellationToken cancellationToken)
         {
+            Guid? sourceTranslationId = null;
+
             try
             {
-                // ── 1) Sıradaki uygun başlığı bul ──
-                Guid? targetTitleId = null;
-                string? titleText = null;
+                // ── 1) Sıradaki tr kaydını bul (kısa ömürlü read context) ──
+                Guid productId = Guid.Empty;
+                string? srcName = null, srcShort = null, srcFull = null, srcTags = null;
+                Guid? existingEnId = null;   // varsa güncellenecek hatalı en kaydı
 
                 await using (var readDb = await _dbFactory.CreateDbContextAsync(cancellationToken))
                 {
-                    var candidate = await readDb.Set<AiTitlesForArticle>()
+                    // Aynı ProductId için zaten başarılı bir "en" kaydı olanları hariç tut.
+                    var candidate = await readDb.Set<ProductTranslations>()
                         .AsNoTracking()
-                        .Where(t => (t.AiIsOk == false || t.AiIsOk == null)
-                                 && t.AiRetryCount < MaxArticleAiRetry
-                                 && (t.IsDeleted == null || t.IsDeleted.IsDeletedStatu == false))
-                        .OrderBy(t => t.CreateDate)          // FIFO — en eski bekleyen önce
-                        .Select(t => new { t.Id, t.Title })
+                        .Where(t => t.LanguageCode == "tr"
+                                 && (t.IsDeleted == null || t.IsDeleted.IsDeletedStatu == false)
+                                 // Bu ürün için başarılı bir en kaydı YOK
+                                 && !readDb.Set<ProductTranslations>().Any(e =>
+                                        e.ProductId == t.ProductId
+                                     && e.LanguageCode == TargetTranslationLanguage
+                                     && (e.IsDeleted == null || e.IsDeleted.IsDeletedStatu == false)
+                                     && (e.AiTranslationStatus == true || e.IsManuallyEdited == true))
+                                 // Retry limitini aşmış (kalıcı hatalı) en kaydı da YOK
+                                 && !readDb.Set<ProductTranslations>().Any(e =>
+                                        e.ProductId == t.ProductId
+                                     && e.LanguageCode == TargetTranslationLanguage
+                                     && (e.IsDeleted == null || e.IsDeleted.IsDeletedStatu == false)
+                                     && e.AiRetryCount >= MaxAiRetry))
+                        .OrderBy(t => t.CreatedAt)          // FIFO
+                        .Select(t => new
+                        {
+                            t.Id,
+                            t.ProductId,
+                            t.Name,
+                            t.ShortDescription,
+                            t.FullDescription,
+                            t.Tags
+                        })
                         .FirstOrDefaultAsync(cancellationToken);
 
-                    if (candidate == null) return;           // Kuyrukta iş yok, sessizce çık
+                    if (candidate == null) return;          // Çevrilecek iş yok, sessizce çık
 
-                    targetTitleId = candidate.Id;
-                    titleText = candidate.Title;
+                    sourceTranslationId = candidate.Id;
+                    productId = candidate.ProductId;
+                    srcName = candidate.Name;
+                    srcShort = candidate.ShortDescription;
+                    srcFull = candidate.FullDescription;
+                    srcTags = candidate.Tags;
+
+                    // Bu ürüne ait, hata almış (retry hakkı kalan) mevcut en kaydı var mı?
+                    existingEnId = await readDb.Set<ProductTranslations>()
+                        .Where(e => e.ProductId == productId
+                                 && e.LanguageCode == TargetTranslationLanguage
+                                 && (e.IsDeleted == null || e.IsDeleted.IsDeletedStatu == false))
+                        .OrderBy(e => e.CreatedAt)
+                        .Select(e => (Guid?)e.Id)
+                        .FirstOrDefaultAsync(cancellationToken);
                 }
 
-                _logger.LogInformation("AI makale üretimi başlıyor → Başlık: {Title} ({Id})", titleText, targetTitleId);
+                _logger.LogInformation(
+                    "AI çeviri başlıyor → ProductId: {Pid} (tr kaynak: {Tid}) → {Lang}",
+                    productId, sourceTranslationId, TargetTranslationLanguage);
 
-                // ── 2) Scoped servis üzerinden AI çağrısı ──
+                // ── 2) Scoped servis üzerinden AI çeviri çağrısı ──
                 using var scope = _scopeFactory.CreateScope();
-                var aiCreator = scope.ServiceProvider.GetRequiredService<AIPostContentCreator>();
+                var translator = scope.ServiceProvider.GetRequiredService<AIProductTranslationGeneratorTurkishToEnglish>();
 
-                var result = await aiCreator.GenerateArticleContentAsync(titleText ?? "", cancellationToken);
+                var translated = await translator.TranslateAsync(
+                    TargetTranslationLanguage,
+                    srcName, srcShort, srcFull, srcTags);
 
-                // ── 3) Sonucu kaydet ──
+                // ── 3) Sonucu kaydet (kısa ömürlü write context) ──
                 await using var writeDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
 
-                var titleEntity = await writeDb.Set<AiTitlesForArticle>()
-                    .FirstOrDefaultAsync(t => t.Id == targetTitleId, cancellationToken);
-
-                if (titleEntity == null) return;
-
-                if (result.Success && result.Data != null)
+                // Var olan en kaydını çek, yoksa yeni oluştur (AYNI ProductId).
+                ProductTranslations? enRecord = null;
+                if (existingEnId.HasValue)
                 {
-                    var seoData = result.Data;
-                    string slug = GenerateSlug(seoData.Title);
+                    enRecord = await writeDb.Set<ProductTranslations>()
+                        .FirstOrDefaultAsync(e => e.Id == existingEnId.Value, cancellationToken);
+                }
 
-                    var article = new Article
+                bool isNew = enRecord == null;
+                if (isNew)
+                {
+                    enRecord = new ProductTranslations
                     {
                         Id = Guid.NewGuid(),
-                        IsUser = null,                       // AI tarafından üretildi
-                        UserStoreId = null,
-                        CategoriId = null,
-                        FeaturedImage = null,
-                        Title = seoData.Title,
-                        ShotDescription = seoData.ShortDescription,
-                        ArticleLognDescription = seoData.ContentHtml,
-                        SourceAiTitleId = titleEntity.Id,
-                        Meta = new Meta
-                        {
-                            MetaTitle = seoData.MetaTitle,
-                            MetaDescription = seoData.MetaDescription,
-                            FocusKeywords = seoData.FocusKeywords,
-                            // NOT: Domain/route yapınız _Viewer.cs'teki canonical mantığıyla aynı olmalı — burada geçici bir varsayım kullanıldı, gerekirse güncelleyin.
-                            CanonicalUrl = $"https://efavori.com/makale/{slug}",
-                            OgType = "article",
-                            RobotsIndex = "index, follow"
-                        },
-                        Interaction = new InteractionCounts
-                        {
-                            ViewCount = 0,
-                            ShareCount = 0,
-                            RecommendCount = 0
-                        },
-                        IsDeleted = new IsDeleted()
+                        ProductId = productId,                 // ← tr ürünüyle AYNI ProductId
+                        LanguageCode = TargetTranslationLanguage,
+                        CreatedAt = DateTime.UtcNow
                     };
+                }
 
-                    writeDb.Set<Article>().Add(article);
+                if (translated != null)
+                {
+                    // Satıcı elle düzenlediyse üzerine YAZMA (güvenlik kontrolü)
+                    if (!isNew && enRecord!.IsManuallyEdited)
+                    {
+                        _logger.LogInformation("en kaydı elle düzenlenmiş, atlanıyor → {Pid}", productId);
+                        return;
+                    }
 
-                    titleEntity.AiIsOk = true;               // Başarılı
-                    titleEntity.AiErrorMessage = null;
-                    titleEntity.AiProcessedAt = DateTime.UtcNow;
+                    enRecord!.Name = translated.Name;
+                    enRecord.ShortDescription = translated.ShortDescription;
+                    enRecord.FullDescription = translated.FullDescription;
+                    enRecord.Tags = translated.Tags;
 
-                    _logger.LogInformation("AI makale başarıyla üretildi ve kaydedildi → {ArticleId} (Kaynak başlık: {TitleId})", article.Id, targetTitleId);
+                    enRecord.IsAiTranslated = true;
+                    enRecord.AiTranslationStatus = true;        // Başarılı
+                    enRecord.AiErrorMessage = null;
+                    enRecord.AiProcessedAt = DateTime.UtcNow;
+                    enRecord.UpdatedAt = DateTime.UtcNow;
 
-                    // ── 4) Kuyruğu besle: yeni bir başlık üret ve ekle (kuyruk kendi kendini besler) ──
-                    await GenerateAndQueueNextTitleAsync(aiCreator, writeDb, cancellationToken);
+                    if (isNew) writeDb.Set<ProductTranslations>().Add(enRecord);
+
+                    _logger.LogInformation("AI çeviri başarıyla yazıldı → ProductId: {Pid}", productId);
                 }
                 else
                 {
-                    // Artık GERÇEK sebep elimizde — genel/anlamsız bir mesaj yerine bunu kaydediyoruz
-                    string reason = result.FailureReason ?? "Bilinmeyen hata (sebep döndürülmedi).";
+                    // AI null döndü — başarısız
+                    enRecord!.AiRetryCount += 1;
+                    enRecord.IsAiTranslated = false;
+                    enRecord.AiTranslationStatus = enRecord.AiRetryCount >= MaxAiRetry ? false : null;
+                    enRecord.AiErrorMessage = "AI çeviri servisi boş yanıt döndürdü.";
+                    enRecord.UpdatedAt = DateTime.UtcNow;
 
-                    titleEntity.AiRetryCount += 1;
-                    titleEntity.AiIsOk = titleEntity.AiRetryCount >= MaxArticleAiRetry ? false : null;
-                    titleEntity.AiErrorMessage = reason.Length > 500 ? reason[..500] : reason;
-                    titleEntity.AiProcessedAt = DateTime.UtcNow;
+                    if (isNew) writeDb.Set<ProductTranslations>().Add(enRecord);
 
                     _logger.LogWarning(
-                        "AI makale üretimi başarısız → {Id} (Deneme: {Retry}/{Max}) | Sebep: {Reason}",
-                        targetTitleId, titleEntity.AiRetryCount, MaxArticleAiRetry, reason);
+                        "AI çeviri boş yanıt döndü → ProductId: {Pid} (Deneme: {Retry}/{Max})",
+                        productId, enRecord.AiRetryCount, MaxAiRetry);
                 }
 
                 await writeDb.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "AI makale üretiminde beklenmeyen hata.");
-
-                try
-                {
-                    await IncrementArticleRetryOnErrorAsync(ex.Message, cancellationToken);
-                }
-                catch (Exception innerEx)
-                {
-                    _logger.LogError(innerEx, "Makale retry sayacı güncellenirken ikincil hata.");
-                }
+                _logger.LogError(ex, "AI çeviride beklenmeyen hata.");
             }
-        }
-
-        /// <summary>
-        /// Exception fırladığında ilgili başlığın retry sayacını artırır.
-        /// </summary>
-        private async Task IncrementArticleRetryOnErrorAsync(string errorMessage, CancellationToken cancellationToken)
-        {
-            await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-            var stuck = await db.Set<AiTitlesForArticle>()
-                .Where(t => (t.AiIsOk == false || t.AiIsOk == null)
-                         && t.AiRetryCount < MaxArticleAiRetry)
-                .OrderBy(t => t.CreateDate)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (stuck == null) return;
-
-            stuck.AiRetryCount += 1;
-            stuck.AiErrorMessage = errorMessage.Length > 500 ? errorMessage[..500] : errorMessage;
-            stuck.AiIsOk = stuck.AiRetryCount >= MaxArticleAiRetry ? false : null;
-            stuck.AiProcessedAt = DateTime.UtcNow;
-
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// Bir makale başarıyla üretildikten hemen sonra çağrılır. AI'dan (telefon numarası İÇERMEYEN)
-        /// ham bir konu başlığı ister, ardından ContactPhoneNumber'ı deterministik olarak ekleyip
-        /// AiTitlesForArticle kuyruğuna yeni bir kayıt olarak yazar. Bu adım en iyi çaba (best-effort)
-        /// mantığıyla çalışır — başarısız olursa sadece loglanır, ana makale kaydını etkilemez.
-        /// </summary>
-        private async Task GenerateAndQueueNextTitleAsync(
-            AIPostContentCreator aiCreator,
-            _ApplicationConnectionDb writeDb,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                var (district, category) = GetNextRotation();
-
-                var titleResult = await aiCreator.GenerateNextArticleTitleAsync(district, category, cancellationToken);
-
-                if (!titleResult.Success || string.IsNullOrWhiteSpace(titleResult.Title))
-                {
-                    _logger.LogWarning(
-                        "Yeni başlık üretilemedi, kuyruk beslenemedi → Bölge: {District} | Hizmet: {Category} | Sebep: {Reason}",
-                        district, category, titleResult.FailureReason ?? "bilinmiyor");
-                    return;
-                }
-
-                string finalTitle = BuildTitleWithPhoneNumber(titleResult.Title, ContactPhoneNumber);
-
-                // Aynı başlık zaten kuyrukta/kayıtlıysa tekrar ekleme
-                bool alreadyExists = await writeDb.Set<AiTitlesForArticle>()
-                    .AnyAsync(t => t.Title == finalTitle, cancellationToken);
-
-                if (alreadyExists)
-                {
-                    _logger.LogInformation("Üretilen başlık zaten mevcut, atlandı → {Title}", finalTitle);
-                    return;
-                }
-
-                var newTitleEntity = new AiTitlesForArticle
-                {
-                    Id = Guid.NewGuid(),
-                    Title = finalTitle,
-                    CreateDate = DateTime.UtcNow,
-                    AiIsOk = null,               // Yeni kuyruk kaydı — henüz işlenmedi
-                    AiRetryCount = 0,
-                    IsDeleted = new IsDeleted()
-                };
-
-                writeDb.Set<AiTitlesForArticle>().Add(newTitleEntity);
-
-                _logger.LogInformation("Kuyruğa yeni başlık eklendi → {Title} (Bölge: {District} | Hizmet: {Category})", finalTitle, district, category);
-            }
-            catch (Exception ex)
-            {
-                // Kuyruk besleme adımı başarısız olsa bile ana makale kaydı zarar görmemeli
-                _logger.LogError(ex, "Kuyruğa yeni başlık eklenirken beklenmeyen hata.");
-            }
-        }
-
-        /// <summary>
-        /// AI'nın ürettiği ham başlıktan olası telefon benzeri dizeleri temizler,
-        /// ardından ZORUNLU telefon numarasını deterministik ve garanti şekilde ekler.
-        /// Bu sayede numaranın eksik, yanlış veya farklı formatta gelme riski tamamen ortadan kalkar.
-        /// </summary>
-        private static string BuildTitleWithPhoneNumber(string rawTitle, string phoneNumber)
-        {
-            // AI yanlışlıkla bir telefon/rakam dizisi eklemiş olabilir — bunları temizle
-            string cleaned = Regex.Replace(rawTitle, @"(\+?\d[\d\s\-\(\)]{6,}\d)", "").Trim();
-            cleaned = Regex.Replace(cleaned, @"\s{2,}", " ").Trim(' ', '-', '|', ',');
-
-            if (string.IsNullOrWhiteSpace(cleaned))
-            {
-                cleaned = rawTitle.Trim(); // temizlik her şeyi silmiş olursa orijinali kullan
-            }
-
-            return $"{cleaned} | İletişim: {phoneNumber}";
-        }
-
-        /// <summary>
-        /// Bölge/hizmet kombinasyonları arasında sırayla (round-robin) dolaşır.
-        /// Tüm kombinasyonlar tükenmeden aynı kombinasyon tekrar seçilmez.
-        /// </summary>
-        private (string district, string category) GetNextRotation()
-        {
-            int totalCombinations = DuzceBolgeleri.Length * HizmetKategorileri.Length;
-            int index = _titleRotationCounter % totalCombinations;
-
-            int districtIndex = index % DuzceBolgeleri.Length;
-            int categoryIndex = (index / DuzceBolgeleri.Length) % HizmetKategorileri.Length;
-
-            _titleRotationCounter++;
-
-            return (DuzceBolgeleri[districtIndex], HizmetKategorileri[categoryIndex]);
-        }
-
-        // Türkçe karakterleri normalize ederek SEO dostu slug üretir
-        private static string GenerateSlug(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input)) return Guid.NewGuid().ToString("N");
-
-            var map = new Dictionary<char, char>
-            {
-                {'ç','c'}, {'Ç','c'}, {'ğ','g'}, {'Ğ','g'}, {'ı','i'}, {'İ','i'},
-                {'ö','o'}, {'Ö','o'}, {'ş','s'}, {'Ş','s'}, {'ü','u'}, {'Ü','u'}
-            };
-
-            var sb = new StringBuilder();
-            foreach (var ch in input.ToLowerInvariant())
-            {
-                char c = map.TryGetValue(ch, out var mapped) ? mapped : ch;
-                if (char.IsLetterOrDigit(c)) sb.Append(c);
-                else sb.Append('-');
-            }
-
-            string slug = Regex.Replace(sb.ToString(), "-{2,}", "-").Trim('-');
-            return string.IsNullOrEmpty(slug) ? Guid.NewGuid().ToString("N") : slug;
         }
     }
 }

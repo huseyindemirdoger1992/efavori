@@ -83,7 +83,9 @@
                 <ol class="breadcrumb mb-2">
                     <li class="breadcrumb-item"><a href="/">Ana Sayfa</a></li>
                     <li class="breadcrumb-item"><a href="/tr/Public/Home/Index">Ürünler</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">@SelectedProduct.Name</li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        <span class="placeholder-glow"><span class="placeholder col-4" style="min-width:120px;"></span></span>
+                    </li>
                 </ol>
             </nav>
         </div>
@@ -95,13 +97,12 @@
                     </div>
                 </div>
                 <div class="col-lg-5">
-                    <h1 class="h4 text-light fw-semibold lh-base mb-2" itemprop="name">@SelectedProduct.Name</h1>
-                    @if (!string.IsNullOrWhiteSpace(SelectedProduct.ShortDescription))
-                    {
-                        <div itemprop="description">
-                            <p class="text-light small mb-0 lh-base">@SelectedProduct.ShortDescription</p>
-                        </div>
-                    }
+                    @* İçerik hazır olana kadar ürün adı/açıklaması iskelet olarak gösterilir.
+                       Ham (Türkçe) Products.Name basılmaz; asıl metin _loading=false olunca
+                       _trName ile seçili dilde gelir. Böylece dil titremesi olmaz. *@
+                    <h1 class="h4 text-light fw-semibold lh-base mb-2 placeholder-glow" aria-hidden="true">
+                        <span class="placeholder col-8"></span>
+                    </h1>
                     <div class="placeholder-glow mt-3">
                         <span class="placeholder col-5 mb-3"></span>
                         <span class="placeholder col-12 mb-2" style="height:48px;"></span>
@@ -194,12 +195,25 @@ else
                         </li>
                     }
                     <li class="breadcrumb-item active" aria-current="page" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-                        <span itemprop="name">@p.Name</span>
+                        <span itemprop="name">@_trName</span>
                         <meta itemprop="position" content="@bcPos" />
                     </li>
                 </ol>
             </nav>
         </div>
+
+        @* ─── DİL BİLGİLENDİRME — seçili dil yoksa uyarı banner + modal tetikle ─── *@
+        @if (_showLangPicker && _availableLangs.Any())
+        {
+            <div class="d-flex align-items-center gap-2 bg-danger bg-opacity-10 border border-dark border-opacity-25 rounded-3 px-3 py-2 mb-2">
+                <i class="fa fa-language text-warning" aria-hidden="true"></i>
+                <span class="text-light small flex-fill"> <b>@GetLocalized("BannerNotAvailable")</b> </span>
+                <button class="btn btn-warning btn-sm py-0 px-3" @onclick="OpenLangModal">
+                    <i class="fa fa-globe me-1" aria-hidden="true"></i>@GetLocalized("SelectLang")
+                </button>
+            </div>
+        }
+
 
         <div class="container-fluid pb-5">
             <div class="row g-4">
@@ -226,7 +240,7 @@ else
                                                  @onclick="() => _activeImageIndex = idx"
                                                  @onmouseover="() => _activeImageIndex = idx">
                                                 <img src="@_displayImages[idx]"
-                                                     alt="@p.Name — görsel @(idx + 1) / @_displayImages.Count"
+                                                     alt="@_trName — görsel @(idx + 1) / @_displayImages.Count"
                                                      class="w-100 h-100" style="object-fit:cover;" loading="lazy"
                                                      width="80" height="80" />
                                             </div>
@@ -244,7 +258,7 @@ else
                                         @if (_displayImages.Any())
                                         {
                                             <img src="@_displayImages[_activeImageIndex]"
-                                                 alt="@p.Name — ana ürün görseli"
+                                                 alt="@_trName — ana ürün görseli"
                                                  itemprop="image"
                                                  class="w-100 h-100" id="ppMainImg" style="object-fit:contain;"
                                                  width="600" height="600" />
@@ -315,7 +329,7 @@ else
                                                  style="width:64px; height:64px; cursor:pointer; @(idx == _activeImageIndex ? "" : "opacity:.6;")"
                                                  @onclick="() => _activeImageIndex = idx">
                                                 <img src="@_displayImages[idx]"
-                                                     alt="@p.Name — küçük görsel @(idx + 1)"
+                                                     alt="@_trName — küçük görsel @(idx + 1)"
                                                      class="w-100 h-100" style="object-fit:cover;" loading="lazy"
                                                      width="64" height="64" />
                                             </div>
@@ -379,13 +393,13 @@ else
                     </div>
 
                     @* SEO: Tek <h1> — itemprop="name" *@
-                    <h1 class="h4 text-light fw-semibold lh-base mb-2" itemprop="name">@p.Name</h1>
+                    <h1 class="h4 text-light fw-semibold lh-base mb-2" itemprop="name">@_trName</h1>
 
                     @* SEO: KISA AÇIKLAMA — itemprop="description" *@
-                    @if (!string.IsNullOrWhiteSpace(p.ShortDescription))
+                    @if (!string.IsNullOrWhiteSpace(_trShortDesc))
                     {
                         <div class="bg-dark bg-opacity-25 rounded-3 p-3" itemprop="description">
-                            <p class="text-light small mb-0 lh-base">@p.ShortDescription</p>
+                            <p class="text-light small mb-0 lh-base">@_trShortDesc</p>
                         </div>
                     }
 
@@ -990,13 +1004,13 @@ else
                     @if (_activeTab == "desc")
                     {
                         <section aria-labelledby="tab-desc">
-                            @if (!string.IsNullOrWhiteSpace(p.FullDescription))
+                            @if (!string.IsNullOrWhiteSpace(_trFullDesc))
                             {
-                                <div class="text-light lh-lg">@((MarkupString)SanitizeDescription(p.FullDescription))</div>
+                                <div class="text-light lh-lg">@((MarkupString)SanitizeDescription(_trFullDesc))</div>
                             }
-                            else if (!string.IsNullOrWhiteSpace(p.ShortDescription))
+                            else if (!string.IsNullOrWhiteSpace(_trShortDesc))
                             {
-                                <p class="text-light lh-lg mb-0">@p.ShortDescription</p>
+                                <p class="text-light lh-lg mb-0">@_trShortDesc</p>
                             }
                             else
                             {
@@ -1004,12 +1018,12 @@ else
                             }
 
                             @* Etiketler *@
-                            @if (!string.IsNullOrWhiteSpace(p.Tags))
+                            @if (!string.IsNullOrWhiteSpace(_trTags))
                             {
                                 <div class="mt-4">
                                     <h6 class="text-light small fw-semibold mb-2"><i class="fa fa-tags me-1 text-info" aria-hidden="true"></i>Etiketler</h6>
                                     <div class="d-flex flex-wrap gap-1">
-                                        @foreach (var tag in p.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                        @foreach (var tag in _trTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                                         {
                                             <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary">@tag</span>
                                         }
@@ -1405,6 +1419,54 @@ else
     </div>
 </div>
 
+@* ═══════════════════════════════════════════════════════════════
+   İÇERİK DİLİ SEÇİM MODALI
+   Ürün seçili dilde mevcut değilse veya kullanıcı dili değiştirmek
+   istediğinde açılır. Language.razor referansı: bayraklar + dil adları.
+   UI metinleri kültür diline göre lokalize edilir.
+   ═══════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="ProductLangModal" tabindex="-1" aria-labelledby="ProductLangModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content bg-dark border border-info">
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-info mb-0" id="ProductLangModalLabel">
+                    <i class="fa fa-language me-1" aria-hidden="true"></i>@GetLocalized("ModalTitle")
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="@GetLocalized("Close")"></button>
+            </div>
+            <div class="modal-body p-0">
+
+                @if (_showLangPicker)
+                {
+                    <div class="px-3 pt-3 pb-2">
+                        <div class="d-flex align-items-start gap-2 bg-warning bg-opacity-10 rounded-3 p-2">
+                            <i class="fa fa-exclamation-triangle text-warning mt-1" aria-hidden="true"></i>
+                            <span class="text-light small lh-sm">@GetLocalized("LangNotAvailable")</span>
+                        </div>
+                    </div>
+                }
+
+                @* Language.razor dropdown-item yapısı referans alındı *@
+                <div class="py-1">
+                    @foreach (var lang in _availableLangs)
+                    {
+                        var l = lang;
+                        var info = LangInfo.TryGetValue(l, out var li) ? li : (Flag: "tr.svg", Name: l.ToUpperInvariant());
+                        <button type="button"
+                                class="btn btn-link text-decoration-none w-100 d-flex align-items-center gap-3 py-2 px-3 border-0"
+                                @onclick="() => OnLangSelected(l)">
+                            <img src="/assets/flags/1x1/@info.Flag" width="28" height="28"
+                                 alt="@info.Name" class="rounded-circle border border-secondary flex-shrink-0"
+                                 style="object-fit:cover;" />
+                            <span class="small flex-fill text-light">@info.Name</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
 
     // ─── Sabitler ─────────────────────────────────────────────────
@@ -1430,6 +1492,18 @@ else
     private string? _brandName;
     private Store? _store;
     private string? _storeProfileUrl;
+
+    // ─── Çeviri / Çoklu Dil ────────────────────────────────────────
+    // Kültürden gelen dil kodu (ör. "tr","en","az"...) ile ProductTranslations'dan
+    // eşleşen kayıt çekilir. Eşleşme yoksa mevcut diller sunulur.
+    private string _trName = "";
+    private string _trShortDesc = "";
+    private string _trFullDesc = "";
+    private string _trTags = "";
+    private string _contentLang = "tr";          // o an görüntülenen dil
+    private List<string> _availableLangs = new(); // ürünün mevcut çeviri dilleri
+    private bool _showLangPicker;                 // dil bulunamadığında seçim UI'ı göster
+    private bool _autoOpenLangModal;              // OnAfterRender'da modalı otomatik aç
 
     // ─── Mağaza Takip / Engel ─────────────────────────────────────
     private bool _isFollowingStore;
@@ -1524,6 +1598,13 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Dil bulunamadığında modalı otomatik aç
+        if (_autoOpenLangModal)
+        {
+            _autoOpenLangModal = false;
+            await OpenLangModal();
+        }
+
         if (_product != null && !_zoomJsInjected)
         {
             _zoomJsInjected = true;
@@ -1781,10 +1862,257 @@ else
         GC.SuppressFinalize(this);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // ÇEVİRİ YÜKLEME — ProductTranslations
+    // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Kültür dil koduna göre çeviriyi yükler. Bulunamazsa mevcut dilleri tespit eder.
+    /// </summary>
+    private async Task LoadTranslationAsync(_ApplicationConnectionDb db, Guid productId, CancellationToken token)
+    {
+        // Kültürden dil kodunu al (ör. "tr", "en", "az")
+        var requestedLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
+
+        // Bu ürüne ait tüm aktif çeviri dil kodlarını çek
+        _availableLangs = await db.Set<ProductTranslations>().AsNoTracking()
+            .Where(t => t.ProductId == productId && t.IsDeleted.IsDeletedStatu != true)
+            .Select(t => t.LanguageCode)
+            .Distinct()
+            .ToListAsync(token);
+
+        // İstenen dilde çeviri var mı?
+        var translation = await db.Set<ProductTranslations>().AsNoTracking()
+            .FirstOrDefaultAsync(t => t.ProductId == productId &&
+                                      t.LanguageCode == requestedLang &&
+                                      t.IsDeleted.IsDeletedStatu != true, token);
+
+        if (translation != null)
+        {
+            ApplyTranslation(translation);
+            _showLangPicker = false;
+        }
+        else if (_availableLangs.Any())
+        {
+            // İstenen dil yok — varolan ilk dili geçici olarak yükle ve dil seçim modalını aç
+            var fallbackLang = _availableLangs.Contains("tr") ? "tr"
+                             : _availableLangs.Contains("en") ? "en"
+                             : _availableLangs.First();
+
+            var fallback = await db.Set<ProductTranslations>().AsNoTracking()
+                .FirstOrDefaultAsync(t => t.ProductId == productId &&
+                                          t.LanguageCode == fallbackLang &&
+                                          t.IsDeleted.IsDeletedStatu != true, token);
+            if (fallback != null) ApplyTranslation(fallback);
+            _showLangPicker = true;
+            _autoOpenLangModal = true;  // OnAfterRenderAsync'de modal açılacak
+        }
+        else
+        {
+            // Hiç çeviri yok (ürünün hiçbir dilde ProductTranslations kaydı yok).
+            // ─── GEÇİCİ FALLBACK ───
+            // Products içerik alanları (Name/ShortDescription/Tags) ileride kaldırılacak.
+            // O kaldırma yapıldığında bu blok tek dokunulacak yer olacak: aşağıdaki üç
+            // satırı boş string'e (veya "tr" çevirisini zorunlu kılan mantığa) çevir.
+            _trName = _product?.Name ?? SelectedProduct?.Name ?? "";
+            _trShortDesc = _product?.ShortDescription ?? SelectedProduct?.ShortDescription ?? "";
+            _trTags = _product?.Tags ?? _product?.AiOriginalTags ?? "";
+            _trFullDesc = "";
+            _contentLang = requestedLang;
+            _showLangPicker = false;
+        }
+    }
+
+    private void ApplyTranslation(ProductTranslations t)
+    {
+        _trName = t.Name ?? "";
+        _trShortDesc = t.ShortDescription ?? "";
+        _trFullDesc = t.FullDescription ?? "";
+        _trTags = t.Tags ?? "";
+        _contentLang = t.LanguageCode;
+    }
+
+    // Language.razor referansı — sistemin desteklediği kültür kodları
+    private static readonly string[] SupportedCultures =
+        ["tr", "az", "de", "en", "es", "fr", "hi", "pt", "ru", "zh"];
+
+    /// <summary>
+    /// Kullanıcı dil seçici UI'dan bir dil seçtiğinde çağrılır.
+    /// Language.razor mantığıyla: kullanıcı dilini kaydeder, cookie yazar ve
+    /// yeni kültür URL'ine yönlendirerek TÜM sistemin dilini değiştirir.
+    /// </summary>
+    private async Task OnLangSelected(string langCode)
+    {
+        if (langCode == _contentLang && use == null) return;
+        try
+        {
+            // 1) Oturum açmış kullanıcının tercih dilini kalıcı olarak kaydet
+            if (use != null)
+            {
+                var token = _cts.Token;
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+                use.Language = langCode;
+                db.Users.Update(use);
+                await db.SaveChangesAsync(token);
+            }
+        }
+        catch (Exception ex) { await LogError("OnLangSelected", ex); }
+
+        // 2) Yeni kültür URL'ini hesapla
+        var newUrl = GetNewLanguageUrl(langCode);
+
+        // 3) Cookie kaydet ve sayfayı JS ile yenile (Language.razor ile aynı akış)
+        await JS.InvokeVoidAsync("setLanguageAndRedirect", langCode, newUrl);
+    }
+
+    /// <summary>
+    /// URL'in ilk segmentindeki kültür kodunu seçilen dille değiştirir;
+    /// kültür segmenti yoksa başa ekler. Language.razor referansı.
+    /// </summary>
+    private string GetNewLanguageUrl(string langCode)
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        var segments = uri.AbsolutePath
+            .Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+
+        if (segments.Count > 0 && SupportedCultures.Contains(segments[0].ToLower()))
+            segments[0] = langCode;
+        else
+            segments.Insert(0, langCode);
+
+        return "/" + string.Join("/", segments) + uri.Query;
+    }
+
+    // Language.razor referansı — bayrak + dil adı eşleşmesi
+    private static readonly Dictionary<string, (string Flag, string Name)> LangInfo = new()
+    {
+        ["tr"] = ("tr.svg", "Türkçe"),
+        ["en"] = ("gb.svg", "English"),
+        ["az"] = ("az.svg", "Azərbaycanca"),
+        ["de"] = ("de.svg", "Deutsch"),
+        ["es"] = ("es.svg", "Español"),
+        ["fr"] = ("fr.svg", "Français"),
+        ["hi"] = ("in.svg", "हिन्दी"),
+        ["pt"] = ("pt.svg", "Português"),
+        ["ru"] = ("ru.svg", "Русский"),
+        ["zh"] = ("cn.svg", "中文")
+    };
+
+    private static string GetLangDisplayName(string code) =>
+        LangInfo.TryGetValue(code, out var info) ? info.Name : code.ToUpperInvariant();
+
+    // ─── Modal / Banner UI metinleri — kültür diline göre lokalize ───
+    private static readonly Dictionary<string, Dictionary<string, string>> LocalizedUi = new()
+    {
+        ["tr"] = new()
+        {
+            ["ModalTitle"] = "İçerik Dili",
+            ["Close"] = "Kapat",
+            ["LangNotAvailable"] = "Bu ürün seçili dilde mevcut değil. Lütfen aşağıdaki dillerden birini seçin.",
+            ["BannerNotAvailable"] = "Bu ürün seçili dilde mevcut değil.",
+            ["SelectLang"] = "Dil Seç",
+            ["ChangeLang"] = "İçerik dilini değiştir"
+        },
+        ["en"] = new()
+        {
+            ["ModalTitle"] = "Content Language",
+            ["Close"] = "Close",
+            ["LangNotAvailable"] = "This product is not available in the selected language. Please choose one of the languages below.",
+            ["BannerNotAvailable"] = "This product is not available in the selected language.",
+            ["SelectLang"] = "Select Language",
+            ["ChangeLang"] = "Change content language"
+        },
+        ["az"] = new()
+        {
+            ["ModalTitle"] = "Məzmun Dili",
+            ["Close"] = "Bağla",
+            ["LangNotAvailable"] = "Bu məhsul seçilmiş dildə mövcud deyil. Zəhmət olmasa aşağıdakı dillərdən birini seçin.",
+            ["BannerNotAvailable"] = "Bu məhsul seçilmiş dildə mövcud deyil.",
+            ["SelectLang"] = "Dil Seç",
+            ["ChangeLang"] = "Məzmun dilini dəyişdir"
+        },
+        ["de"] = new()
+        {
+            ["ModalTitle"] = "Inhaltssprache",
+            ["Close"] = "Schließen",
+            ["LangNotAvailable"] = "Dieses Produkt ist in der gewählten Sprache nicht verfügbar. Bitte wählen Sie eine der folgenden Sprachen.",
+            ["BannerNotAvailable"] = "Dieses Produkt ist in der gewählten Sprache nicht verfügbar.",
+            ["SelectLang"] = "Sprache wählen",
+            ["ChangeLang"] = "Inhaltssprache ändern"
+        },
+        ["es"] = new()
+        {
+            ["ModalTitle"] = "Idioma del Contenido",
+            ["Close"] = "Cerrar",
+            ["LangNotAvailable"] = "Este producto no está disponible en el idioma seleccionado. Por favor, elija uno de los idiomas a continuación.",
+            ["BannerNotAvailable"] = "Este producto no está disponible en el idioma seleccionado.",
+            ["SelectLang"] = "Elegir Idioma",
+            ["ChangeLang"] = "Cambiar idioma del contenido"
+        },
+        ["fr"] = new()
+        {
+            ["ModalTitle"] = "Langue du Contenu",
+            ["Close"] = "Fermer",
+            ["LangNotAvailable"] = "Ce produit n'est pas disponible dans la langue sélectionnée. Veuillez choisir l'une des langues ci-dessous.",
+            ["BannerNotAvailable"] = "Ce produit n'est pas disponible dans la langue sélectionnée.",
+            ["SelectLang"] = "Choisir la Langue",
+            ["ChangeLang"] = "Changer la langue du contenu"
+        },
+        ["hi"] = new()
+        {
+            ["ModalTitle"] = "सामग्री भाषा",
+            ["Close"] = "बंद करें",
+            ["LangNotAvailable"] = "यह उत्पाद चयनित भाषा में उपलब्ध नहीं है। कृपया नीचे दी गई भाषाओं में से एक चुनें।",
+            ["BannerNotAvailable"] = "यह उत्पाद चयनित भाषा में उपलब्ध नहीं है।",
+            ["SelectLang"] = "भाषा चुनें",
+            ["ChangeLang"] = "सामग्री भाषा बदलें"
+        },
+        ["pt"] = new()
+        {
+            ["ModalTitle"] = "Idioma do Conteúdo",
+            ["Close"] = "Fechar",
+            ["LangNotAvailable"] = "Este produto não está disponível no idioma selecionado. Por favor, escolha um dos idiomas abaixo.",
+            ["BannerNotAvailable"] = "Este produto não está disponível no idioma selecionado.",
+            ["SelectLang"] = "Escolher Idioma",
+            ["ChangeLang"] = "Alterar idioma do conteúdo"
+        },
+        ["ru"] = new()
+        {
+            ["ModalTitle"] = "Язык Контента",
+            ["Close"] = "Закрыть",
+            ["LangNotAvailable"] = "Этот товар недоступен на выбранном языке. Пожалуйста, выберите один из языков ниже.",
+            ["BannerNotAvailable"] = "Этот товар недоступен на выбранном языке.",
+            ["SelectLang"] = "Выбрать Язык",
+            ["ChangeLang"] = "Изменить язык контента"
+        },
+        ["zh"] = new()
+        {
+            ["ModalTitle"] = "内容语言",
+            ["Close"] = "关闭",
+            ["LangNotAvailable"] = "该产品在所选语言中不可用。请从以下语言中选择一种。",
+            ["BannerNotAvailable"] = "该产品在所选语言中不可用。",
+            ["SelectLang"] = "选择语言",
+            ["ChangeLang"] = "更改内容语言"
+        }
+    };
+
+    private string GetLocalized(string key)
+    {
+        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.ToLowerInvariant();
+        if (LocalizedUi.TryGetValue(lang, out var dict) && dict.TryGetValue(key, out var text))
+            return text;
+        // Fallback: Türkçe
+        return LocalizedUi["tr"].TryGetValue(key, out var fallback) ? fallback : key;
+    }
+
+    private async Task OpenLangModal()
+        => await ShowModal("ProductLangModal");
+
     private async Task HandleDataChanged(string entityName)
     {
         if (_disposed || _product == null) return;
-        if (entityName != "Products" && entityName != "ProductPrices" && entityName != "ProductStocks" && entityName != "Store" && entityName != "StoreShip" && entityName != "ProductReview")
+        if (entityName != "Products" && entityName != "ProductTranslations" && entityName != "ProductPrices" && entityName != "ProductStocks" && entityName != "Store" && entityName != "StoreShip" && entityName != "ProductReview")
             return;
         await InvokeAsync(async () => { await LoadAllAsync(); StateHasChanged(); });
     }
@@ -1815,8 +2143,11 @@ else
 
             var productId = _product.Id;
 
+            // 1b) Çeviri verilerini yükle — kültür diline göre ProductTranslations'dan çek
+            await LoadTranslationAsync(db, productId, token);
+
             // Görüntülenme logla
-            await Logger.TakeIt(use?.Id, PAGE_TITLE, "ProductView", "details", _product.Name);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "ProductView", "details", _trName);
 
             // ─── Ziyaret geçmişi kaydet ───
             try
@@ -2732,7 +3063,7 @@ else
             _newReviewText = null;
             _newReviewRating = 0;
             await Notify("success", "Yorum", "Yorumunuz başarıyla eklendi!");
-            await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewAdd", "new", _product.Name);
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewAdd", "new", _trName);
         }
         catch (Exception ex) { await LogError("SubmitNewReview", ex); await Notify("danger", "Hata", "Yorum gönderilirken sorun oluştu."); }
         finally { _reviewSubmitting = false; StateHasChanged(); }
@@ -2774,7 +3105,7 @@ else
             _replyText = null;
             _replyingToReviewId = null;
             await Notify("success", "Yanıt", "Yanıtınız başarıyla eklendi!");
-            await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewReply", "reply", _product.Name);
+            await Logger.TakeIt(use.Id, PAGE_TITLE, "ReviewReply", "reply", _trName);
         }
         catch (Exception ex) { await LogError("SubmitReply", ex); await Notify("danger", "Hata", "Yanıt gönderilirken sorun oluştu."); }
         finally { _replySubmitting = false; StateHasChanged(); }
@@ -3000,7 +3331,7 @@ else
                 await db.SaveChangesAsync(token);
 
                 await Notify("success", "Sepet", $"Sepetteki ürün adedi {existingCartItem.Quantity} olarak güncellendi.");
-                await Logger.TakeIt(use.Id, PAGE_TITLE, "UpdateCartQuantity", "cart", _product.Name);
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "UpdateCartQuantity", "cart", _trName);
                 await StateHub.NotifyDataChanged("ProductCart");
             }
             else
@@ -3057,7 +3388,7 @@ else
                 await db.SaveChangesAsync(token);
 
                 await Notify("success", "Sepet", $"{_quantity} adet ürün sepete eklendi!");
-                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddToCart", "cart", _product.Name);
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddToCart", "cart", _trName);
                 await StateHub.NotifyDataChanged("ProductCart");
             }
         }
@@ -3112,7 +3443,7 @@ else
         return new CartSnapshot
         {
             Slug = _slug ?? _product!.Id.ToString(),
-            ShortDescription = _product?.ShortDescription ?? "",
+            ShortDescription = !string.IsNullOrEmpty(_trShortDesc) ? _trShortDesc : "",
             CoverImageUrl = _displayImages.Any() ? _displayImages[0] : "",
             BrandName = _brandName ?? "",
             CategoryId = _breadcrumbCategories.Any() ? _breadcrumbCategories.Last().Id : 0,
@@ -3178,7 +3509,7 @@ else
 
                 _isFavorite = false;
                 await Notify("info", "Favoriler", "Ürün favorilerden çıkarıldı.");
-                await Logger.TakeIt(use.Id, PAGE_TITLE, "RemoveFavorite", "favorite", _product.Name);
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "RemoveFavorite", "favorite", _trName);
             }
             else if (existingFav != null)
             {
@@ -3206,7 +3537,7 @@ else
 
                 _isFavorite = true;
                 await Notify("success", "Favoriler", "Ürün favorilere eklendi!");
-                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddFavorite", "favorite", _product.Name);
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddFavorite", "favorite", _trName);
             }
             else
             {
@@ -3255,7 +3586,7 @@ else
 
                 _isFavorite = true;
                 await Notify("success", "Favoriler", "Ürün favorilere eklendi!");
-                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddFavorite", "favorite", _product.Name);
+                await Logger.TakeIt(use.Id, PAGE_TITLE, "AddFavorite", "favorite", _trName);
             }
 
             // Favori açılır menüsü / rozetleri gerçek zamanlı güncelle
@@ -3294,7 +3625,7 @@ else
                 _product.InteractionCounts.RecommendCount = (_product.InteractionCounts.RecommendCount ?? 0) + 1;
             }
             await Notify("success", "Tavsiye", "Ürün tavsiye edildi!");
-            await Logger.TakeIt(use?.Id, PAGE_TITLE, "RecommendProduct", "recommend", _product?.Name);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "RecommendProduct", "recommend", _trName);
         }
         catch (Exception ex) { await LogError("ToggleRecommendation", ex); await Notify("danger", "Hata", "Tavsiye işlemi sırasında sorun oluştu."); }
         StateHasChanged();
@@ -3330,7 +3661,7 @@ else
                 _product.InteractionCounts ??= new InteractionCounts();
                 _product.InteractionCounts.ShareCount = (_product.InteractionCounts.ShareCount ?? 0) + 1;
             }
-            await Logger.TakeIt(use?.Id, PAGE_TITLE, "ShareProduct", "share", _product?.Name);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "ShareProduct", "share", _trName);
         }
         catch (Exception ex) { await LogError("OpenShareModal", ex); }
         await ShowModal("ShareModal");
@@ -3353,7 +3684,7 @@ else
     // ═══════════════════════════════════════════════════════════════
 
     private async Task ShowModal(string id) =>
-        await JS.InvokeVoidAsync("eval", $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+        await JS.InvokeVoidAsync("eval", $"bootstrap.Modal.getOrCreateInstance(document.getElementById('{id}')).show()");
 
     private async Task Notify(string type, string title, string text)
     {

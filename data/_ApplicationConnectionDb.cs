@@ -140,6 +140,7 @@ namespace data
         public DbSet<Warehouse> Warehouse { get; set; } = default!;
         public DbSet<ProductHistory> ProductHistory { get; set; } = default!;
         public DbSet<ProductReview> ProductReview { get; set; } = default!;
+        public DbSet<ProductTranslations> ProductTranslations { get; set; } = default!;
 
         // ShoppingCart
         public DbSet<ProductCart> ProductCart { get; set; } = default!;

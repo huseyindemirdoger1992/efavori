@@ -2,6 +2,7 @@
 using data._Product.BulkWordPressProductImport;
 using data._Product.ProductHistory;
 using data._Shared;
+using data.AdminSettings;
 using data.Articles;
 using data.FavoriteCart;
 using data.ShoppingCart;
@@ -23,8 +24,9 @@ namespace data
         // Deneme Tabloları
         public DbSet<TryTableSingle> TryTableSingle { get; set; } = default!;
 
-        // Oturum izinleri
+        // Admin Settings
         public DbSet<AccountPermissions> AccountPermissions { get; set; } = default!;
+        public DbSet<AllBackgroundServicesFrequencyRate> AllBackgroundServicesFrequencyRate { get; set; } = default!;
 
         // Arkadaşlıklar / Takipleşmeler
         public DbSet<FriendShip> FriendShip { get; set; } = default!;

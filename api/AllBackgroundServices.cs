@@ -1,7 +1,7 @@
-﻿using api.tr.AI;
-using data;
+﻿using data;
 using data._Product;
 using data._Shared;
+using data.AdminSettings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,25 +27,25 @@ namespace api
         private static readonly HttpClient _httpClient = new HttpClient();
 
         // ════════════════════════════════════════════════════════════
-        //  AYARLAR — sıklık ve limit değerleri buradan yönetilir.
-        //  Her görev KENDİ aralığında, birbirinden bağımsız çalışır.
-        //  İstediğiniz süreyi doğrudan buraya yazın.
+        //  AYARLAR — sıklık, izin ve limit değerleri artık VERİTABANINDAN
+        //  (AllBackgroundServicesFrequencyRate, Id = 1) okunur.
+        //  Ayarları AllBackgroundServicesTasks.razor sayfasından değiştirin.
+        //
+        //  Aşağıdaki sabitler yalnızca DB'de kayıt bulunamadığında veya
+        //  değerler geçersiz olduğunda devreye giren GÜVENLİ VARSAYILANLARDIR.
         // ════════════════════════════════════════════════════════════
 
-        // Döviz kuru çekme sıklığı
-        private static readonly TimeSpan ExchangeRateInterval = TimeSpan.FromMinutes(1);
+        // Ayar tablosu okunamadığında bir sonraki denemeye kadar beklenecek süre
+        private static readonly TimeSpan SettingsReadFallbackInterval = TimeSpan.FromSeconds(10);
 
-        // AI ürün içerik üretimi — tetiklenme sıklığı
-        private static readonly TimeSpan AiProductInterval = TimeSpan.FromSeconds(10);
+        // Minimum aralık koruması — 0/negatif değer CPU'yu kilitlemesin
+        private static readonly TimeSpan MinimumInterval = TimeSpan.FromSeconds(1);
 
-        // AI ürün çevirisi — tetiklenme sıklığı (her 10 sn'de 1 ürün)
-        private static readonly TimeSpan AiTranslationInterval = TimeSpan.FromSeconds(10);
+        // DB'den okunan varsayılan aralık (kayıt yoksa)
+        private static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(10);
 
-        // Hedef çeviri dili
-        private const string TargetTranslationLanguage = "en";
-
-        // AI retry üst limiti (bu sayıya ulaşan kayıt tekrar denenmez)
-        private const int MaxAiRetry = 3;
+        // AI retry üst limiti için varsayılan (DB'de yoksa)
+        private const int DefaultMaxAiRetry = 3;
 
         // ════════════════════════════════════════════════════════════
 
@@ -61,49 +61,50 @@ namespace api
 
         protected override async Task ExecuteAsync(CancellationToken durdurmaSinyali)
         {
-            _logger.LogInformation("AllBackgroundServices başlatıldı (Kur + AI Ürün İçerik + AI Çeviri).");
+            _logger.LogInformation("AllBackgroundServices başlatıldı (Kur + AI Ürün İçerik).");
 
             // Her görev kendi bağımsız döngüsünde çalışır — biri diğerini bekletmez, kilitlenme olmaz.
             var exchangeRateLoop = RunLoopAsync(
                 "Döviz Kuru",
-                ExchangeRateInterval,
                 FetchAndSaveExchangeRatesAsync,
                 durdurmaSinyali);
 
             var aiProductLoop = RunLoopAsync(
                 "AI Ürün İçerik",
-                AiProductInterval,
                 ProcessNextAiProductAsync,
                 durdurmaSinyali);
 
-            var aiTranslationLoop = RunLoopAsync(
-                "AI Çeviri",
-                AiTranslationInterval,
-                ProcessNextAiTranslationAsync,
-                durdurmaSinyali);
-
-            await Task.WhenAll(exchangeRateLoop, aiProductLoop, aiTranslationLoop);
+            await Task.WhenAll(exchangeRateLoop, aiProductLoop);
 
             _logger.LogInformation("AllBackgroundServices Durduruldu.");
         }
 
         /// <summary>
-        /// Verilen görevi kendi aralığında sonsuz döngüde çalıştırır.
-        /// Bir görevdeki gecikme/hata diğer görevleri ETKİLEMEZ.
+        /// Verilen görevi, her tick'te VERİTABANINDAN taze okunan ayarlara göre
+        /// (izin + aralık) çalıştırır. Bir görevdeki gecikme/hata diğerlerini ETKİLEMEZ.
+        /// Ayarlar canlı okunduğu için servis yeniden başlatmadan değişiklikler uygulanır.
         /// </summary>
         private async Task RunLoopAsync(
             string taskName,
-            TimeSpan interval,
-            Func<CancellationToken, Task> job,
+            Func<AllBackgroundServicesFrequencyRate, CancellationToken, Task> job,
             CancellationToken durdurmaSinyali)
         {
-            using var timer = new PeriodicTimer(interval);
-
             try
             {
-                while (await timer.WaitForNextTickAsync(durdurmaSinyali))
+                while (!durdurmaSinyali.IsCancellationRequested)
                 {
-                    await job(durdurmaSinyali);
+                    // ── Her turda ayarları taze oku ──
+                    var settings = await LoadSettingsAsync(durdurmaSinyali);
+
+                    var (isEnabled, interval) = ResolveTaskConfig(taskName, settings);
+
+                    // Bir sonraki tick'e kadar bekle
+                    await Task.Delay(interval, durdurmaSinyali);
+
+                    // İzin kapalıysa görevi çalıştırmadan sadece bekle
+                    if (!isEnabled) continue;
+
+                    await job(settings!, durdurmaSinyali);
                 }
             }
             catch (OperationCanceledException)
@@ -112,10 +113,71 @@ namespace api
             }
         }
 
+        /// <summary>
+        /// Görev adına göre ilgili izin + aralık değerini ayarlardan çözer.
+        /// Ayar yoksa güvenli varsayılanlara düşer.
+        /// </summary>
+        private (bool isEnabled, TimeSpan interval) ResolveTaskConfig(
+            string taskName,
+            AllBackgroundServicesFrequencyRate? settings)
+        {
+            if (settings == null)
+                return (false, SettingsReadFallbackInterval);
+
+            return taskName switch
+            {
+                "Döviz Kuru" => (
+                    settings.IsCurrencyFetchEnabled,
+                    NormalizeInterval(settings.CurrencyFetchIntervalInSeconds)),
+
+                "AI Ürün İçerik" => (
+                    settings.IsAiContentGenerationEnabled,
+                    NormalizeInterval(settings.AiContentGenerationIntervalInSeconds)),
+
+                _ => (false, SettingsReadFallbackInterval)
+            };
+        }
+
+        /// <summary>
+        /// Saniye değerini güvenli TimeSpan'e çevirir; 0/negatif değerleri minimuma sabitler.
+        /// </summary>
+        private static TimeSpan NormalizeInterval(int seconds)
+        {
+            if (seconds <= 0) return DefaultInterval;
+            var span = TimeSpan.FromSeconds(seconds);
+            return span < MinimumInterval ? MinimumInterval : span;
+        }
+
+        /// <summary>
+        /// Ayar tablosunun tek satırını (Id = 1) kısa ömürlü context ile okur.
+        /// </summary>
+        private async Task<AllBackgroundServicesFrequencyRate?> LoadSettingsAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+                return await db.Set<AllBackgroundServicesFrequencyRate>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Id == 1, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Arka plan servis ayarları okunamadı (Id = 1).");
+                return null;
+            }
+        }
+
         // ──────────────────────────────────────────────
         //  DÖVİZ KURU
         // ──────────────────────────────────────────────
-        private async Task FetchAndSaveExchangeRatesAsync(CancellationToken cancellationToken)
+        private async Task FetchAndSaveExchangeRatesAsync(
+            AllBackgroundServicesFrequencyRate settings,
+            CancellationToken cancellationToken)
         {
             try
             {
@@ -153,8 +215,15 @@ namespace api
         // ──────────────────────────────────────────────
         //  AI ÜRÜN İÇERİK ÜRETİMİ (Tick başına maks 1 ürün)
         // ──────────────────────────────────────────────
-        private async Task ProcessNextAiProductAsync(CancellationToken cancellationToken)
+        private async Task ProcessNextAiProductAsync(
+            AllBackgroundServicesFrequencyRate settings,
+            CancellationToken cancellationToken)
         {
+            // Retry limitini ayardan al (yoksa varsayılan)
+            int maxAiRetry = settings.AiContentGenerationIntervalMaxAiRetry > 0
+                ? settings.AiContentGenerationIntervalMaxAiRetry
+                : DefaultMaxAiRetry;
+
             try
             {
                 // ── 1) Sıradaki uygun ürünü bul (kısa ömürlü read context) ──
@@ -167,7 +236,7 @@ namespace api
                         .AsNoTracking()
                         .Where(p => p.IsAiManaged == true
                                  && p.AiContentStatus == null
-                                 && p.AiRetryCount < MaxAiRetry
+                                 && p.AiRetryCount < maxAiRetry
                                  && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu == false))
                         .OrderBy(p => p.CreatedAt)          // FIFO — en eski bekleyen önce
                         .Select(p => new { p.Id, p.Name })
@@ -223,13 +292,13 @@ namespace api
                 {
                     // AI null döndü — başarısız
                     product.AiRetryCount += 1;
-                    product.AiContentStatus = product.AiRetryCount >= MaxAiRetry ? false : null;
+                    product.AiContentStatus = product.AiRetryCount >= maxAiRetry ? false : null;
                     product.AiErrorMessage = "AI servisi boş yanıt döndürdü.";
                     product.UpdatedAt = DateTime.UtcNow;
 
                     _logger.LogWarning(
                         "AI boş yanıt döndü → {Id} (Deneme: {Retry}/{Max})",
-                        targetProductId, product.AiRetryCount, MaxAiRetry);
+                        targetProductId, product.AiRetryCount, maxAiRetry);
                 }
 
                 await writeDb.SaveChangesAsync(cancellationToken);
@@ -241,7 +310,7 @@ namespace api
                 // Hata durumunda da retry sayacını artır
                 try
                 {
-                    await IncrementRetryOnErrorAsync(ex.Message, cancellationToken);
+                    await IncrementRetryOnErrorAsync(ex.Message, maxAiRetry, cancellationToken);
                 }
                 catch (Exception innerEx)
                 {
@@ -254,14 +323,14 @@ namespace api
         /// Exception fırladığında ilgili ürünün retry sayacını artırır.
         /// targetProductId scope dışında kaybolduğu için aynı sorguyu tekrarlar.
         /// </summary>
-        private async Task IncrementRetryOnErrorAsync(string errorMessage, CancellationToken cancellationToken)
+        private async Task IncrementRetryOnErrorAsync(string errorMessage, int maxAiRetry, CancellationToken cancellationToken)
         {
             await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
 
             var stuck = await db.Set<Products>()
                 .Where(p => p.IsAiManaged == true
                          && p.AiContentStatus == null
-                         && p.AiRetryCount < MaxAiRetry)
+                         && p.AiRetryCount < maxAiRetry)
                 .OrderBy(p => p.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -269,165 +338,10 @@ namespace api
 
             stuck.AiRetryCount += 1;
             stuck.AiErrorMessage = errorMessage.Length > 500 ? errorMessage[..500] : errorMessage;
-            stuck.AiContentStatus = stuck.AiRetryCount >= MaxAiRetry ? false : null;
+            stuck.AiContentStatus = stuck.AiRetryCount >= maxAiRetry ? false : null;
             stuck.UpdatedAt = DateTime.UtcNow;
 
             await db.SaveChangesAsync(cancellationToken);
-        }
-
-        // ──────────────────────────────────────────────
-        //  AI ÜRÜN ÇEVİRİSİ  (tr → en, Tick başına maks 1 ürün)
-        //
-        //  Akış:
-        //   1) ProductTranslations tablosunda "tr" olup, aynı ProductId için
-        //      henüz "en" kaydı bulunmayan (veya hata alıp retry hakkı kalan)
-        //      bir kayıt bul.
-        //   2) tr içerikleri AI ile en'e çevir.
-        //   3) Çeviriyi AYNI ProductId ile yeni bir "en" ProductTranslations
-        //      kaydı olarak yaz (veya var olan hatalı en kaydını güncelle).
-        // ──────────────────────────────────────────────
-        private async Task ProcessNextAiTranslationAsync(CancellationToken cancellationToken)
-        {
-            Guid? sourceTranslationId = null;
-
-            try
-            {
-                // ── 1) Sıradaki tr kaydını bul (kısa ömürlü read context) ──
-                Guid productId = Guid.Empty;
-                string? srcName = null, srcShort = null, srcFull = null, srcTags = null;
-                Guid? existingEnId = null;   // varsa güncellenecek hatalı en kaydı
-
-                await using (var readDb = await _dbFactory.CreateDbContextAsync(cancellationToken))
-                {
-                    // Aynı ProductId için zaten başarılı bir "en" kaydı olanları hariç tut.
-                    var candidate = await readDb.Set<ProductTranslations>()
-                        .AsNoTracking()
-                        .Where(t => t.LanguageCode == "tr"
-                                 && (t.IsDeleted == null || t.IsDeleted.IsDeletedStatu == false)
-                                 // Bu ürün için başarılı bir en kaydı YOK
-                                 && !readDb.Set<ProductTranslations>().Any(e =>
-                                        e.ProductId == t.ProductId
-                                     && e.LanguageCode == TargetTranslationLanguage
-                                     && (e.IsDeleted == null || e.IsDeleted.IsDeletedStatu == false)
-                                     && (e.AiTranslationStatus == true || e.IsManuallyEdited == true))
-                                 // Retry limitini aşmış (kalıcı hatalı) en kaydı da YOK
-                                 && !readDb.Set<ProductTranslations>().Any(e =>
-                                        e.ProductId == t.ProductId
-                                     && e.LanguageCode == TargetTranslationLanguage
-                                     && (e.IsDeleted == null || e.IsDeleted.IsDeletedStatu == false)
-                                     && e.AiRetryCount >= MaxAiRetry))
-                        .OrderBy(t => t.CreatedAt)          // FIFO
-                        .Select(t => new
-                        {
-                            t.Id,
-                            t.ProductId,
-                            t.Name,
-                            t.ShortDescription,
-                            t.FullDescription,
-                            t.Tags
-                        })
-                        .FirstOrDefaultAsync(cancellationToken);
-
-                    if (candidate == null) return;          // Çevrilecek iş yok, sessizce çık
-
-                    sourceTranslationId = candidate.Id;
-                    productId = candidate.ProductId;
-                    srcName = candidate.Name;
-                    srcShort = candidate.ShortDescription;
-                    srcFull = candidate.FullDescription;
-                    srcTags = candidate.Tags;
-
-                    // Bu ürüne ait, hata almış (retry hakkı kalan) mevcut en kaydı var mı?
-                    existingEnId = await readDb.Set<ProductTranslations>()
-                        .Where(e => e.ProductId == productId
-                                 && e.LanguageCode == TargetTranslationLanguage
-                                 && (e.IsDeleted == null || e.IsDeleted.IsDeletedStatu == false))
-                        .OrderBy(e => e.CreatedAt)
-                        .Select(e => (Guid?)e.Id)
-                        .FirstOrDefaultAsync(cancellationToken);
-                }
-
-                _logger.LogInformation(
-                    "AI çeviri başlıyor → ProductId: {Pid} (tr kaynak: {Tid}) → {Lang}",
-                    productId, sourceTranslationId, TargetTranslationLanguage);
-
-                // ── 2) Scoped servis üzerinden AI çeviri çağrısı ──
-                using var scope = _scopeFactory.CreateScope();
-                var translator = scope.ServiceProvider.GetRequiredService<AIProductTranslationGeneratorTurkishToEnglish>();
-
-                var translated = await translator.TranslateAsync(
-                    TargetTranslationLanguage,
-                    srcName, srcShort, srcFull, srcTags);
-
-                // ── 3) Sonucu kaydet (kısa ömürlü write context) ──
-                await using var writeDb = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-                // Var olan en kaydını çek, yoksa yeni oluştur (AYNI ProductId).
-                ProductTranslations? enRecord = null;
-                if (existingEnId.HasValue)
-                {
-                    enRecord = await writeDb.Set<ProductTranslations>()
-                        .FirstOrDefaultAsync(e => e.Id == existingEnId.Value, cancellationToken);
-                }
-
-                bool isNew = enRecord == null;
-                if (isNew)
-                {
-                    enRecord = new ProductTranslations
-                    {
-                        Id = Guid.NewGuid(),
-                        ProductId = productId,                 // ← tr ürünüyle AYNI ProductId
-                        LanguageCode = TargetTranslationLanguage,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                }
-
-                if (translated != null)
-                {
-                    // Satıcı elle düzenlediyse üzerine YAZMA (güvenlik kontrolü)
-                    if (!isNew && enRecord!.IsManuallyEdited)
-                    {
-                        _logger.LogInformation("en kaydı elle düzenlenmiş, atlanıyor → {Pid}", productId);
-                        return;
-                    }
-
-                    enRecord!.Name = translated.Name;
-                    enRecord.ShortDescription = translated.ShortDescription;
-                    enRecord.FullDescription = translated.FullDescription;
-                    enRecord.Tags = translated.Tags;
-
-                    enRecord.IsAiTranslated = true;
-                    enRecord.AiTranslationStatus = true;        // Başarılı
-                    enRecord.AiErrorMessage = null;
-                    enRecord.AiProcessedAt = DateTime.UtcNow;
-                    enRecord.UpdatedAt = DateTime.UtcNow;
-
-                    if (isNew) writeDb.Set<ProductTranslations>().Add(enRecord);
-
-                    _logger.LogInformation("AI çeviri başarıyla yazıldı → ProductId: {Pid}", productId);
-                }
-                else
-                {
-                    // AI null döndü — başarısız
-                    enRecord!.AiRetryCount += 1;
-                    enRecord.IsAiTranslated = false;
-                    enRecord.AiTranslationStatus = enRecord.AiRetryCount >= MaxAiRetry ? false : null;
-                    enRecord.AiErrorMessage = "AI çeviri servisi boş yanıt döndürdü.";
-                    enRecord.UpdatedAt = DateTime.UtcNow;
-
-                    if (isNew) writeDb.Set<ProductTranslations>().Add(enRecord);
-
-                    _logger.LogWarning(
-                        "AI çeviri boş yanıt döndü → ProductId: {Pid} (Deneme: {Retry}/{Max})",
-                        productId, enRecord.AiRetryCount, MaxAiRetry);
-                }
-
-                await writeDb.SaveChangesAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "AI çeviride beklenmeyen hata.");
-            }
         }
     }
 }

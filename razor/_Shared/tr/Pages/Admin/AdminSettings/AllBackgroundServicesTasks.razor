@@ -1,0 +1,301 @@
+﻿@using System.Globalization
+@using data
+@using api
+@using api.tr
+@using Data
+@using data.AdminSettings
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+<Notification @ref="notificationRef" />
+
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        // Ana sayfa için ev ikonu
+        ("fa fa-home", "efavori", "/"),
+
+        // Oturum Ayarları başlığı için anahtar ikonu
+        ("fa fa-server", "Oturum Ayarları", "/@culture/Public/Home/GetGitHubCommits/"),
+
+        // Arka plan servis ayarları için dişli ikonu
+        ("fa fa-cogs", $"Arka Plan Servis Ayarları", "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads=roads />
+
+
+@if (_isLoading)
+{
+    <p>Yükleniyor...</p>
+}
+else if (Settings == null)
+{
+    <div class="alert alert-warning">
+        Ayar kaydı (Id = 1) bulunamadı. Lütfen varsayılan kaydın oluşturulduğundan emin olun.
+    </div>
+}
+else
+{
+    <div class="row g-3">
+
+        @* ══════════════ DÖVİZ KURU ══════════════ *@
+        <div class="col-12">
+            <div class="card border">
+                <div class="card-header bg-light">
+                    <i class="fa fa-money"></i> Döviz Kuru Çekme
+                </div>
+                <div class="card-body">
+                    <div class="col-12 col-md-12 mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="switchCurrencyEnabled" @bind="Settings.IsCurrencyFetchEnabled">
+                            <label class="form-check-label" for="switchCurrencyEnabled">
+                                Döviz Kuru Çekilsin
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-12">
+                        <label class="form-label" for="inputCurrencyInterval">
+                            Çekme Sıklığı (saniye)
+                        </label>
+                        <input class="form-control" type="number" min="1" step="1"
+                               id="inputCurrencyInterval"
+                               @bind="Settings.CurrencyFetchIntervalInSeconds">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ══════════════ AI ÜRÜN İÇERİK ══════════════ *@
+        <div class="col-12">
+            <div class="card border">
+                <div class="card-header bg-light">
+                    <i class="fa fa-magic"></i> AI Ürün İçerik Üretimi
+                </div>
+                <div class="card-body">
+                    <div class="col-12 col-md-12 mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="switchAiContentEnabled" @bind="Settings.IsAiContentGenerationEnabled">
+                            <label class="form-check-label" for="switchAiContentEnabled">
+                                AI Ürün İçerik Üretimi Yapılsın
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-12 mb-3">
+                        <label class="form-label" for="inputAiContentInterval">
+                            Üretim Sıklığı (saniye)
+                        </label>
+                        <input class="form-control" type="number" min="1" step="1"
+                               id="inputAiContentInterval"
+                               @bind="Settings.AiContentGenerationIntervalInSeconds">
+                    </div>
+
+                    <div class="col-12 col-md-12">
+                        <label class="form-label" for="inputAiContentRetry">
+                            Maksimum Deneme Sayısı (retry)
+                        </label>
+                        <input class="form-control" type="number" min="1" step="1"
+                               id="inputAiContentRetry"
+                               @bind="Settings.AiContentGenerationIntervalMaxAiRetry">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <button class="btn btn-light border w-100" @onclick="UpdateSettings" disabled="@_isProcessing">
+                @if (_isProcessing)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span> Kaydediliyor...</span>
+                }
+                else
+                {
+                    <i class="fa fa-save"></i>
+                    <span>Değişiklikleri Kaydet</span>
+                }
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+
+    private const string PAGE = "AllBackgroundServicesTasks";
+
+    [Parameter] public Users? use { get; set; }
+
+    private readonly CancellationTokenSource _cts = new();
+    public AllBackgroundServicesFrequencyRate? Settings { get; set; }
+    private bool _disposed;
+    private bool _isInitialized;
+
+    private bool _isLoading;
+    private CancellationTokenSource? _searchCts;
+
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private bool _isProcessing;
+
+    private Notification? notificationRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleGlobalDataChange;
+
+        await LoadData();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleGlobalDataChange(string entityName)
+    {
+        if (_disposed || !_isInitialized || _isProcessing) return;
+
+        var shouldRefresh = entityName == "AllBackgroundServicesFrequencyRate";
+
+        if (shouldRefresh)
+        {
+            await InvokeAsync(async () =>
+            {
+                await LoadData();
+                StateHasChanged();
+            });
+        }
+    }
+
+    protected virtual async Task LoadData()
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            if (_isLoading) return;
+            _isLoading = true;
+            StateHasChanged();
+
+            var result = await StateHub.GetOrLoadAsync("AllBackgroundServicesFrequencyRate_Main", async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+
+                // Tek satır — Id = 1
+                var settings = await db.Set<AllBackgroundServicesFrequencyRate>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.Id == 1, token);
+
+                return new { Settings = settings };
+
+            }, token);
+
+            if (result != null && !token.IsCancellationRequested)
+            {
+                Settings = result.Settings;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadData",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Ayarlar yüklenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            if (token == _searchCts?.Token)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected async Task UpdateSettings()
+    {
+        if (_isProcessing || Settings == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            // Güvenli değer koruması — 0/negatif değerleri minimuma sabitle
+            if (Settings.CurrencyFetchIntervalInSeconds < 1)
+                Settings.CurrencyFetchIntervalInSeconds = 1;
+
+            if (Settings.AiContentGenerationIntervalInSeconds < 1)
+                Settings.AiContentGenerationIntervalInSeconds = 1;
+
+            if (Settings.AiContentGenerationIntervalMaxAiRetry < 1)
+                Settings.AiContentGenerationIntervalMaxAiRetry = 1;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // Güvenlik önlemi: Sadece Id'si 1 olan kaydı güncellemeye zorla
+            if (Settings.Id == 1)
+            {
+                db.Set<AllBackgroundServicesFrequencyRate>().Update(Settings);
+                await db.SaveChangesAsync(_cts.Token);
+
+                // Veri değiştiğini diğer bileşenlere haber ver (arka plan servis canlı okuyor)
+                await StateHub.NotifyDataChanged("AllBackgroundServicesFrequencyRate");
+
+                await Logger.TakeIt(use?.Id, PAGE, "UpdateSettings", "Arka plan servis ayarları güncellendi.");
+
+                await ShowNotification("success", "Başarılı", "Arka plan servis ayarları başarıyla güncellendi.", null);
+            }
+            else
+            {
+                await ShowNotification("warning", "Uyarı", "Geçersiz işlem denemesi.", null);
+            }
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "UpdateSettings",
+                exception: ex.Message,
+                stackTrace: ex.StackTrace);
+
+            await ShowNotification("danger", "Hata", "Ayarlar güncellenirken bir sorun oluştu.", null);
+        }
+        finally
+        {
+            _isProcessing = false;
+            _writeLock.Release();
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowNotification(string type, string title, string text, string? image)
+    {
+        if (notificationRef is null) return;
+        var imageUrl = string.IsNullOrWhiteSpace(image) ? "https://picsum.photos/120?" : image;
+        await notificationRef.Launch(type, title, text, imageUrl);
+    }
+}

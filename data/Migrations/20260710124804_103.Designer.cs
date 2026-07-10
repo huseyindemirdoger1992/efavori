@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260710124804_103")]
+    partial class _103
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -104,9 +107,6 @@ namespace data.Migrations
                     b.Property<bool>("CanResetPassword")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("WebActionInfos")
-                        .HasColumnType("bit");
-
                     b.HasKey("Id");
 
                     b.ToTable("AccountPermissions");
@@ -124,31 +124,6 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Addresses");
-                });
-
-            modelBuilder.Entity("data.AdminSettings.AllBackgroundServicesFrequencyRate", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
-
-                    b.Property<int>("AiContentGenerationIntervalInSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<int>("AiContentGenerationIntervalMaxAiRetry")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CurrencyFetchIntervalInSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsAiContentGenerationEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsCurrencyFetchEnabled")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AllBackgroundServicesFrequencyRate");
                 });
 
             modelBuilder.Entity("data.Articles.AiTitlesForArticle", b =>

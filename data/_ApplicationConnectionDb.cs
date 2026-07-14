@@ -72,18 +72,6 @@ namespace data
         public DbSet<States> States { get; set; } = default!;
         public DbSet<Addresses> Addresses { get; set; } = default!;
 
-        // Products Categories
-        public DbSet<CategoriesAz> CategoriesAz { get; set; } = default!;
-        public DbSet<CategoriesDe> CategoriesDe { get; set; } = default!;
-        public DbSet<CategoriesEn> CategoriesEn { get; set; } = default!;
-        public DbSet<CategoriesEs> CategoriesEs { get; set; } = default!;
-        public DbSet<CategoriesFr> CategoriesFr { get; set; } = default!;
-        public DbSet<CategoriesHi> CategoriesHi { get; set; } = default!;
-        public DbSet<CategoriesPt> CategoriesPt { get; set; } = default!;
-        public DbSet<CategoriesRu> CategoriesRu { get; set; } = default!;
-        public DbSet<CategoriesTr> CategoriesTr { get; set; } = default!;
-        public DbSet<CategoriesZh> CategoriesZh { get; set; } = default!;
-
 
         // Articles
         public DbSet<AiTitlesForArticle> AiTitlesForArticle { get; set; } = default!;
@@ -113,8 +101,10 @@ namespace data
 
         // Products
 
-        public DbSet<MoneyExchangeRate> MoneyExchangeRate { get; set; } = default!;
+        public DbSet<ProductCategoriesMultiLang> ProductCategoriesMultiLang { get; set; } = default!;
 
+
+        public DbSet<MoneyExchangeRate> MoneyExchangeRate { get; set; } = default!;
         public DbSet<ProductVariantValues> ProductVariantValues { get; set; } = default!;
         public DbSet<ProductVariants> ProductVariants { get; set; } = default!;
         public DbSet<ProductStocks> ProductStocks { get; set; } = default!;
@@ -143,6 +133,11 @@ namespace data
         public DbSet<ProductHistory> ProductHistory { get; set; } = default!;
         public DbSet<ProductReview> ProductReview { get; set; } = default!;
         public DbSet<ProductTranslations> ProductTranslations { get; set; } = default!;
+        public DbSet<ProductAttributeTranslations> ProductAttributeTranslations { get; set; } = default!;
+        public DbSet<ProductAttributeValueTranslations> ProductAttributeValueTranslations { get; set; } = default!;
+        public DbSet<ProductSpecificationTranslations> ProductSpecificationTranslations { get; set; } = default!;
+
+
 
         // ShoppingCart
         public DbSet<ProductCart> ProductCart { get; set; } = default!;

@@ -8,6 +8,11 @@ namespace data._Product
     /// Ürün varyantları. Birleşik tek-varyant modeli gereği basit ürünlerde de
     /// IsDefault = true olan tek bir varyant kaydı bulunur.
     /// Fiyat (ProductPrices) ve stok (ProductStocks) daima varyant üzerinden tutulur.
+    ///
+    /// REVİZYON: Paket ölçüleri eklendi. Amazon/eBay ÜRÜN ölçüsü (item dimensions) ile
+    /// PAKET ölçüsünü (package dimensions) ayrı gönderir — kargo/desi hesabı PAKET üzerinden yapılır.
+    /// İçe aktarımda birim dönüşümü uygulama katmanında yapılır (inç → cm, lbs → kg);
+    /// ham değerler ProductMarketplaceListings.RawSourceData içinde korunur.
     /// </summary>
     public class ProductVariants
     {
@@ -30,11 +35,18 @@ namespace data._Product
         public bool IsActive { get; set; } = true; // Varyant satışta mı
         public int DisplayOrder { get; set; } = 0; // Listeleme sırası
 
-        // === Fiziksel Özellikler (kargo/desi hesabı ShippingProfile bölen değerleri ile yapılır) ===
-        public decimal? WeightKg { get; set; } // Ağırlık (kg)
-        public decimal? WidthCm { get; set; } // Genişlik (cm)
-        public decimal? HeightCm { get; set; } // Yükseklik (cm)
-        public decimal? LengthCm { get; set; } // Uzunluk (cm)
+        // === Fiziksel Özellikler — ÜRÜN ölçüleri (ürün sayfasında gösterilir) ===
+        public decimal? WeightKg { get; set; } // Ürün ağırlığı (kg)
+        public decimal? WidthCm { get; set; } // Ürün genişliği (cm)
+        public decimal? HeightCm { get; set; } // Ürün yüksekliği (cm)
+        public decimal? LengthCm { get; set; } // Ürün uzunluğu (cm)
+
+        // === Fiziksel Özellikler — PAKET ölçüleri (kargo/desi hesabı BU değerlerle yapılır) ===
+        // Null ise kargo hesabında ürün ölçülerine geri düşülür (fallback).
+        public decimal? PackageWeightKg { get; set; } // Paket ağırlığı (kg)
+        public decimal? PackageWidthCm { get; set; } // Paket genişliği (cm)
+        public decimal? PackageHeightCm { get; set; } // Paket yüksekliği (cm)
+        public decimal? PackageLengthCm { get; set; } // Paket uzunluğu (cm)
 
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi
         public DateTime? UpdatedAt { get; set; } // Son güncelleme tarihi

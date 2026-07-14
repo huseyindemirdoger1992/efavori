@@ -7,6 +7,10 @@ namespace data._Product
     /// Ürünün galeri dışı medya kaynakları: video URL'leri, 360 derece görünüm,
     /// embed içerikler ve PDF/doküman dosyaları.
     /// Sistemde yüklü dosyalar MediaId ile (Media.Id), harici kaynaklar Url ile bağlanır.
+    ///
+    /// REVİZYON: LanguageCode eklendi — dile özgü medya desteklenir.
+    /// Örn: Almanca kullanım kılavuzu PDF'i yalnızca "de" sayfasında gösterilir.
+    /// Null = tüm dillerde gösterilir (dil bağımsız medya).
     /// </summary>
     public class ProductExternalMedias
     {
@@ -22,6 +26,7 @@ namespace data._Product
         public Guid? MediaId { get; set; } // Sistemde yüklü dosya (Media.Id) — PDF/doküman için
 
         public string? Title { get; set; } // Gösterim başlığı (Örn: "Kurulum Kılavuzu")
+        public string? LanguageCode { get; set; } // Medyanın dili — null = tüm dillerde gösterilir
         public int DisplayOrder { get; set; } = 0; // Gösterim sırası
 
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow; // Oluşturulma tarihi

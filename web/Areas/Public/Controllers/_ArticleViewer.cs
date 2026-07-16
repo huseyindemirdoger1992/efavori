@@ -19,9 +19,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using data;
 using data.Articles;
-using Data;
 using System.Text.Json;
 using System.Text.Encodings.Web;
+using data._Galleries;
+using data._Users;
 
 namespace web.Areas.Public.Controllers
 {

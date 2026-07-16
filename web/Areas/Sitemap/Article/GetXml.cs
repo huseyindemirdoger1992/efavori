@@ -26,9 +26,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 using data;
+using data._Galleries;
 using data._Product;
 using data.Articles;
-using Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;

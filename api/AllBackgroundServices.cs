@@ -1,7 +1,7 @@
 ﻿using data;
 using data._Product;
 using data._Shared;
-using data.AdminSettings;
+using data._System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

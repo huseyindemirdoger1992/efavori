@@ -1,12 +1,21 @@
-﻿using data._Product;
+﻿using data._Carts;
+using data._Categories;
+using data._Follows;
+using data._Galleries;
+using data._Locations;
+using data._Product;
 using data._Product.BulkWordPressProductImport;
 using data._Product.ProductHistory;
+using data._Products;
 using data._Shared;
-using data.AdminSettings;
+using data._Shares;
+using data._Store;
+using data._System;
+using data._Systems;
+using data._Tasks;
+using data._Users;
 using data.Articles;
 using data.FavoriteCart;
-using data.ShoppingCart;
-using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -48,7 +57,7 @@ namespace data
 
         // Media
         public DbSet<Media> Media { get; set; } = default!;
-        public DbSet<ItemGallery> ItemGallery { get; set; } = default!;
+        public DbSet<MediaItems> ItemGallery { get; set; } = default!;
 
         // Logs
         public DbSet<Logs> Logs { get; set; } = default!;

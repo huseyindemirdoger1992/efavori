@@ -19,10 +19,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using data;
 using data._Product;
-using Data;
 using System.Text.Json;
 using System.Text.Encodings.Web;
 using System.Globalization;
+using data._Products;
+using data._Galleries;
+using data._Users;
+using data._Store;
 
 
 namespace web.Areas.Public.Controllers
@@ -278,7 +281,7 @@ namespace web.Areas.Public.Controllers
                 if (!string.IsNullOrEmpty(coverImageUrl))
                     galleryUrls.Add(coverImageUrl);
 
-                var galleryMediaIds = db.Set<ItemGallery>().AsNoTracking()
+                var galleryMediaIds = db.Set<MediaItems>().AsNoTracking()
                     .Where(ig => ig.ItemId == productId &&
                                  ig.IsDelete != true &&
                                  (ig.ItemType == "Product" || ig.ItemType == "ProductGallery"))

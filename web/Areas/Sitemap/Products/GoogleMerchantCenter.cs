@@ -59,8 +59,10 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 using data;
+using data._Galleries;
 using data._Product;
-using Data;
+using data._Products;
+using data._Store;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -227,7 +229,7 @@ namespace web.Areas.Sitemap.Products
 
 
             // ── 2c. Galeri görselleri (max 10 per ürün) ───────────
-            var galleryItems = await _context.Set<ItemGallery>().AsNoTracking()
+            var galleryItems = await _context.Set<MediaItems>().AsNoTracking()
                 .Where(ig => ig.ItemId.HasValue &&
                              productIds.Contains(ig.ItemId.Value) &&
                              ig.IsDelete != true &&

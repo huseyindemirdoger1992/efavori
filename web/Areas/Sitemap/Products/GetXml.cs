@@ -26,8 +26,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 using data;
+using data._Galleries;
 using data._Product;
-using Data;
+using data._Products;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -163,7 +164,7 @@ namespace web.Areas.Sitemap.Products
             // ── 3c. Galeri görselleri toplu çek ──────────────────
             var productIds = productsRaw.Select(p => p.Id).ToList();
 
-            var galleryItems = await _context.Set<ItemGallery>().AsNoTracking()
+            var galleryItems = await _context.Set<MediaItems>().AsNoTracking()
                 .Where(ig => ig.ItemId.HasValue &&
                              productIds.Contains(ig.ItemId.Value) &&
                              ig.IsDelete != true &&
@@ -328,7 +329,7 @@ namespace web.Areas.Sitemap.Products
                 : new Dictionary<Guid, string>();
 
             // ── Galeri görselleri ─────────────────────────────────
-            var galleryItems = await _context.Set<ItemGallery>().AsNoTracking()
+            var galleryItems = await _context.Set<MediaItems>().AsNoTracking()
                 .Where(ig => ig.ItemId.HasValue &&
                              productIds.Contains(ig.ItemId.Value) &&
                              ig.IsDelete != true &&

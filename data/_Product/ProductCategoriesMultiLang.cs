@@ -60,3 +60,4 @@ namespace data._Product
         public DateTime? UpdatedDate { get; set; }
     }
 }
+ 

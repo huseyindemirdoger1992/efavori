@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260717131943_112")]
+    partial class _112
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -49,35 +52,6 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CartsFavorite");
-                });
-
-            modelBuilder.Entity("data._Carts.CartsProduct", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ProductSlug")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("ProductVariantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("StoreId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CartsProduct");
                 });
 
             modelBuilder.Entity("data._Categories.CategoriesArticle", b =>
@@ -1593,25 +1567,6 @@ namespace data.Migrations
 
             modelBuilder.Entity("data._Carts.CartsFavorite", b =>
                 {
-                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("CartsFavoriteId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("CartsFavoriteId");
-
-                            b1.ToTable("CartsFavorite");
-
-                            b1.WithOwner()
-                                .HasForeignKey("CartsFavoriteId");
-                        });
-
                     b.OwnsOne("data.Owned.CartProductSnapshot", "ProductSnapshot", b1 =>
                         {
                             b1.Property<Guid>("CartsFavoriteId")
@@ -1708,16 +1663,9 @@ namespace data.Migrations
                                 .HasForeignKey("CartsFavoriteId");
                         });
 
-                    b.Navigation("IsDeleted");
-
-                    b.Navigation("ProductSnapshot");
-                });
-
-            modelBuilder.Entity("data._Carts.CartsProduct", b =>
-                {
                     b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
                         {
-                            b1.Property<Guid>("CartsProductId")
+                            b1.Property<Guid>("CartsFavoriteId")
                                 .HasColumnType("uniqueidentifier");
 
                             b1.Property<DateTime?>("DeletedAtDate")
@@ -1726,108 +1674,12 @@ namespace data.Migrations
                             b1.Property<bool?>("IsDeletedStatu")
                                 .HasColumnType("bit");
 
-                            b1.HasKey("CartsProductId");
+                            b1.HasKey("CartsFavoriteId");
 
-                            b1.ToTable("CartsProduct");
-
-                            b1.WithOwner()
-                                .HasForeignKey("CartsProductId");
-                        });
-
-                    b.OwnsOne("data.Owned.CartProductSnapshot", "ProductSnapshot", b1 =>
-                        {
-                            b1.Property<Guid>("CartsProductId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("Barcode")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("BrandName")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<int>("CategoryName")
-                                .HasColumnType("int");
-
-                            b1.Property<string>("CouponCode")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("CustomerNote")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("DeliveryTimeText")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<decimal?>("Desi")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("DiscountAmountAzn")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("DiscountAmountEur")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("DiscountAmountTry")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("DiscountAmountUsd")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<string>("ProductImageUrl")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("ProductShortDescription")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<int>("Quantity")
-                                .HasColumnType("int");
-
-                            b1.Property<string>("SKU")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<decimal>("SalePriceAzn")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("SalePriceEur")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("SalePriceTry")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("SalePriceUsd")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("ShippingPriceAzn")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("ShippingPriceEur")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("ShippingPriceTry")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("ShippingPriceUsd")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal>("VatRate")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.Property<decimal?>("Weight")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.HasKey("CartsProductId");
-
-                            b1.ToTable("CartsProduct");
+                            b1.ToTable("CartsFavorite");
 
                             b1.WithOwner()
-                                .HasForeignKey("CartsProductId");
+                                .HasForeignKey("CartsFavoriteId");
                         });
 
                     b.Navigation("IsDeleted");

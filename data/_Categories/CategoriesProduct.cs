@@ -12,12 +12,16 @@ namespace data._Categories
     public class CategoriesProduct
     {
         [Key]
-        public int Id { get; set; }
+
+        /// <summary>
+        /// Kategori ID
+        /// </summary>
+        public Guid Id { get; set; }
 
         /// <summary>
         /// Üst kategori ID
         /// </summary>
-        public int? ParentId { get; set; }
+        public Guid? ParentId { get; set; }
 
         /// <summary>
         /// Aktif / Pasif

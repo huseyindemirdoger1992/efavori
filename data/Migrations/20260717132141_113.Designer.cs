@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using data;
 
@@ -11,9 +12,11 @@ using data;
 namespace data.Migrations
 {
     [DbContext(typeof(_ApplicationConnectionDb))]
-    partial class _ApplicationConnectionDbModelSnapshot : ModelSnapshot
+    [Migration("20260717132141_113")]
+    partial class _113
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -106,38 +109,6 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CategoriesArticle");
-                });
-
-            modelBuilder.Entity("data._Categories.CategoriesProduct", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool?>("AiAttributesIsOk")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Path")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("ShowInMenu")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CategoriesProduct");
                 });
 
             modelBuilder.Entity("data._Follows.FriendShip", b =>
@@ -1937,115 +1908,6 @@ namespace data.Migrations
 
                             b1.WithOwner()
                                 .HasForeignKey("CategoriesArticleId");
-                        });
-
-                    b.Navigation("Categories");
-
-                    b.Navigation("IsDeleted");
-                });
-
-            modelBuilder.Entity("data._Categories.CategoriesProduct", b =>
-                {
-                    b.OwnsOne("data.Owned.Categories", "Categories", b1 =>
-                        {
-                            b1.Property<Guid>("CategoriesProductId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<string>("NameAz")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameDe")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameEn")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameEs")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameFr")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameHi")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NamePt")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameRu")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameTr")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("NameZh")
-                                .IsRequired()
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugAz")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugDe")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugEn")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugEs")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugFr")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugHi")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugPt")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugRu")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugTr")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("SlugZh")
-                                .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("CategoriesProductId");
-
-                            b1.ToTable("CategoriesProduct");
-
-                            b1.WithOwner()
-                                .HasForeignKey("CategoriesProductId");
-                        });
-
-                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
-                        {
-                            b1.Property<Guid>("CategoriesProductId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<DateTime?>("DeletedAtDate")
-                                .HasColumnType("datetime2");
-
-                            b1.Property<bool?>("IsDeletedStatu")
-                                .HasColumnType("bit");
-
-                            b1.HasKey("CategoriesProductId");
-
-                            b1.ToTable("CategoriesProduct");
-
-                            b1.WithOwner()
-                                .HasForeignKey("CategoriesProductId");
                         });
 
                     b.Navigation("Categories");

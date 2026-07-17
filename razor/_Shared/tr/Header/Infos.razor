@@ -1,14 +1,25 @@
 ﻿@rendermode InteractiveServer
+@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
 
 @using System.Globalization
 @using api
 @using api.tr
-@using data
-@using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
-@using data._Shared
 
 @inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
@@ -123,7 +134,7 @@
 
     private List<Users>? Users { get; set; } = new();
 
-    private List<data.FriendShip> FriendShipList { get; set; } = new();
+    private List<data._Follows.FriendShip> FriendShipList { get; set; } = new();
 
     private List<Country> _Countries = new();
     private List<States> _States = new();
@@ -366,7 +377,7 @@
                 var friendShip = await query_FriendShip
                     .ToListAsync(token);
 
-                return new { Users = users, FriendShip = (List<data.FriendShip>)friendShip };
+                return new { Users = users, FriendShip = (List<data._Follows.FriendShip>)friendShip };
 
             }, token);
 

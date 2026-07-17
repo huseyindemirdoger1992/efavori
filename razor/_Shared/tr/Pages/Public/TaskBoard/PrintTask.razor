@@ -1,4 +1,18 @@
 ﻿@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
 @using Microsoft.EntityFrameworkCore
 @inject IJSRuntime JS
 
@@ -891,12 +905,12 @@ else
 @code {
     [Parameter] public Guid TaskId { get; set; }
 
-    private data.TaskStatus? task;
-    private TaskCategories? category;
-    private TaskFramework? framework;
-    private List<TaskNotes> notes = new();
-    private Users? assignedByUser;
-    private Users? personInChargeUser;
+    private data._Tasks.TaskStatus? task;
+    private data._Tasks.TaskCategories? category;
+    private data._Tasks.TaskFramework? framework;
+    private List<data._Tasks.TaskNotes> notes = new();
+    private data._Users.Users? assignedByUser;
+    private data._Users.Users? personInChargeUser;
     private Dictionary<Guid, Users> noteUsers = new();
 
     private const int NotesPerPage = 12;

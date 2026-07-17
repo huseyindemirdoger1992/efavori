@@ -1,8 +1,20 @@
-﻿@using api
+﻿@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
+@using api
 @using api.tr
-@using data
-@using data._Shared
-@using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -56,7 +68,7 @@ else
 
 
     @* Galeri grid render fragment'i — modallardan ÖNCE ve aynı kapsamda tanımlanır *@
-    RenderFragment<List<Data.Media>> RenderGalleryGrid = (selected) => @<text>
+    RenderFragment<List<data._Galleries.Media>> RenderGalleryGrid = (selected) => @<text>
         <div class="input-group input-group-sm mb-3">
             <span class="input-group-text bg-dark-transparent border-light-3 text-white-50"><i class="fa fa-search"></i></span>
             <input type="text" class="form-control bg-dark-transparent border-light-3 text-white" placeholder="Ara..."
@@ -1145,36 +1157,36 @@ else
     private int _stateId;
 
     // ─── Tekli medya seçimleri ────────────────────────────────────
-    private Data.Media? _profileMedia;
-    private Data.Media? _coverMedia;
+    private data._Galleries.Media? _profileMedia;
+    private data._Galleries.Media? _coverMedia;
     private string _activeMediaSlot = string.Empty;
 
-    private Data.Media? _certificateOfIncorporation;
-    private Data.Media? _activityCertificate;
-    private Data.Media? _taxRegistration;
-    private Data.Media? _tradeRegistryGazette;
-    private Data.Media? _signatureCircular;
-    private Data.Media? _authorizedPersonId;
-    private Data.Media? _proofOfBusinessAddress;
-    private Data.Media? _bankStatement;
-    private Data.Media? _bankAccountConfirmation;
-    private Data.Media? _trademarkCertificate;
-    private Data.Media? _letterOfAuthorization;
-    private Data.Media? _qualityCertificates;
-    private Data.Media? _customsRegistration;
-    private Data.Media? _socialSecurityRegistration;
-    private Data.Media? _proofOfOwnership;
+    private data._Galleries.Media? _certificateOfIncorporation;
+    private data._Galleries.Media? _activityCertificate;
+    private data._Galleries.Media? _taxRegistration;
+    private data._Galleries.Media? _tradeRegistryGazette;
+    private data._Galleries.Media? _signatureCircular;
+    private data._Galleries.Media? _authorizedPersonId;
+    private data._Galleries.Media? _proofOfBusinessAddress;
+    private data._Galleries.Media? _bankStatement;
+    private data._Galleries.Media? _bankAccountConfirmation;
+    private data._Galleries.Media? _trademarkCertificate;
+    private data._Galleries.Media? _letterOfAuthorization;
+    private data._Galleries.Media? _qualityCertificates;
+    private data._Galleries.Media? _customsRegistration;
+    private data._Galleries.Media? _socialSecurityRegistration;
+    private data._Galleries.Media? _proofOfOwnership;
 
     // ─── Çoklu medya (galeri) seçimleri ───────────────────────────
-    private List<Data.Media> _galleryOutSideFiles = new();
-    private List<Data.Media> _galleryInSideFiles = new();
+    private List<data._Galleries.Media> _galleryOutSideFiles = new();
+    private List<data._Galleries.Media> _galleryInSideFiles = new();
 
     // ─── Slot'a bağlanamayan (genel "Document" tipli) evrak dosyaları ──
-    private List<Data.Media> _otherDocumentFiles = new();
+    private List<data._Galleries.Media> _otherDocumentFiles = new();
 
     // ─── Galeri grid (Id bazlı) state ─────────────────────────────
-    private List<Data.Media> _galleryAllMedia = new();
-    private List<Data.Media> _galleryFilteredMedia = new();
+    private List<data._Galleries.Media> _galleryAllMedia = new();
+    private List<data._Galleries.Media> _galleryFilteredMedia = new();
     private string _gallerySearch = string.Empty;
     private int _galleryDisplayCount = 15;
     private bool _galleryLoading;
@@ -1200,7 +1212,7 @@ else
     };
 
     // ─── Evrak tablosu satır tanımı (UI tekrarını azaltır) ────────
-    private record DocRow(string Slot, string Icon, string Title, string Description, bool Required, Func<Data.Media?> Getter);
+    private record DocRow(string Slot, string Icon, string Title, string Description, bool Required, Func<data._Galleries.Media?> Getter);
     private List<DocRow> _documentRows = new();
 
     // ─── Çalışma günü satır tanımı ────────────────────────────────
@@ -1409,7 +1421,7 @@ else
         try
         {
             await using var loadDb = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var fresh = await loadDb.Stores.AsNoTracking()
+            var fresh = await loadDb.Store.AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == src.Id, _cts.Token);
 
             if (fresh != null)
@@ -1469,11 +1481,11 @@ else
         // Profil / Kapak görsellerini geri yükle
         _profileMedia = string.IsNullOrWhiteSpace(_Store.ProfileCoverGallery?.ProfileImagePath)
             ? null
-            : new Data.Media { FileUrl = _Store.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
+            : new data._Galleries.Media { FileUrl = _Store.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
 
         _coverMedia = string.IsNullOrWhiteSpace(_Store.ProfileCoverGallery?.CoverImagePath)
             ? null
-            : new Data.Media { FileUrl = _Store.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
+            : new data._Galleries.Media { FileUrl = _Store.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
 
         // Evrak medyalarını ve galerileri DB'den yükle
         await LoadDocumentMediaAsync();
@@ -1629,11 +1641,11 @@ else
         if (_Store == null) return;
 
         // slot → (getter, setter) eşlemesi
-        var slotGet = new Dictionary<string, Func<Data.Media?>>(StringComparer.OrdinalIgnoreCase);
-        var slotSet = new Dictionary<string, Action<Data.Media>>(StringComparer.OrdinalIgnoreCase);
+        var slotGet = new Dictionary<string, Func<data._Galleries.Media?>>(StringComparer.OrdinalIgnoreCase);
+        var slotSet = new Dictionary<string, Action<data._Galleries.Media>>(StringComparer.OrdinalIgnoreCase);
         var slotGuid = new Dictionary<string, Guid?>(StringComparer.OrdinalIgnoreCase);
 
-        void Map(string slot, Guid? id, Func<Data.Media?> get, Action<Data.Media> set)
+        void Map(string slot, Guid? id, Func<data._Galleries.Media?> get, Action<data._Galleries.Media> set)
         {
             slotGet[slot] = get; slotSet[slot] = set; slotGuid[slot] = id;
         }
@@ -1694,9 +1706,9 @@ else
             var emptySlots = slotGet.Where(kv => kv.Value() == null).Select(kv => kv.Key).ToList();
             if (emptySlots.Any())
             {
-                var rows = await db.ItemGallery.AsNoTracking()
+                var rows = await db.MediaItems.AsNoTracking()
                     .Where(g => g.ItemId == _Store.Id
-                                && g.IsDelete != true
+                                && g.IsDeleted!.IsDeletedStatu != true
                                 && g.MediaId != null
                                 && g.ItemType != null
                                 && emptySlots.Contains(g.ItemType))
@@ -1707,7 +1719,7 @@ else
                 {
                     var galleryMediaIds = rows.Select(r => r.MediaId!.Value).Distinct().ToList();
                     var galleryMedias = await db.Media.AsNoTracking()
-                        .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                        .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeleted!.IsDeletedStatu != true)
                         .ToListAsync(_cts.Token);
 
                     var byId = galleryMedias.ToDictionary(m => m.Id);
@@ -1731,9 +1743,9 @@ else
                 .Select(m => m!.Id)
                 .ToHashSet();
 
-            var otherRows = await db.ItemGallery.AsNoTracking()
+            var otherRows = await db.MediaItems.AsNoTracking()
                 .Where(g => g.ItemId == _Store.Id
-                            && g.IsDelete != true
+                            && g.IsDeleted!.IsDeletedStatu != true
                             && g.MediaId != null
                             && g.ItemType != "InShooting"
                             && g.ItemType != "OutShooting")
@@ -1749,7 +1761,7 @@ else
             if (otherMediaIds.Any())
             {
                 _otherDocumentFiles = await db.Media.AsNoTracking()
-                    .Where(m => otherMediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                    .Where(m => otherMediaIds.Contains(m.Id) && m.IsDeleted!.IsDeletedStatu != true)
                     .ToListAsync(_cts.Token);
             }
         }
@@ -1757,20 +1769,20 @@ else
     }
 
     // ── Mevcut galeri kayıtlarını DB'den yükle (ItemGallery → Media) ──
-    private async Task<List<Data.Media>> LoadGalleryAsync(Guid itemId, string itemType)
+    private async Task<List<data._Galleries.Media>> LoadGalleryAsync(Guid itemId, string itemType)
     {
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var mediaIds = await db.ItemGallery
-                .Where(g => g.ItemId == itemId && g.ItemType == itemType && g.IsDelete != true)
+            var mediaIds = await db.MediaItems
+                .Where(g => g.ItemId == itemId && g.ItemType == itemType && g.IsDeleted!.IsDeletedStatu != true)
                 .Select(g => g.MediaId)
                 .ToListAsync(_cts.Token);
 
             if (!mediaIds.Any()) return new();
 
             return await db.Media.AsNoTracking()
-                .Where(m => mediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
+                .Where(m => mediaIds.Contains(m.Id) && m.IsDeleted!.IsDeletedStatu != true)
                 .ToListAsync(_cts.Token);
         }
         catch (Exception ex)
@@ -1989,7 +2001,7 @@ else
             // Eksik(ler) giderildi olarak onaylandıysa mağaza yeniden değerlendirmeye alınır.
             if (anyMarkedSucces)
             {
-                var store = await db.Stores.FirstOrDefaultAsync(s => s.Id == _Store.Id, _cts.Token);
+                var store = await db.Store.FirstOrDefaultAsync(s => s.Id == _Store.Id, _cts.Token);
                 if (store != null)
                 {
                     store.IsActiveStateAdmin = null;   // → "Yeniden Değerlendiriliyor"
@@ -2201,7 +2213,7 @@ else
     }
 
     // ── Tekli seçim handler (profil/kapak/evrak) ──
-    private void HandleSingleFileSelected(Data.Media media)
+    private void HandleSingleFileSelected(data._Galleries.Media media)
     {
         switch (_activeMediaSlot)
         {
@@ -2247,7 +2259,7 @@ else
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
             _galleryAllMedia = await db.Media.AsNoTracking()
-                .Where(m => m.IsDeletedStatu != true && m.UserId == use.Id)
+                .Where(m => m.IsDeleted!.IsDeletedStatu != true && m.UserId == use.Id)
                 .OrderByDescending(m => m.CreatedAt)
                 .ToListAsync(_cts.Token);
             ApplyGalleryFilter();
@@ -2289,7 +2301,7 @@ else
         }
     }
 
-    private void ToggleGalleryItem(Data.Media m)
+    private void ToggleGalleryItem(data._Galleries.Media m)
     {
         var target = _activeMediaSlot == "galleryInSide" ? _galleryInSideFiles : _galleryOutSideFiles;
         var existing = target.FirstOrDefault(x => x.Id == m.Id);
@@ -2363,7 +2375,7 @@ else
 
             // ── 2. MEVCUT KAYDI YÜKLE (blanket Update YOK; alan bazlı yazılır) ──
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var existing = await db.Stores.FindAsync(new object[] { _Store.Id }, _cts.Token);
+            var existing = await db.Store.FindAsync(new object[] { _Store.Id }, _cts.Token);
 
             if (existing == null)
             {
@@ -2453,11 +2465,11 @@ else
 
     // Galeri merge: artık seçili olmayanlar soft-delete, tekrar seçilenler reaktive,
     // hiç kaydı olmayan yeniler eklenir. (audit izi korunur, tablo şişmez)
-    private async Task SyncGalleryAsync(_ApplicationConnectionDb db, Guid storeId, List<Data.Media> selectedFiles, string itemType)
+    private async Task SyncGalleryAsync(_ApplicationConnectionDb db, Guid storeId, List<data._Galleries.Media> selectedFiles, string itemType)
     {
-        var oldGallery = await db.ItemGallery
-            .Where(g => g.ItemId == storeId && g.ItemType == itemType)
-            .ToListAsync(_cts.Token);
+        var oldGallery = await db.MediaItems
+                    .Where(g => g.ItemId == storeId && g.ItemType == itemType)
+                    .ToListAsync(_cts.Token);
 
         var selectedMediaIds = selectedFiles.Select(m => m.Id).ToHashSet();
 
@@ -2465,13 +2477,18 @@ else
         {
             var stillSelected = g.MediaId.HasValue && selectedMediaIds.Contains(g.MediaId.Value);
 
-            if (!stillSelected && g.IsDelete != true)
+            // IsDeleted nesnesini güvenli şekilde başlat[cite: 4, 11]
+            g.IsDeleted ??= new data.Owned.IsDeleted();
+
+            if (!stillSelected && g.IsDeleted.IsDeletedStatu != true)
             {
-                g.IsDelete = true;
+                g.IsDeleted.IsDeletedStatu = true;
+                g.IsDeleted.DeletedAtDate = DateTime.UtcNow;
             }
-            else if (stillSelected && g.IsDelete == true)
+            else if (stillSelected && g.IsDeleted.IsDeletedStatu == true)
             {
-                g.IsDelete = false;
+                g.IsDeleted.IsDeletedStatu = false;
+                g.IsDeleted.DeletedAtDate = null; // Silinme tarihini temizle
                 g.ItemAddDate = DateTime.UtcNow;
             }
         }
@@ -2485,17 +2502,18 @@ else
 
         if (trulyNew.Any())
         {
-            var newGallery = trulyNew.Select(m => new ItemGallery
+            var newGallery = trulyNew.Select(m => new data._Galleries.MediaItems
             {
                 UserId = use!.Id,
                 ItemId = storeId,
                 ItemType = itemType,
                 MediaId = m.Id,
                 ItemAddDate = DateTime.UtcNow,
-                IsDelete = false
+                // IsDeleted sahipli nesnesini başlat ve durumunu false (silinmemiş) olarak ayarla
+                IsDeleted = new data.Owned.IsDeleted { IsDeletedStatu = false }
             }).ToList();
 
-            await db.ItemGallery.AddRangeAsync(newGallery, _cts.Token);
+            await db.MediaItems.AddRangeAsync(newGallery, _cts.Token);
         }
     }
 

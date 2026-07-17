@@ -23,7 +23,7 @@ namespace web.Areas.Admin.Controllers
             ViewBag.StoreId = id;
             using (var db = new _ApplicationConnectionDb())
             {
-                var store = await db.Stores
+                var store = await db.Store
                     .AsNoTracking()
                     .FirstOrDefaultAsync(s => s.Id == id);
                 ViewBag.StoreData = store;

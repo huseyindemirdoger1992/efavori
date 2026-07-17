@@ -1,11 +1,23 @@
-﻿@using System.Globalization
-@using Data
+﻿@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
+@using System.Globalization
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using api
 @using api.tr
-@using data
-@using data._Shared
 @using razor._Shared
 @implements IAsyncDisposable
 @inject IJSRuntime JSRuntime
@@ -3301,18 +3313,18 @@
     _ApplicationConnectionDb db = new _ApplicationConnectionDb();
     private List<Users> adminUsers = new();
     private List<TaskCategories> taskCategories = new();
-    private List<data.TaskStatus> tasks = new();
+    private List<data._Tasks.TaskStatus> tasks = new();
     private List<TaskNotes> taskNotes = new();
     private Guid? draggedTaskId;
     private bool AddTaskshowModal = false;
     private bool EditTaskshowModal = false;
     private bool showDetailModal = false;
     private bool showNoteEditlModal = false;
-    private data.TaskCategories? TaskCategories = new();
-    private data.TaskStatus? AddTask;
-    private data.TaskStatus? editingTask;
-    private data.TaskStatus? selectedTask;
-    private data.TaskNotes? Task_Notes;
+    private data._Tasks.TaskCategories? TaskCategories = new();
+    private data._Tasks.TaskStatus? AddTask;
+    private data._Tasks.TaskStatus? editingTask;
+    private data._Tasks.TaskStatus? selectedTask;
+    private data._Tasks.TaskNotes? Task_Notes;
     private DateTime? targetDate = DateTime.Now.AddDays(7);
     private DateTime? editTargetDate;
     private string CategoryStructure = "";
@@ -3863,7 +3875,7 @@
 
 
 
-    private List<data.TaskStatus> GetTasksByStatus(string status, Guid? TaskCategoriesId, Guid? TaskFramewokId)
+    private List<data._Tasks.TaskStatus> GetTasksByStatus(string status, Guid? TaskCategoriesId, Guid? TaskFramewokId)
     {
         using var db = DbFactory.CreateDbContext();
 
@@ -4044,7 +4056,7 @@
     #region Modal Operations
     private void ShowAddTaskModal()
     {
-        AddTask = new data.TaskStatus
+        AddTask = new data._Tasks.TaskStatus
         {
             Id = Guid.NewGuid(),
             Status = "NewTasks",
@@ -4062,9 +4074,9 @@
         selectedAssigneeIds = new List<Guid>();
         AddTaskshowModal = true;
     }
-    private void EditTask(data.TaskStatus task)
+    private void EditTask(data._Tasks.TaskStatus task)
     {
-        editingTask = new data.TaskStatus
+        editingTask = new data._Tasks.TaskStatus
         {
             Id = task.Id,
             TaskTitle = task.TaskTitle,
@@ -4136,7 +4148,7 @@
         CloseAddModal();
         CloseEditModal();
     }
-    private async Task ShowTaskDetail(data.TaskStatus task)
+    private async Task ShowTaskDetail(data._Tasks.TaskStatus task)
     {
         selectedTask = task;
         await LoadTaskNotes(task.Id);

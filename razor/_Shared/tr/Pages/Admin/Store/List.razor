@@ -9,12 +9,23 @@
    ✅ İşlemler sütunu: AdminPermissionPending=true VE IsActiveStateAdmin=true ise görünür
    ✅ 5'li sayfalama
    ============================================================ *@
+@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
 
 @using api
 @using api.tr
-@using data
-@using data._Shared
-@using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -873,13 +884,13 @@ else
                 if (IsSuperAdmin)
                 {
                     // SuperAdmin tüm mağazaları görür
-                    q = db.Stores.AsNoTracking();
+                    q = db.Store.AsNoTracking();
                 }
                 else
                 {
                     // Diğer kullanıcı yalnızca kendi mağazalarını görür
                     var uid = use?.Id;
-                    q = db.Stores.Where(x => x.UserId == uid).AsNoTracking();
+                    q = db.Store.Where(x => x.UserId == uid).AsNoTracking();
                 }
                 // Soft Delete filtresi
                 q = q.Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true);
@@ -1006,7 +1017,7 @@ else
             StateHasChanged();
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var entity = await db.Stores.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+            var entity = await db.Store.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
 
             if (entity != null)
             {
@@ -1059,7 +1070,7 @@ else
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            var entities = await db.Stores
+            var entities = await db.Store
                 .Where(x => ids.Contains(x.Id))
                 .ToListAsync(_cts.Token);
 
@@ -1143,7 +1154,7 @@ else
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            var query = db.Stores.Where(x => ids.Contains(x.Id));
+            var query = db.Store.Where(x => ids.Contains(x.Id));
 
             // SuperAdmin olmayan kullanıcı sadece kendi mağazalarını güncelleyebilir
             if (!IsSuperAdmin)

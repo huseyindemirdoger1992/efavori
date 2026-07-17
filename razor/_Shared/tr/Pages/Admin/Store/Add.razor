@@ -1,7 +1,20 @@
-﻿@using api
+﻿@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
+@using api
 @using api.tr
-@using data
-@using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -1512,36 +1525,36 @@
     private Notification? notificationRef;
 
     private Store _Store = new Store();
-    private ItemGallery _ItemGallery = new ItemGallery();
+    private data._Galleries.MediaItems _ItemGallery = new data._Galleries.MediaItems();
 
 
     // --- Medya Seçim State ---
     private string _activeMediaSlot = string.Empty;
 
     // Tekli seçimler
-    private Data.Media? _profileMedia;
-    private Data.Media? _coverMedia;
+    private data._Galleries.Media? _profileMedia;
+    private data._Galleries.Media? _coverMedia;
 
-    private Data.Media? _certificateOfIncorporation; // Şirket Kuruluş Belgesi (Certificate of Incorporation) *
-    private Data.Media? _activityCertificate;        // Güncel Faaliyet Belgesi (Son 3 Aylık - Activity Certificate) *
-    private Data.Media? _taxRegistration;            // Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration) *
-    private Data.Media? _tradeRegistryGazette;       // Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)
-    private Data.Media? _signatureCircular;          // İmza Sirküleri veya Yetki Belgesi (Signature Circular / POA) *
-    private Data.Media? _authorizedPersonId;         // Şirket Yetkilisi Pasaport veya Kimlik Görseli (Authorized Person ID) *
-    private Data.Media? _proofOfBusinessAddress;     // Şirket Adres Kanıtı - Fatura/Resmi Belge (Proof of Business Address) *
-    private Data.Media? _bankStatement;              // Son 3 Aya Ait Banka Hesap Dökümü (Bank Statement)
-    private Data.Media? _bankAccountConfirmation;    // IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation) *
-    private Data.Media? _trademarkCertificate;       // Marka Tescil Belgesi (Trademark Certificate)
-    private Data.Media? _letterOfAuthorization;      // Yetkili Satıcı Onay Belgesi (Letter of Authorization - LOA)
-    private Data.Media? _qualityCertificates;        // Ürün Kalite ve Sağlık Sertifikaları (CE, ISO, FDA vb.)
-    private Data.Media? _customsRegistration;        // Gümrük Kayıt Belgesi (EORI veya Gümrük No - Customs Registration)
-    private Data.Media? _socialSecurityRegistration; // Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security/Employer ID)
-    private Data.Media? _proofOfOwnership;           // Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership/UBO) *
+    private data._Galleries.Media? _certificateOfIncorporation; // Şirket Kuruluş Belgesi (Certificate of Incorporation) *
+    private data._Galleries.Media? _activityCertificate;        // Güncel Faaliyet Belgesi (Son 3 Aylık - Activity Certificate) *
+    private data._Galleries.Media? _taxRegistration;            // Vergi Levhası / VAT / GST / EIN Sertifikası (Tax Registration) *
+    private data._Galleries.Media? _tradeRegistryGazette;       // Ticaret Sicil Gazetesi Örneği (Trade Registry Gazette)
+    private data._Galleries.Media? _signatureCircular;          // İmza Sirküleri veya Yetki Belgesi (Signature Circular / POA) *
+    private data._Galleries.Media? _authorizedPersonId;         // Şirket Yetkilisi Pasaport veya Kimlik Görseli (Authorized Person ID) *
+    private data._Galleries.Media? _proofOfBusinessAddress;     // Şirket Adres Kanıtı - Fatura/Resmi Belge (Proof of Business Address) *
+    private data._Galleries.Media? _bankStatement;              // Son 3 Aya Ait Banka Hesap Dökümü (Bank Statement)
+    private data._Galleries.Media? _bankAccountConfirmation;    // IBAN / SWIFT Doğrulama Mektubu veya Dekontu (Bank Confirmation) *
+    private data._Galleries.Media? _trademarkCertificate;       // Marka Tescil Belgesi (Trademark Certificate)
+    private data._Galleries.Media? _letterOfAuthorization;      // Yetkili Satıcı Onay Belgesi (Letter of Authorization - LOA)
+    private data._Galleries.Media? _qualityCertificates;        // Ürün Kalite ve Sağlık Sertifikaları (CE, ISO, FDA vb.)
+    private data._Galleries.Media? _customsRegistration;        // Gümrük Kayıt Belgesi (EORI veya Gümrük No - Customs Registration)
+    private data._Galleries.Media? _socialSecurityRegistration; // Sosyal Güvenlik / İşletme Kayıt No Belgesi (Social Security/Employer ID)
+    private data._Galleries.Media? _proofOfOwnership;           // Şirket Ortaklık Yapısı ve Nihai Faydalanıcı Belgesi (Proof of Ownership/UBO) *
 
     // Çoklu seçimler (Slot bazlı izole listeler)
-    private List<Data.Media> _galleryOutSideFiles = new();
-    private List<Data.Media> _galleryInSideFiles = new();
-    private List<Data.Media> _galleryDocuments = new();
+    private List<data._Galleries.Media> _galleryOutSideFiles = new();
+    private List<data._Galleries.Media> _galleryInSideFiles = new();
+    private List<data._Galleries.Media> _galleryDocuments = new();
 
     // ─── Modal Açma Metotları ────────────────────────────────────────────────
     // Her metot yalnızca kendi slotunu aktif eder.
@@ -1559,7 +1572,7 @@
     }
 
     // ─── Tekli Seçim Handler ────────────────────────────────────────────────
-    private void HandleSingleFileSelected(Data.Media media)
+    private void HandleSingleFileSelected(data._Galleries.Media media)
     {
         switch (_activeMediaSlot)
         {
@@ -1589,7 +1602,7 @@
     }
 
     // ─── Çoklu Seçim Handler ────────────────────────────────────────────────
-    private void HandleMultiSelectionChanged(List<Data.Media> files)
+    private void HandleMultiSelectionChanged(List<data._Galleries.Media> files)
     {
         if (files == null) return;
 
@@ -2015,23 +2028,23 @@
 
             // Galeri Mapping
             var galleryItems = _galleryOutSideFiles
-                .Select(m => new ItemGallery
+                .Select(m => new data._Galleries.MediaItems
                 {
                     UserId = use.Id,
                     ItemId = _Store.Id,
                     ItemType = "OutShooting",
                     MediaId = m.Id,
                     ItemAddDate = DateTime.UtcNow,
-                    IsDelete = false
+                    IsDeleted = new data.Owned.IsDeleted { IsDeletedStatu = false }
                 })
-                .Concat(_galleryInSideFiles.Select(m => new ItemGallery
+                .Concat(_galleryInSideFiles.Select(m => new data._Galleries.MediaItems
                 {
                     UserId = use.Id,
                     ItemId = _Store.Id,
                     ItemType = "InShooting",
                     MediaId = m.Id,
                     ItemAddDate = DateTime.UtcNow,
-                    IsDelete = false
+                    IsDeleted = new data.Owned.IsDeleted { IsDeletedStatu = false }
                 }))
                 .ToList();
 
@@ -2040,11 +2053,11 @@
             // ──────────────────────────────────────────
             if (galleryItems.Any())
             {
-                await db.ItemGallery.AddRangeAsync(galleryItems, _cts.Token);
+                await db.MediaItems.AddRangeAsync(galleryItems, _cts.Token);
                 await db.SaveChangesAsync(_cts.Token);
             }
             _Store.AddressInfo.MapTitle = _Store.Name;
-            db.Stores.Add(_Store);
+            db.Store.Add(_Store);
             await db.SaveChangesAsync(_cts.Token);
 
             // ──────────────────────────────────────────

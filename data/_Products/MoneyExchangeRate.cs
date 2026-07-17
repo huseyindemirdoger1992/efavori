@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace data
+namespace data._Products
 {
     public class MoneyExchangeRate
     {

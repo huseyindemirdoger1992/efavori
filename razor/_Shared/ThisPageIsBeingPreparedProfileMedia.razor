@@ -9,12 +9,24 @@
    ✅ 5'li sayfalama
    ✅ Basit, performanslı, kötü sunucuda bile binlerce kullanıcıya cevap
    ============================================================ *@
+@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
 
 @using api
 @using api.tr
-@using data
-@using data._Shared
-@using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -1074,12 +1086,12 @@ else
     [Parameter] public Users? use { get; set; }
 
     // ─── Profil Kapak Görseli ─────────────────────────────────────
-    private Data.Media? _profileMedia;
-    private Data.Media? _coverMedia;
+    private data._Galleries.Media? _profileMedia;
+    private data._Galleries.Media? _coverMedia;
     private string _activeMediaSlot = string.Empty;
 
     // ─── Galeri (çoklu seçim) ─────────────────────────────────────
-    private List<Data.Media> _galleryFiles = new();
+    private List<data._Galleries.Media> _galleryFiles = new();
 
     // ─── Galeri seçim grid'i (parent yönetiminde) ─────────────────
     // List bileşeni yerine kendi grid'imizi kullanıyoruz; sebep:
@@ -1087,8 +1099,8 @@ else
     // bizim instance'larımız farklı DbContext'lerden geldiği için
     // referans eşleşmesi tutmuyor → daha önce seçilen medyalar
     // rozetlenmiyordu. Kendi grid'imizde Id bazlı karşılaştırma yapıyoruz.
-    private List<Data.Media> _galleryAllMedia = new();
-    private List<Data.Media> _galleryFilteredMedia = new();
+    private List<data._Galleries.Media> _galleryAllMedia = new();
+    private List<data._Galleries.Media> _galleryFilteredMedia = new();
     private string _gallerySearch = string.Empty;
     private int _galleryDisplayCount = 15;
     private bool _galleryLoading;
@@ -1478,15 +1490,15 @@ else
         // Profil/Kapak görsellerini UI state'ine geri yükle
         _profileMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.ProfileImagePath)
             ? null
-            : new Data.Media { FileUrl = _editModel.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
+            : new data._Galleries.Media { FileUrl = _editModel.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
 
         _coverMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.CoverImagePath)
             ? null
-            : new Data.Media { FileUrl = _editModel.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
+            : new data._Galleries.Media { FileUrl = _editModel.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
 
         _activeMediaSlot = string.Empty;
 
-        // Mevcut galeri kayıtlarını DB'den yükle (ItemGallery → Media join)
+        // Mevcut galeri kayıtlarını DB'den yükle (MediaItems → Media join)
         _galleryFiles = await LoadGalleryAsync(item.Id);
 
         // Cascade preload
@@ -1582,20 +1594,20 @@ else
             db.TryTableSingle.Add(_addModel);
             await db.SaveChangesAsync(_cts.Token);
 
-            // Galeri kayıtlarını ItemGallery tablosuna ekle
+            // Galeri kayıtlarını MediaItems tablosuna ekle
             if (_galleryFiles.Any())
             {
-                var galleryItems = _galleryFiles.Select(m => new ItemGallery
+                var galleryItems = _galleryFiles.Select(m => new MediaItems
                 {
                     UserId = use!.Id,
                     ItemId = _addModel.Id,
                     ItemType = "Gallery",
                     MediaId = m.Id,
                     ItemAddDate = DateTime.UtcNow,
-                    IsDelete = false
+                    IsDeleted = new IsDeleted { IsDeletedStatu = false }
                 }).ToList();
 
-                await db.ItemGallery.AddRangeAsync(galleryItems, _cts.Token);
+                await db.MediaItems.AddRangeAsync(galleryItems, _cts.Token);
                 await db.SaveChangesAsync(_cts.Token);
             }
 
@@ -1663,12 +1675,12 @@ else
             };
 
             // Galeri: TryTableSingle.IsDeleted mantığıyla tutarlı SOFT DELETE.
-            // Mevcut (silinmemiş) ItemGallery kayıtları kalıcı olarak silinmez;
+            // Mevcut (silinmemiş) MediaItems kayıtları kalıcı olarak silinmez;
             // sadece IsDelete = true olarak işaretlenir (audit izi korunur).
             // Yeniden seçilen MediaId'ler için daha önce soft delete edilmiş kayıt varsa
             // o satır yeniden aktive edilir (yeni satır oluşturmak yerine) — bu hem
             // tablonun şişmesini önler hem de geçmiş izini bozmaz.
-            var oldGallery = await db.ItemGallery
+            var oldGallery = await db.MediaItems
                 .Where(g => g.ItemId == existing.Id && g.ItemType == "Gallery")
                 .ToListAsync(_cts.Token);
 
@@ -1679,15 +1691,18 @@ else
             {
                 var stillSelected = g.MediaId.HasValue && selectedMediaIds.Contains(g.MediaId.Value);
 
-                if (!stillSelected && g.IsDelete != true)
+                if (!stillSelected && g.IsDeleted?.IsDeletedStatu != true)
                 {
                     // Aktif → silindi
-                    g.IsDelete = true;
+                    g.IsDeleted ??= new IsDeleted();
+                    g.IsDeleted.IsDeletedStatu = true;
+                    g.IsDeleted.DeletedAtDate = DateTime.UtcNow;
                 }
-                else if (stillSelected && g.IsDelete == true)
+                else if (stillSelected && g.IsDeleted?.IsDeletedStatu == true)
                 {
                     // Daha önce soft delete edilmiş ama tekrar seçildi → yeniden aktive et
-                    g.IsDelete = false;
+                    g.IsDeleted.IsDeletedStatu = false;
+                    g.IsDeleted.DeletedAtDate = null;
                     g.ItemAddDate = DateTime.UtcNow;
                 }
             }
@@ -1704,17 +1719,17 @@ else
 
             if (trulyNewMedia.Any())
             {
-                var newGallery = trulyNewMedia.Select(m => new ItemGallery
+                var newGallery = trulyNewMedia.Select(m => new MediaItems
                 {
                     UserId = use!.Id,
                     ItemId = existing.Id,
                     ItemType = "Gallery",
                     MediaId = m.Id,
                     ItemAddDate = DateTime.UtcNow,
-                    IsDelete = false
+                    IsDeleted = new IsDeleted { IsDeletedStatu = false }
                 }).ToList();
 
-                await db.ItemGallery.AddRangeAsync(newGallery, _cts.Token);
+                await db.MediaItems.AddRangeAsync(newGallery, _cts.Token);
             }
 
             await db.SaveChangesAsync(_cts.Token);
@@ -1762,13 +1777,17 @@ else
 
             if (entity != null)
             {
-                // Bağlı galeri kayıtlarını soft delete et (ItemGallery.IsDelete = true)
-                var galleryItems = await db.ItemGallery
-                    .Where(g => g.ItemId == entity.Id && g.ItemType == "Gallery" && g.IsDelete != true)
+                // Bağlı galeri kayıtlarını soft delete et (MediaItems.IsDeleted.IsDeletedStatu = true)
+                var galleryItems = await db.MediaItems
+                    .Where(g => g.ItemId == entity.Id && g.ItemType == "Gallery" && g.IsDeleted!.IsDeletedStatu != true)
                     .ToListAsync(_cts.Token);
 
                 foreach (var g in galleryItems)
-                    g.IsDelete = true;
+                {
+                    g.IsDeleted ??= new IsDeleted();
+                    g.IsDeleted.IsDeletedStatu = true;
+                    g.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+                }
 
                 // Ana kaydı soft delete et (IsDeleted owned entity)
                 entity.IsDeleted ??= new IsDeleted();
@@ -1820,11 +1839,11 @@ else
 
             var now = DateTime.UtcNow;
 
-            // Bağlı galeri kayıtlarını toplu soft delete (ItemGallery.IsDelete = true)
-            await db.ItemGallery
-                .Where(g => ids.Contains(g.ItemId!.Value) && g.ItemType == "Gallery" && g.IsDelete != true)
+            // Bağlı galeri kayıtlarını toplu soft delete (MediaItems.IsDelete = true)
+            await db.MediaItems
+                .Where(g => ids.Contains(g.ItemId!.Value) && g.ItemType == "Gallery" && g.IsDeleted!.IsDeletedStatu != true)
                 .ExecuteUpdateAsync(s => s
-                    .SetProperty(g => g.IsDelete, true),
+                    .SetProperty(g => g.IsDeleted!.IsDeletedStatu, true),
                     _cts.Token);
 
             // Ana kayıtları toplu soft delete (IsDeleted owned entity alanları)
@@ -1938,7 +1957,7 @@ else
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
             _galleryAllMedia = await db.Media
                 .AsNoTracking()
-                .Where(m => m.IsDeletedStatu != true && m.UserId == use.Id)
+                .Where(m => m.IsDeleted!.IsDeletedStatu == false && m.UserId == use.Id)
                 .OrderByDescending(m => m.CreatedAt)
                 .ToListAsync(_cts.Token);
             ApplyGalleryFilter();
@@ -1984,7 +2003,7 @@ else
     }
 
     // Galeri grid'inde bir karta tıklanınca: Id bazlı toggle.
-    private void ToggleGalleryItem(Data.Media m)
+    private void ToggleGalleryItem(data._Galleries.Media m)
     {
         var existing = _galleryFiles.FirstOrDefault(x => x.Id == m.Id);
         if (existing != null)
@@ -2021,7 +2040,7 @@ else
 
     // Tekli seçim handler — FileService.OnFileSelected event'inden tetiklenir.
     // Aktif slot'a göre profil veya kapak medyasını set eder.
-    private void HandleSingleFileSelected(Data.Media media)
+    private void HandleSingleFileSelected(data._Galleries.Media media)
     {
         switch (_activeMediaSlot)
         {
@@ -2032,22 +2051,22 @@ else
         InvokeAsync(StateHasChanged);
     }
 
-    // Mevcut kayda ait galeri görsellerini DB'den yükler (ItemGallery → Media join)
-    private async Task<List<Data.Media>> LoadGalleryAsync(Guid itemId)
+    // Mevcut kayda ait galeri görsellerini DB'den yükler (MediaItems → Media join)
+    private async Task<List<data._Galleries.Media>> LoadGalleryAsync(Guid itemId)
     {
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var mediaIds = await db.ItemGallery
-                .Where(g => g.ItemId == itemId && g.ItemType == "Gallery" && g.IsDelete != true)
+            var mediaIds = await db.MediaItems
+                .Where(g => g.ItemId == itemId && g.ItemType == "Gallery" && g.IsDeleted!.IsDeletedStatu == false)
                 .Select(g => g.MediaId)
                 .ToListAsync(_cts.Token);
 
             if (!mediaIds.Any()) return new();
 
             return await db.Media
-                .Where(m => mediaIds.Contains(m.Id) && m.IsDeletedStatu != true)
-                .ToListAsync(_cts.Token);
+.Where(m => mediaIds.Contains(m.Id) && m.IsDeleted.IsDeletedStatu != true)
+.ToListAsync(_cts.Token);
         }
         catch (Exception ex)
         {

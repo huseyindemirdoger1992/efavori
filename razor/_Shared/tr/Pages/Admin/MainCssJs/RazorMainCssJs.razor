@@ -9,12 +9,24 @@
    ✅ 5'li sayfalama
    ✅ GlobalSecurityProvider YOK — düz metin
    ============================================================ *@
+@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
 
 @using api
 @using api.tr
-@using data
-@using data._Shared
-@using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -738,24 +750,24 @@ else
                 StateHub.ClearCache(cacheKey);
 
             var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
-            {
-                await using var db = await DbFactory.CreateDbContextAsync(token);
-                var q = db.MainCssJs.AsNoTracking().AsQueryable();
+                        {
+                            await using var db = await DbFactory.CreateDbContextAsync(token);
+                            var q = db.MainCssJs.AsNoTracking().AsQueryable();
 
-                // Soft delete: silinmemiş kayıtları getir
-                q = q.Where(x => x.IsDelete == null || x.IsDelete == false);
+                            // Soft delete: IsDeletedStatu'su true olmayan (silinmemiş) kayıtları getir
+                            q = q.Where(x => x.IsDeleted == null || x.IsDeleted!.IsDeletedStatu != true);
 
-                // Arama: düz metin — DB'de LIKE çalışır
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    var s = search.Trim();
-                    q = q.Where(x =>
-                        (x.Title != null && x.Title.Contains(s)) ||
-                        (x.Description != null && x.Description.Contains(s)));
-                }
+                            // Arama: düz metin — DB'de LIKE çalışır
+                            if (!string.IsNullOrWhiteSpace(search))
+                            {
+                                var s = search.Trim();
+                                q = q.Where(x =>
+                                    (x.Title != null && x.Title.Contains(s)) ||
+                                    (x.Description != null && x.Description.Contains(s)));
+                            }
 
-                return await q.OrderByDescending(x => x.GetDateTime).ToListAsync(token);
-            }, token);
+                            return await q.OrderByDescending(x => x.GetDateTime).ToListAsync(token);
+                        }, token);
 
             if (token.IsCancellationRequested || result == null) return;
 
@@ -892,7 +904,12 @@ else
 
             _addModel.Id = Guid.NewGuid();
             _addModel.GetDateTime = DateTime.UtcNow;
-            _addModel.IsDelete = false;
+
+            // IsDeleted sahipli nesnesini başlat ve durumunu ayarla
+            _addModel.IsDeleted = new data.Owned.IsDeleted
+            {
+                IsDeletedStatu = false
+            };
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
             db.MainCssJs.Add(_addModel);
@@ -990,8 +1007,11 @@ else
 
             if (entity != null)
             {
-                // Soft delete
-                entity.IsDelete = true;
+                // Soft delete: IsDeleted owned entity'sini başlat ve durumunu true yap
+                entity.IsDeleted ??= new data.Owned.IsDeleted();
+                entity.IsDeleted.IsDeletedStatu = true;
+                entity.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+
                 await db.SaveChangesAsync(_cts.Token);
             }
 
@@ -1039,7 +1059,8 @@ else
             await db.MainCssJs
                 .Where(x => ids.Contains(x.Id))
                 .ExecuteUpdateAsync(s => s
-                    .SetProperty(x => x.IsDelete, true),
+                    .SetProperty(x => x.IsDeleted!.IsDeletedStatu, true)
+                    .SetProperty(x => x.IsDeleted!.DeletedAtDate, DateTime.UtcNow),
                     _cts.Token);
 
             _selectedIds.Clear();

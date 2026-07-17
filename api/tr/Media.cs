@@ -1,7 +1,18 @@
 ﻿using data;
-using data._Shared;
+using data.Owned;
+using data._Carts;
+using data._Categories;
+using data._Follows;
+using data._Galleries;
+using data._Helper;
+using data._Locations;
+using data._Products;
+using data._Shares;
+using data._Store;
 using data._Systems;
-using Data;
+using data._Tasks;
+using data._Users;
+
 using ImageMagick;
 using Microsoft.AspNetCore.Http;
 using System.Diagnostics;
@@ -112,7 +123,7 @@ public class Media(UserInfos userInfos)
             var fileInfoAvif = new FileInfo(fullPathAvif);
             string urlBasePath = $"/{relativeBasePath.Replace("\\", "/")}/avif/";
 
-            var mediaEntry = new Data.Media
+            var mediaEntry = new data._Galleries.Media
             {
                 Id = Guid.NewGuid(),
                 UserId = targetUserId,
@@ -136,7 +147,12 @@ public class Media(UserInfos userInfos)
                 OriginalSize = file.Length,
                 CompressedSize = fileInfoAvif.Length,
                 CreatedAt = DateTime.UtcNow,
-                IsDeletedStatu = false
+
+                // IsDeleted owned entity yapısına uygun atama:
+                IsDeleted = new data.Owned.IsDeleted
+                {
+                    IsDeletedStatu = false
+                }
             };
 
             db.Media.Add(mediaEntry);
@@ -203,7 +219,7 @@ public class Media(UserInfos userInfos)
             // 5. Media Tablosuna Kayıt
             using var db = new _ApplicationConnectionDb();
 
-            var mediaEntry = new Data.Media
+            var mediaEntry = new data._Galleries.Media
             {
                 Id = Guid.NewGuid(),
                 UserId = targetUserId,
@@ -219,7 +235,11 @@ public class Media(UserInfos userInfos)
                 OriginalSize = file.Length,
                 CompressedSize = file.Length, // Video sıkıştırma yoksa aynı kalır
                 CreatedAt = DateTime.UtcNow,
-                IsDeletedStatu = false
+                // IsDeleted owned entity yapısına uygun atama:
+                IsDeleted = new data.Owned.IsDeleted
+                {
+                    IsDeletedStatu = false
+                }
             };
 
             db.Media.Add(mediaEntry);
@@ -290,7 +310,7 @@ public class Media(UserInfos userInfos)
             // 5. Veritabanı İşlemleri (Media + Log)
             using var db = new _ApplicationConnectionDb();
 
-            var mediaEntry = new Data.Media
+            var mediaEntry = new data._Galleries.Media
             {
                 Id = Guid.NewGuid(),
                 UserId = targetUserId,
@@ -305,7 +325,11 @@ public class Media(UserInfos userInfos)
                 OriginalSize = file.Length,
                 CompressedSize = file.Length, // Ses dosyalarında genelde işlem sonrası boyut aynıdır
                 CreatedAt = DateTime.UtcNow,
-                IsDeletedStatu = false
+                // IsDeleted owned entity yapısına uygun atama:
+                IsDeleted = new data.Owned.IsDeleted
+                {
+                    IsDeletedStatu = false
+                }
             };
 
             logEntry.Exception = "Success";
@@ -380,7 +404,7 @@ public class Media(UserInfos userInfos)
             // 5. Veritabanı İşlemleri (Media + Log)
             using var db = new _ApplicationConnectionDb();
 
-            var mediaEntry = new Data.Media
+            var mediaEntry = new data._Galleries.Media
             {
                 Id = Guid.NewGuid(),
                 UserId = targetUserId,
@@ -396,7 +420,11 @@ public class Media(UserInfos userInfos)
                 OriginalSize = file.Length,
                 CompressedSize = file.Length,
                 CreatedAt = DateTime.UtcNow,
-                IsDeletedStatu = false
+                // IsDeleted owned entity yapısına uygun atama:
+                IsDeleted = new data.Owned.IsDeleted
+                {
+                    IsDeletedStatu = false
+                }
             };
 
             logEntry.Exception = "Success";
@@ -472,7 +500,7 @@ public class Media(UserInfos userInfos)
             // 5. Media ve Log Kayıtlarını Hazırla
             using var db = new _ApplicationConnectionDb();
 
-            var mediaEntry = new Data.Media
+            var mediaEntry = new data._Galleries.Media
             {
                 Id = Guid.NewGuid(),
                 UserId = targetUserId,
@@ -487,7 +515,11 @@ public class Media(UserInfos userInfos)
                 OriginalSize = file.Length,
                 CompressedSize = file.Length,
                 CreatedAt = DateTime.UtcNow,
-                IsDeletedStatu = false
+                // IsDeleted owned entity yapısına uygun atama:
+                IsDeleted = new data.Owned.IsDeleted
+                {
+                    IsDeletedStatu = false
+                }
             };
 
             logEntry.Exception = "Success";

@@ -9,12 +9,23 @@
    ✅ 5'li sayfalama
    ✅ Basit, performanslı, kötü sunucuda bile binlerce kullanıcıya cevap
    ============================================================ *@
+@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
 
 @using api
 @using api.tr
-@using data
-@using data._Shared
-@using Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
@@ -850,8 +861,8 @@ else
     [Parameter] public Users? use { get; set; }
 
     // ─── Profil Kapak Görseli ─────────────────────────────────────
-    private Data.Media? _profileMedia;
-    private Data.Media? _coverMedia;
+    private data._Galleries.Media? _profileMedia;
+    private data._Galleries.Media? _coverMedia;
     private string _activeMediaSlot = string.Empty;
 
     // ─── Yaşam döngüsü ────────────────────────────────────────────
@@ -1220,11 +1231,11 @@ else
         // Profil/Kapak görsellerini UI state'ine geri yükle
         _profileMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.ProfileImagePath)
             ? null
-            : new Data.Media { FileUrl = _editModel.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
+            : new data._Galleries.Media { FileUrl = _editModel.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
 
         _coverMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.CoverImagePath)
             ? null
-            : new Data.Media { FileUrl = _editModel.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
+            : new data._Galleries.Media { FileUrl = _editModel.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
 
         _activeMediaSlot = string.Empty;
 
@@ -1578,7 +1589,7 @@ else
 
     // Tekli seçim handler — FileService.OnFileSelected event'inden tetiklenir.
     // Aktif slot'a göre profil veya kapak medyasını set eder.
-    private void HandleSingleFileSelected(Data.Media media)
+    private void HandleSingleFileSelected(data._Galleries.Media media)
     {
         switch (_activeMediaSlot)
         {

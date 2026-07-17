@@ -1,5 +1,19 @@
-﻿@using System.Security.Claims
-@using data
+﻿@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
+@using System.Security.Claims
 @using System.Text.Encodings.Web
 @using web.wwwroot
 @using Microsoft.EntityFrameworkCore
@@ -120,7 +134,7 @@
                 var allActiveCssJs = await dbCssJs.MainCssJs
                     .AsNoTracking()
                     .Where(x => x.IsActive == true
-                             && (x.IsDelete == null || x.IsDelete == false)
+                             && (x.IsDeleted == null || x.IsDeleted!.IsDeletedStatu != true)
                              && !string.IsNullOrEmpty(x.UserCodes))
                     .OrderBy(x => x.GetDateTime)
                     .ToListAsync();

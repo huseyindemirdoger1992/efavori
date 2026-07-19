@@ -1,0 +1,2391 @@
+﻿@* ============================================================
+   CategoriesProductManagement.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ GlobalStateHub — anlık broadcast, debounce, RAM cache
+   ✅ ŞİFRELEME YOK — veriler yalın haliyle DB'ye yazılır/okunur
+   ✅ TakeLogs — tüm CRUD aksiyonları loglanır
+   ✅ Ayrı Ekle / Düzenle / Sil modalleri
+   ✅ Seçilenleri Sil → önce onay modali (sayı + liste)
+   ✅ 20'li sayfalama + arama (10 dil ad + slug üzerinde)
+   ✅ 10 dil (TR, EN, AZ, DE, ES, FR, HI, PT, RU, ZH) form + DB
+   ✅ Path alanı otomatik: İngilizce (En) hiyerarşik format
+        (Örn: "Sports & Outdoors > Team Sports > Football Equipment")
+   ✅ AiAttributesIsOk (bool?) CRUD ile yönetilebilir
+   ✅ Soft delete korunur (IsDeleted owned)
+   ============================================================ *@
+@using data
+@using data.Owned;
+@using data._Categories;
+@using data._Users;
+
+@using api
+@using api.tr
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    // Bu alanı kesinlikle SİLME. Kullanılsın veya kullanılmasın, global state'den dil bilgisini almak ve yönlendirme yapmak için gereklidir.
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Categories/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",       "Ana Sayfa",  "/"),
+        ("fa fa-sitemap",    "Kategoriler","javascript:void(0)"),
+        ("fa fa-list-alt",   PAGE_TITLE,   "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    <button class="btn btn-light btn-sm" @onclick="OpenAddModal" disabled="@_isLoading">
+        <i class="fa fa-plus me-sm-1"></i>
+        <span class="d-none d-sm-inline">Yeni Kategori</span>
+    </button>
+
+    <div class="vr mx-1"></div>
+
+    @* ─── Görünüm modu: Ağaç / Liste ─── *@
+    <div class="btn-group btn-group-sm" role="group" aria-label="Görünüm modu">
+        <button type="button"
+                class="btn @(_viewMode == ViewMode.Tree ? "btn-info text-dark" : "btn-outline-info")"
+                @onclick="() => SetViewMode(ViewMode.Tree)"
+                title="Hiyerarşik Ağaç Yapısı">
+            <i class="fa fa-sitemap"></i>
+            <span class="d-none d-sm-inline ms-1">Ağaç</span>
+        </button>
+        <button type="button"
+                class="btn @(_viewMode == ViewMode.List ? "btn-info text-dark" : "btn-outline-info")"
+                @onclick="() => SetViewMode(ViewMode.List)"
+                title="Liste (Sayfalı)">
+            <i class="fa fa-list"></i>
+            <span class="d-none d-sm-inline ms-1">Liste</span>
+        </button>
+    </div>
+
+    @if (_selectedIds.Any())
+    {
+        <div class="vr mx-1"></div>
+        <span class="badge bg-light">@_selectedIds.Count seçili</span>
+
+        <button class="btn btn-outline-light btn-sm border-0" @onclick="ClearSelection" title="Seçimi Temizle">
+            <i class="fa fa-times"></i> Seçimi Temizle
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-info btn-sm border-0"
+                @onclick="OpenBulkEditModal"
+                disabled="@_isProcessing">
+            <i class="fa fa-sliders"></i> Seçilenleri Düzenle
+        </button>
+
+        <button class="btn btn-outline-danger btn-sm border-0"
+                @onclick="OpenBulkDeleteModal"
+                disabled="@_isProcessing">
+            <i class="fa fa-trash"></i> Seçilenleri Sil
+        </button>
+    }
+</div>
+
+@* ─── Arama ─── *@
+@if (_viewMode == ViewMode.List)
+{
+    <div class="input-group input-group-sm mb-2">
+        <span class="input-group-text bg-transparent border-secondary text-white">
+            <i class="fa fa-search"></i>
+        </span>
+        <input type="text"
+               class="form-control bg-transparent text-light border-secondary"
+               placeholder="Kategori adı / slug ara"
+               value="@_searchTerm"
+               @oninput="OnSearchInput" />
+        @if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                <i class="fa fa-times"></i>
+            </button>
+        }
+    </div>
+}
+else
+{
+    <div class="input-group input-group-sm mb-2">
+        <span class="input-group-text bg-transparent border-secondary text-white">
+            <i class="fa fa-search"></i>
+        </span>
+        <input type="text"
+               class="form-control bg-transparent text-light border-secondary"
+               placeholder="Ağaçta filtrele (ad üzerinde) — eşleşenler ve üst dalları gösterilir"
+               value="@_treeFilter"
+               @oninput="OnTreeFilterInput" />
+        @if (!string.IsNullOrWhiteSpace(_treeFilter))
+        {
+            <button class="btn btn-outline-secondary" @onclick="ClearTreeFilter">
+                <i class="fa fa-times"></i>
+            </button>
+        }
+        <button class="btn btn-outline-info" @onclick="ExpandAllTree" title="Tümünü Aç">
+            <i class="fa fa-plus-square-o"></i>
+        </button>
+        <button class="btn btn-outline-info" @onclick="CollapseAllTree" title="Tümünü Kapat">
+            <i class="fa fa-minus-square-o"></i>
+        </button>
+    </div>
+}
+
+@* ═══════════════════════════════════════════════════════════
+   İÇERİK — HİYERARŞİK AĞAÇ YAPISI (Tree)
+   ═══════════════════════════════════════════════════════════ *@
+@if (_viewMode == ViewMode.Tree)
+{
+    @if (_nodes.Count == 0)
+    {
+        <div class="text-center py-5 text-light">
+            <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+            <p class="mb-0">Kayıt bulunmuyor.</p>
+        </div>
+    }
+    else
+    {
+        <div class="rounded-3 border p-2" style="background:rgba(0,0,0,0.15);">
+            <div class="d-flex align-items-center justify-content-between mb-2 px-1">
+                <small class="text-light">
+                    <i class="fa fa-sitemap text-info me-1"></i>
+                    Toplam @_nodes.Count kategori
+                    @if (_selectedIds.Any())
+                    {
+                        <span class="badge bg-info text-dark ms-1">@_selectedIds.Count seçili</span>
+                    }
+                </small>
+                @if (!string.IsNullOrWhiteSpace(_treeFilter))
+                {
+                    <small class="text-warning"><i class="fa fa-filter me-1"></i>@_treeVisible.Count eşleşme</small>
+                }
+            </div>
+
+            <ul class="list-unstyled mb-0 tree-root">
+                @foreach (var root in GetChildren(null))
+                {
+                    @RenderTreeNode(root, 0)
+                }
+            </ul>
+        </div>
+    }
+}
+@* ─── İçerik — LİSTE (Sayfalı) ─── *@
+else if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && _totalCount == 0)
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">Kayıt bulunmuyor.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width:2rem;">
+                        <input type="checkbox" class="form-check-input"
+                               checked="@_allSelected"
+                               @onchange="ToggleSelectAll" />
+                    </th>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Kategori (TR)</th>
+                    <th class="d-none d-lg-table-cell">Üst Kategori</th>
+                    <th class="d-none d-xl-table-cell">Path (En)</th>
+                    @*                     <th class="d-none d-md-table-cell">Tarih</th>
+ *@
+                    <th>Kontroller</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var item in _pagedItems)
+                {
+                    var isSelected = _selectedIds.Contains(item.Id);
+                    <tr class="@(isSelected ? "table-active" : "")">
+                        <td>
+                            <input type="checkbox" class="form-check-input"
+                                   checked="@isSelected"
+                                   @onchange="() => ToggleRowSelection(item.Id)" />
+                        </td>
+                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
+                        <td>
+                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(item.Categories?.NameTr) ? "—" : item.Categories!.NameTr)</div>
+                            <div class="small text-warning">@(string.IsNullOrWhiteSpace(item.Categories?.NameEn) ? "" : item.Categories!.NameEn)</div>
+                        </td>
+                        <td class="d-none d-lg-table-cell">
+                            <span class="small">@GetParentName(item.ParentId)</span>
+                        </td>
+                        <td class="d-none d-xl-table-cell">
+                            <span class="small text-light" title="@item.Path">@(string.IsNullOrWhiteSpace(item.Path) ? "—" : item.Path)</span>
+                        </td>
+                        @*                         <td class="d-none d-md-table-cell text-nowrap">
+                            <div class="small">@item.CreatedDate.ToString("dd.MM.yyyy") | @item.CreatedDate.ToString("HH:mm")</div>
+                        </td> *@
+                        <td class="align-middle">
+                            <div class="d-flex align-items-center gap-2">
+                                <!-- Aktif Durumu -->
+                                <span title="Aktif">
+                                    <i class="fa @(item.IsActive ? "fa-toggle-on text-success" : "fa-toggle-off text-secondary")"></i>
+                                </span>
+
+                                <!-- Menüde Göster -->
+                                <span title="Menüde Göster">
+                                    <i class="fa @(item.ShowInMenu ? "fa-eye text-info" : "fa-eye-slash text-secondary")"></i>
+                                </span>
+
+                                <!-- AI Özellikleri -->
+                                <span title="AI Özellikleri">
+                                    @{
+                                        var aiOk = item.AiAttributesIsOk;
+                                    }
+                                    <i class="fa @(aiOk == true ? "fa-check-circle text-success" : aiOk == false ? "fa-times-circle text-danger" : "fa-question-circle text-secondary")"></i>
+                                </span>
+                            </div>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OpenEditModal(item)" title="Düzenle">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => OpenDeleteModal(item)" title="Sil">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">
+            Toplam @_totalCount kayıt
+            @if (_isLoading)
+            {
+                <i class="fa fa-spinner fa-spin ms-1 text-info"></i>
+            }
+        </small>
+
+        @if (_totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage - 1)">
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                    </li>
+
+                    @foreach (var pg in GetPageWindow())
+                    {
+                        <li class="page-item @(_currentPage == pg ? "active" : "")">
+                            <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary"
+                                    @onclick="() => GoToPage(pg)">
+                                @pg
+                            </button>
+                        </li>
+                    }
+
+                    <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary"
+                                @onclick="() => GoToPage(_currentPage + 1)">
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Ekle (Ayrı Modal)
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="AddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-plus me-1"></i>Yeni Kategori
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_addModel != null)
+                {
+                    @ModalForm(_addModel, _addParentId, true)
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-primary btn-sm"
+                        @onclick="AddAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-plus me-1"></i><span>Yeni Kategori Ekle</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Düzenle (Ayrı Modal)
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="EditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(255,215,0,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-pencil me-1"></i>Kategori Düzenle
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                @if (_editModel != null)
+                {
+                    @ModalForm(_editModel, _editParentId, false)
+                }
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+                <button type="button" class="btn btn-warning btn-sm"
+                        @onclick="UpdateAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-1"></i><span>Değişiklikleri Kaydet</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Tekli Sil (Ayrı Modal)
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>Silme İşlemi
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-white-50 small mb-3">Bu kategoriyi silmek istediğinizden emin misiniz?</p>
+                @if (_deleteTarget != null)
+                {
+                    var childCount = _nodes.Values.Count(x => x.ParentId == _deleteTarget.Id);
+                    if (childCount > 0)
+                    {
+                        <div class="alert alert-warning py-2 small">
+                            <i class="fa fa-exclamation-triangle me-1"></i>
+                            Bu kategorinin <strong>@childCount</strong> alt kategorisi var. Silmeden önce alt kategorileri kontrol edin.
+                        </div>
+                    }
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-tag me-1"></i>Kategori (TR)</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(string.IsNullOrWhiteSpace(_deleteTarget.Categories?.NameTr) ? "—" : _deleteTarget.Categories!.NameTr)" disabled />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-globe me-1"></i>Kategori (EN)</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(string.IsNullOrWhiteSpace(_deleteTarget.Categories?.NameEn) ? "—" : _deleteTarget.Categories!.NameEn)" disabled />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small"><i class="fa fa-sitemap me-1"></i>Path (En)</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
+                                   value="@(string.IsNullOrWhiteSpace(_deleteTarget.Path) ? "—" : _deleteTarget.Path)" disabled />
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>İptal
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="DeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>Evet, Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Toplu Düzenle (Aktif / Menüde Göster / AI Durumu)
+   ─────────────────────────────────────────────────────────
+   Her alan için "Değiştirme / Uygula" seçeneği. Yalnızca
+   "uygula" işaretlenen alanlar seçili kayıtlara yazılır.
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="BulkEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-info"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-info mb-0">
+                    <i class="fa fa-sliders me-2"></i>
+                    Toplu Düzenle — @_selectedIds.Count kayıt seçildi
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-white-50 small mb-3">
+                    <i class="fa fa-info-circle me-1"></i>
+                    Yalnızca <strong>"Uygula"</strong> işaretlenen alanlar, seçili
+                    <strong>@_selectedIds.Count</strong> kategoriye yazılır. Diğer alanlar olduğu gibi kalır.
+                </p>
+
+                @* ── Aktif ── *@
+                <div class="d-flex align-items-center justify-content-between border border-secondary rounded p-2 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="bulk_apply_active"
+                               checked="@_bulkApplyActive"
+                               @onchange="e => _bulkApplyActive = (bool)(e.Value ?? false)" />
+                        <label class="form-check-label text-white" for="bulk_apply_active">
+                            <i class="fa fa-toggle-on text-success me-1"></i>Aktiflik Durumu
+                        </label>
+                    </div>
+                    <div class="form-check form-switch @(_bulkApplyActive ? "" : "opacity-50")">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="bulk_val_active" disabled="@(!_bulkApplyActive)"
+                               checked="@_bulkValActive"
+                               @onchange="e => _bulkValActive = (bool)(e.Value ?? false)" />
+                        <label class="form-check-label text-white-50" for="bulk_val_active">
+                            @(_bulkValActive ? "Aktif" : "Pasif")
+                        </label>
+                    </div>
+                </div>
+
+                @* ── Menüde Göster ── *@
+                <div class="d-flex align-items-center justify-content-between border border-secondary rounded p-2 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="bulk_apply_menu"
+                               checked="@_bulkApplyMenu"
+                               @onchange="e => _bulkApplyMenu = (bool)(e.Value ?? false)" />
+                        <label class="form-check-label text-white" for="bulk_apply_menu">
+                            <i class="fa fa-eye text-info me-1"></i>Menüde Göster
+                        </label>
+                    </div>
+                    <div class="form-check form-switch @(_bulkApplyMenu ? "" : "opacity-50")">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="bulk_val_menu" disabled="@(!_bulkApplyMenu)"
+                               checked="@_bulkValMenu"
+                               @onchange="e => _bulkValMenu = (bool)(e.Value ?? false)" />
+                        <label class="form-check-label text-white-50" for="bulk_val_menu">
+                            @(_bulkValMenu ? "Gösteriliyor" : "Gizli")
+                        </label>
+                    </div>
+                </div>
+
+                @* ── AI Özellik Durumu ── *@
+                <div class="d-flex align-items-center justify-content-between border border-secondary rounded p-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="bulk_apply_ai"
+                               checked="@_bulkApplyAi"
+                               @onchange="e => _bulkApplyAi = (bool)(e.Value ?? false)" />
+                        <label class="form-check-label text-white" for="bulk_apply_ai">
+                            <i class="fa fa-magic text-warning me-1"></i>AI Özellik Durumu
+                        </label>
+                    </div>
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary @(_bulkApplyAi ? "" : "opacity-50")"
+                            style="width:auto;" disabled="@(!_bulkApplyAi)"
+                            value="@AiStateToString(_bulkValAi)"
+                            @onchange="e => _bulkValAi = StringToAiState(e.Value?.ToString())">
+                        <option value="null">Beklemede (null)</option>
+                        <option value="false">İşlenmedi (false)</option>
+                        <option value="true">Tamamlandı (true)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top border-info py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-info btn-sm text-dark"
+                        @onclick="BulkEditConfirmedAsync"
+                        disabled="@(_isProcessing || !(_bulkApplyActive || _bulkApplyMenu || _bulkApplyAi))">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Uygulanıyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-check me-1"></i><span>@_selectedIds.Count Kayda Uygula</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Toplu Sil Onayı (Ayrı Modal)
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="BulkDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-dark border border-danger"
+             style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>
+                    Toplu Silme — @_selectedIds.Count kayıt seçildi
+                </h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                        <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                    </button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" arialabel="Close" title="Kapat">
+                        <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-warning small mb-3">
+                    <i class="fa fa-exclamation-triangle me-1"></i>
+                    Aşağıdaki <strong>@_selectedIds.Count</strong> kategori silinecek. Bu işlem soft delete olarak işaretlenir.
+                </p>
+
+                @if (_bulkDeletePreview.Any())
+                {
+                    <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
+                        <table class="table table-sm table-dark table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="small">#</th>
+                                    <th class="small">Kategori (TR)</th>
+                                    <th class="small">Kategori (EN)</th>
+                                    <th class="small">Path (En)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int n = 1;
+                                }
+                                @foreach (var item in _bulkDeletePreview)
+                                {
+                                    <tr>
+                                        <td class="small text-warning">@(n++)</td>
+                                        <td class="small">@(string.IsNullOrWhiteSpace(item.NameTr) ? "—" : item.NameTr)</td>
+                                        <td class="small">@(string.IsNullOrWhiteSpace(item.NameEn) ? "—" : item.NameEn)</td>
+                                        <td class="small text-info">@BuildEnPath(item.Id)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"
+                        @onclick="() => _bulkDeletePreview.Clear()">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        @onclick="BulkDeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>@_selectedIds.Count Kaydı Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   AĞAÇ DÜĞÜMÜ — özyinelemeli (recursive) render
+   Her düğüm: aç/kapa oku, seçim kutusu, ad, işlemler.
+   Alt dallar yalnızca düğüm açıkken (_expanded) render edilir.
+   ═══════════════════════════════════════════ *@
+<style>
+    .tree-root, .tree-root ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+        .tree-root .tree-row {
+            transition: background-color .12s ease;
+            border-radius: .375rem;
+        }
+
+            .tree-root .tree-row:hover {
+                background-color: rgba(13,202,240,0.10);
+            }
+
+            .tree-root .tree-row.tree-selected {
+                background-color: rgba(13,202,240,0.18);
+            }
+
+        .tree-root .tree-toggle {
+            width: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Alt dallar, üst kategorinin İÇİNDE (girintili) render edilir.
+           Sol kenardaki kılavuz çizgi, bu dalların hangi kategoriye ait
+           olduğunu görsel olarak vurgular. */
+        .tree-root .tree-children {
+            margin-left: 1.1rem;
+            padding-left: .65rem;
+            border-left: 2px solid rgba(13,202,240,0.30);
+        }
+        /* Açık (genişletilmiş) düğümün kendi satırını hafifçe vurgula ki
+           hangi düğümün alt ağacına bakıldığı belli olsun. */
+        .tree-root .tree-row.tree-open {
+            background-color: rgba(13,202,240,0.06);
+            box-shadow: inset 2px 0 0 rgba(13,202,240,0.55);
+        }
+
+        .tree-root .tree-status i {
+            font-size: .9rem;
+        }
+</style>
+@{
+    RenderFragment RenderTreeNode(Node node, int depth) =>
+    @<text>
+        @{
+            var children = GetChildren(node.Id);
+            var hasChildren = children.Count > 0;
+            var isExpanded = _expanded.Contains(node.Id) || !string.IsNullOrWhiteSpace(_treeFilter);
+            var isOpen = hasChildren && isExpanded;
+            var isSel = _selectedIds.Contains(node.Id);
+            var trName = string.IsNullOrWhiteSpace(node.NameTr) ? (string.IsNullOrWhiteSpace(node.NameEn) ? "—" : node.NameEn) : node.NameTr;
+            var enName = string.IsNullOrWhiteSpace(node.NameEn) ? "" : node.NameEn;
+            var isMatch = !string.IsNullOrWhiteSpace(_treeFilter) && _treeMatched.Contains(node.Id);
+        }
+        <li>
+            <div class="tree-row d-flex align-items-center gap-1 py-1 px-1 @(isSel ? "tree-selected" : "") @(isOpen ? "tree-open" : "")">
+
+                @* Aç / Kapa oku (yaprak düğümde boşluk) *@
+                @if (hasChildren)
+                {
+                    <span class="tree-toggle text-info" @onclick="() => ToggleExpand(node.Id)">
+                        <i class="fa @(isExpanded ? "fa-caret-down" : "fa-caret-right")"></i>
+                    </span>
+                }
+                else
+                {
+                    <span class="tree-toggle text-secondary"><i class="fa fa-circle" style="font-size:.35rem;opacity:.4;"></i></span>
+                }
+
+                @* Seçim kutusu *@
+                <input type="checkbox" class="form-check-input mt-0"
+                       checked="@isSel"
+                       @onchange="() => ToggleRowSelection(node.Id)" />
+
+                @* Klasör ikonu *@
+                <i class="fa @(hasChildren ? (isExpanded ? "fa-folder-open text-warning" : "fa-folder text-warning") : "fa-tag text-info") ms-1"></i>
+
+                @* Ad (TR öncelik) + EN alt bilgi *@
+                <span class="ms-1 flex-grow-1 text-truncate">
+                    <span class="fw-semibold @(isMatch ? "text-info" : "text-white")">@trName</span>
+                    @if (!string.IsNullOrWhiteSpace(enName))
+                    {
+                        <span class="small text-warning ms-2">@enName</span>
+                    }
+                    @if (hasChildren)
+                    {
+                        <span class="badge bg-secondary ms-2" style="font-size:.65rem;">@children.Count</span>
+                    }
+                </span>
+
+                @* Durum göstergeleri: Aktif / Menüde Göster / AI Özellik Durumu *@
+                <span class="tree-status d-flex align-items-center gap-2 me-1">
+                    <span title="Aktif">
+                        <i class="fa @(node.IsActive ? "fa-toggle-on text-success" : "fa-toggle-off text-secondary")"></i>
+                    </span>
+                    <span title="Menüde Göster">
+                        <i class="fa @(node.ShowInMenu ? "fa-eye text-info" : "fa-eye-slash text-secondary")"></i>
+                    </span>
+                    <span title="AI Özellikleri">
+                        <i class="fa @(node.AiAttributesIsOk == true ? "fa-check-circle text-success" : node.AiAttributesIsOk == false ? "fa-times-circle text-danger" : "fa-question-circle text-secondary")"></i>
+                    </span>
+                </span>
+
+                @* İşlemler *@
+                <span class="text-nowrap">
+                    <button class="btn btn-outline-success btn-sm border-0 py-0 px-1"
+                            @onclick="() => OpenAddModalWithParent(node.Id)" title="Alt Kategori Ekle">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm border-0 py-0 px-1"
+                            @onclick="() => OpenEditModalById(node.Id)" title="Düzenle">
+                        <i class="fa fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm border-0 py-0 px-1"
+                            @onclick="() => OpenDeleteModalById(node.Id)" title="Sil">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </span>
+            </div>
+
+            @* Alt dallar — üst kategorinin İÇİNDE, girintili ve kılavuz çizgili *@
+            @if (isOpen)
+            {
+                <ul class="tree-children">
+                    @foreach (var child in children)
+                    {
+                        @RenderTreeNode(child, depth + 1)
+                    }
+                </ul>
+            }
+        </li>
+    </text>;
+}
+
+@* ═══════════════════════════════════════════
+   ORTAK FORM — Ekle/Düzenle modallerinde kullanılır
+   isAdd=true → ekle, false → düzenle
+   ═══════════════════════════════════════════ *@
+@{
+    RenderFragment ModalForm(CategoriesProduct model, Guid? currentParentId, bool isAdd) =>
+    @<div>
+        <div class="row g-3">
+
+            @* ── Üst Kategori (aranabilir typeahead — 50k kayıt için DB tarafı arama) ── *@
+            <div class="col-12 col-md-12 position-relative">
+                <label class="form-label text-white-50 small"><i class="fa fa-level-up me-1"></i>Üst Kategori</label>
+
+                @* Seçili üst kategori rozeti *@
+                @{
+                    var pid = isAdd ? _addParentId : _editParentId;
+                }
+                @if (pid.HasValue && pid.Value != Guid.Empty)
+                {
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-info text-dark text-truncate" style="max-width:100%;" title="@BuildEnPath(pid.Value)">
+                            <i class="fa fa-sitemap me-1"></i>@BuildEnPath(pid.Value)
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 p-0 px-1"
+                                @onclick="() => ClearParentSelection(isAdd)" title="Üst kategoriyi kaldır">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div><span class="badge bg-light"><i class="fa fa-folder-o me-1"></i>Kök Kategori (üst yok)</span></div>
+                }
+
+                @* Arama kutusu *@
+                <input type="text"
+                       class="form-control form-control-sm bg-dark text-white border-secondary"
+                       placeholder="Üst kategori ara (ad / path)..."
+                       value="@_parentSearchTerm"
+                       @oninput="e => OnParentSearchInput(e, model.Id)" />
+
+                @* Sonuç listesi (yalnızca arama varken) *@
+                @if (_parentSearching)
+                {
+                    <div class="border border-secondary rounded mt-1 p-2 bg-black text-center">
+                        <i class="fa fa-spinner fa-spin text-info"></i>
+                        <span class="small text-light ms-1">Aranıyor...</span>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_parentSearchTerm))
+                {
+                    <div class="border border-secondary rounded mt-1 bg-black" style="max-height:220px;overflow-y:auto;">
+                        @if (_parentResults.Count == 0)
+                        {
+                            <div class="p-2 small text-warning text-center">Eşleşen üst kategori yok.</div>
+                        }
+                        else
+                        {
+                            @foreach (var opt in _parentResults)
+                            {
+                                <button type="button"
+                                        class="btn btn-sm w-100 text-start text-light border-0 rounded-0 border-bottom border-secondary px-2 py-1"
+                                        @onclick="() => SelectParent(opt.Id, isAdd)">
+                                    <i class="fa fa-sitemap text-info me-1"></i>@opt.Label
+                                </button>
+                            }
+                            @if (_parentResultsTruncated)
+                            {
+                                <div class="p-1 small text-warning text-center border-top border-secondary">
+                                    İlk @PARENT_SEARCH_LIMIT sonuç gösteriliyor — aramayı daraltın.
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                <small class="text-secondary d-block mt-1">Path alanı üst kategoriye göre otomatik oluşturulur.</small>
+            </div>
+
+            @* ── Path önizleme (salt-okunur) ── *@
+            <div class="col-12 col-md-12">
+                <label class="form-label text-white-50 small"><i class="fa fa-sitemap me-1"></i>Path (En) — Otomatik</label>
+                <input type="text" readonly
+                       class="form-control form-control-sm bg-black text-info border-secondary"
+                       value="@BuildPathPreview(model, currentParentId)" />
+            </div>
+
+            @* ── Durum kontrolleri ── *@
+            <div class="col-12">
+                <div class="d-flex flex-wrap gap-4 mt-1">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="@(isAdd ? "add" : "edit")_isActive"
+                               checked="@model.IsActive"
+                               @onchange="e => model.IsActive = (bool)(e.Value ?? false)" />
+                        <label class="form-check-label text-white-50" for="@(isAdd ? "add" : "edit")_isActive">Aktif</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="@(isAdd ? "add" : "edit")_showInMenu"
+                               checked="@model.ShowInMenu"
+                               @onchange="e => model.ShowInMenu = (bool)(e.Value ?? false)" />
+                        <label class="form-check-label text-white-50" for="@(isAdd ? "add" : "edit")_showInMenu">Menüde Göster</label>
+                    </div>
+                    <div>
+                        <label class="form-label text-white-50 small mb-0 me-2"><i class="fa fa-magic me-1"></i>AI Özellik Durumu</label>
+                        <select class="form-select form-select-sm bg-dark text-white border-secondary d-inline-block" style="width:auto;"
+                                value="@AiStateToString(model.AiAttributesIsOk)"
+                                @onchange="e => model.AiAttributesIsOk = StringToAiState(e.Value?.ToString())">
+                            <option value="null">Beklemede (null)</option>
+                            <option value="false">İşlenmedi (false)</option>
+                            <option value="true">Tamamlandı (true)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="border-secondary my-3" />
+
+        @* ── Kategori Adları (10 dil) ── *@
+        <h6 class="text-info small mb-2"><i class="fa fa-tags me-1"></i>Kategori Adları (10 Dil)</h6>
+        <div class="row g-2">
+            @foreach (var lang in _langs)
+            {
+                <div class="col-12 col-md-6 col-lg-6">
+                    <label class="form-label text-white-50 small mb-1">@lang.Flag @lang.Label</label>
+                    <input type="text"
+                           class="form-control form-control-sm bg-dark text-white border-secondary"
+                           placeholder="@lang.Label adı"
+                           value="@lang.GetName(model.Categories!)"
+                           @onchange="async e => await OnNameChangedAsync(model, lang, e.Value?.ToString() ?? string.Empty)" />
+                </div>
+            }
+        </div>
+
+        <hr class="border-secondary my-3" />
+
+        @* ── SEO Slug (10 dil) ── *@
+        <h6 class="text-info small mb-2"><i class="fa fa-link me-1"></i>SEO Slug (10 Dil — opsiyonel)</h6>
+        <div class="row g-2">
+            @foreach (var lang in _langs)
+            {
+                <div class="col-12 col-md-6 col-lg-6">
+                    <label class="form-label text-white-50 small mb-1">@lang.Flag @lang.Label</label>
+                    <input type="text"
+                           class="form-control form-control-sm bg-dark text-white border-secondary"
+                           placeholder="@lang.Code.ToLower() slug"
+                           value="@lang.GetSlug(model.Categories!)"
+                           @onchange="e => lang.SetSlug(model.Categories!, e.Value?.ToString())" />
+                </div>
+            }
+        </div>
+    </div>;
+}
+
+@* ═══════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Ürün Kategori Yönetimi";
+    private const string ENTITY_NAME = "CategoriesProduct";
+    // Hafif parent/Path ağacının cache anahtarı (tek sefer yüklenir, yazmada tazelenir)
+    private const string NODES_CACHE_KEY = "CategoriesProduct_Nodes";
+    private const int SEARCH_DELAY = 250; // ~saniyenin 1/4'ü — yazma durunca ara
+    private const int PAGE_SIZE = 20;
+    // Üst kategori typeahead: her aramada DB'den en fazla bu kadar sonuç getirilir.
+    private const int PARENT_SEARCH_LIMIT = 20;
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+
+    // ─── Yazma kilidi ─────────────────────────────────────────────
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isProcessing;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+
+    // ─── Görünüm modu (Ağaç / Liste) ──────────────────────────────
+    private enum ViewMode { Tree, List }
+    private ViewMode _viewMode = ViewMode.Tree; // varsayılan: hiyerarşik ağaç
+
+    // ─── Ağaç durumu ──────────────────────────────────────────────
+    // Açık düğümler (aç/kapa). Kök düğümler ilk yüklemede otomatik açılır.
+    private readonly HashSet<Guid> _expanded = new();
+    private bool _treeExpandInit; // kökleri bir kez otomatik açmak için
+    // Ağaç filtresi: ad üzerinde arama; eşleşenler + üst dalları görünür.
+    private string _treeFilter = string.Empty;
+    private CancellationTokenSource? _treeFilterCts;
+    private readonly HashSet<Guid> _treeMatched = new(); // filtreye doğrudan uyanlar
+    private readonly HashSet<Guid> _treeVisible = new(); // eşleşen + atalar + torunlar
+    // ParentId → çocuklar (ada göre sıralı) — ağaç render'ı için bir kez kurulur.
+    private Dictionary<Guid, List<Node>> _childrenByParent = new();
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    // Yalnızca GÖRÜNEN sayfa (20 kayıt) DB'den tam entity olarak çekilir.
+    private List<CategoriesProduct> _pagedItems = new();
+
+    // Path/parent çözümü için HAFİF ağaç sözlüğü.
+    // 50k kayıtta bile küçük: sadece Id, ParentId, NameEn, NameTr taşınır.
+    // Cache'te tutulur, yalnızca yazma işlemlerinden sonra tazelenir.
+    private sealed class Node
+    {
+        public Guid Id;
+        public Guid? ParentId;
+        public string? NameEn;
+        public string? NameTr;
+        public bool IsActive;
+        public bool ShowInMenu;
+        public bool? AiAttributesIsOk;
+    }
+    private Dictionary<Guid, Node> _nodes = new();
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private int _totalCount = 0; // sunucudan gelen toplam kayıt sayısı (filtreye göre)
+
+    // ─── Ekle modal state ─────────────────────────────────────────
+    private CategoriesProduct? _addModel;
+    private Guid? _addParentId;
+
+    // ─── Düzenle modal state ──────────────────────────────────────
+    private CategoriesProduct? _editModel;
+    private Guid? _editParentId;
+
+    // ─── Üst kategori typeahead state (Ekle/Düzenle ortak) ────────
+    // 50k kayıt native <select>'e basılmadığından burada yalnızca aktif
+    // arama sonuçları (max PARENT_SEARCH_LIMIT) tutulur.
+    private string _parentSearchTerm = string.Empty;
+    private bool _parentSearching;
+    private bool _parentResultsTruncated;
+    private List<(Guid Id, string Label)> _parentResults = new();
+    private CancellationTokenSource? _parentSearchCts;
+
+    // ─── Sil modal state ──────────────────────────────────────────
+    private CategoriesProduct? _deleteTarget;
+
+    // ─── Toplu Sil state ──────────────────────────────────────────
+    private readonly HashSet<Guid> _selectedIds = new();
+    private bool _allSelected;
+    private List<Node> _bulkDeletePreview = new(); // hafif ağaçtan üretilir
+
+    // ─── Toplu Düzenle state ──────────────────────────────────────
+    // Her alan için: "apply" → bu alanı yaz, "val" → yazılacak değer.
+    private bool _bulkApplyActive; private bool _bulkValActive = true;
+    private bool _bulkApplyMenu; private bool _bulkValMenu = true;
+    private bool _bulkApplyAi; private bool? _bulkValAi = null;
+
+    // ══════════════════════════════════════════════════════════════
+    // DİL TANIMLARI — 10 dil için ad + slug erişimcileri
+    // ══════════════════════════════════════════════════════════════
+    private sealed record LangDef(
+        string Code, string Label, string Flag,
+        Func<Categories, string> GetName, Action<Categories, string> SetName,
+        Func<Categories, string?> GetSlug, Action<Categories, string?> SetSlug);
+
+    private readonly List<LangDef> _langs = new()
+    {
+        new("TR","Türkçe","🇹🇷", c => c.NameTr, (c,v) => c.NameTr = v, c => c.SlugTr, (c,v) => c.SlugTr = v),
+        new("EN","English","🇬🇧", c => c.NameEn, (c,v) => c.NameEn = v, c => c.SlugEn, (c,v) => c.SlugEn = v),
+        new("AZ","Azərbaycan","🇦🇿", c => c.NameAz, (c,v) => c.NameAz = v, c => c.SlugAz, (c,v) => c.SlugAz = v),
+        new("DE","Deutsch","🇩🇪", c => c.NameDe, (c,v) => c.NameDe = v, c => c.SlugDe, (c,v) => c.SlugDe = v),
+        new("ES","Español","🇪🇸", c => c.NameEs, (c,v) => c.NameEs = v, c => c.SlugEs, (c,v) => c.SlugEs = v),
+        new("FR","Français","🇫🇷", c => c.NameFr, (c,v) => c.NameFr = v, c => c.SlugFr, (c,v) => c.SlugFr = v),
+        new("HI","हिन्दी","🇮🇳", c => c.NameHi, (c,v) => c.NameHi = v, c => c.SlugHi, (c,v) => c.SlugHi = v),
+        new("PT","Português","🇵🇹", c => c.NamePt, (c,v) => c.NamePt = v, c => c.SlugPt, (c,v) => c.SlugPt = v),
+        new("RU","Русский","🇷🇺", c => c.NameRu, (c,v) => c.NameRu = v, c => c.SlugRu, (c,v) => c.SlugRu = v),
+        new("ZH","中文","🇨🇳", c => c.NameZh, (c,v) => c.NameZh = v, c => c.SlugZh, (c,v) => c.SlugZh = v),
+    };
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        StateHub.OnDataChanged += HandleDataChanged;
+
+        // Önce hafif parent ağacını yükle (Path çözümü için), sonra ilk sayfayı çek.
+        await LoadNodesAsync();
+        await LoadPageAsync(1, _searchTerm);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+        _parentSearchCts?.Dispose();
+        _treeFilterCts?.Dispose();
+        _writeLock.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // GLOBAL OLAY
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+
+        await InvokeAsync(async () =>
+        {
+            // Yazma sonrası: hafif ağacı tazele + mevcut sayfayı yeniden çek
+            await LoadNodesAsync(forceReload: true);
+            await LoadPageAsync(_currentPage, _searchTerm);
+            StateHasChanged();
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // HAFİF AĞAÇ YÜKLEME (Path/parent çözümü için)
+    // Sadece Id/ParentId/NameEn/NameTr — 50k kayıtta bile küçük.
+    // Cache'lenir; yalnızca yazma işlemlerinden sonra tazelenir.
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadNodesAsync(bool forceReload = false)
+    {
+        try
+        {
+            if (forceReload) StateHub.ClearCache(NODES_CACHE_KEY);
+
+            var nodes = await StateHub.GetOrLoadAsync(NODES_CACHE_KEY, async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                return await db.CategoriesProduct.AsNoTracking()
+                    .Where(x => x.IsDeleted == null
+                             || x.IsDeleted.IsDeletedStatu == null
+                             || x.IsDeleted.IsDeletedStatu == false)
+                    .Select(x => new Node
+                    {
+                        Id = x.Id,
+                        ParentId = x.ParentId,
+                        NameEn = x.Categories!.NameEn,
+                        NameTr = x.Categories!.NameTr,
+                        IsActive = x.IsActive,
+                        ShowInMenu = x.ShowInMenu,
+                        AiAttributesIsOk = x.AiAttributesIsOk
+                    })
+                    .ToListAsync(_cts.Token);
+            }, _cts.Token) ?? new List<Node>();
+
+            _nodes = nodes.ToDictionary(n => n.Id, n => n);
+            RebuildTreeIndex();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { await LogError("LoadNodes", ex); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // AĞAÇ İNDEKSİ — ParentId → çocuklar (TR ada göre sıralı)
+    // Hafif ağaç her tazelendiğinde yeniden kurulur. Render O(1) okur.
+    // ══════════════════════════════════════════════════════════════
+    private void RebuildTreeIndex()
+    {
+        _childrenByParent = _nodes.Values
+            .GroupBy(n => (n.ParentId == null || n.ParentId == Guid.Empty) ? Guid.Empty : n.ParentId!.Value)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(n => string.IsNullOrWhiteSpace(n.NameTr) ? n.NameEn : n.NameTr,
+                                   StringComparer.OrdinalIgnoreCase).ToList());
+
+        // İlk yüklemede kök düğümleri otomatik aç (kullanıcı hemen dalları görsün)
+        if (!_treeExpandInit)
+        {
+            _treeExpandInit = true;
+            foreach (var root in GetChildren(null)) _expanded.Add(root.Id);
+        }
+
+        // Filtre aktifse görünürlük kümesini yeniden hesapla
+        if (!string.IsNullOrWhiteSpace(_treeFilter)) RecomputeTreeFilter();
+    }
+
+    // Bir düğümün (veya kökün) doğrudan çocuklarını döndürür.
+    // Filtre aktifse yalnızca görünür olanlar süzülür.
+    private List<Node> GetChildren(Guid? parentId)
+    {
+        var key = (parentId == null || parentId == Guid.Empty) ? Guid.Empty : parentId.Value;
+        if (!_childrenByParent.TryGetValue(key, out var list)) return _emptyNodes;
+        if (string.IsNullOrWhiteSpace(_treeFilter)) return list;
+        return list.Where(n => _treeVisible.Contains(n.Id)).ToList();
+    }
+    private static readonly List<Node> _emptyNodes = new();
+
+    // ══════════════════════════════════════════════════════════════
+    // SAYFA YÜKLEME — sadece görünen 20 kayıt DB'den çekilir
+    // Arama DB tarafında (EF.Functions.Like), Skip/Take DB tarafında.
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadPageAsync(int page, string? search)
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
+        try
+        {
+            // Debounce: kullanıcı yazarken her tuşta değil, durunca ara (~250ms)
+            if (!string.IsNullOrWhiteSpace(search))
+                await Task.Delay(SEARCH_DELAY, token);
+
+            if (token.IsCancellationRequested) return;
+
+            _isLoading = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            var q = db.CategoriesProduct.AsNoTracking()
+                .Where(x => x.IsDeleted == null
+                         || x.IsDeleted.IsDeletedStatu == null
+                         || x.IsDeleted.IsDeletedStatu == false);
+
+            // Sunucu tarafı arama: 10 dil adı + 10 slug + Path üzerinde LIKE.
+            // Şifreleme olmadığı için DB'de doğrudan aranabiliyor.
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var like = $"%{search.Trim()}%";
+                q = q.Where(x =>
+                    EF.Functions.Like(x.Path!, like) ||
+                    EF.Functions.Like(x.Categories!.NameTr, like) ||
+                    EF.Functions.Like(x.Categories!.NameEn, like) ||
+                    EF.Functions.Like(x.Categories!.NameAz, like) ||
+                    EF.Functions.Like(x.Categories!.NameDe, like) ||
+                    EF.Functions.Like(x.Categories!.NameEs, like) ||
+                    EF.Functions.Like(x.Categories!.NameFr, like) ||
+                    EF.Functions.Like(x.Categories!.NameHi, like) ||
+                    EF.Functions.Like(x.Categories!.NamePt, like) ||
+                    EF.Functions.Like(x.Categories!.NameRu, like) ||
+                    EF.Functions.Like(x.Categories!.NameZh, like) ||
+                    EF.Functions.Like(x.Categories!.SlugTr!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugEn!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugAz!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugDe!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugEs!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugFr!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugHi!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugPt!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugRu!, like) ||
+                    EF.Functions.Like(x.Categories!.SlugZh!, like));
+            }
+
+            // Önce toplam sayı (sayfalama için)
+            _totalCount = await q.CountAsync(token);
+            _totalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PAGE_SIZE));
+            _currentPage = Math.Clamp(page, 1, _totalPages);
+
+            if (token.IsCancellationRequested) return;
+
+            // Sadece görünen 20 kaydı çek
+            _pagedItems = await q
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((_currentPage - 1) * PAGE_SIZE)
+                .Take(PAGE_SIZE)
+                .ToListAsync(token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested)
+            {
+                await LogError("LoadPage", ex);
+                await Notify("danger", "Hata", "Veriler yüklenirken sorun oluştu.");
+            }
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page < 1 || page > _totalPages || page == _currentPage) return;
+        await LoadPageAsync(page, _searchTerm);
+    }
+
+    // Sayfa numaraları penceresi (çok sayfada tümünü basmamak için)
+    private IEnumerable<int> GetPageWindow()
+    {
+        const int window = 5;
+        int start = Math.Max(1, _currentPage - window / 2);
+        int end = Math.Min(_totalPages, start + window - 1);
+        start = Math.Max(1, end - window + 1);
+        for (int p = start; p <= end; p++) yield return p;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // PARENT / PATH YARDIMCILARI
+    // ══════════════════════════════════════════════════════════════
+
+    // Tablo: üst kategori adını göster (TR öncelikli, yoksa EN) — hafif ağaçtan
+    private string GetParentName(Guid? parentId)
+    {
+        if (parentId == null || parentId == Guid.Empty) return "— Kök —";
+        if (_nodes.TryGetValue(parentId.Value, out var p))
+        {
+            var name = p.NameTr;
+            if (string.IsNullOrWhiteSpace(name)) name = p.NameEn;
+            return string.IsNullOrWhiteSpace(name) ? "—" : name!;
+        }
+        return "—";
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // AĞAÇ ETKİLEŞİMLERİ (aç/kapa, filtre, görünüm modu)
+    // ══════════════════════════════════════════════════════════════
+
+    private void SetViewMode(ViewMode mode)
+    {
+        if (_viewMode == mode) return;
+        _viewMode = mode;
+        StateHasChanged();
+    }
+
+    private void ToggleExpand(Guid id)
+    {
+        if (!_expanded.Remove(id)) _expanded.Add(id);
+        StateHasChanged();
+    }
+
+    private void ExpandAllTree()
+    {
+        foreach (var id in _nodes.Keys) _expanded.Add(id);
+        StateHasChanged();
+    }
+
+    private void CollapseAllTree()
+    {
+        _expanded.Clear();
+        StateHasChanged();
+    }
+
+    private async Task OnTreeFilterInput(ChangeEventArgs e)
+    {
+        _treeFilter = e.Value?.ToString() ?? string.Empty;
+        _treeFilterCts?.Cancel();
+        _treeFilterCts?.Dispose();
+        _treeFilterCts = new CancellationTokenSource();
+        var token = _treeFilterCts.Token;
+        try
+        {
+            await Task.Delay(SEARCH_DELAY, token); // debounce
+            if (token.IsCancellationRequested) return;
+            RecomputeTreeFilter();
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void ClearTreeFilter()
+    {
+        _treeFilter = string.Empty;
+        _treeMatched.Clear();
+        _treeVisible.Clear();
+        StateHasChanged();
+    }
+
+    // Filtre: ada uyan düğümleri bul, ardından onların ATA ve TORUNLARINI görünür yap.
+    private void RecomputeTreeFilter()
+    {
+        _treeMatched.Clear();
+        _treeVisible.Clear();
+
+        var term = _treeFilter?.Trim();
+        if (string.IsNullOrWhiteSpace(term)) return;
+
+        foreach (var n in _nodes.Values)
+        {
+            var tr = n.NameTr ?? string.Empty;
+            var en = n.NameEn ?? string.Empty;
+            if (tr.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                en.Contains(term, StringComparison.OrdinalIgnoreCase))
+                _treeMatched.Add(n.Id);
+        }
+
+        foreach (var id in _treeMatched)
+        {
+            _treeVisible.Add(id);
+
+            // Ataları görünür yap (kök yola kadar) + otomatik aç
+            var guard = new HashSet<Guid>();
+            var cur = _nodes.TryGetValue(id, out var self) ? self.ParentId : null;
+            while (cur is Guid pid && pid != Guid.Empty && _nodes.ContainsKey(pid) && guard.Add(pid))
+            {
+                _treeVisible.Add(pid);
+                _expanded.Add(pid);
+                cur = _nodes[pid].ParentId;
+            }
+
+            // Torunları görünür yap (eşleşenin altındaki tüm ağaç)
+            CollectDescendants(id, _treeVisible);
+        }
+    }
+
+    // Ağaçtan doğrudan modal açma (Id ile) — hafif ağaç yerine DB'den tam entity çekilir.
+    private async Task OpenAddModalWithParent(Guid parentId)
+    {
+        _addModel = new CategoriesProduct
+        {
+            Id = Guid.Empty,
+            IsActive = true,
+            ShowInMenu = true,
+            AiAttributesIsOk = null,
+            Categories = new Categories(),
+            CreatedDate = DateTime.UtcNow,
+            ParentId = parentId
+        };
+        _addParentId = parentId;
+        _autoSlugTrack.Clear();
+        ResetParentSearch();
+        await ShowModal("AddModal");
+    }
+
+    private async Task OpenEditModalById(Guid id)
+    {
+        var item = await LoadFullEntityAsync(id);
+        if (item == null) { await Notify("warning", "Uyarı", "Kayıt bulunamadı."); return; }
+        await OpenEditModal(item);
+    }
+
+    private async Task OpenDeleteModalById(Guid id)
+    {
+        var item = await LoadFullEntityAsync(id);
+        if (item == null) { await Notify("warning", "Uyarı", "Kayıt bulunamadı."); return; }
+        await OpenDeleteModal(item);
+    }
+
+    private async Task<CategoriesProduct?> LoadFullEntityAsync(Guid id)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            return await db.CategoriesProduct.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id, _cts.Token);
+        }
+        catch (Exception ex) { await LogError("LoadFullEntity", ex); return null; }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ÜST KATEGORİ TYPEAHEAD — DB tarafı, aranabilir, sayfalı
+    // 50k kaydın tamamını basmak yerine kullanıcının yazdığı terimle
+    // DB'de LIKE arayıp yalnızca ilk PARENT_SEARCH_LIMIT sonucu getirir.
+    // Kendisi ve alt ağacı (döngü engeli) sonuçlardan çıkarılır.
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnParentSearchInput(ChangeEventArgs e, Guid selfId)
+    {
+        _parentSearchTerm = e.Value?.ToString() ?? string.Empty;
+        await SearchParentOptionsAsync(_parentSearchTerm, selfId);
+    }
+
+    private async Task SearchParentOptionsAsync(string? term, Guid selfId)
+    {
+        _parentSearchCts?.Cancel();
+        _parentSearchCts?.Dispose();
+        _parentSearchCts = new CancellationTokenSource();
+        var token = _parentSearchCts.Token;
+
+        // Boş arama: sonuç listesini kapat
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            _parentResults = new();
+            _parentResultsTruncated = false;
+            _parentSearching = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            await Task.Delay(SEARCH_DELAY, token); // debounce
+            if (token.IsCancellationRequested) return;
+
+            _parentSearching = true;
+            StateHasChanged();
+
+            // Döngü engeli: kendisi + alt ağacı hariç (hafif ağaçtan çözülür)
+            var banned = new HashSet<Guid>();
+            if (selfId != Guid.Empty)
+            {
+                banned.Add(selfId);
+                CollectDescendants(selfId, banned);
+            }
+
+            var like = $"%{term.Trim()}%";
+
+            await using var db = await DbFactory.CreateDbContextAsync(token);
+
+            // DB tarafı: silinmemiş + 10 dil ad + Path üzerinde LIKE.
+            // banned küçük bir küme olduğundan Contains ile dışlanır.
+            // Yalnızca Id çekilir; etiket (Path) hafif ağaçtan üretilir → ucuz.
+            var ids = await db.CategoriesProduct.AsNoTracking()
+                .Where(x => (x.IsDeleted == null
+                          || x.IsDeleted.IsDeletedStatu == null
+                          || x.IsDeleted.IsDeletedStatu == false)
+                         && !banned.Contains(x.Id)
+                         && (EF.Functions.Like(x.Path!, like) ||
+                             EF.Functions.Like(x.Categories!.NameTr, like) ||
+                             EF.Functions.Like(x.Categories!.NameEn, like) ||
+                             EF.Functions.Like(x.Categories!.NameAz, like) ||
+                             EF.Functions.Like(x.Categories!.NameDe, like) ||
+                             EF.Functions.Like(x.Categories!.NameEs, like) ||
+                             EF.Functions.Like(x.Categories!.NameFr, like) ||
+                             EF.Functions.Like(x.Categories!.NameHi, like) ||
+                             EF.Functions.Like(x.Categories!.NamePt, like) ||
+                             EF.Functions.Like(x.Categories!.NameRu, like) ||
+                             EF.Functions.Like(x.Categories!.NameZh, like)))
+                .OrderBy(x => x.Path)
+                .Select(x => x.Id)
+                .Take(PARENT_SEARCH_LIMIT + 1) // +1 → "daha fazla var mı" tespiti
+                .ToListAsync(token);
+
+            if (token.IsCancellationRequested) return;
+
+            _parentResultsTruncated = ids.Count > PARENT_SEARCH_LIMIT;
+            _parentResults = ids
+                .Take(PARENT_SEARCH_LIMIT)
+                .Select(id => (Id: id, Label: BuildEnPath(id))) // etiket hafif ağaçtan
+                .OrderBy(x => x.Label, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested) await LogError("SearchParentOptions", ex);
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _parentSearching = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // Sonuçtan bir üst kategori seçildiğinde
+    private void SelectParent(Guid id, bool isAdd)
+    {
+        if (isAdd)
+        {
+            _addParentId = id;
+            if (_addModel != null) _addModel.ParentId = id;
+        }
+        else
+        {
+            _editParentId = id;
+            if (_editModel != null) _editModel.ParentId = id;
+        }
+        ResetParentSearch();
+        StateHasChanged();
+    }
+
+    // "Kök kategori" — üst seçimi kaldır
+    private void ClearParentSelection(bool isAdd)
+    {
+        if (isAdd)
+        {
+            _addParentId = null;
+            if (_addModel != null) _addModel.ParentId = null;
+        }
+        else
+        {
+            _editParentId = null;
+            if (_editModel != null) _editModel.ParentId = null;
+        }
+        ResetParentSearch();
+        StateHasChanged();
+    }
+
+    private void ResetParentSearch()
+    {
+        _parentSearchCts?.Cancel();
+        _parentSearchTerm = string.Empty;
+        _parentResults = new();
+        _parentResultsTruncated = false;
+        _parentSearching = false;
+    }
+
+    // Bir kategorinin tüm alt ağacını toplar (döngü engeli için)
+    private void CollectDescendants(Guid id, HashSet<Guid> acc)
+    {
+        foreach (var child in _nodes.Values.Where(x => x.ParentId == id))
+        {
+            if (acc.Add(child.Id))
+                CollectDescendants(child.Id, acc);
+        }
+    }
+
+    // Verilen kategorinin İngilizce (En) hiyerarşik Path'ini oluşturur.
+    // Örn: "Sports & Outdoors > Team Sports > Football Equipment"
+    private string BuildEnPath(Guid id)
+    {
+        var parts = new List<string>();
+        var guard = new HashSet<Guid>();
+        var current = id;
+
+        while (current != Guid.Empty && _nodes.TryGetValue(current, out var node) && guard.Add(current))
+        {
+            var en = node.NameEn;
+            if (string.IsNullOrWhiteSpace(en)) en = node.NameTr; // EN yoksa TR'ye düş
+            parts.Insert(0, string.IsNullOrWhiteSpace(en) ? "?" : en!.Trim());
+
+            if (node.ParentId == null || node.ParentId == Guid.Empty) break;
+            current = node.ParentId.Value;
+        }
+
+        return string.Join(" > ", parts);
+    }
+
+    // Modal formunda canlı Path önizlemesi: seçili parent + mevcut EN adı
+    private string BuildPathPreview(CategoriesProduct model, Guid? parentId)
+    {
+        var self = model.Categories?.NameEn;
+        if (string.IsNullOrWhiteSpace(self)) self = model.Categories?.NameTr;
+        self = string.IsNullOrWhiteSpace(self) ? "?" : self!.Trim();
+
+        if (parentId == null || parentId == Guid.Empty) return self;
+
+        var parentPath = _nodes.ContainsKey(parentId.Value) ? BuildEnPath(parentId.Value) : "";
+        return string.IsNullOrWhiteSpace(parentPath) ? self : $"{parentPath} > {self}";
+    }
+
+    // Kaydetmeden hemen önce nihai Path'i hesaplar (ağaca güncel self'i ekleyerek).
+    private string ComputeFinalPath(CategoriesProduct model)
+    {
+        // Geçici node: kendi güncel halini de ağaca dahil et ki isim/parent değişikliği yansısın
+        _nodes[model.Id] = new Node
+        {
+            Id = model.Id,
+            ParentId = model.ParentId,
+            NameEn = model.Categories?.NameEn,
+            NameTr = model.Categories?.NameTr
+        };
+        return BuildEnPath(model.Id);
+    }
+
+    // ── Bir parent'ı değiştiğinde: kendisi ve tüm alt ağacın Path'lerini yeniden yaz ──
+    // Yalnızca etkilenen alt ağaç DB'den çekilip güncellenir (tüm tablo değil).
+    private async Task RewriteSubtreePathsAsync(_ApplicationConnectionDb db, Guid rootId, CancellationToken token)
+    {
+        var affected = new HashSet<Guid> { rootId };
+        CollectDescendants(rootId, affected);
+
+        // rootId zaten çağıran tarafça güncellendiği için burada onu atlıyoruz.
+        var childIds = affected.Where(x => x != rootId).ToList();
+        if (childIds.Count == 0) return;
+
+        var tracked = await db.CategoriesProduct
+            .Where(x => childIds.Contains(x.Id))
+            .ToListAsync(token);
+
+        foreach (var entity in tracked)
+        {
+            var newPath = BuildEnPath(entity.Id);
+            if (entity.Path != newPath)
+            {
+                entity.Path = newPath;
+                entity.UpdatedDate = DateTime.UtcNow;
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // AI DURUM YARDIMCILARI (bool? <-> string)
+    // ══════════════════════════════════════════════════════════════
+    private static string AiStateToString(bool? v) => v switch { true => "true", false => "false", _ => "null" };
+    private static bool? StringToAiState(string? v) => v switch { "true" => true, "false" => false, _ => (bool?)null };
+
+    // ══════════════════════════════════════════════════════════════
+    // SLUG OTOMASYONU (10 dil)
+    // ─────────────────────────────────────────────────────────────
+    // Bir dilin ADI değiştiğinde, o dile ait SEO slug alanını otomatik doldurur.
+    // Kural: slug'ı yalnızca boşken VEYA kullanıcının el ile değiştirmediği
+    //        (önceki addan otomatik türetilmiş) durumda güncelle. Böylece
+    //        kullanıcının manuel yazdığı slug korunur.
+    // Benzersizlik: DB'de aynı slug varsa "slug_1", "slug_2", ... şeklinde
+    //        1'den başlayıp benzersiz olana kadar 1'er artırılır.
+    // ══════════════════════════════════════════════════════════════
+
+    // Model.Id → (langCode → en son otomatik üretilmiş slug). Kullanıcının
+    // el ile mi yazdığını, yoksa bizim mi türettiğimizi ayırt etmek için.
+    private readonly Dictionary<(Guid, string), string> _autoSlugTrack = new();
+
+    private async Task OnNameChangedAsync(CategoriesProduct model, LangDef lang, string newName)
+    {
+        // 1) Adı yaz
+        lang.SetName(model.Categories!, newName);
+
+        // 2) Slug otomasyonu — mevcut slug'ı oku
+        var currentSlug = lang.GetSlug(model.Categories!) ?? string.Empty;
+        var trackKey = (model.Id, lang.Code);
+        var lastAuto = _autoSlugTrack.TryGetValue(trackKey, out var la) ? la : null;
+
+        // Slug boşsa VEYA en son bizim ürettiğimiz değerse → yeniden üret.
+        // Kullanıcı el ile farklı bir slug yazmışsa dokunma.
+        bool mayOverwrite = string.IsNullOrWhiteSpace(currentSlug)
+                            || (lastAuto != null && currentSlug == lastAuto);
+
+        if (!mayOverwrite) return;
+
+        var baseSlug = Slugify(newName);
+        if (string.IsNullOrWhiteSpace(baseSlug))
+        {
+            // Ad temizlenmişse slug'ı da temizle (yalnızca otomatikse)
+            if (mayOverwrite) { lang.SetSlug(model.Categories!, null); _autoSlugTrack.Remove(trackKey); }
+            return;
+        }
+
+        // 3) DB'de benzersiz olana kadar "_X" ekle (X: 1'den artan)
+        var uniqueSlug = await MakeUniqueSlugAsync(lang.Code, baseSlug, model.Id);
+
+        lang.SetSlug(model.Categories!, uniqueSlug);
+        _autoSlugTrack[trackKey] = uniqueSlug;
+        StateHasChanged();
+    }
+
+    // Metni URL-dostu slug'a çevirir: küçük harf, aksan/diakritik temizliği,
+    // Türkçe özel karakter eşleme, alfasayısal dışını "-" ile birleştirme.
+    private static string Slugify(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+        var text = input.Trim().ToLowerInvariant();
+
+        // Türkçe/yaygın özel karakter eşlemeleri (kültür-bağımsız, güvenli)
+        var sb = new System.Text.StringBuilder(text.Length);
+        foreach (var ch in text)
+        {
+            switch (ch)
+            {
+                case 'ı': case 'i': sb.Append('i'); break;
+                case 'ğ': sb.Append('g'); break;
+                case 'ü': sb.Append('u'); break;
+                case 'ş': sb.Append('s'); break;
+                case 'ö': sb.Append('o'); break;
+                case 'ç': sb.Append('c'); break;
+                case 'ä': sb.Append('a'); break;
+                case 'ß': sb.Append("ss"); break;
+                case 'ñ': sb.Append('n'); break;
+                case 'á': case 'à': case 'â': case 'ã': sb.Append('a'); break;
+                case 'é': case 'è': case 'ê': sb.Append('e'); break;
+                case 'í': case 'ì': case 'î': sb.Append('i'); break;
+                case 'ó': case 'ò': case 'ô': case 'õ': sb.Append('o'); break;
+                case 'ú': case 'ù': case 'û': sb.Append('u'); break;
+                default: sb.Append(ch); break;
+            }
+        }
+
+        // Unicode aksanlarını ayıklama (kalan diakritikler için)
+        var normalized = sb.ToString().Normalize(System.Text.NormalizationForm.FormD);
+        var clean = new System.Text.StringBuilder(normalized.Length);
+        foreach (var ch in normalized)
+        {
+            var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (cat == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
+
+            if (char.IsLetterOrDigit(ch)) clean.Append(ch);
+            else clean.Append('-'); // ayraç/boşluk/noktalama → tire
+        }
+
+        // Fazla tireleri sadeleştir
+        var slug = System.Text.RegularExpressions.Regex.Replace(clean.ToString(), "-{2,}", "-");
+        return slug.Trim('-');
+    }
+
+    // DB'de aynı slug var mı diye kontrol eder; varsa base_1, base_2, ...
+    // benzersiz olana kadar dener. selfId (düzenlemede kendi kaydı) hariç tutulur.
+    private async Task<string> MakeUniqueSlugAsync(string langCode, string baseSlug, Guid selfId)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            var candidate = baseSlug;
+            int suffix = 1;
+
+            while (await SlugExistsAsync(db, langCode, candidate, selfId, _cts.Token))
+            {
+                candidate = $"{baseSlug}_{suffix}";
+                suffix++;
+            }
+            return candidate;
+        }
+        catch (Exception ex)
+        {
+            await LogError("MakeUniqueSlug", ex);
+            return baseSlug; // hata olursa en azından temel slug'ı ver
+        }
+    }
+
+    // İlgili dil sütununda bu slug var mı? (silinmemiş + kendisi hariç)
+    private static Task<bool> SlugExistsAsync(
+        _ApplicationConnectionDb db, string langCode, string slug, Guid selfId, CancellationToken token)
+    {
+        var q = db.CategoriesProduct.AsNoTracking()
+            .Where(x => (x.IsDeleted == null
+                      || x.IsDeleted.IsDeletedStatu == null
+                      || x.IsDeleted.IsDeletedStatu == false)
+                     && x.Id != selfId);
+
+        q = langCode switch
+        {
+            "TR" => q.Where(x => x.Categories!.SlugTr == slug),
+            "EN" => q.Where(x => x.Categories!.SlugEn == slug),
+            "AZ" => q.Where(x => x.Categories!.SlugAz == slug),
+            "DE" => q.Where(x => x.Categories!.SlugDe == slug),
+            "ES" => q.Where(x => x.Categories!.SlugEs == slug),
+            "FR" => q.Where(x => x.Categories!.SlugFr == slug),
+            "HI" => q.Where(x => x.Categories!.SlugHi == slug),
+            "PT" => q.Where(x => x.Categories!.SlugPt == slug),
+            "RU" => q.Where(x => x.Categories!.SlugRu == slug),
+            "ZH" => q.Where(x => x.Categories!.SlugZh == slug),
+            _ => q.Where(x => false)
+        };
+
+        return q.AnyAsync(token);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ARAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        // Debounce LoadPageAsync içinde; her arama 1. sayfadan başlar
+        await LoadPageAsync(1, _searchTerm);
+    }
+
+    private async Task ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        await LoadPageAsync(1, null);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL AÇMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenAddModal()
+    {
+        _addModel = new CategoriesProduct
+        {
+            Id = Guid.Empty,
+            IsActive = true,
+            ShowInMenu = true,
+            AiAttributesIsOk = null,
+            Categories = new Categories(),
+            CreatedDate = DateTime.UtcNow
+        };
+        _addParentId = null;
+        _autoSlugTrack.Clear();
+        ResetParentSearch();
+        await ShowModal("AddModal");
+    }
+
+    private async Task OpenEditModal(CategoriesProduct item)
+    {
+        // Yalın kopya (şifreleme yok) — owned Categories'i de klonla
+        _editModel = new CategoriesProduct
+        {
+            Id = item.Id,
+            ParentId = item.ParentId,
+            IsActive = item.IsActive,
+            ShowInMenu = item.ShowInMenu,
+            Path = item.Path,
+            AiAttributesIsOk = item.AiAttributesIsOk,
+            CreatedDate = item.CreatedDate,
+            UpdatedDate = item.UpdatedDate,
+            Categories = CloneCategories(item.Categories)
+        };
+        _editParentId = item.ParentId;
+        _autoSlugTrack.Clear();
+        ResetParentSearch();
+        await ShowModal("EditModal");
+    }
+
+    private static Categories CloneCategories(Categories? src)
+    {
+        src ??= new Categories();
+        return new Categories
+        {
+            NameTr = src.NameTr,
+            NameEn = src.NameEn,
+            NameAz = src.NameAz,
+            NameDe = src.NameDe,
+            NameEs = src.NameEs,
+            NameFr = src.NameFr,
+            NameHi = src.NameHi,
+            NamePt = src.NamePt,
+            NameRu = src.NameRu,
+            NameZh = src.NameZh,
+            SlugTr = src.SlugTr,
+            SlugEn = src.SlugEn,
+            SlugAz = src.SlugAz,
+            SlugDe = src.SlugDe,
+            SlugEs = src.SlugEs,
+            SlugFr = src.SlugFr,
+            SlugHi = src.SlugHi,
+            SlugPt = src.SlugPt,
+            SlugRu = src.SlugRu,
+            SlugZh = src.SlugZh
+        };
+    }
+
+    private async Task OpenDeleteModal(CategoriesProduct item)
+    {
+        _deleteTarget = item;
+        await ShowModal("DeleteModal");
+    }
+
+    private async Task OpenBulkDeleteModal()
+    {
+        if (!_selectedIds.Any()) return;
+        // Seçim sayfalar arası olabildiğinden preview'i hafif ağaçtan üret
+        _bulkDeletePreview = _selectedIds
+            .Where(id => _nodes.ContainsKey(id))
+            .Select(id => _nodes[id])
+            .ToList();
+        await ShowModal("BulkDeleteModal");
+    }
+
+    private async Task OpenBulkEditModal()
+    {
+        if (!_selectedIds.Any()) return;
+        // Her açılışta varsayılanları sıfırla — istenmeyen alanı yazma riski olmasın
+        _bulkApplyActive = false; _bulkValActive = true;
+        _bulkApplyMenu = false; _bulkValMenu = true;
+        _bulkApplyAi = false; _bulkValAi = null;
+        await ShowModal("BulkEditModal");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Ekle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task AddAsync()
+    {
+        if (_isProcessing || _addModel == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            _addModel.Id = Guid.NewGuid();
+            _addModel.ParentId = _addParentId;
+            _addModel.CreatedDate = DateTime.UtcNow;
+            _addModel.UpdatedDate = null;
+            _addModel.Categories ??= new Categories();
+
+            // Soft delete: yeni kayıt aktif başlasın
+            _addModel.IsDeleted = new IsDeleted { IsDeletedStatu = false, DeletedAtDate = null };
+
+            // Otomatik Path (En hiyerarşik) — lookup'a ekleyip hesapla
+            _addModel.Path = ComputeFinalPath(_addModel);
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            db.CategoriesProduct.Add(_addModel);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("AddModal");
+            _addModel = null;
+            _addParentId = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(NODES_CACHE_KEY);
+            await LoadNodesAsync(forceReload: true);
+            await LoadPageAsync(1, _searchTerm);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Add");
+            await Notify("success", "Başarılı", "Kategori eklendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("AddAsync", ex);
+            await Notify("danger", "Hata", "Kayıt sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Güncelle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task UpdateAsync()
+    {
+        if (_isProcessing || _editModel == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.CategoriesProduct.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+
+            if (existing == null)
+            {
+                await Notify("warning", "Uyarı", "Kayıt artık mevcut değil.");
+                return;
+            }
+
+            // Yalın güncelle (şifreleme yok)
+            existing.ParentId = _editParentId;
+            existing.IsActive = _editModel.IsActive;
+            existing.ShowInMenu = _editModel.ShowInMenu;
+            existing.AiAttributesIsOk = _editModel.AiAttributesIsOk;
+            existing.UpdatedDate = DateTime.UtcNow;
+
+            var cat = existing.Categories ??= new Categories();
+            var src = _editModel.Categories ?? new Categories();
+            cat.NameTr = src.NameTr; cat.NameEn = src.NameEn; cat.NameAz = src.NameAz; cat.NameDe = src.NameDe;
+            cat.NameEs = src.NameEs; cat.NameFr = src.NameFr; cat.NameHi = src.NameHi; cat.NamePt = src.NamePt;
+            cat.NameRu = src.NameRu; cat.NameZh = src.NameZh;
+            cat.SlugTr = src.SlugTr; cat.SlugEn = src.SlugEn; cat.SlugAz = src.SlugAz; cat.SlugDe = src.SlugDe;
+            cat.SlugEs = src.SlugEs; cat.SlugFr = src.SlugFr; cat.SlugHi = src.SlugHi; cat.SlugPt = src.SlugPt;
+            cat.SlugRu = src.SlugRu; cat.SlugZh = src.SlugZh;
+
+            // Hafif ağacı güncel modelle senkronla (isim/parent değişimi Path'e yansısın)
+            _editModel.ParentId = _editParentId;
+            _nodes[existing.Id] = new Node
+            {
+                Id = existing.Id,
+                ParentId = _editParentId,
+                NameEn = cat.NameEn,
+                NameTr = cat.NameTr
+            };
+
+            // Bu kategorinin ve tüm alt ağacın Path'lerini yeniden yaz
+            existing.Path = BuildEnPath(existing.Id);
+            existing.ParentId = _editParentId;
+            await RewriteSubtreePathsAsync(db, existing.Id, _cts.Token);
+
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("EditModal");
+            _editModel = null;
+            _editParentId = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(NODES_CACHE_KEY);
+            await LoadNodesAsync(forceReload: true);
+            await LoadPageAsync(_currentPage, _searchTerm);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
+            await Notify("success", "Başarılı", "Kategori güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("UpdateAsync", ex);
+            await Notify("danger", "Hata", "Güncelleme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Tekli Sil (Soft Delete)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task DeleteConfirmedAsync()
+    {
+        if (_isProcessing || _deleteTarget == null) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var entity = await db.CategoriesProduct.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+
+            if (entity != null)
+            {
+                entity.IsDeleted = new IsDeleted { IsDeletedStatu = true, DeletedAtDate = DateTime.UtcNow };
+                entity.UpdatedDate = DateTime.UtcNow;
+                await db.SaveChangesAsync(_cts.Token);
+            }
+
+            await HideModal("DeleteModal");
+            _deleteTarget = null;
+            _isProcessing = false;
+
+            StateHub.ClearCache(NODES_CACHE_KEY);
+            await LoadNodesAsync(forceReload: true);
+            await LoadPageAsync(_currentPage, _searchTerm);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
+            await Notify("success", "Silindi", "Kategori başarıyla silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("DeleteAsync", ex);
+            await Notify("danger", "Hata", "Silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Toplu Sil (Soft Delete)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkDeleteConfirmedAsync()
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+            var count = ids.Count;
+            var now = DateTime.UtcNow;
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            await db.CategoriesProduct
+                .Where(x => ids.Contains(x.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.IsDeleted!.IsDeletedStatu, true)
+                    .SetProperty(x => x.IsDeleted!.DeletedAtDate, now)
+                    .SetProperty(x => x.UpdatedDate, now),
+                    _cts.Token);
+
+            _selectedIds.Clear();
+            _allSelected = false;
+            _bulkDeletePreview.Clear();
+
+            await HideModal("BulkDeleteModal");
+            _isProcessing = false;
+
+            StateHub.ClearCache(NODES_CACHE_KEY);
+            await LoadNodesAsync(forceReload: true);
+            await LoadPageAsync(1, _searchTerm);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({count})");
+            await Notify("success", "Silindi", $"{count} kayıt silindi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkDelete", ex);
+            await Notify("danger", "Hata", "Toplu silme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Toplu Düzenle (Aktif / Menüde Göster / AI Durumu)
+    // Yalnızca "apply" işaretli alanlar yazılır. Her alan kendi
+    // ExecuteUpdateAsync çağrısıyla set edilir (koşullu, izlemesiz, hızlı).
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkEditConfirmedAsync()
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+        if (!(_bulkApplyActive || _bulkApplyMenu || _bulkApplyAi)) return;
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true;
+            StateHasChanged();
+
+            var ids = _selectedIds.ToList();
+            var count = ids.Count;
+            var now = DateTime.UtcNow;
+            var changed = new List<string>();
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            if (_bulkApplyActive)
+            {
+                var val = _bulkValActive;
+                await db.CategoriesProduct
+                    .Where(x => ids.Contains(x.Id))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.IsActive, val)
+                        .SetProperty(x => x.UpdatedDate, now),
+                        _cts.Token);
+                changed.Add($"Aktif={(val ? "Evet" : "Hayır")}");
+            }
+
+            if (_bulkApplyMenu)
+            {
+                var val = _bulkValMenu;
+                await db.CategoriesProduct
+                    .Where(x => ids.Contains(x.Id))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.ShowInMenu, val)
+                        .SetProperty(x => x.UpdatedDate, now),
+                        _cts.Token);
+                changed.Add($"Menü={(val ? "Evet" : "Hayır")}");
+            }
+
+            if (_bulkApplyAi)
+            {
+                var val = _bulkValAi;
+                await db.CategoriesProduct
+                    .Where(x => ids.Contains(x.Id))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.AiAttributesIsOk, val)
+                        .SetProperty(x => x.UpdatedDate, now),
+                        _cts.Token);
+                changed.Add($"AI={AiStateToString(val)}");
+            }
+
+            _selectedIds.Clear();
+            _allSelected = false;
+
+            await HideModal("BulkEditModal");
+            _isProcessing = false;
+
+            StateHub.ClearCache(NODES_CACHE_KEY);
+            await LoadNodesAsync(forceReload: true);
+            await LoadPageAsync(_currentPage, _searchTerm);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkEdit ({count}) [{string.Join(", ", changed)}]");
+            await Notify("success", "Güncellendi", $"{count} kayıt güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            await LogError("BulkEdit", ex);
+            await Notify("danger", "Hata", "Toplu düzenleme sırasında sorun oluştu.");
+        }
+        finally
+        {
+            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            _writeLock.Release();
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU SEÇİM
+    // ══════════════════════════════════════════════════════════════
+
+    // NOT: Sunucu tarafı sayfalamada "tümünü seç" yalnızca GÖRÜNEN sayfayı (20 kayıt)
+    // kapsar. Seçim sayfalar arası korunur (HashSet), böylece farklı sayfalardan
+    // seçip toplu silinebilir.
+    private void ToggleRowSelection(Guid id)
+    {
+        if (!_selectedIds.Remove(id)) _selectedIds.Add(id);
+        _allSelected = _pagedItems.Count > 0 && _pagedItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ToggleSelectAll()
+    {
+        var pageIds = _pagedItems.Select(i => i.Id).ToList();
+        bool pageFullySelected = pageIds.Count > 0 && pageIds.All(_selectedIds.Contains);
+
+        if (pageFullySelected)
+            foreach (var id in pageIds) _selectedIds.Remove(id); // görünen sayfayı seçimden çıkar
+        else
+            foreach (var id in pageIds) _selectedIds.Add(id);    // görünen sayfayı seç
+
+        _allSelected = _pagedItems.Count > 0 && _pagedItems.All(i => _selectedIds.Contains(i.Id));
+        StateHasChanged();
+    }
+
+    private void ClearSelection()
+    {
+        _selectedIds.Clear();
+        _allSelected = false;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private async Task LogError(string action, Exception ex)
+    {
+        try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); }
+        catch { }
+    }
+}

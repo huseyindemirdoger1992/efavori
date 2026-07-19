@@ -9,6 +9,12 @@
 		<AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
 	</PropertyGroup>
 	<ItemGroup>
+	  <Compile Remove="Areas\Vendor\**" />
+	  <Content Remove="Areas\Vendor\**" />
+	  <EmbeddedResource Remove="Areas\Vendor\**" />
+	  <None Remove="Areas\Vendor\**" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="Google.GenAI" Version="1.10.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.9" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
@@ -20,8 +26,7 @@
 		<ProjectReference Include="..\razor\razor.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-		<Folder Include="Areas\Vendor\Controllers\" />
-		<Folder Include="Areas\Vendor\Views\" />
+		<Folder Include="_files\" />
 		<Folder Include="_files\" />
 		<Folder Include="_files\" />
 		<Folder Include="_files\" />

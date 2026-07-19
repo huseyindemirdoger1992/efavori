@@ -16,6 +16,7 @@ using data._Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using data._Attributes;
 
 namespace data
 {
@@ -28,6 +29,15 @@ namespace data
         // === _Categories ===
         public DbSet<CategoriesArticle> CategoriesArticle { get; set; } = default!;
         public DbSet<CategoriesProduct> CategoriesProduct { get; set; } = default!;
+
+        // === _Attributes ===
+        public DbSet<AttributeDefinition> AttributeDefinition { get; set; } = default!;
+        public DbSet<AttributeGroup> AttributeGroup { get; set; } = default!;
+        public DbSet<AttributeCategoryJoint> AttributeCategoryJoint { get; set; } = default!;
+        public DbSet<AttributeOption> AttributeOption { get; set; } = default!;
+        public DbSet<AttributeValue> AttributeValue { get; set; } = default!;
+        public DbSet<AttributeMapping> AttributeMapping { get; set; } = default!;
+        public DbSet<AttributeUnit> AttributeUnit { get; set; } = default!;
 
         // === _Follows ===
         public DbSet<FriendShip> FriendShip { get; set; } = default!;

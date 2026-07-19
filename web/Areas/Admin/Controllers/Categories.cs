@@ -6,11 +6,7 @@ namespace web.Areas.Admin.Controllers
     [Route("{culture}/Admin/[controller]/[action]")]
     public class Categories : Controller
     {
-        public IActionResult CategoriesTr()
-        {
-            return View();
-        }
-        public IActionResult CategoriesEn()
+        public IActionResult CategoryManagementProducts()
         {
             return View();
         }

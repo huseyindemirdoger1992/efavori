@@ -31,7 +31,7 @@ namespace api
         // ════════════════════════════════════════════════════════════
 
         /// <summary>Döviz kuru çekme aralığı</summary>
-        private static readonly TimeSpan CurrencyInterval = TimeSpan.FromSeconds(60);
+        private static readonly TimeSpan CurrencyInterval = TimeSpan.FromSeconds(30);
 
         /// <summary>Döviz kuru çekme aktif mi?</summary>
         private static readonly bool IsCurrencyEnabled = true;

@@ -31,13 +31,13 @@ namespace api
         // ════════════════════════════════════════════════════════════
 
         /// <summary>Döviz kuru çekme aralığı</summary>
-        private static readonly TimeSpan CurrencyInterval = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan CurrencyInterval = TimeSpan.FromSeconds(60);
 
         /// <summary>Döviz kuru çekme aktif mi?</summary>
         private static readonly bool IsCurrencyEnabled = true;
 
         /// <summary>AI kategori özellik üretim aralığı</summary>
-        private static readonly TimeSpan AiAttributeInterval = TimeSpan.FromSeconds(60);
+        private static readonly TimeSpan AiAttributeInterval = TimeSpan.FromSeconds(120);
 
         /// <summary>AI kategori özellik üretimi aktif mi?</summary>
         private static readonly bool IsAiAttributeEnabled = true;

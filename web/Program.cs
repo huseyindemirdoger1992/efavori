@@ -56,6 +56,7 @@ try
 
 
     // Api Services
+    builder.Services.AddHttpClient<AIAttributeManager>();
     builder.Services.AddHttpClient<AIProductKnowledgeGenerator>();
     builder.Services.AddHttpClient<AIProductTranslationGeneratorTurkishToEnglish>();
     builder.Services.AddHostedService<AllBackgroundServices>();

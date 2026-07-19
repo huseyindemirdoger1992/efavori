@@ -21,164 +21,179 @@ namespace api
     {
         private readonly IDbContextFactory<_ApplicationConnectionDb> _dbFactory;
         private readonly ILogger<AllBackgroundServices> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         private static readonly HttpClient _httpClient = new HttpClient();
 
         // ════════════════════════════════════════════════════════════
-        //  AYARLAR — sıklık, izin ve limit değerleri artık VERİTABANINDAN
-        //  (AllBackgroundServicesFrequencyRate, Id = 1) okunur.
-        //  Ayarları AllBackgroundServicesTasks.razor sayfasından değiştirin.
-        //
-        //  Aşağıdaki sabitler yalnızca DB'de kayıt bulunamadığında veya
-        //  değerler geçersiz olduğunda devreye giren GÜVENLİ VARSAYILANLARDIR.
+        //  GÖREV AYARLARI — Tüm sıklıkları sadece buradan değiştirin
+        //  Örnek: TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(2)
         // ════════════════════════════════════════════════════════════
 
-        private static readonly TimeSpan SettingsReadFallbackInterval = TimeSpan.FromSeconds(10);
-        private static readonly TimeSpan MinimumInterval = TimeSpan.FromSeconds(1);
-        private static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(10);
+        /// <summary>Döviz kuru çekme aralığı</summary>
+        private static readonly TimeSpan CurrencyInterval = TimeSpan.FromSeconds(30);
+
+        /// <summary>Döviz kuru çekme aktif mi?</summary>
+        private static readonly bool IsCurrencyEnabled = true;
+
+        /// <summary>AI kategori özellik üretim aralığı</summary>
+        private static readonly TimeSpan AiAttributeInterval = TimeSpan.FromSeconds(60);
+
+        /// <summary>AI kategori özellik üretimi aktif mi?</summary>
+        private static readonly bool IsAiAttributeEnabled = true;
 
         // ════════════════════════════════════════════════════════════
 
         public AllBackgroundServices(
             IDbContextFactory<_ApplicationConnectionDb> dbFactory,
-            ILogger<AllBackgroundServices> logger)
+            ILogger<AllBackgroundServices> logger,
+            IServiceScopeFactory scopeFactory)
         {
             _dbFactory = dbFactory;
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken durdurmaSinyali)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("AllBackgroundServices başlatıldı (Döviz Kuru).");
+            _logger.LogInformation(
+                "AllBackgroundServices başlatıldı. Döviz: {CurrencyInterval}s | AI: {AiInterval}s",
+                CurrencyInterval.TotalSeconds,
+                AiAttributeInterval.TotalSeconds);
 
-            await RunLoopAsync("Döviz Kuru", FetchAndSaveExchangeRatesAsync, durdurmaSinyali);
+            var tasks = new List<Task>();
 
-            _logger.LogInformation("AllBackgroundServices Durduruldu.");
+            if (IsCurrencyEnabled)
+                tasks.Add(RunLoopAsync("Döviz Kuru", FetchAndSaveExchangeRatesAsync, CurrencyInterval, stoppingToken));
+            else
+                _logger.LogInformation("► Döviz Kuru devre dışı.");
+
+            if (IsAiAttributeEnabled)
+                tasks.Add(RunLoopAsync("AI Kategori Özellikleri", GenerateCategoryAttributesAsync, AiAttributeInterval, stoppingToken));
+            else
+                _logger.LogInformation("► AI Kategori Özellikleri devre dışı.");
+
+            if (tasks.Count == 0)
+            {
+                _logger.LogWarning("Hiçbir görev aktif olmadığı için servis bekliyor...");
+                await Task.Delay(Timeout.Infinite, stoppingToken);
+                return;
+            }
+
+            try
+            {
+                await Task.WhenAll(tasks);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("AllBackgroundServices durdurma sinyali aldı.");
+            }
+
+            _logger.LogInformation("AllBackgroundServices durduruldu.");
         }
 
         /// <summary>
-        /// Verilen görevi, her tick'te VERİTABANINDAN taze okunan ayarlara göre
-        /// (izin + aralık) çalıştırır. Ayarlar canlı okunduğu için servis
-        /// yeniden başlatmadan değişiklikler uygulanır.
+        /// Belirtilen aralıkta görevi çalıştırır.
+        /// • Önceki çalışma bitmeden yeni çalışma başlamaz (atlanır).
+        /// • Hatalar yakalanır; bir görevin hatası diğerini veya döngüyü durdurmaz.
+        /// • Tamamen async çalışır, thread bloklamaz.
         /// </summary>
         private async Task RunLoopAsync(
             string taskName,
-            Func<AllBackgroundServicesFrequencyRate, CancellationToken, Task> job,
-            CancellationToken durdurmaSinyali)
+            Func<CancellationToken, Task> job,
+            TimeSpan interval,
+            CancellationToken cancellationToken)
         {
+            using var timer = new PeriodicTimer(interval);
+            using var semaphore = new SemaphoreSlim(1, 1);
+
+            _logger.LogInformation(
+                "{Task} döngüsü başladı (aralık: {Interval}s).",
+                taskName,
+                interval.TotalSeconds);
+
             try
             {
-                while (!durdurmaSinyali.IsCancellationRequested)
+                while (await timer.WaitForNextTickAsync(cancellationToken))
                 {
-                    var settings = await LoadSettingsAsync(durdurmaSinyali);
+                    // Önceki çalışma hâlâ devam ediyor mu?
+                    if (!await semaphore.WaitAsync(0, cancellationToken))
+                    {
+                        _logger.LogWarning(
+                            "⏭ {Task} atlandı — önceki çalışma henüz bitmedi.",
+                            taskName);
+                        continue;
+                    }
 
-                    var (isEnabled, interval) = ResolveTaskConfig(taskName, settings);
-
-                    await Task.Delay(interval, durdurmaSinyali);
-
-                    if (!isEnabled) continue;
-
-                    await job(settings!, durdurmaSinyali);
+                    try
+                    {
+                        await job(cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw; // Durdurma sinyali yukarı taşınır
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "💥 {Task} görevinde hata oluştu.", taskName);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
                 }
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("{Task} görevi durdurma sinyali aldı.", taskName);
+                _logger.LogInformation("{Task} döngüsü durduruldu.", taskName);
             }
         }
 
-        /// <summary>
-        /// Görev adına göre ilgili izin + aralık değerini ayarlardan çözer.
-        /// </summary>
-        private (bool isEnabled, TimeSpan interval) ResolveTaskConfig(
-            string taskName,
-            AllBackgroundServicesFrequencyRate? settings)
+        // ──────────────────────────────────────────────
+        //  AI KATEGORİ ÖZELLİKLERİ
+        // ──────────────────────────────────────────────
+        private async Task GenerateCategoryAttributesAsync(CancellationToken cancellationToken)
         {
-            if (settings == null)
-                return (false, SettingsReadFallbackInterval);
+            using var scope = _scopeFactory.CreateScope();
+            var manager = scope.ServiceProvider.GetRequiredService<AIAttributeManager>();
 
-            return taskName switch
-            {
-                "Döviz Kuru" => (
-                    settings.IsCurrencyFetchEnabled,
-                    NormalizeInterval(settings.CurrencyFetchIntervalInSeconds)),
-
-                _ => (false, SettingsReadFallbackInterval)
-            };
-        }
-
-        /// <summary>
-        /// Saniye değerini güvenli TimeSpan'e çevirir; 0/negatif değerleri minimuma sabitler.
-        /// </summary>
-        private static TimeSpan NormalizeInterval(int seconds)
-        {
-            if (seconds <= 0) return DefaultInterval;
-            var span = TimeSpan.FromSeconds(seconds);
-            return span < MinimumInterval ? MinimumInterval : span;
-        }
-
-        /// <summary>
-        /// Ayar tablosunun tek satırını (Id = 1) kısa ömürlü context ile okur.
-        /// </summary>
-        private async Task<AllBackgroundServicesFrequencyRate?> LoadSettingsAsync(CancellationToken cancellationToken)
-        {
-            try
-            {
-                await using var db = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-                return await db.Set<AllBackgroundServicesFrequencyRate>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.Id == 1, cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Arka plan servis ayarları okunamadı (Id = 1).");
-                return null;
-            }
+            await manager.ProcessNextPendingCategoryAsync(cancellationToken);
         }
 
         // ──────────────────────────────────────────────
         //  DÖVİZ KURU
         // ──────────────────────────────────────────────
-        private async Task FetchAndSaveExchangeRatesAsync(
-            AllBackgroundServicesFrequencyRate settings,
-            CancellationToken cancellationToken)
+        private async Task FetchAndSaveExchangeRatesAsync(CancellationToken cancellationToken)
         {
-            try
+            const string apiUrl = "https://open.er-api.com/v6/latest/USD";
+
+            var response = await _httpClient.GetFromJsonAsync<ExchangeRateApiResponse>(apiUrl, cancellationToken);
+
+            if (response?.Rates == null)
             {
-                string apiUrl = "https://open.er-api.com/v6/latest/USD";
-
-                var response = await _httpClient.GetFromJsonAsync<ExchangeRateApiResponse>(apiUrl, cancellationToken);
-
-                if (response?.Rates != null)
-                {
-                    await using var context = await _dbFactory.CreateDbContextAsync(cancellationToken);
-
-                    var newRate = new MoneyExchangeRate
-                    {
-                        Dolar_Usd = response.Rates.GetValueOrDefault("USD", 1m),
-                        Euro_Eur = response.Rates.GetValueOrDefault("EUR", 0m),
-                        Manat_Azn = response.Rates.GetValueOrDefault("AZN", 0m),
-                        Lira_Tl = response.Rates.GetValueOrDefault("TRY", 0m),
-                        CreatedAt = DateTime.Now
-                    };
-
-                    context.Set<MoneyExchangeRate>().Add(newRate);
-                    await context.SaveChangesAsync(cancellationToken);
-
-                    _logger.LogInformation(
-                        "Kurlar kaydedildi → EUR: {Eur} | AZN: {Azn} | TRY: {Try}",
-                        newRate.Euro_Eur, newRate.Manat_Azn, newRate.Lira_Tl);
-                }
+                _logger.LogWarning("Döviz API'den geçerli veri alınamadı.");
+                return;
             }
-            catch (Exception ex)
+
+            await using var context = await _dbFactory.CreateDbContextAsync(cancellationToken);
+
+            var newRate = new MoneyExchangeRate
             {
-                _logger.LogError(ex, "Kur verileri çekilirken hata oluştu.");
-            }
+                Dolar_Usd = response.Rates.GetValueOrDefault("USD", 1m),
+                Euro_Eur = response.Rates.GetValueOrDefault("EUR", 0m),
+                Manat_Azn = response.Rates.GetValueOrDefault("AZN", 0m),
+                Lira_Tl = response.Rates.GetValueOrDefault("TRY", 0m),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.Set<MoneyExchangeRate>().Add(newRate);
+            await context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "💱 Kurlar kaydedildi → EUR: {Eur} | AZN: {Azn} | TRY: {Try}",
+                newRate.Euro_Eur,
+                newRate.Manat_Azn,
+                newRate.Lira_Tl);
         }
     }
 }

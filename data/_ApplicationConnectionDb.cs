@@ -1,5 +1,5 @@
 ﻿using data;
-using data.Owned;
+using data._Attribute;
 using data._Carts;
 using data._Categories;
 using data._Follows;
@@ -12,11 +12,10 @@ using data._Store;
 using data._Systems;
 using data._Tasks;
 using data._Users;
-
+using data.Owned;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
-using data._Attributes;
 
 namespace data
 {
@@ -30,14 +29,34 @@ namespace data
         public DbSet<CategoriesArticle> CategoriesArticle { get; set; } = default!;
         public DbSet<CategoriesProduct> CategoriesProduct { get; set; } = default!;
 
-        // === _Attributes ===
-        public DbSet<AttributeDefinition> AttributeDefinition { get; set; } = default!;
-        public DbSet<AttributeGroup> AttributeGroup { get; set; } = default!;
-        public DbSet<AttributeCategoryJoint> AttributeCategoryJoint { get; set; } = default!;
-        public DbSet<AttributeOption> AttributeOption { get; set; } = default!;
-        public DbSet<AttributeValue> AttributeValue { get; set; } = default!;
-        public DbSet<AttributeMapping> AttributeMapping { get; set; } = default!;
-        public DbSet<AttributeUnit> AttributeUnit { get; set; } = default!;
+        // === _Attribute (Enterprise Marketplace Attribute System V3) ===
+        public DbSet<AttributeGroup> AttributeGroups => Set<AttributeGroup>();
+        public DbSet<AttributeGroupTranslation> AttributeGroupTranslations => Set<AttributeGroupTranslation>();
+        public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
+        public DbSet<AttributeTranslation> AttributeTranslations => Set<AttributeTranslation>();
+        public DbSet<AttributeAlias> AttributeAliases => Set<AttributeAlias>();
+        public DbSet<AttributeSynonym> AttributeSynonyms => Set<AttributeSynonym>();
+        public DbSet<AttributeOption> AttributeOptions => Set<AttributeOption>();
+        public DbSet<AttributeOptionTranslation> AttributeOptionTranslations => Set<AttributeOptionTranslation>();
+        public DbSet<AttributeOptionAlias> AttributeOptionAliases => Set<AttributeOptionAlias>();
+        public DbSet<AttributeOptionSynonym> AttributeOptionSynonyms => Set<AttributeOptionSynonym>();
+        public DbSet<UnitGroup> UnitGroups => Set<UnitGroup>();
+        public DbSet<UnitGroupTranslation> UnitGroupTranslations => Set<UnitGroupTranslation>();
+        public DbSet<Unit> Units => Set<Unit>();
+        public DbSet<UnitTranslation> UnitTranslations => Set<UnitTranslation>();
+        public DbSet<AttributeTemplate> AttributeTemplates_V3 => Set<AttributeTemplate>(); // adı mevcut ile çakışmasın diye _V3
+        public DbSet<AttributeTemplateTranslation> AttributeTemplateTranslations => Set<AttributeTemplateTranslation>();
+        public DbSet<TemplateAttribute> TemplateAttributes => Set<TemplateAttribute>();
+        public DbSet<TemplateCategory> TemplateCategories => Set<TemplateCategory>();
+        public DbSet<CategoryAttribute> CategoryAttributes => Set<CategoryAttribute>();
+        public DbSet<AttributeDependency> AttributeDependencies => Set<AttributeDependency>();
+        public DbSet<NormalizationRule> NormalizationRules => Set<NormalizationRule>();
+        public DbSet<AiGenerationJob> AiGenerationJobs => Set<AiGenerationJob>();
+        public DbSet<AiGenerationHistory> AiGenerationHistories => Set<AiGenerationHistory>();
+        public DbSet<IntegrationPlatform> IntegrationPlatforms => Set<IntegrationPlatform>();
+        public DbSet<AttributeMapping> AttributeMappings => Set<AttributeMapping>();
+        public DbSet<AttributeOptionMapping> AttributeOptionMappings => Set<AttributeOptionMapping>();
+
 
         // === _Follows ===
         public DbSet<FriendShip> FriendShip { get; set; } = default!;
@@ -102,6 +121,18 @@ namespace data
 
         public _ApplicationConnectionDb()
         {
+        }
+
+        //---------------- Model yapılandırması ----------------//
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Enterprise Marketplace Attribute System V3 — owned tipler (Ai/IsDeleted),
+            // FK'ler, silme davranışları, tekil/bileşik indeksler, RowVersion ve
+            // decimal precision yapılandırmalarının tamamını uygular.
+            _AttributeModelConfiguration.Apply(modelBuilder);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -2,7 +2,6 @@
    ThisPageIsBeingPrepared.razor
    ─────────────────────────────────────────────────────────────
    ✅ GlobalStateHub — anlık broadcast, debounce, RAM cache
-   ✅ GlobalSecurityProvider — Country/State/Cities/RadioButton şifreli
    ✅ TakeLogs — tüm CRUD aksiyonları loglanır
    ✅ Ayrı Ekle / Düzenle / Sil modalleri
    ✅ Seçilenleri Sil → önce onay modali (sayı + liste)
@@ -188,9 +187,9 @@ else
                                      alt="Kapak" />
                             }
                         </td>
-                        <td><div class="fw-semibold">@(Decrypt(item.Country))</div></td>
-                        <td><div class="fw-semibold">@(Decrypt(item.State))</div></td>
-                        <td><div class="fw-semibold">@(Decrypt(item.Cities))</div></td>
+                        <td><div class="fw-semibold">@item.Country</div></td>
+                        <td><div class="fw-semibold">@item.State</div></td>
+                        <td><div class="fw-semibold">@item.Cities</div></td>
                         <td class="d-none d-md-table-cell text-nowrap">
                             <div class="small">@item.SelectDateTime.ToString("dd.MM.yyyy") | @item.SelectDateTime.ToString("HH:mm")</div>
                         </td>
@@ -720,17 +719,17 @@ else
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-flag me-1"></i>Ülke</label>
                             <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
-                                   value="@(Decrypt(_deleteTarget.Country) ?? "—")" disabled />
+                                   value="@(_deleteTarget.Country ?? "—")" disabled />
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-map-signs me-1"></i>Eyalet / İl</label>
                             <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
-                                   value="@(Decrypt(_deleteTarget.State) ?? "—")" disabled />
+                                   value="@(_deleteTarget.State ?? "—")" disabled />
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label text-white-50 small"><i class="fa fa-map-marker me-1"></i>Şehir</label>
                             <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary"
-                                   value="@(Decrypt(_deleteTarget.Cities) ?? "—")" disabled />
+                                   value="@(_deleteTarget.Cities ?? "—")" disabled />
                         </div>
                     </div>
                 }
@@ -809,9 +808,9 @@ else
                                 {
                                     <tr>
                                         <td class="small text-secondary">@(n++)</td>
-                                        <td class="small">@(Decrypt(item.Country) ?? "—")</td>
-                                        <td class="small">@(Decrypt(item.State) ?? "—")</td>
-                                        <td class="small">@(Decrypt(item.Cities) ?? "—")</td>
+                                        <td class="small">@(item.Country ?? "—")</td>
+                                        <td class="small">@(item.State ?? "—")</td>
+                                        <td class="small">@(item.Cities ?? "—")</td>
                                     </tr>
                                 }
                             </tbody>
@@ -1154,18 +1153,6 @@ else
     private List<TryTableSingle> _bulkDeletePreview = new();
 
     // ══════════════════════════════════════════════════════════════
-    // YARDIMCI: Şifre çöz (null-safe, hata durumunda orijinal döner)
-    // ══════════════════════════════════════════════════════════════
-
-    private static string? Decrypt(string? value)
-    {
-        if (string.IsNullOrEmpty(value)) return value;
-        var result = GlobalSecurityProvider.Decrypt(value);
-        // Hata mesajı kontrolü: şifrelenmemiş eski veri de okunabilsin
-        return result?.StartsWith("Hata:") == true ? value : result;
-    }
-
-    // ══════════════════════════════════════════════════════════════
     // YAŞAM DÖNGÜSÜ
     // ══════════════════════════════════════════════════════════════
 
@@ -1266,24 +1253,20 @@ else
                 // (IsDeleted owned entity — IsDeletedStatu null veya false olanlar gösterilir)
                 q = q.Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu == null || x.IsDeleted.IsDeletedStatu == false);
 
-                // Arama: şifreli alanlar DB'de şifreli olduğundan
-                // tam liste çekilip bellek içi filtreleme yapılır.
-                // (Ülke/il/şehir şifreli — DB'de LIKE çalışmaz)
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var s = search.Trim();
+                    q = q.Where(x =>
+                        (x.Country != null && x.Country.Contains(s)) ||
+                        (x.State != null && x.State.Contains(s)) ||
+                        (x.Cities != null && x.Cities.Contains(s))
+                    );
+                }
+
                 return await q.OrderByDescending(x => x.SelectDateTime).ToListAsync(token);
             }, token);
 
             if (token.IsCancellationRequested || result == null) return;
-
-            // Bellek içi arama (şifreli alanlar çözülerek)
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var s = search.Trim();
-                result = result.Where(x =>
-                    Contains(Decrypt(x.Country), s) ||
-                    Contains(Decrypt(x.State), s) ||
-                    Contains(Decrypt(x.Cities), s)
-                ).ToList();
-            }
 
             _allItems = result;
             ApplyPaging(1);
@@ -1306,9 +1289,6 @@ else
             }
         }
     }
-
-    private static bool Contains(string? value, string search) =>
-        value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
 
     private void ApplyPaging(int page)
     {
@@ -1462,14 +1442,13 @@ else
 
     private async Task OpenEditModal(TryTableSingle item)
     {
-        // Şifreli alanları çözerek modele yaz
         _editModel = new TryTableSingle
         {
             Id = item.Id,
-            Country = Decrypt(item.Country),
-            State = Decrypt(item.State),
-            Cities = Decrypt(item.Cities),
-            RadioButton = Decrypt(item.RadioButton),
+            Country = item.Country,
+            State = item.State,
+            Cities = item.Cities,
+            RadioButton = item.RadioButton,
             CheckSliding = item.CheckSliding,
             CheckMarked = item.CheckMarked,
             SelectDateTime = item.SelectDateTime,
@@ -1566,12 +1545,6 @@ else
             _isProcessing = true;
             StateHasChanged();
 
-            // Şifrele
-            _addModel.Country = GlobalSecurityProvider.Encrypt(_addModel.Country ?? "");
-            _addModel.State = GlobalSecurityProvider.Encrypt(_addModel.State ?? "");
-            _addModel.Cities = GlobalSecurityProvider.Encrypt(_addModel.Cities ?? "");
-            _addModel.RadioButton = GlobalSecurityProvider.Encrypt(_addModel.RadioButton ?? "");
-
             _addModel.Id = Guid.NewGuid();
             _addModel.UserId = use.Id;
             _addModel.GetDateTime = DateTime.UtcNow;
@@ -1658,11 +1631,11 @@ else
                 return;
             }
 
-            // Şifrele ve güncelle
-            existing.Country = GlobalSecurityProvider.Encrypt(_editModel.Country ?? "");
-            existing.State = GlobalSecurityProvider.Encrypt(_editModel.State ?? "");
-            existing.Cities = GlobalSecurityProvider.Encrypt(_editModel.Cities ?? "");
-            existing.RadioButton = GlobalSecurityProvider.Encrypt(_editModel.RadioButton ?? "");
+            // Güncelle
+            existing.Country = _editModel.Country;
+            existing.State = _editModel.State;
+            existing.Cities = _editModel.Cities;
+            existing.RadioButton = _editModel.RadioButton;
             existing.CheckSliding = _editModel.CheckSliding;
             existing.CheckMarked = _editModel.CheckMarked;
             existing.SelectDateTime = _editModel.SelectDateTime;
@@ -2065,8 +2038,8 @@ else
             if (!mediaIds.Any()) return new();
 
             return await db.Media
-.Where(m => mediaIds.Contains(m.Id) && m.IsDeleted.IsDeletedStatu != true)
-.ToListAsync(_cts.Token);
+                .Where(m => mediaIds.Contains(m.Id) && m.IsDeleted.IsDeletedStatu != true)
+                .ToListAsync(_cts.Token);
         }
         catch (Exception ex)
         {

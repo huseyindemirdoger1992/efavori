@@ -1,58 +1,2122 @@
 ﻿@* ============================================================
-   TemplateList.razor
-   ─────────────────────────────────────────────────────────────
-   ✅ Sistem öznitelik şablonları yönetimi (yalnızca admin)
-   ✅ TEK DOSYA — tüm sorgular doğrudan IDbContextFactory ile
-   ✅ Server-side sayfalama + arama (Skip/Take DB tarafında)
-   ✅ Server-side kategori autocomplete (debounce + top 25)
-   ✅ Sistem özniteliği autocomplete (UserId==null && StoreId==null)
-   ✅ Versiyonlama (immutable): yayındaki sürüm güncellenmez,
-       yeni satır = aynı TemplateGroupId, Version + 1
-   ✅ Toplu işlemler: Yayınla / Pasife Al / Ortak Kategori Ata
-   ✅ Hiç ayrı sayfa yok — her şey modal & offcanvas üzerinde
-   ✅ GlobalStateHub broadcast + TakeLogs ile aksiyon loglama
+   AttributeDefinitions.razor  (v3 — Syntax Düzeltildi)
    ============================================================ *@
 @using data
 @using data.Owned;
-@using data._Carts;
+@using data._Attribute;
 @using data._Categories;
-@using data._Follows;
-@using data._Galleries;
 @using data._Helper;
-@using data._Locations;
 @using data._Products;
-@using data._Shares;
-@using data._Store;
 @using data._Systems;
-@using data._Tasks;
 @using data._Users;
-
-
 @using api
 @using api.tr
-@using Microsoft.AspNetCore.Components.Web
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using razor._Shared
+@using System.Globalization
 
 @inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
 
-@code {
-    // Bu alanı kesinlikle SİLME. Global state'den dil bilgisini alıp yönlendirme için gereklidir.
-    [Inject]
-    private NavigationManager NavigationManager { get; set; } = default!;
-    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/AttributeTemplate/List/", true);
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",     "Ana Sayfa",  "/"),
+        ("fa fa-cogs",     "Katalog",    "javascript:void(0)"),
+        ("fa fa-tags",     PAGE_TITLE,   "javascript:void(0)")
+    };
 }
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ─── Toolbar ─── *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <button class="btn btn-light btn-sm" @onclick="OpenAddModal" disabled="@_isLoading">
+        <i class="fa fa-plus me-sm-1"></i>
+        <span class="d-none d-sm-inline">Yeni Attribute</span>
+    </button>
+
+    @if (_selectedIds.Any())
+    {
+        <div class="vr mx-1"></div>
+        <span class="badge bg-light">@_selectedIds.Count seçili</span>
+        <button class="btn btn-outline-light btn-sm border-0" @onclick="ClearSelection" title="Seçimi Temizle">
+            <i class="fa fa-times"></i> Seçimi Temizle
+        </button>
+        <div class="vr mx-1"></div>
+        <button class="btn btn-outline-danger btn-sm border-0" @onclick="OpenBulkDeleteModal" disabled="@_isProcessing">
+            <i class="fa fa-trash"></i> Seçilenleri Sil
+        </button>
+    }
+</div>
+
+@* ─── Arama ─── *@
+<div class="input-group input-group-sm mb-2">
+    <span class="input-group-text bg-transparent border-secondary text-white">
+        <i class="fa fa-search"></i>
+    </span>
+    <input type="text"
+           class="form-control bg-transparent text-light border-secondary"
+           placeholder="Kanonik kod, ad veya normalize ad ara..."
+           value="@_searchTerm"
+           @oninput="OnSearchInput" />
+    @if (!string.IsNullOrWhiteSpace(_searchTerm))
+    {
+        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+            <i class="fa fa-times"></i>
+        </button>
+    }
+</div>
+
+@* ─── İçerik ─── *@
+@if (_isLoading && !_pagedItems.Any())
+{
+    <div class="text-center py-5">
+        <i class="fa fa-spinner fa-spin fa-2x text-info"></i>
+        <p class="mt-2 text-light small">Yükleniyor...</p>
+    </div>
+}
+else if (!_isLoading && !_allItems.Any())
+{
+    <div class="text-center py-5 text-light">
+        <i class="fa fa-inbox fa-3x mb-3 d-block"></i>
+        <p class="mb-0">Attribute bulunmuyor.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive rounded-3 overflow-hidden border">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr>
+                    <th style="width:2rem;"><input type="checkbox" class="form-check-input" checked="@_allSelected" @onchange="ToggleSelectAll" /></th>
+                    <th class="d-none d-md-table-cell" style="width:2.5rem;">#</th>
+                    <th>Kanonik Kod</th>
+                    <th>Ad</th>
+                    <th>Veri Tipi</th>
+                    <th>Giriş Bileşeni</th>
+                    <th>Grup</th>
+                    <th class="text-center">Durum</th>
+                    <th class="text-end">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{
+                    int rowNo = (_currentPage - 1) * PAGE_SIZE + 1;
+                }
+                @foreach (var item in _pagedItems)
+                {
+                    var isSelected = _selectedIds.Contains(item.Id);
+                    var groupName = _groupLookup.GetValueOrDefault(item.AttributeGroupId ?? Guid.Empty, "—");
+                    <tr class="@(isSelected ? "table-active" : "")">
+                        <td><input type="checkbox" class="form-check-input" checked="@isSelected" @onchange="() => ToggleRowSelection(item.Id)" /></td>
+                        <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
+                        <td><code class="text-info">@item.CanonicalCode</code></td>
+                        <td>
+                            <div class="fw-semibold">@item.CanonicalName</div>
+                            <div class="small text-white-50">@item.NormalizedName</div>
+                        </td>
+                        <td><span class="badge bg-secondary">@item.DataType</span></td>
+                        <td><span class="badge bg-dark border border-secondary">@item.InputType</span></td>
+                        <td class="small">@groupName</td>
+                        <td class="text-center">
+                            @if (item.IsSystemLocked)
+                            {
+                                <span class="badge bg-danger" title="Sistem Kilidi"><i class="fa fa-lock"></i></span>
+                            }
+                            @if (item.IsActive)
+                            {
+                                <span class="badge bg-success">Aktif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Pasif</span>
+                            }
+                            @if (item.Ai?.IsManuallyEdited == true)
+                            {
+                                <span class="badge bg-info" title="Manuel Düzenleme Kilidi"><i class="fa fa-user"></i></span>
+                            }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <button class="btn btn-outline-warning btn-sm me-1" @onclick="() => OpenEditModal(item)" title="Düzenle">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => OpenDeleteModal(item)" title="Sil">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* ─── Sayfalama (Akıllı) ─── *@
+    <div class="d-flex align-items-center justify-content-between mt-2 flex-wrap gap-2">
+        <small class="text-light">Toplam @_allItems.Count kayıt @if (_isLoading) { <i class="fa fa-spinner fa-spin ms-1 text-info"></i> }</small>
+        @if (_totalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0 flex-wrap">
+                    <li class="page-item @(_currentPage == 1 ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary" @onclick="() => GoToPage(_currentPage - 1)"><i class="fa fa-chevron-left"></i></button>
+                    </li>
+                    @foreach (var pg in GetVisiblePages())
+                    {
+                        if (pg == -1)
+                        {
+                            <li class="page-item disabled"><span class="page-link bg-dark text-light border-secondary">…</span></li>
+                        }
+                        else
+                        {
+                            <li class="page-item @(_currentPage == pg ? "active" : "")">
+                                <button class="page-link @(_currentPage == pg ? "" : "bg-dark text-light") border-secondary" @onclick="() => GoToPage(pg)">@pg</button>
+                            </li>
+                        }
+                    }
+                    <li class="page-item @(_currentPage == _totalPages ? "disabled" : "")">
+                        <button class="page-link bg-dark text-light border-secondary" @onclick="() => GoToPage(_currentPage + 1)"><i class="fa fa-chevron-right"></i></button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}
+
+@* ═══════════════════════════════════════════
+   MODAL — Ekle
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="AddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content bg-dark border border-secondary" style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0"><i class="fa fa-plus me-1"></i>Yeni Attribute</h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran"><i class="fa fa-expand" style="font-size: 0.85rem;"></i></button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat"><i class="fa fa-times" style="font-size: 0.95rem;"></i></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                @if (_addModel != null)
+                {
+                    <div class="row g-3">
+                        @* ── Temel Bilgiler ── *@
+                        <div class="col-12"><h6 class="text-info border-bottom border-secondary pb-1"><i class="fa fa-info-circle me-1"></i>Temel Bilgiler</h6></div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-code me-1"></i>Kanonik Kod <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.CanonicalCode" placeholder="ornek_ram" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-font me-1"></i>Kanonik Ad <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.CanonicalName" @onblur="OnAddNameBlur" placeholder="RAM" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-text-width me-1"></i>Normalize Ad (Otomatik)</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.NormalizedName" placeholder="ram" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-object-group me-1"></i>Görsel Grup</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_addModel.AttributeGroupId">
+                                <option value="@Guid.Empty">— Grup Seçiniz —</option>
+                                @foreach (var g in _groups)
+                                {
+                                    <option value="@g.Id">@g.CanonicalName</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* ── Tip & Bileşen ── *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-database me-1"></i>Veri Tipi</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_addModel.DataType">
+                                @foreach (var dt in Enum.GetValues<AttributeDataType>())
+                                {
+                                    <option value="@dt">@dt</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-desktop me-1"></i>Giriş Bileşeni</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_addModel.InputType">
+                                @foreach (var it in Enum.GetValues<AttributeInputType>())
+                                {
+                                    <option value="@it">@it</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* ── Birim (Measurement tipi için) ── *@
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-balance-scale me-1"></i>Birim Grubu</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" value="@_addUnitGroupId" @onchange="e => OnUnitGroupChanged(e, true)">
+                                <option value="@Guid.Empty">— Seçiniz —</option>
+                                @foreach (var ug in _unitGroups)
+                                {
+                                    <option value="@ug.Id">@ug.CanonicalName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small"><i class="fa fa-ruler me-1"></i>Baz Birim</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_addModel.BaseUnitId" disabled="@(!_addUnits.Any())">
+                                <option value="@Guid.Empty">@(_addUnits.Any() ? "— Seçiniz —" : "—")</option>
+                                @foreach (var u in _addUnits)
+                                {
+                                    <option value="@u.Id">@u.Symbol (@u.CanonicalName)</option>
+                                }
+                            </select>
+                        </div>
+
+                        @* ── Davranış Bayrakları ── *@
+                        <div class="col-12"><h6 class="text-info border-bottom border-secondary pb-1 mt-2"><i class="fa fa-sliders me-1"></i>Davranışlar</h6></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a1" @bind="_addModel.IsMultiValued" /><label class="form-check-label text-white-50 small" for="add_a1">Çok Değerli</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a2" @bind="_addModel.IsRequiredByDefault" /><label class="form-check-label text-white-50 small" for="add_a2">Vars. Zorunlu</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a3" @bind="_addModel.IsVariantByDefault" /><label class="form-check-label text-white-50 small" for="add_a3">Vars. Varyant</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a4" @bind="_addModel.IsFilterableByDefault" /><label class="form-check-label text-white-50 small" for="add_a4">Vars. Filtrelenebilir</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a5" @bind="_addModel.IsSearchableByDefault" /><label class="form-check-label text-white-50 small" for="add_a5">Vars. Aranabilir</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a6" @bind="_addModel.IsComparableByDefault" /><label class="form-check-label text-white-50 small" for="add_a6">Vars. Karşılaştırılabilir</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a7" @bind="_addModel.IsVisibleOnProductPageByDefault" /><label class="form-check-label text-white-50 small" for="add_a7">Ürün Sayfasında Görünür</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a8" @bind="_addModel.IsKeyAttribute" /><label class="form-check-label text-white-50 small" for="add_a8">Anahtar Özellik</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a9" @bind="_addModel.IsActive" /><label class="form-check-label text-white-50 small" for="add_a9">Aktif</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a10" @bind="_addModel.IsUnique" /><label class="form-check-label text-white-50 small" for="add_a10">Benzersiz Değer</label></div></div>
+                        <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="add_a11" @bind="_addModel.IsSystemLocked" /><label class="form-check-label text-white-50 small" for="add_a11">Sistem Kilidi</label></div></div>
+
+                        @* ── Validasyon ── *@
+                        <div class="col-12"><h6 class="text-info border-bottom border-secondary pb-1 mt-2"><i class="fa fa-shield me-1"></i>Validasyon Kuralları</h6></div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">Regex Deseni</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.RegexPattern" placeholder="^\d+$" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Min. Sayısal</label>
+                            <input type="number" step="any" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.MinNumericValue" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Max. Sayısal</label>
+                            <input type="number" step="any" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.MaxNumericValue" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Artış Adımı</label>
+                            <input type="number" step="any" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.NumericStep" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Ondalık Basamak</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.DecimalScale" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Min. Uzunluk</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.MinLength" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Max. Uzunluk</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.MaxLength" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">Varsayılan Değer</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.DefaultValue" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-white-50 small">Sıralama</label>
+                            <input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.DisplayOrder" />
+                        </div>
+
+                        @* ── AI Metadata ── *@
+                        <div class="col-12"><h6 class="text-info border-bottom border-secondary pb-1 mt-2"><i class="fa fa-robot me-1"></i>AI Metadata</h6></div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">Kaynak</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_addModel.Ai.Source">
+                                @foreach (var src in Enum.GetValues<ContentSource>())
+                                {
+                                    <option value="@src">@src</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">Onay Durumu</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_addModel.Ai.ApprovalStatus">
+                                @foreach (var ap in Enum.GetValues<AiApprovalStatus>())
+                                {
+                                    <option value="@ap">@ap</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-white-50 small">İnceleme Durumu</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_addModel.Ai.ReviewStatus">
+                                @foreach (var rs in Enum.GetValues<AiReviewStatus>())
+                                {
+                                    <option value="@rs">@rs</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">AI Model</label>
+                            <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.Ai.AiModel" placeholder="gemini-2.5-pro" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label text-white-50 small">Güven Skoru (0-1)</label>
+                            <input type="number" step="0.01" min="0" max="1" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_addModel.Ai.Confidence" />
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="add_aiLock" @bind="_addModel.Ai.IsManuallyEdited" />
+                                <label class="form-check-label text-white-50" for="add_aiLock"><i class="fa fa-lock me-1"></i>Manuel Düzenleme Kilidi (AI/Import bu kaydın üzerine yazamaz)</label>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="fa fa-arrow-left me-1"></i>Kapat</button>
+                <button type="button" class="btn btn-primary btn-sm" @onclick="AddAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-plus me-1"></i><span>Yeni Attribute Ekle</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Düzenle (Sekmeli)
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="EditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
+        <div class="modal-content bg-dark border border-secondary" style="box-shadow:0 0 8px rgba(255,215,0,0.35);">
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0"><i class="fa fa-pencil me-1"></i>Attribute Düzenle</h6>
+                <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                    <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran"><i class="fa fa-expand" style="font-size: 0.85rem;"></i></button>
+                    <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+                    <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat"><i class="fa fa-times" style="font-size: 0.95rem;"></i></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                @if (_editModel != null)
+                {
+                    @* ── Sekmeler ── *@
+                    <ul class="nav nav-tabs nav-fill border-secondary mb-3" id="editTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == 1 ? "active bg-dark text-info border-info" : "bg-transparent text-white-50")" @onclick="() => _activeTab = 1" type="button">Temel Bilgiler</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == 2 ? "active bg-dark text-info border-info" : "bg-transparent text-white-50")" @onclick="() => _activeTab = 2" type="button">Validasyon</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == 3 ? "active bg-dark text-info border-info" : "bg-transparent text-white-50")" @onclick="() => _activeTab = 3" type="button">Options (@_editOptions.Count)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == 4 ? "active bg-dark text-info border-info" : "bg-transparent text-white-50")" @onclick="() => _activeTab = 4" type="button">Çeviriler (@_editTranslations.Count)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == 5 ? "active bg-dark text-info border-info" : "bg-transparent text-white-50")" @onclick="() => _activeTab = 5" type="button">Alias & Synonym</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == 6 ? "active bg-dark text-info border-info" : "bg-transparent text-white-50")" @onclick="() => _activeTab = 6" type="button">Kurallar (@_editDependencies.Count)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(_activeTab == 7 ? "active bg-dark text-info border-info" : "bg-transparent text-white-50")" @onclick="() => _activeTab = 7" type="button">AI & Sistem</button>
+                        </li>
+                    </ul>
+
+                    @* ═══════ TAB 1: Temel Bilgiler ═══════ *@
+                    @if (_activeTab == 1)
+                    {
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Kanonik Kod <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.CanonicalCode" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Kanonik Ad <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.CanonicalName" @onblur="OnEditNameBlur" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Normalize Ad</label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.NormalizedName" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Görsel Grup</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_editModel.AttributeGroupId">
+                                    <option value="@Guid.Empty">— Grup Seçiniz —</option>
+                                    @foreach (var g in _groups)
+                                    {
+                                        <option value="@g.Id">@g.CanonicalName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Veri Tipi</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_editModel.DataType">
+                                    @foreach (var dt in Enum.GetValues<AttributeDataType>())
+                                    {
+                                        <option value="@dt">@dt</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Giriş Bileşeni</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_editModel.InputType">
+                                    @foreach (var it in Enum.GetValues<AttributeInputType>())
+                                    {
+                                        <option value="@it">@it</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Birim Grubu</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" value="@_editUnitGroupId" @onchange="e => OnUnitGroupChanged(e, false)">
+                                    <option value="@Guid.Empty">— Seçiniz —</option>
+                                    @foreach (var ug in _unitGroups)
+                                    {
+                                        <option value="@ug.Id">@ug.CanonicalName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Baz Birim</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_editModel.BaseUnitId" disabled="@(!_editUnits.Any())">
+                                    <option value="@Guid.Empty">@(_editUnits.Any() ? "— Seçiniz —" : "—")</option>
+                                    @foreach (var u in _editUnits)
+                                    {
+                                        <option value="@u.Id">@u.Symbol (@u.CanonicalName)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12"><label class="form-label text-white-50 small">Varsayılan Değer</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.DefaultValue" /></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a1" @bind="_editModel.IsMultiValued" /><label class="form-check-label text-white-50 small" for="ed_a1">Çok Değerli</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a2" @bind="_editModel.IsRequiredByDefault" /><label class="form-check-label text-white-50 small" for="ed_a2">Vars. Zorunlu</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a3" @bind="_editModel.IsVariantByDefault" /><label class="form-check-label text-white-50 small" for="ed_a3">Vars. Varyant</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a4" @bind="_editModel.IsFilterableByDefault" /><label class="form-check-label text-white-50 small" for="ed_a4">Vars. Filtrelenebilir</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a5" @bind="_editModel.IsSearchableByDefault" /><label class="form-check-label text-white-50 small" for="ed_a5">Vars. Aranabilir</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a6" @bind="_editModel.IsComparableByDefault" /><label class="form-check-label text-white-50 small" for="ed_a6">Vars. Karşılaştırılabilir</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a7" @bind="_editModel.IsVisibleOnProductPageByDefault" /><label class="form-check-label text-white-50 small" for="ed_a7">Ürün Sayfasında Görünür</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a8" @bind="_editModel.IsKeyAttribute" /><label class="form-check-label text-white-50 small" for="ed_a8">Anahtar Özellik</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a9" @bind="_editModel.IsActive" /><label class="form-check-label text-white-50 small" for="ed_a9">Aktif</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a10" @bind="_editModel.IsUnique" /><label class="form-check-label text-white-50 small" for="ed_a10">Benzersiz Değer</label></div></div>
+                            <div class="col-6 col-md-3"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="ed_a11" @bind="_editModel.IsSystemLocked" /><label class="form-check-label text-white-50 small" for="ed_a11">Sistem Kilidi</label></div></div>
+                        </div>
+                    }
+
+                    @* ═══════ TAB 2: Validasyon ═══════ *@
+                    @if (_activeTab == 2)
+                    {
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-white-50 small">Regex Deseni</label>
+                                <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.RegexPattern" />
+                            </div>
+                            <div class="col-6 col-md-3"><label class="form-label text-white-50 small">Min. Sayısal</label><input type="number" step="any" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.MinNumericValue" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label text-white-50 small">Max. Sayısal</label><input type="number" step="any" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.MaxNumericValue" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label text-white-50 small">Artış Adımı</label><input type="number" step="any" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.NumericStep" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label text-white-50 small">Ondalık Basamak</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.DecimalScale" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label text-white-50 small">Min. Uzunluk</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.MinLength" /></div>
+                            <div class="col-6 col-md-3"><label class="form-label text-white-50 small">Max. Uzunluk</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.MaxLength" /></div>
+                            <div class="col-12 col-md-6"><label class="form-label text-white-50 small">Sıralama</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.DisplayOrder" /></div>
+                        </div>
+                    }
+
+                    @* ═══════ TAB 3: Options ═══════ *@
+                    @if (_activeTab == 3)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-white-50 mb-0"><i class="fa fa-list-ul me-1"></i>Seçilebilir Değerler</h6>
+                            <button class="btn btn-outline-info btn-sm" @onclick="AddNewOptionRow" disabled="@_isProcessing"><i class="fa fa-plus me-1"></i>Yeni Option</button>
+                        </div>
+                        <div class="table-responsive rounded-2 border" style="max-height:400px; overflow-y:auto;">
+                            <table class="table table-sm table-dark table-bordered mb-0">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th class="small" style="width:120px;">Kod</th>
+                                        <th class="small">Değer</th>
+                                        <th class="small" style="width:100px;">Normalize</th>
+                                        <th class="small" style="width:80px;">Renk</th>
+                                        <th class="small" style="width:90px;">Görsel URL</th>
+                                        <th class="small" style="width:70px;">Sayısal</th>
+                                        <th class="small" style="width:110px;">Üst Option</th>
+                                        <th class="small" style="width:50px;">Seviye</th>
+                                        <th class="small" style="width:60px;">Sıra</th>
+                                        <th class="small text-center" style="width:50px;">Aktif</th>
+                                        <th class="small text-end" style="width:90px;">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var opt in _editOptions.OrderBy(o => o.DisplayOrder))
+                                    {
+                                        @if (_editingOptionId == opt.Id)
+                                        {
+                                            <tr>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.CanonicalCode" /></td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.CanonicalValue" /></td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.NormalizedValue" /></td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.ColorHex" placeholder="#000000" /></td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.ImageUrl" placeholder="https://..." /></td>
+                                                <td><input type="number" step="any" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.NumericValue" /></td>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_optionBuffer.ParentOptionId">
+                                                        <option value="@Guid.Empty">— Yok —</option>
+                                                        @foreach (var po in _editOptions.Where(o => o.Id != _optionBuffer.Id))
+                                                        {
+                                                            <option value="@po.Id">@po.CanonicalValue</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.Level" disabled /></td>
+                                                <td><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_optionBuffer.DisplayOrder" /></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" @bind="_optionBuffer.IsActive" /></td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-success btn-sm py-0 px-1" @onclick="SaveOptionBuffer" title="Kaydet"><i class="fa fa-check"></i></button>
+                                                    <button class="btn btn-secondary btn-sm py-0 px-1" @onclick="CancelOptionEdit" title="İptal"><i class="fa fa-times"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td class="small"><code>@opt.CanonicalCode</code></td>
+                                                <td class="small">@opt.CanonicalValue</td>
+                                                <td class="small text-white-50">@opt.NormalizedValue</td>
+                                                <td class="small">@opt.ColorHex</td>
+                                                <td class="small text-truncate" style="max-width:90px;" title="@opt.ImageUrl">@opt.ImageUrl</td>
+                                                <td class="small">@opt.NumericValue</td>
+                                                <td class="small">@(_editOptions.FirstOrDefault(o => o.Id == opt.ParentOptionId)?.CanonicalValue ?? "—")</td>
+                                                <td class="small">@opt.Level</td>
+                                                <td class="small">@opt.DisplayOrder</td>
+                                                <td class="text-center">
+                                                    @if (opt.IsActive)
+                                                    {
+                                                        <i class="fa fa-check text-success"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fa fa-times text-secondary"></i>
+                                                    }
+                                                </td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="() => EditOption(opt)" title="Düzenle"><i class="fa fa-edit"></i></button>
+                                                    <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => DeleteOption(opt)" title="Sil"><i class="fa fa-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @* ═══════ TAB 4: Çeviriler ═══════ *@
+                    @if (_activeTab == 4)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-white-50 mb-0"><i class="fa fa-language me-1"></i>Dil Çevirileri</h6>
+                            <button class="btn btn-outline-info btn-sm" @onclick="AddNewTranslationRow" disabled="@_isProcessing"><i class="fa fa-plus me-1"></i>Yeni Çeviri</button>
+                        </div>
+                        <div class="table-responsive rounded-2 border" style="max-height:400px; overflow-y:auto;">
+                            <table class="table table-sm table-dark table-bordered mb-0">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th class="small" style="width:80px;">Dil</th>
+                                        <th class="small">Ad</th>
+                                        <th class="small">Açıklama</th>
+                                        <th class="small">Yardım Metni</th>
+                                        <th class="small">Placeholder</th>
+                                        <th class="small" style="width:70px;">Kaynak</th>
+                                        <th class="small text-center" style="width:55px;">Manuel</th>
+                                        <th class="small text-end" style="width:80px;">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var tr in _editTranslations)
+                                    {
+                                        @if (_editingTranslationId == tr.Id)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_translationBuffer.Language">
+                                                        @foreach (var lng in Enum.GetValues<Language>())
+                                                        {
+                                                            <option value="@lng">@lng</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_translationBuffer.Name" /></td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_translationBuffer.Description" /></td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_translationBuffer.HelpText" /></td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_translationBuffer.Placeholder" /></td>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_translationBuffer.Source">
+                                                        @foreach (var src in Enum.GetValues<ContentSource>())
+                                                        {
+                                                            <option value="@src">@src</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" @bind="_translationBuffer.IsManuallyEdited" /></td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-success btn-sm py-0 px-1" @onclick="SaveTranslationBuffer"><i class="fa fa-check"></i></button>
+                                                    <button class="btn btn-secondary btn-sm py-0 px-1" @onclick="CancelTranslationEdit"><i class="fa fa-times"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td class="small"><span class="badge bg-secondary">@tr.Language</span></td>
+                                                <td class="small">@tr.Name</td>
+                                                <td class="small text-white-50">@(tr.Description ?? "—")</td>
+                                                <td class="small text-white-50">@(tr.HelpText ?? "—")</td>
+                                                <td class="small text-white-50">@(tr.Placeholder ?? "—")</td>
+                                                <td class="small"><span class="badge bg-dark border border-secondary">@tr.Source</span></td>
+                                                <td class="text-center">
+                                                    @if (tr.IsManuallyEdited)
+                                                    {
+                                                        <i class="fa fa-check text-success"></i>
+                                                    }
+                                                </td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="() => EditTranslation(tr)"><i class="fa fa-edit"></i></button>
+                                                    <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => DeleteTranslation(tr)"><i class="fa fa-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @* ═══════ TAB 5: Alias & Synonym ═══════ *@
+                    @if (_activeTab == 5)
+                    {
+                        <div class="row">
+                            <div class="col-12 col-lg-6">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="text-white-50 mb-0"><i class="fa fa-tag me-1"></i>Alias'lar</h6>
+                                    <button class="btn btn-outline-info btn-sm" @onclick="AddNewAliasRow"><i class="fa fa-plus"></i></button>
+                                </div>
+                                <div class="table-responsive rounded-2 border" style="max-height:300px; overflow-y:auto;">
+                                    <table class="table table-sm table-dark table-bordered mb-0">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th class="small">Dil</th>
+                                                <th class="small">Alias</th>
+                                                <th class="small text-end" style="width:80px;">İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var al in _editAliases)
+                                            {
+                                                @if (_editingAliasId == al.Id)
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_aliasBuffer.Language">
+                                                                <option value="">—</option>
+                                                                @foreach (var lng in Enum.GetValues<Language>())
+                                                                {
+                                                                    <option value="@lng">@lng</option>
+                                                                }
+                                                            </select>
+                                                        </td>
+                                                        <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_aliasBuffer.Alias" /></td>
+                                                        <td class="text-end">
+                                                            <button class="btn btn-success btn-sm py-0 px-1" @onclick="SaveAliasBuffer"><i class="fa fa-check"></i></button>
+                                                            <button class="btn btn-secondary btn-sm py-0 px-1" @onclick="CancelAliasEdit"><i class="fa fa-times"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                else
+                                                {
+                                                    <tr>
+                                                        <td class="small">@(al.Language?.ToString() ?? "—")</td>
+                                                        <td class="small">@al.Alias</td>
+                                                        <td class="text-end">
+                                                            <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="() => EditAlias(al)"><i class="fa fa-edit"></i></button>
+                                                            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => DeleteAlias(al)"><i class="fa fa-trash"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-6">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="text-white-50 mb-0"><i class="fa fa-link me-1"></i>Synonym'ler</h6>
+                                    <button class="btn btn-outline-info btn-sm" @onclick="AddNewSynonymRow"><i class="fa fa-plus"></i></button>
+                                </div>
+                                <div class="table-responsive rounded-2 border" style="max-height:300px; overflow-y:auto;">
+                                    <table class="table table-sm table-dark table-bordered mb-0">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th class="small">Token</th>
+                                                <th class="small">Normalize</th>
+                                                <th class="small text-end" style="width:80px;">İşlem</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var sy in _editSynonyms)
+                                            {
+                                                @if (_editingSynonymId == sy.Id)
+                                                {
+                                                    <tr>
+                                                        <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_synonymBuffer.Token" /></td>
+                                                        <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_synonymBuffer.NormalizedToken" /></td>
+                                                        <td class="text-end">
+                                                            <button class="btn btn-success btn-sm py-0 px-1" @onclick="SaveSynonymBuffer"><i class="fa fa-check"></i></button>
+                                                            <button class="btn btn-secondary btn-sm py-0 px-1" @onclick="CancelSynonymEdit"><i class="fa fa-times"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                else
+                                                {
+                                                    <tr>
+                                                        <td class="small">@sy.Token</td>
+                                                        <td class="small text-white-50">@sy.NormalizedToken</td>
+                                                        <td class="text-end">
+                                                            <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="() => EditSynonym(sy)"><i class="fa fa-edit"></i></button>
+                                                            <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => DeleteSynonym(sy)"><i class="fa fa-trash"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @* ═══════ TAB 6: Kurallar (AttributeDependency) ═══════ *@
+                    @if (_activeTab == 6)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-white-50 mb-0"><i class="fa fa-project-diagram me-1"></i>Bağımlılık / Koşul Kuralları</h6>
+                            <button class="btn btn-outline-info btn-sm" @onclick="AddNewDependencyRow" disabled="@_isProcessing"><i class="fa fa-plus me-1"></i>Yeni Kural</button>
+                        </div>
+                        <div class="table-responsive rounded-2 border" style="max-height:400px; overflow-y:auto;">
+                            <table class="table table-sm table-dark table-bordered mb-0">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th class="small" style="width:140px;">Kaynak Attribute</th>
+                                        <th class="small" style="width:110px;">Operatör</th>
+                                        <th class="small" style="width:120px;">Beklenen Değer</th>
+                                        <th class="small" style="width:140px;">Hedef Attribute</th>
+                                        <th class="small" style="width:110px;">Eylem</th>
+                                        <th class="small" style="width:50px;">Grup</th>
+                                        <th class="small" style="width:60px;">Mantık</th>
+                                        <th class="small text-center" style="width:50px;">Aktif</th>
+                                        <th class="small text-end" style="width:80px;">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var dep in _editDependencies.OrderBy(d => d.ConditionGroup).ThenBy(d => d.DisplayOrder))
+                                    {
+                                        @if (_editingDependencyId == dep.Id)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_dependencyBuffer.SourceAttributeDefinitionId">
+                                                        <option value="@Guid.Empty">— Seçiniz —</option>
+                                                        @foreach (var ad in _allAttributeLookup)
+                                                        {
+                                                            <option value="@ad.Key">@ad.Value</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_dependencyBuffer.Operator">
+                                                        @foreach (var op in Enum.GetValues<DependencyOperator>())
+                                                        {
+                                                            <option value="@op">@op</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td><input class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_dependencyBuffer.ExpectedValue" placeholder="değer / optionId" /></td>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_dependencyBuffer.TargetAttributeDefinitionId">
+                                                        <option value="@Guid.Empty">— Seçiniz —</option>
+                                                        @foreach (var ad in _allAttributeLookup)
+                                                        {
+                                                            <option value="@ad.Key">@ad.Value</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_dependencyBuffer.Action">
+                                                        @foreach (var ac in Enum.GetValues<DependencyAction>())
+                                                        {
+                                                            <option value="@ac">@ac</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_dependencyBuffer.ConditionGroup" /></td>
+                                                <td>
+                                                    <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_dependencyBuffer.GroupLogic">
+                                                        @foreach (var gl in Enum.GetValues<DependencyLogic>())
+                                                        {
+                                                            <option value="@gl">@gl</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" @bind="_dependencyBuffer.IsActive" /></td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-success btn-sm py-0 px-1" @onclick="SaveDependencyBuffer"><i class="fa fa-check"></i></button>
+                                                    <button class="btn btn-secondary btn-sm py-0 px-1" @onclick="CancelDependencyEdit"><i class="fa fa-times"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                        else
+                                        {
+                                            <tr>
+                                                <td class="small">@(_allAttributeLookup.GetValueOrDefault(dep.SourceAttributeDefinitionId, "—"))</td>
+                                                <td class="small"><span class="badge bg-dark border border-secondary">@dep.Operator</span></td>
+                                                <td class="small">@(dep.ExpectedValue ?? dep.ExpectedOptionId?.ToString() ?? "—")</td>
+                                                <td class="small">@(_allAttributeLookup.GetValueOrDefault(dep.TargetAttributeDefinitionId, "—"))</td>
+                                                <td class="small"><span class="badge bg-info text-dark">@dep.Action</span></td>
+                                                <td class="small">@dep.ConditionGroup</td>
+                                                <td class="small">@dep.GroupLogic</td>
+                                                <td class="text-center">
+                                                    @if (dep.IsActive)
+                                                    {
+                                                        <i class="fa fa-check text-success"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fa fa-times text-secondary"></i>
+                                                    }
+                                                </td>
+                                                <td class="text-end">
+                                                    <button class="btn btn-outline-warning btn-sm py-0 px-1" @onclick="() => EditDependency(dep)"><i class="fa fa-edit"></i></button>
+                                                    <button class="btn btn-outline-danger btn-sm py-0 px-1" @onclick="() => DeleteDependency(dep)"><i class="fa fa-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @* ═══════ TAB 7: AI & Sistem ═══════ *@
+                    @if (_activeTab == 7)
+                    {
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label text-white-50 small">Kaynak</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.Source">
+                                    @foreach (var src in Enum.GetValues<ContentSource>())
+                                    {
+                                        <option value="@src">@src</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label text-white-50 small">Onay Durumu</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.ApprovalStatus">
+                                    @foreach (var ap in Enum.GetValues<AiApprovalStatus>())
+                                    {
+                                        <option value="@ap">@ap</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label text-white-50 small">İnceleme Durumu</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.ReviewStatus">
+                                    @foreach (var rs in Enum.GetValues<AiReviewStatus>())
+                                    {
+                                        <option value="@rs">@rs</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6"><label class="form-label text-white-50 small">AI Model</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.AiModel" /></div>
+                            <div class="col-12 col-md-6"><label class="form-label text-white-50 small">Model Sürümü</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.AiModelVersion" /></div>
+                            <div class="col-12 col-md-6"><label class="form-label text-white-50 small">Prompt Hash</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.PromptHash" /></div>
+                            <div class="col-12 col-md-6"><label class="form-label text-white-50 small">Prompt Sürümü</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.PromptVersion" /></div>
+                            <div class="col-12 col-md-6"><label class="form-label text-white-50 small">Güven Skoru (0-1)</label><input type="number" step="0.01" min="0" max="1" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.Confidence" /></div>
+                            <div class="col-12 col-md-6"><label class="form-label text-white-50 small">Kategori Kaynağı</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" @bind="_editModel.Ai.CategorySource" /></div>
+                            <div class="col-12"><label class="form-label text-white-50 small">İnceleme Notu</label><textarea class="form-control form-control-sm bg-dark text-white border-secondary" rows="2" @bind="_editModel.Ai.ReviewNote"></textarea></div>
+                            <div class="col-12">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="ed_aiLock" @bind="_editModel.Ai.IsManuallyEdited" />
+                                    <label class="form-check-label text-white-50" for="ed_aiLock"><i class="fa fa-lock me-1"></i>Manuel Düzenleme Kilidi (AI/Import bu kaydın üzerine yazamaz)</label>
+                                </div>
+                            </div>
+                            <div class="col-12 text-white-50 small">
+                                <div><strong>Oluşturulma:</strong> @_editModel.CreatedAtUtc.ToString("dd.MM.yyyy HH:mm")</div>
+                                <div><strong>Son Güncelleme:</strong> @(_editModel.UpdatedAtUtc?.ToString("dd.MM.yyyy HH:mm") ?? "—")</div>
+                                <div><strong>Sürüm:</strong> @_editModel.Version</div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="fa fa-arrow-left me-1"></i>Kapat</button>
+                <button type="button" class="btn btn-warning btn-sm" @onclick="UpdateAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Kaydediliyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-save me-1"></i><span>Değişiklikleri Kaydet</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Tekli Sil
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="DeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark border border-danger" style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0"><i class="fa fa-trash-o me-2"></i>Silme İşlemi</h6>
+                <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close"><i class="fa fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-white-50 small mb-3">Bu attribute'u silmek istediğinizden emin misiniz?</p>
+                @if (_deleteTarget != null)
+                {
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4"><label class="form-label text-white-50 small">Kanonik Kod</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" value="@_deleteTarget.CanonicalCode" disabled /></div>
+                        <div class="col-12 col-md-4"><label class="form-label text-white-50 small">Ad</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" value="@_deleteTarget.CanonicalName" disabled /></div>
+                        <div class="col-12 col-md-4"><label class="form-label text-white-50 small">Veri Tipi</label><input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" value="@_deleteTarget.DataType" disabled /></div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal"><i class="fa fa-arrow-left me-1"></i>İptal</button>
+                <button type="button" class="btn btn-danger btn-sm" @onclick="DeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>Evet, Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════
+   MODAL — Toplu Sil
+   ═══════════════════════════════════════════ *@
+<div class="modal fade" id="BulkDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content bg-light border border-danger" style="box-shadow:0 0 8px rgba(220,53,69,0.35);">
+            <div class="modal-header border-bottom border-danger py-2">
+                <h6 class="modal-title text-danger mb-0">
+                    <i class="fa fa-trash-o me-2"></i>Toplu Silme — @_selectedIds.Count kayıt seçildi
+                </h6>
+                <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body text-dark">
+                <p class="text-warning small mb-3">
+                    <i class="fa fa-exclamation-triangle me-1"></i>
+                    Aşağıdaki <strong>@_selectedIds.Count</strong> attribute kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                </p>
+                @if (_bulkDeletePreview != null && _bulkDeletePreview.Any())
+                {
+                    <div class="table-responsive" style="max-height:300px; overflow-y:auto;">
+                        <table class="table table-sm table-bordered table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="small">#</th>
+                                    <th class="small">Kod</th>
+                                    <th class="small">Ad</th>
+                                    <th class="small">Tip</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ int n = 1; }
+                                @foreach (var item in _bulkDeletePreview)
+                                {
+                                    <tr>
+                                        <td class="small text-secondary">@(n++)</td>
+                                        <td class="small">@item.CanonicalCode</td>
+                                        <td class="small">@item.CanonicalName</td>
+                                        <td class="small">@item.DataType</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer border-top border-danger py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" @onclick="() => _bulkDeletePreview.Clear()">
+                    <i class="fa fa-arrow-left me-1"></i>Vazgeç
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" @onclick="BulkDeleteConfirmedAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <i class="fa fa-spinner fa-spin me-1"></i><span>Siliniyor...</span>
+                    }
+                    else
+                    {
+                        <i class="fa fa-trash me-1"></i><span>@_selectedIds.Count Kaydı Sil</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @* ═══════════════════════════════════════════
    CODE BLOCK
    ═══════════════════════════════════════════ *@
 @code {
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Attribute Yönetimi";
+    private const string ENTITY_NAME = "AttributeDefinition";
+    private const string CACHE_KEY = "AttributeDefinition_List";
+    private const int SEARCH_DELAY = 500;
+    private const int PAGE_SIZE = 10;
 
     // ─── Parametre ────────────────────────────────────────────────
     [Parameter] public Users? use { get; set; }
 
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource? _searchCts;
+
+    // ─── Yazma kilidi ─────────────────────────────────────────────
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isProcessing;
+    private string _searchTerm = string.Empty;
+    private Notification? _notificationRef;
+    private int _activeTab = 1;
+
+    // ─── Veriler ──────────────────────────────────────────────────
+    private List<AttributeDefinition> _allItems = new();
+    private List<AttributeDefinition> _pagedItems = new();
+    private List<AttributeGroup> _groups = new();
+    private List<UnitGroup> _unitGroups = new();
+    private Dictionary<Guid, string> _groupLookup = new();
+    private Dictionary<Guid, string> _allAttributeLookup = new(); // Dependency lookup için
+
+    // ─── Sayfalama ────────────────────────────────────────────────
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+
+    // ─── Seçim ────────────────────────────────────────────────────
+    private readonly HashSet<Guid> _selectedIds = new();
+    private bool _allSelected;
+    private List<AttributeDefinition> _bulkDeletePreview = new();
+
+    // ─── Ekle modal state ─────────────────────────────────────────
+    private AttributeDefinition? _addModel;
+    private Guid _addUnitGroupId;
+    private List<Unit> _addUnits = new();
+
+    // ─── Düzenle modal state ──────────────────────────────────────
+    private AttributeDefinition? _editModel;
+    private Guid _editUnitGroupId;
+    private List<Unit> _editUnits = new();
+
+    // ─── Options tab state ────────────────────────────────────────
+    private List<AttributeOption> _editOptions = new();
+    private Guid _editingOptionId;
+    private AttributeOption _optionBuffer = new();
+
+    // ─── Translations tab state ───────────────────────────────────
+    private List<AttributeTranslation> _editTranslations = new();
+    private Guid _editingTranslationId;
+    private AttributeTranslation _translationBuffer = new();
+
+    // ─── Alias tab state ──────────────────────────────────────────
+    private List<AttributeAlias> _editAliases = new();
+    private Guid _editingAliasId;
+    private AttributeAlias _aliasBuffer = new();
+
+    // ─── Synonym tab state ────────────────────────────────────────
+    private List<AttributeSynonym> _editSynonyms = new();
+    private Guid _editingSynonymId;
+    private AttributeSynonym _synonymBuffer = new();
+
+    // ─── Dependency tab state (YENİ) ──────────────────────────────
+    private List<AttributeDependency> _editDependencies = new();
+    private Guid _editingDependencyId;
+    private AttributeDependency _dependencyBuffer = new();
+
+    // ─── Sil modal state ──────────────────────────────────────────
+    private AttributeDefinition? _deleteTarget;
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+        StateHub.OnDataChanged += HandleDataChanged;
+        await Task.WhenAll(LoadDataAsync(_searchTerm), LoadLookupsAsync());
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        StateHub.OnDataChanged -= HandleDataChanged;
+        await _cts.CancelAsync();
+        _cts.Dispose();
+        _searchCts?.Dispose();
+        _writeLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private async Task HandleDataChanged(string entityName)
+    {
+        if (_disposed || !_isInitialized || entityName != ENTITY_NAME) return;
+        await InvokeAsync(async () => { await LoadDataAsync(_searchTerm); StateHasChanged(); });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // VERİ YÜKLEME
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task LoadDataAsync(string? search)
+    {
+        _searchCts?.Cancel(); _searchCts?.Dispose(); _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(search)) await Task.Delay(SEARCH_DELAY, token);
+            if (token.IsCancellationRequested) return;
+            _isLoading = true; StateHasChanged();
+
+            string cacheKey = string.IsNullOrWhiteSpace(search) ? CACHE_KEY : $"{CACHE_KEY}_{search}";
+            if (!string.IsNullOrWhiteSpace(search)) StateHub.ClearCache(cacheKey);
+
+            var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(token);
+                var q = db.Set<AttributeDefinition>().AsNoTracking().AsQueryable();
+                q = q.Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu == null || x.IsDeleted.IsDeletedStatu == false);
+                return await q.OrderBy(x => x.DisplayOrder).ThenBy(x => x.CanonicalName).ToListAsync(token);
+            }, token);
+
+            if (token.IsCancellationRequested || result == null) return;
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                result = result.Where(x =>
+                    Contains(x.CanonicalCode, s) || Contains(x.CanonicalName, s) || Contains(x.NormalizedName, s)
+                ).ToList();
+            }
+            _allItems = result;
+            ApplyPaging(1);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!token.IsCancellationRequested) { await LogError("LoadData", ex); await Notify("danger", "Hata", "Veriler yüklenirken sorun oluştu."); }
+        }
+        finally { if (!token.IsCancellationRequested) { _isLoading = false; StateHasChanged(); } }
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _groups = await db.Set<AttributeGroup>().AsNoTracking()
+                .Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu == null || x.IsDeleted.IsDeletedStatu == false)
+                .OrderBy(x => x.DisplayOrder).ThenBy(x => x.CanonicalName).ToListAsync(_cts.Token);
+            _groupLookup = _groups.ToDictionary(g => g.Id, g => g.CanonicalName);
+
+            _unitGroups = await db.Set<UnitGroup>().AsNoTracking()
+                .Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu == null || x.IsDeleted.IsDeletedStatu == false)
+                .OrderBy(x => x.CanonicalName).ToListAsync(_cts.Token);
+
+            // Tüm attribute'ları dependency lookup için yükle (YENİ)
+            var allAttrs = await db.Set<AttributeDefinition>().AsNoTracking()
+                .Where(x => x.IsDeleted == null || x.IsDeleted.IsDeletedStatu == null || x.IsDeleted.IsDeletedStatu == false)
+                .OrderBy(x => x.CanonicalName).ToListAsync(_cts.Token);
+            _allAttributeLookup = allAttrs.ToDictionary(a => a.Id, a => $"{a.CanonicalName} ({a.CanonicalCode})");
+        }
+        catch (Exception ex) { await LogError("LoadLookups", ex); }
+    }
+
+    private static bool Contains(string? value, string search) => value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true;
+
+    private void ApplyPaging(int page)
+    {
+        _totalPages = Math.Max(1, (int)Math.Ceiling(_allItems.Count / (double)PAGE_SIZE));
+        _currentPage = Math.Clamp(page, 1, _totalPages);
+        _pagedItems = _allItems.Skip((_currentPage - 1) * PAGE_SIZE).Take(PAGE_SIZE).ToList();
+    }
+
+    private void GoToPage(int page) { ApplyPaging(page); StateHasChanged(); }
+
+    // ══════════════════════════════════════════════════════════════
+    // AKILLI SAYFALAMA (taşma düzeltmesi)
+    // ══════════════════════════════════════════════════════════════
+    private List<int> GetVisiblePages()
+    {
+        var pages = new List<int>();
+        const int window = 2;
+        if (_totalPages <= 7)
+        {
+            for (int i = 1; i <= _totalPages; i++) pages.Add(i);
+            return pages;
+        }
+        pages.Add(1);
+        int start = Math.Max(2, _currentPage - window);
+        int end = Math.Min(_totalPages - 1, _currentPage + window);
+        if (start > 2) pages.Add(-1);
+        for (int i = start; i <= end; i++) pages.Add(i);
+        if (end < _totalPages - 1) pages.Add(-1);
+        pages.Add(_totalPages);
+        return pages;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CASCADE: UnitGroup → Unit
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnUnitGroupChanged(ChangeEventArgs e, bool isAdd)
+    {
+        Guid.TryParse(e.Value?.ToString(), out var ugId);
+        if (isAdd) { _addUnitGroupId = ugId; _addModel!.BaseUnitId = null; _addUnits.Clear(); }
+        else { _editUnitGroupId = ugId; _editModel!.BaseUnitId = null; _editUnits.Clear(); }
+
+        if (ugId != Guid.Empty)
+        {
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                var units = await db.Set<Unit>().AsNoTracking()
+                    .Where(u => u.UnitGroupId == ugId && (u.IsDeleted == null || u.IsDeleted.IsDeletedStatu == null || u.IsDeleted.IsDeletedStatu == false))
+                    .OrderBy(u => u.DisplayOrder).ToListAsync(_cts.Token);
+                if (isAdd) _addUnits = units; else _editUnits = units;
+            }
+            catch (Exception ex) { await LogError("OnUnitGroupChanged", ex); }
+        }
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // NORMALİZASYON
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnAddNameBlur() { if (_addModel != null && string.IsNullOrWhiteSpace(_addModel.NormalizedName)) _addModel.NormalizedName = TextNormalizer.Normalize(_addModel.CanonicalName); }
+    private void OnEditNameBlur() { if (_editModel != null && string.IsNullOrWhiteSpace(_editModel.NormalizedName)) _editModel.NormalizedName = TextNormalizer.Normalize(_editModel.CanonicalName); }
+
+    // ══════════════════════════════════════════════════════════════
+    // ARAMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OnSearchInput(ChangeEventArgs e) { _searchTerm = e.Value?.ToString() ?? string.Empty; await LoadDataAsync(_searchTerm); }
+    private async Task ClearSearch() { _searchTerm = string.Empty; await LoadDataAsync(null); }
+
+    // ══════════════════════════════════════════════════════════════
+    // MODAL AÇMA
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task OpenAddModal()
+    {
+        _addModel = new AttributeDefinition
+        {
+            Id = Guid.NewGuid(),
+            DataType = AttributeDataType.Text,
+            InputType = AttributeInputType.TextBox,
+            IsActive = true,
+            IsVisibleOnProductPageByDefault = true,
+            Version = 1,
+            Ai = new AiMetadata { Source = ContentSource.Manual, ApprovalStatus = AiApprovalStatus.NotRequired, ReviewStatus = AiReviewStatus.NotReviewed }
+        };
+        _addUnitGroupId = Guid.Empty; _addUnits.Clear();
+        await ShowModal("AddModal");
+    }
+
+    private async Task OpenEditModal(AttributeDefinition item)
+    {
+        _activeTab = 1;
+        _editModel = new AttributeDefinition
+        {
+            Id = item.Id,
+            CanonicalCode = item.CanonicalCode,
+            NormalizedName = item.NormalizedName,
+            CanonicalName = item.CanonicalName,
+            AttributeGroupId = item.AttributeGroupId,
+            DataType = item.DataType,
+            InputType = item.InputType,
+            UnitGroupId = item.UnitGroupId,
+            BaseUnitId = item.BaseUnitId,
+            IsMultiValued = item.IsMultiValued,
+            IsRequiredByDefault = item.IsRequiredByDefault,
+            IsVariantByDefault = item.IsVariantByDefault,
+            IsFilterableByDefault = item.IsFilterableByDefault,
+            IsSearchableByDefault = item.IsSearchableByDefault,
+            IsComparableByDefault = item.IsComparableByDefault,
+            IsVisibleOnProductPageByDefault = item.IsVisibleOnProductPageByDefault,
+            IsKeyAttribute = item.IsKeyAttribute,
+            IsActive = item.IsActive,
+            IsUnique = item.IsUnique,
+            IsSystemLocked = item.IsSystemLocked,
+            RegexPattern = item.RegexPattern,
+            MinNumericValue = item.MinNumericValue,
+            MaxNumericValue = item.MaxNumericValue,
+            NumericStep = item.NumericStep,
+            DecimalScale = item.DecimalScale,
+            MinLength = item.MinLength,
+            MaxLength = item.MaxLength,
+            DefaultValue = item.DefaultValue,
+            DisplayOrder = item.DisplayOrder,
+            Version = item.Version,
+            CreatedAtUtc = item.CreatedAtUtc,
+            UpdatedAtUtc = item.UpdatedAtUtc,
+            Ai = new AiMetadata
+            {
+                Source = item.Ai?.Source ?? ContentSource.Manual,
+                IsManuallyEdited = item.Ai?.IsManuallyEdited ?? false,
+                AiModel = item.Ai?.AiModel,
+                AiModelVersion = item.Ai?.AiModelVersion,
+                Confidence = item.Ai?.Confidence,
+                PromptHash = item.Ai?.PromptHash,
+                PromptVersion = item.Ai?.PromptVersion,
+                ApprovalStatus = item.Ai?.ApprovalStatus ?? AiApprovalStatus.NotRequired,
+                ReviewStatus = item.Ai?.ReviewStatus ?? AiReviewStatus.NotReviewed,
+                ReviewNote = item.Ai?.ReviewNote,
+                CategorySource = item.Ai?.CategorySource
+            }
+        };
+
+        // UnitGroup cascade preload
+        _editUnitGroupId = item.UnitGroupId ?? Guid.Empty;
+        _editUnits.Clear();
+        if (_editUnitGroupId != Guid.Empty)
+        {
+            try
+            {
+                await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+                _editUnits = await db.Set<Unit>().AsNoTracking()
+                    .Where(u => u.UnitGroupId == _editUnitGroupId && (u.IsDeleted == null || u.IsDeleted.IsDeletedStatu == null || u.IsDeleted.IsDeletedStatu == false))
+                    .OrderBy(u => u.DisplayOrder).ToListAsync(_cts.Token);
+            }
+            catch (Exception ex) { await LogError("OpenEditModal_Units", ex); }
+        }
+
+        // İlişkili verileri yükle
+        await LoadRelatedDataAsync(item.Id);
+        await ShowModal("EditModal");
+    }
+
+    private async Task LoadRelatedDataAsync(Guid attributeId)
+    {
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            _editOptions = await db.Set<AttributeOption>().AsNoTracking()
+                .Where(o => o.AttributeDefinitionId == attributeId && (o.IsDeleted == null || o.IsDeleted.IsDeletedStatu == null || o.IsDeleted.IsDeletedStatu == false))
+                .OrderBy(o => o.DisplayOrder).ThenBy(o => o.CanonicalValue).ToListAsync(_cts.Token);
+
+            _editTranslations = await db.Set<AttributeTranslation>().AsNoTracking()
+                .Where(t => t.AttributeDefinitionId == attributeId && (t.IsDeleted == null || t.IsDeleted.IsDeletedStatu == null || t.IsDeleted.IsDeletedStatu == false))
+                .OrderBy(t => t.Language).ToListAsync(_cts.Token);
+
+            _editAliases = await db.Set<AttributeAlias>().AsNoTracking()
+                .Where(a => a.AttributeDefinitionId == attributeId && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu == null || a.IsDeleted.IsDeletedStatu == false))
+                .OrderBy(a => a.Language).ToListAsync(_cts.Token);
+
+            _editSynonyms = await db.Set<AttributeSynonym>().AsNoTracking()
+                .Where(s => s.AttributeDefinitionId == attributeId && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu == null || s.IsDeleted.IsDeletedStatu == false))
+                .OrderBy(s => s.Token).ToListAsync(_cts.Token);
+
+            // Dependencies yükle (YENİ)
+            _editDependencies = await db.Set<AttributeDependency>().AsNoTracking()
+                .Where(d => d.SourceAttributeDefinitionId == attributeId || d.TargetAttributeDefinitionId == attributeId)
+                .Where(d => d.IsDeleted == null || d.IsDeleted.IsDeletedStatu == null || d.IsDeleted.IsDeletedStatu == false)
+                .OrderBy(d => d.ConditionGroup).ThenBy(d => d.DisplayOrder).ToListAsync(_cts.Token);
+        }
+        catch (Exception ex) { await LogError("LoadRelatedData", ex); }
+    }
+
+    private async Task OpenDeleteModal(AttributeDefinition item) { _deleteTarget = item; await ShowModal("DeleteModal"); }
+
+    private async Task OpenBulkDeleteModal()
+    {
+        if (!_selectedIds.Any()) return;
+        _bulkDeletePreview = _allItems.Where(x => _selectedIds.Contains(x.Id)).ToList();
+        await ShowModal("BulkDeleteModal");
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // OPTIONS CRUD (Inline) — Eksik alanlar tamamlandı
+    // ══════════════════════════════════════════════════════════════
+
+    private void AddNewOptionRow()
+    {
+        _optionBuffer = new AttributeOption
+        {
+            Id = Guid.NewGuid(),
+            AttributeDefinitionId = _editModel!.Id,
+            IsActive = true,
+            DisplayOrder = (_editOptions.Any() ? _editOptions.Max(o => o.DisplayOrder) : 0) + 10,
+            IsDeleted = new IsDeleted { IsDeletedStatu = false }
+        };
+        _editingOptionId = _optionBuffer.Id;
+        _editOptions.Add(_optionBuffer);
+    }
+
+    private void EditOption(AttributeOption opt)
+    {
+        _optionBuffer = new AttributeOption
+        {
+            Id = opt.Id,
+            AttributeDefinitionId = opt.AttributeDefinitionId,
+            CanonicalCode = opt.CanonicalCode,
+            CanonicalValue = opt.CanonicalValue,
+            NormalizedValue = opt.NormalizedValue,
+            ColorHex = opt.ColorHex,
+            ImageUrl = opt.ImageUrl,
+            NumericValue = opt.NumericValue,
+            ParentOptionId = opt.ParentOptionId,
+            Level = opt.Level,
+            DisplayOrder = opt.DisplayOrder,
+            IsActive = opt.IsActive
+        };
+        _editingOptionId = opt.Id;
+    }
+
+    private void SaveOptionBuffer()
+    {
+        if (string.IsNullOrWhiteSpace(_optionBuffer.CanonicalCode) || string.IsNullOrWhiteSpace(_optionBuffer.CanonicalValue)) return;
+        if (string.IsNullOrWhiteSpace(_optionBuffer.NormalizedValue)) _optionBuffer.NormalizedValue = TextNormalizer.Normalize(_optionBuffer.CanonicalValue);
+        // Seviyeyi otomatik hesapla (parent varsa parent.Level + 1)
+        if (_optionBuffer.ParentOptionId.HasValue && _optionBuffer.ParentOptionId != Guid.Empty)
+        {
+            var parent = _editOptions.FirstOrDefault(o => o.Id == _optionBuffer.ParentOptionId);
+            _optionBuffer.Level = (parent?.Level ?? 0) + 1;
+        }
+        else
+        {
+            _optionBuffer.Level = 0;
+            _optionBuffer.ParentOptionId = null;
+        }
+        var existing = _editOptions.FirstOrDefault(o => o.Id == _optionBuffer.Id);
+        if (existing != null)
+        {
+            existing.CanonicalCode = _optionBuffer.CanonicalCode;
+            existing.CanonicalValue = _optionBuffer.CanonicalValue;
+            existing.NormalizedValue = _optionBuffer.NormalizedValue;
+            existing.ColorHex = _optionBuffer.ColorHex;
+            existing.ImageUrl = _optionBuffer.ImageUrl;
+            existing.NumericValue = _optionBuffer.NumericValue;
+            existing.ParentOptionId = _optionBuffer.ParentOptionId;
+            existing.Level = _optionBuffer.Level;
+            existing.DisplayOrder = _optionBuffer.DisplayOrder;
+            existing.IsActive = _optionBuffer.IsActive;
+        }
+        _editingOptionId = Guid.Empty;
+    }
+
+    private void CancelOptionEdit()
+    {
+        if (_optionBuffer.Id != Guid.Empty && !_editOptions.Any(o => o.Id == _optionBuffer.Id && o.CanonicalCode != null))
+            _editOptions.RemoveAll(o => o.Id == _optionBuffer.Id);
+        _editingOptionId = Guid.Empty;
+    }
+
+    private void DeleteOption(AttributeOption opt) { _editOptions.RemoveAll(o => o.Id == opt.Id); }
+
+    // ══════════════════════════════════════════════════════════════
+    // TRANSLATIONS CRUD (Inline) — Eksik alanlar tamamlandı
+    // ══════════════════════════════════════════════════════════════
+
+    private void AddNewTranslationRow()
+    {
+        _translationBuffer = new AttributeTranslation
+        {
+            Id = Guid.NewGuid(),
+            AttributeDefinitionId = _editModel!.Id,
+            Language = Language.Tr,
+            Source = ContentSource.Manual,
+            IsDeleted = new IsDeleted { IsDeletedStatu = false }
+        };
+        _editingTranslationId = _translationBuffer.Id;
+        _editTranslations.Add(_translationBuffer);
+    }
+
+    private void EditTranslation(AttributeTranslation tr)
+    {
+        _translationBuffer = new AttributeTranslation
+        {
+            Id = tr.Id,
+            AttributeDefinitionId = tr.AttributeDefinitionId,
+            Language = tr.Language,
+            Name = tr.Name,
+            Description = tr.Description,
+            HelpText = tr.HelpText,
+            Placeholder = tr.Placeholder,
+            Source = tr.Source,
+            IsManuallyEdited = tr.IsManuallyEdited
+        };
+        _editingTranslationId = tr.Id;
+    }
+
+    private void SaveTranslationBuffer()
+    {
+        if (string.IsNullOrWhiteSpace(_translationBuffer.Name)) return;
+        var existing = _editTranslations.FirstOrDefault(t => t.Id == _translationBuffer.Id);
+        if (existing != null)
+        {
+            existing.Language = _translationBuffer.Language;
+            existing.Name = _translationBuffer.Name;
+            existing.Description = _translationBuffer.Description;
+            existing.HelpText = _translationBuffer.HelpText;
+            existing.Placeholder = _translationBuffer.Placeholder;
+            existing.Source = _translationBuffer.Source;
+            existing.IsManuallyEdited = _translationBuffer.IsManuallyEdited;
+        }
+        _editingTranslationId = Guid.Empty;
+    }
+
+    private void CancelTranslationEdit()
+    {
+        if (_translationBuffer.Id != Guid.Empty && !_editTranslations.Any(t => t.Id == _translationBuffer.Id && t.Name != null))
+            _editTranslations.RemoveAll(t => t.Id == _translationBuffer.Id);
+        _editingTranslationId = Guid.Empty;
+    }
+
+    private void DeleteTranslation(AttributeTranslation tr) { _editTranslations.RemoveAll(t => t.Id == tr.Id); }
+
+    // ══════════════════════════════════════════════════════════════
+    // ALIAS CRUD (Inline)
+    // ══════════════════════════════════════════════════════════════
+
+    private void AddNewAliasRow()
+    {
+        _aliasBuffer = new AttributeAlias
+        {
+            Id = Guid.NewGuid(),
+            AttributeDefinitionId = _editModel!.Id,
+            Source = ContentSource.Manual,
+            IsDeleted = new IsDeleted { IsDeletedStatu = false }
+        };
+        _editingAliasId = _aliasBuffer.Id;
+        _editAliases.Add(_aliasBuffer);
+    }
+
+    private void EditAlias(AttributeAlias al)
+    {
+        _aliasBuffer = new AttributeAlias
+        {
+            Id = al.Id,
+            AttributeDefinitionId = al.AttributeDefinitionId,
+            Language = al.Language,
+            Alias = al.Alias,
+            NormalizedAlias = al.NormalizedAlias,
+            Source = al.Source
+        };
+        _editingAliasId = al.Id;
+    }
+
+    private void SaveAliasBuffer()
+    {
+        if (string.IsNullOrWhiteSpace(_aliasBuffer.Alias)) return;
+        if (string.IsNullOrWhiteSpace(_aliasBuffer.NormalizedAlias)) _aliasBuffer.NormalizedAlias = TextNormalizer.Normalize(_aliasBuffer.Alias);
+        var existing = _editAliases.FirstOrDefault(a => a.Id == _aliasBuffer.Id);
+        if (existing != null)
+        {
+            existing.Language = _aliasBuffer.Language;
+            existing.Alias = _aliasBuffer.Alias;
+            existing.NormalizedAlias = _aliasBuffer.NormalizedAlias;
+            existing.Source = _aliasBuffer.Source;
+        }
+        _editingAliasId = Guid.Empty;
+    }
+
+    private void CancelAliasEdit()
+    {
+        if (_aliasBuffer.Id != Guid.Empty && !_editAliases.Any(a => a.Id == _aliasBuffer.Id && a.Alias != null))
+            _editAliases.RemoveAll(a => a.Id == _aliasBuffer.Id);
+        _editingAliasId = Guid.Empty;
+    }
+
+    private void DeleteAlias(AttributeAlias al) { _editAliases.RemoveAll(a => a.Id == al.Id); }
+
+    // ══════════════════════════════════════════════════════════════
+    // SYNONYM CRUD (Inline)
+    // ══════════════════════════════════════════════════════════════
+
+    private void AddNewSynonymRow()
+    {
+        _synonymBuffer = new AttributeSynonym
+        {
+            Id = Guid.NewGuid(),
+            AttributeDefinitionId = _editModel!.Id,
+            Source = ContentSource.Manual,
+            IsDeleted = new IsDeleted { IsDeletedStatu = false }
+        };
+        _editingSynonymId = _synonymBuffer.Id;
+        _editSynonyms.Add(_synonymBuffer);
+    }
+
+    private void EditSynonym(AttributeSynonym sy)
+    {
+        _synonymBuffer = new AttributeSynonym
+        {
+            Id = sy.Id,
+            AttributeDefinitionId = sy.AttributeDefinitionId,
+            Token = sy.Token,
+            NormalizedToken = sy.NormalizedToken,
+            Language = sy.Language,
+            Source = sy.Source,
+            Confidence = sy.Confidence
+        };
+        _editingSynonymId = sy.Id;
+    }
+
+    private void SaveSynonymBuffer()
+    {
+        if (string.IsNullOrWhiteSpace(_synonymBuffer.Token)) return;
+        if (string.IsNullOrWhiteSpace(_synonymBuffer.NormalizedToken)) _synonymBuffer.NormalizedToken = TextNormalizer.Normalize(_synonymBuffer.Token);
+        var existing = _editSynonyms.FirstOrDefault(s => s.Id == _synonymBuffer.Id);
+        if (existing != null)
+        {
+            existing.Token = _synonymBuffer.Token;
+            existing.NormalizedToken = _synonymBuffer.NormalizedToken;
+            existing.Language = _synonymBuffer.Language;
+            existing.Source = _synonymBuffer.Source;
+            existing.Confidence = _synonymBuffer.Confidence;
+        }
+        _editingSynonymId = Guid.Empty;
+    }
+
+    private void CancelSynonymEdit()
+    {
+        if (_synonymBuffer.Id != Guid.Empty && !_editSynonyms.Any(s => s.Id == _synonymBuffer.Id && s.Token != null))
+            _editSynonyms.RemoveAll(s => s.Id == _synonymBuffer.Id);
+        _editingSynonymId = Guid.Empty;
+    }
+
+    private void DeleteSynonym(AttributeSynonym sy) { _editSynonyms.RemoveAll(s => s.Id == sy.Id); }
+
+    // ══════════════════════════════════════════════════════════════
+    // DEPENDENCY CRUD (Inline) — YENİ
+    // ══════════════════════════════════════════════════════════════
+
+    private void AddNewDependencyRow()
+    {
+        _dependencyBuffer = new AttributeDependency
+        {
+            Id = Guid.NewGuid(),
+            SourceAttributeDefinitionId = _editModel!.Id, // Varsayılan olarak mevcut attribute
+            Operator = DependencyOperator.Equals,
+            Action = DependencyAction.Show,
+            ConditionGroup = 1,
+            GroupLogic = DependencyLogic.And,
+            IsActive = true,
+            DisplayOrder = (_editDependencies.Any() ? _editDependencies.Max(d => d.DisplayOrder) : 0) + 10,
+            IsDeleted = new IsDeleted { IsDeletedStatu = false }
+        };
+        _editingDependencyId = _dependencyBuffer.Id;
+        _editDependencies.Add(_dependencyBuffer);
+    }
+
+    private void EditDependency(AttributeDependency dep)
+    {
+        _dependencyBuffer = new AttributeDependency
+        {
+            Id = dep.Id,
+            CategoryId = dep.CategoryId,
+            SourceAttributeDefinitionId = dep.SourceAttributeDefinitionId,
+            Operator = dep.Operator,
+            ExpectedOptionId = dep.ExpectedOptionId,
+            ExpectedValue = dep.ExpectedValue,
+            TargetAttributeDefinitionId = dep.TargetAttributeDefinitionId,
+            Action = dep.Action,
+            ConditionGroup = dep.ConditionGroup,
+            GroupLogic = dep.GroupLogic,
+            DisplayOrder = dep.DisplayOrder,
+            IsActive = dep.IsActive
+        };
+        _editingDependencyId = dep.Id;
+    }
+
+    private void SaveDependencyBuffer()
+    {
+        if (_dependencyBuffer.SourceAttributeDefinitionId == Guid.Empty || _dependencyBuffer.TargetAttributeDefinitionId == Guid.Empty) return;
+        var existing = _editDependencies.FirstOrDefault(d => d.Id == _dependencyBuffer.Id);
+        if (existing != null)
+        {
+            existing.CategoryId = _dependencyBuffer.CategoryId;
+            existing.SourceAttributeDefinitionId = _dependencyBuffer.SourceAttributeDefinitionId;
+            existing.Operator = _dependencyBuffer.Operator;
+            existing.ExpectedOptionId = _dependencyBuffer.ExpectedOptionId;
+            existing.ExpectedValue = _dependencyBuffer.ExpectedValue;
+            existing.TargetAttributeDefinitionId = _dependencyBuffer.TargetAttributeDefinitionId;
+            existing.Action = _dependencyBuffer.Action;
+            existing.ConditionGroup = _dependencyBuffer.ConditionGroup;
+            existing.GroupLogic = _dependencyBuffer.GroupLogic;
+            existing.DisplayOrder = _dependencyBuffer.DisplayOrder;
+            existing.IsActive = _dependencyBuffer.IsActive;
+        }
+        _editingDependencyId = Guid.Empty;
+    }
+
+    private void CancelDependencyEdit()
+    {
+        if (_dependencyBuffer.Id != Guid.Empty && !_editDependencies.Any(d => d.Id == _dependencyBuffer.Id && d.SourceAttributeDefinitionId != Guid.Empty))
+            _editDependencies.RemoveAll(d => d.Id == _dependencyBuffer.Id);
+        _editingDependencyId = Guid.Empty;
+    }
+
+    private void DeleteDependency(AttributeDependency dep) { _editDependencies.RemoveAll(d => d.Id == dep.Id); }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Ekle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task AddAsync()
+    {
+        if (_isProcessing || _addModel == null) return;
+        if (string.IsNullOrWhiteSpace(_addModel.CanonicalCode) || string.IsNullOrWhiteSpace(_addModel.CanonicalName))
+        { await Notify("warning", "Uyarı", "Kanonik kod ve ad zorunludur."); return; }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            if (string.IsNullOrWhiteSpace(_addModel.NormalizedName)) _addModel.NormalizedName = TextNormalizer.Normalize(_addModel.CanonicalName);
+            _addModel.CanonicalCode = TextNormalizer.ToCanonicalCode(_addModel.CanonicalCode);
+            _addModel.CreatedAtUtc = DateTime.UtcNow;
+            _addModel.CreatedByUserId = use?.Id;
+            _addModel.IsDeleted = new IsDeleted { IsDeletedStatu = false };
+
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            db.Set<AttributeDefinition>().Add(_addModel);
+            await db.SaveChangesAsync(_cts.Token);
+
+            await HideModal("AddModal"); _addModel = null; _isProcessing = false;
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Add");
+            await Notify("success", "Başarılı", "Attribute eklendi.");
+        }
+        catch (Exception ex) { await LogError("AddAsync", ex); await Notify("danger", "Hata", "Kayıt sırasında sorun oluştu."); }
+        finally { if (_isProcessing) { _isProcessing = false; StateHasChanged(); } _writeLock.Release(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Güncelle
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task UpdateAsync()
+    {
+        if (_isProcessing || _editModel == null) return;
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var existing = await db.Set<AttributeDefinition>().FindAsync(new object[] { _editModel.Id }, _cts.Token);
+            if (existing == null) { await Notify("warning", "Uyarı", "Kayıt artık mevcut değil."); return; }
+
+            // Temel alanlar
+            existing.CanonicalCode = _editModel.CanonicalCode;
+            existing.NormalizedName = string.IsNullOrWhiteSpace(_editModel.NormalizedName) ? TextNormalizer.Normalize(_editModel.CanonicalName) : _editModel.NormalizedName;
+            existing.CanonicalName = _editModel.CanonicalName;
+            existing.AttributeGroupId = _editModel.AttributeGroupId == Guid.Empty ? null : _editModel.AttributeGroupId;
+            existing.DataType = _editModel.DataType;
+            existing.InputType = _editModel.InputType;
+            existing.UnitGroupId = _editModel.UnitGroupId;
+            existing.BaseUnitId = _editModel.BaseUnitId;
+            existing.IsMultiValued = _editModel.IsMultiValued;
+            existing.IsRequiredByDefault = _editModel.IsRequiredByDefault;
+            existing.IsVariantByDefault = _editModel.IsVariantByDefault;
+            existing.IsFilterableByDefault = _editModel.IsFilterableByDefault;
+            existing.IsSearchableByDefault = _editModel.IsSearchableByDefault;
+            existing.IsComparableByDefault = _editModel.IsComparableByDefault;
+            existing.IsVisibleOnProductPageByDefault = _editModel.IsVisibleOnProductPageByDefault;
+            existing.IsKeyAttribute = _editModel.IsKeyAttribute;
+            existing.IsActive = _editModel.IsActive;
+            existing.IsUnique = _editModel.IsUnique;
+            existing.IsSystemLocked = _editModel.IsSystemLocked;
+            existing.RegexPattern = _editModel.RegexPattern;
+            existing.MinNumericValue = _editModel.MinNumericValue;
+            existing.MaxNumericValue = _editModel.MaxNumericValue;
+            existing.NumericStep = _editModel.NumericStep;
+            existing.DecimalScale = _editModel.DecimalScale;
+            existing.MinLength = _editModel.MinLength;
+            existing.MaxLength = _editModel.MaxLength;
+            existing.DefaultValue = _editModel.DefaultValue;
+            existing.DisplayOrder = _editModel.DisplayOrder;
+            existing.UpdatedAtUtc = DateTime.UtcNow;
+            existing.UpdatedByUserId = use?.Id;
+
+            // AI Metadata
+            existing.Ai ??= new AiMetadata();
+            existing.Ai.Source = _editModel.Ai.Source;
+            existing.Ai.IsManuallyEdited = _editModel.Ai.IsManuallyEdited;
+            existing.Ai.AiModel = _editModel.Ai.AiModel;
+            existing.Ai.AiModelVersion = _editModel.Ai.AiModelVersion;
+            existing.Ai.Confidence = _editModel.Ai.Confidence;
+            existing.Ai.PromptHash = _editModel.Ai.PromptHash;
+            existing.Ai.PromptVersion = _editModel.Ai.PromptVersion;
+            existing.Ai.ApprovalStatus = _editModel.Ai.ApprovalStatus;
+            existing.Ai.ReviewStatus = _editModel.Ai.ReviewStatus;
+            existing.Ai.ReviewNote = _editModel.Ai.ReviewNote;
+            existing.Ai.CategorySource = _editModel.Ai.CategorySource;
+            if (_editModel.Ai.IsManuallyEdited) { existing.Ai.ManuallyEditedByUserId = use?.Id; existing.Ai.ManuallyEditedAtUtc = DateTime.UtcNow; }
+
+            // Options sync
+            await SyncOptionsAsync(db, existing.Id);
+            // Translations sync
+            await SyncTranslationsAsync(db, existing.Id);
+            // Alias sync
+            await SyncAliasesAsync(db, existing.Id);
+            // Synonym sync
+            await SyncSynonymsAsync(db, existing.Id);
+            // Dependencies sync (YENİ)
+            await SyncDependenciesAsync(db, existing.Id);
+
+            await db.SaveChangesAsync(_cts.Token);
+            await HideModal("EditModal"); _editModel = null; _isProcessing = false;
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
+            await Notify("success", "Başarılı", "Attribute güncellendi.");
+        }
+        catch (Exception ex) { await LogError("UpdateAsync", ex); await Notify("danger", "Hata", "Güncelleme sırasında sorun oluştu."); }
+        finally { if (_isProcessing) { _isProcessing = false; StateHasChanged(); } _writeLock.Release(); }
+    }
+
+    private async Task SyncOptionsAsync(_ApplicationConnectionDb db, Guid attributeId)
+    {
+        var existingOpts = await db.Set<AttributeOption>()
+            .Where(o => o.AttributeDefinitionId == attributeId && (o.IsDeleted == null || o.IsDeleted.IsDeletedStatu == null || o.IsDeleted.IsDeletedStatu == false))
+            .ToListAsync(_cts.Token);
+
+        foreach (var opt in _editOptions)
+        {
+            var existing = existingOpts.FirstOrDefault(o => o.Id == opt.Id);
+            if (existing == null)
+            {
+                opt.AttributeDefinitionId = attributeId;
+                opt.IsDeleted = new IsDeleted { IsDeletedStatu = false };
+                if (string.IsNullOrWhiteSpace(opt.NormalizedValue)) opt.NormalizedValue = TextNormalizer.Normalize(opt.CanonicalValue);
+                db.Set<AttributeOption>().Add(opt);
+            }
+            else
+            {
+                existing.CanonicalCode = opt.CanonicalCode;
+                existing.CanonicalValue = opt.CanonicalValue;
+                existing.NormalizedValue = opt.NormalizedValue;
+                existing.ColorHex = opt.ColorHex;
+                existing.ImageUrl = opt.ImageUrl;
+                existing.NumericValue = opt.NumericValue;
+                existing.ParentOptionId = opt.ParentOptionId;
+                existing.Level = opt.Level;
+                existing.DisplayOrder = opt.DisplayOrder;
+                existing.IsActive = opt.IsActive;
+            }
+        }
+        // Silinenler
+        foreach (var ex in existingOpts.Where(o => !_editOptions.Any(e => e.Id == o.Id)))
+        {
+            ex.IsDeleted ??= new IsDeleted();
+            ex.IsDeleted.IsDeletedStatu = true;
+            ex.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+        }
+    }
+
+    private async Task SyncTranslationsAsync(_ApplicationConnectionDb db, Guid attributeId)
+    {
+        var existing = await db.Set<AttributeTranslation>()
+            .Where(t => t.AttributeDefinitionId == attributeId && (t.IsDeleted == null || t.IsDeleted.IsDeletedStatu == null || t.IsDeleted.IsDeletedStatu == false))
+            .ToListAsync(_cts.Token);
+        foreach (var tr in _editTranslations)
+        {
+            var ex = existing.FirstOrDefault(t => t.Id == tr.Id);
+            if (ex == null) { tr.AttributeDefinitionId = attributeId; tr.IsDeleted = new IsDeleted { IsDeletedStatu = false }; db.Set<AttributeTranslation>().Add(tr); }
+            else { ex.Language = tr.Language; ex.Name = tr.Name; ex.Description = tr.Description; ex.HelpText = tr.HelpText; ex.Placeholder = tr.Placeholder; ex.Source = tr.Source; ex.IsManuallyEdited = tr.IsManuallyEdited; }
+        }
+        foreach (var ex in existing.Where(t => !_editTranslations.Any(e => e.Id == t.Id)))
+        { ex.IsDeleted ??= new IsDeleted(); ex.IsDeleted.IsDeletedStatu = true; ex.IsDeleted.DeletedAtDate = DateTime.UtcNow; }
+    }
+
+    private async Task SyncAliasesAsync(_ApplicationConnectionDb db, Guid attributeId)
+    {
+        var existing = await db.Set<AttributeAlias>()
+            .Where(a => a.AttributeDefinitionId == attributeId && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu == null || a.IsDeleted.IsDeletedStatu == false))
+            .ToListAsync(_cts.Token);
+        foreach (var al in _editAliases)
+        {
+            var ex = existing.FirstOrDefault(a => a.Id == al.Id);
+            if (ex == null) { al.AttributeDefinitionId = attributeId; al.IsDeleted = new IsDeleted { IsDeletedStatu = false }; if (string.IsNullOrWhiteSpace(al.NormalizedAlias)) al.NormalizedAlias = TextNormalizer.Normalize(al.Alias); db.Set<AttributeAlias>().Add(al); }
+            else { ex.Language = al.Language; ex.Alias = al.Alias; ex.NormalizedAlias = al.NormalizedAlias; ex.Source = al.Source; }
+        }
+        foreach (var ex in existing.Where(a => !_editAliases.Any(e => e.Id == a.Id)))
+        { ex.IsDeleted ??= new IsDeleted(); ex.IsDeleted.IsDeletedStatu = true; ex.IsDeleted.DeletedAtDate = DateTime.UtcNow; }
+    }
+
+    private async Task SyncSynonymsAsync(_ApplicationConnectionDb db, Guid attributeId)
+    {
+        var existing = await db.Set<AttributeSynonym>()
+            .Where(s => s.AttributeDefinitionId == attributeId && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu == null || s.IsDeleted.IsDeletedStatu == false))
+            .ToListAsync(_cts.Token);
+        foreach (var sy in _editSynonyms)
+        {
+            var ex = existing.FirstOrDefault(s => s.Id == sy.Id);
+            if (ex == null) { sy.AttributeDefinitionId = attributeId; sy.IsDeleted = new IsDeleted { IsDeletedStatu = false }; if (string.IsNullOrWhiteSpace(sy.NormalizedToken)) sy.NormalizedToken = TextNormalizer.Normalize(sy.Token); db.Set<AttributeSynonym>().Add(sy); }
+            else { ex.Token = sy.Token; ex.NormalizedToken = sy.NormalizedToken; ex.Language = sy.Language; ex.Source = sy.Source; ex.Confidence = sy.Confidence; }
+        }
+        foreach (var ex in existing.Where(s => !_editSynonyms.Any(e => e.Id == s.Id)))
+        { ex.IsDeleted ??= new IsDeleted(); ex.IsDeleted.IsDeletedStatu = true; ex.IsDeleted.DeletedAtDate = DateTime.UtcNow; }
+    }
+
+    // Dependency sync (YENİ)
+    private async Task SyncDependenciesAsync(_ApplicationConnectionDb db, Guid attributeId)
+    {
+        var existing = await db.Set<AttributeDependency>()
+            .Where(d => (d.SourceAttributeDefinitionId == attributeId || d.TargetAttributeDefinitionId == attributeId)
+                     && (d.IsDeleted == null || d.IsDeleted.IsDeletedStatu == null || d.IsDeleted.IsDeletedStatu == false))
+            .ToListAsync(_cts.Token);
+        foreach (var dep in _editDependencies)
+        {
+            var ex = existing.FirstOrDefault(d => d.Id == dep.Id);
+            if (ex == null)
+            {
+                dep.IsDeleted = new IsDeleted { IsDeletedStatu = false };
+                db.Set<AttributeDependency>().Add(dep);
+            }
+            else
+            {
+                ex.CategoryId = dep.CategoryId;
+                ex.SourceAttributeDefinitionId = dep.SourceAttributeDefinitionId;
+                ex.Operator = dep.Operator;
+                ex.ExpectedOptionId = dep.ExpectedOptionId;
+                ex.ExpectedValue = dep.ExpectedValue;
+                ex.TargetAttributeDefinitionId = dep.TargetAttributeDefinitionId;
+                ex.Action = dep.Action;
+                ex.ConditionGroup = dep.ConditionGroup;
+                ex.GroupLogic = dep.GroupLogic;
+                ex.DisplayOrder = dep.DisplayOrder;
+                ex.IsActive = dep.IsActive;
+            }
+        }
+        foreach (var ex in existing.Where(d => !_editDependencies.Any(e => e.Id == d.Id)))
+        { ex.IsDeleted ??= new IsDeleted(); ex.IsDeleted.IsDeletedStatu = true; ex.IsDeleted.DeletedAtDate = DateTime.UtcNow; }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Tekli Sil
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task DeleteConfirmedAsync()
+    {
+        if (_isProcessing || _deleteTarget == null) return;
+        if (_deleteTarget.IsSystemLocked) { await Notify("warning", "Kilit", "Sistem kilitli attribute silinemez."); await HideModal("DeleteModal"); return; }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            var entity = await db.Set<AttributeDefinition>().FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+            if (entity != null)
+            {
+                entity.IsDeleted ??= new IsDeleted();
+                entity.IsDeleted.IsDeletedStatu = true;
+                entity.IsDeleted.DeletedAtDate = DateTime.UtcNow;
+                await db.SaveChangesAsync(_cts.Token);
+            }
+            await HideModal("DeleteModal"); _deleteTarget = null; _isProcessing = false;
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Delete");
+            await Notify("success", "Silindi", "Attribute başarıyla silindi.");
+        }
+        catch (Exception ex) { await LogError("DeleteAsync", ex); await Notify("danger", "Hata", "Silme sırasında sorun oluştu."); }
+        finally { if (_isProcessing) { _isProcessing = false; StateHasChanged(); } _writeLock.Release(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // CRUD — Toplu Sil
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task BulkDeleteConfirmedAsync()
+    {
+        if (_isProcessing || !_selectedIds.Any()) return;
+        var locked = _allItems.Where(x => _selectedIds.Contains(x.Id) && x.IsSystemLocked).ToList();
+        if (locked.Any()) { await Notify("warning", "Kilit", $"{locked.Count} sistem kilitli kayıt atlandı."); }
+        var ids = _selectedIds.Where(id => !_allItems.Any(x => x.Id == id && x.IsSystemLocked)).ToList();
+        if (!ids.Any()) { await HideModal("BulkDeleteModal"); return; }
+
+        await _writeLock.WaitAsync(_cts.Token);
+        try
+        {
+            _isProcessing = true; StateHasChanged();
+            var now = DateTime.UtcNow;
+            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            await db.Set<AttributeDefinition>()
+                .Where(x => ids.Contains(x.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(x => x.IsDeleted!.IsDeletedStatu, true)
+                    .SetProperty(x => x.IsDeleted!.DeletedAtDate, now), _cts.Token);
+            _selectedIds.Clear(); _allSelected = false; _bulkDeletePreview.Clear();
+            await HideModal("BulkDeleteModal"); _isProcessing = false;
+            StateHub.ClearCache(CACHE_KEY);
+            await StateHub.NotifyDataChanged(ENTITY_NAME);
+            await Logger.TakeIt(use?.Id, PAGE_TITLE, $"BulkDelete ({ids.Count})");
+            await Notify("success", "Silindi", $"{ids.Count} attribute silindi.");
+        }
+        catch (Exception ex) { await LogError("BulkDelete", ex); await Notify("danger", "Hata", "Toplu silme sırasında sorun oluştu."); }
+        finally { if (_isProcessing) { _isProcessing = false; StateHasChanged(); } _writeLock.Release(); }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TOPLU SEÇİM
+    // ══════════════════════════════════════════════════════════════
+
+    private void ToggleRowSelection(Guid id) { if (!_selectedIds.Remove(id)) _selectedIds.Add(id); _allSelected = _allItems.Count > 0 && _allItems.All(i => _selectedIds.Contains(i.Id)); StateHasChanged(); }
+    private void ToggleSelectAll() { if (_allSelected) _selectedIds.Clear(); else foreach (var item in _allItems) _selectedIds.Add(item.Id); _allSelected = _allItems.Count > 0 && _allItems.All(i => _selectedIds.Contains(i.Id)); StateHasChanged(); }
+    private void ClearSelection() { _selectedIds.Clear(); _allSelected = false; StateHasChanged(); }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) => await JS.InvokeVoidAsync("eval", $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+    private async Task HideModal(string id) => await JS.InvokeVoidAsync("eval", $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+    private async Task Notify(string type, string title, string text) { if (_notificationRef == null) return; await _notificationRef.Launch(type, title, text, "https://picsum.photos/120"); }
+    private async Task LogError(string action, Exception ex) { try { await Logger.TakeIt(use?.Id, PAGE_TITLE, action, exception: ex.Message, stackTrace: ex.StackTrace); } catch { } }
 }

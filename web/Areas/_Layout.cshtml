@@ -1,5 +1,4 @@
 ﻿@using data
-@using data.Owned;
 @using data._Carts;
 @using data._Categories;
 @using data._Follows;
@@ -32,10 +31,6 @@
     var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
 
     Users? use = null;
-
-    // MainCssJs — Kullanıcı tanımlı CSS/JS kodları
-    List<MainCssJs> _activeCssItems = new();
-    List<MainCssJs> _activeJsItems = new();
 
     // ═══════════════════════════════════════════════════════════════
     // 2. DİL VE VERİ ÇEKME MANTIĞI
@@ -123,27 +118,6 @@
             { "zh", "版权所有。" }
         };
         currentFooterText = footerTexts.GetValueOrDefault(lang, footerTexts["en"]);
-
-        // ═══════════════════════════════════════════════════════════════
-        // MainCssJs — Aktif ve silinmemiş CSS/JS kayıtlarını çek
-        // ═══════════════════════════════════════════════════════════════
-        try
-        {
-            using (var dbCssJs = new _ApplicationConnectionDb())
-            {
-                var allActiveCssJs = await dbCssJs.MainCssJs
-                    .AsNoTracking()
-                    .Where(x => x.IsActive == true
-                             && (x.IsDeleted == null || x.IsDeleted!.IsDeletedStatu != true)
-                             && !string.IsNullOrEmpty(x.UserCodes))
-                    .OrderBy(x => x.GetDateTime)
-                    .ToListAsync();
-
-                _activeCssItems = allActiveCssJs.Where(x => x.IsCssOrJs == true).ToList();
-                _activeJsItems = allActiveCssJs.Where(x => x.IsCssOrJs == false).ToList();
-            }
-        }
-        catch { }
     }
     catch (Exception ex)
     {
@@ -209,6 +183,36 @@
         { "hi", "hi-IN" }, { "pt", "pt-BR" }, { "ru", "ru-RU" },
         { "zh", "zh-CN" }
     };
+
+    // ═══════════════════════════════════════════════════════════════
+    // 4. DİNAMİK CSS/JS (MainCssJs) — Veritabanından aktif kodlar
+    //    IsCssOrJs == true  -> CSS  (<head> içine <style> olarak)
+    //    IsCssOrJs == false -> JS   (</body> öncesi <script> olarak)
+    //    Soft delete edilmiş (IsDeletedStatu == true) ve pasif kayıtlar hariç.
+    // ═══════════════════════════════════════════════════════════════
+    var activeCssList = new List<MainCssJs>();
+    var activeJsList = new List<MainCssJs>();
+    try
+    {
+        using (var dbCssJs = new _ApplicationConnectionDb())
+        {
+            var cssJsItems = await dbCssJs.MainCssJs
+                .AsNoTracking()
+                .Where(x => x.IsActive == true
+                         && x.IsDeleted.IsDeletedStatu != true)
+                .OrderBy(x => x.GetDateTime)
+                .ToListAsync();
+
+            activeCssList = cssJsItems
+                .Where(x => x.IsCssOrJs == true && !string.IsNullOrWhiteSpace(x.UserCodes))
+                .ToList();
+
+            activeJsList = cssJsItems
+                .Where(x => x.IsCssOrJs == false && !string.IsNullOrWhiteSpace(x.UserCodes))
+                .ToList();
+        }
+    }
+    catch { }
 }
 <!doctype html>
 <html lang="@langLocaleMap.GetValueOrDefault(lang, "en-US")" dir="@(lang == "hi" ? "ltr" : "ltr")">
@@ -312,9 +316,9 @@
     @* ═══════════════════════════════════════════════════════════════
        FAVICON & PWA
        ═══════════════════════════════════════════════════════════════ *@
-    <link rel="icon" href="https://efavori.com/_files/main/logo/logo_100.png" type="image/png" sizes="100x100" />
-    <link rel="icon" href="https://efavori.com/_files/main/logo/logo_100.png" type="image/png" sizes="100x100" />
-    <link rel="apple-touch-icon" href="https://efavori.com/_files/main/logo/logo_100.png" sizes="100x100">
+    <link rel="icon" href="https://efavori.com/_files/main/logo/logo.png" type="image/png" sizes="2000x2000" />
+    <link rel="icon" href="https://efavori.com/_files/main/logo/logo.png" type="image/png" sizes="2000x2000" />
+    <link rel="apple-touch-icon" href="https://efavori.com/_files/main/logo/logo.png" sizes="2000x2000">
     <meta name="theme-color" content="#0000FF">
     <meta name="application-name" content="efavori">
 
@@ -336,12 +340,25 @@
     @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
 
     @* ═══════════════════════════════════════════════════════════════
-       MainCssJs — Kullanıcı tanımlı CSS kodları
+       DİNAMİK CSS — MainCssJs (veritabanı: IsActive && IsCssOrJs == true)
+       Temel CSS'ten SONRA basılır ki override edebilsin.
        ═══════════════════════════════════════════════════════════════ *@
-    @foreach (var cssItem in _activeCssItems)
+    @foreach (var css in activeCssList)
     {
-        @Html.Raw(cssItem.UserCodes)
+                @Html.Raw(css.UserCodes)
     }
+
+    <!-- Google Search Console XML (gtag.js) -->
+    <meta name="google-site-verification" content="5NNGMkgIA5vY339WHPLmpN2efO1qVgj23Bf-pJjisyg" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-3S3KS4DHSF"></script>
+    <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() { dataLayer.push(arguments); }
+            gtag('js', new Date());
+
+            gtag('config', 'G-3S3KS4DHSF');
+    </script>
 
 </head>
 <body class="bg-theme @(use != null && !string.IsNullOrEmpty(use.BackgroundImagePath) ? use.BackgroundImagePath : "bg-theme1")">
@@ -356,6 +373,27 @@
 
         <div class="page-wrapper">
             <div class="page-content" role="main">
+
+                <div class="accordion" id="accordionWarning">
+                    <div class="accordion-item border-danger">
+                        <h2 class="accordion-header" id="headingWarning">
+                            <button class="accordion-button collapsed text-warning fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWarning" aria-expanded="false" aria-controls="collapseWarning">
+                                <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i> Önemli: Site Yapım Aşamasında
+                            </button>
+                        </h2>
+                        <div id="collapseWarning" class="accordion-collapse collapse" aria-labelledby="headingWarning" data-bs-parent="#accordionWarning">
+                            <div class="accordion-body bg-light">
+                                <div class="alert alert-white d-flex align-items-center mb-0" role="alert">
+                                    <i class="fa fa-shopping-cart fa-2x me-3" aria-hidden="true"></i>
+                                    <div>
+                                        <strong>Şu an için alışveriş yapılamamaktadır.</strong><br>
+                                        Web sitemiz henüz yapım aşamasında olduğu için ticari faaliyetlere ve online ödeme işlemlerine kapalıdır. Altyapı çalışmalarımız tamamlandığında tüm özellikler aktif olacaktır. Anlayışınız için teşekkür ederiz. Hedef <b>19 Ağustos 2026</b> tarihinde tüm özelliklerin aktif olmasıdır. Bu tarihe kadar siteyi test edebilir ve geri bildirimde bulunabilirsiniz.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 @RenderBody()
                 @if (use != null)
@@ -448,11 +486,12 @@
     @(await Html.RenderComponentAsync<Js>(RenderMode.Static, new { use = use != null ? use : null }))
 
     @* ═══════════════════════════════════════════════════════════════
-       MainCssJs — Kullanıcı tanımlı JS kodları
+       DİNAMİK JS — MainCssJs (veritabanı: IsActive && IsCssOrJs == false)
+       Temel JS bileşeninden SONRA basılır ki jQuery/Bootstrap hazır olsun.
        ═══════════════════════════════════════════════════════════════ *@
-    @foreach (var jsItem in _activeJsItems)
+    @foreach (var js in activeJsList)
     {
-        @Html.Raw(jsItem.UserCodes)
+                @Html.Raw(js.UserCodes)
     }
 
     @(await Html.RenderComponentAsync<razor._Shared.Notification>(RenderMode.Server))

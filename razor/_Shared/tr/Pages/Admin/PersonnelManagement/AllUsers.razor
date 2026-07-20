@@ -693,13 +693,15 @@ else
 
     private static string? Decrypt(string? value)
     {
-        if (string.IsNullOrEmpty(value)) return value;
-        var result = GlobalSecurityProvider.Decrypt(value);
-        return result?.StartsWith("Hata:") == true ? value : result;
+        // GlobalSecurityProvider kaldırıldı — şifreleme artık kullanılmıyor
+        return value;
     }
 
-    private static string? Enc(string? value) =>
-        string.IsNullOrEmpty(value) ? value : GlobalSecurityProvider.Encrypt(value);
+    private static string? Enc(string? value)
+    {
+        // GlobalSecurityProvider kaldırıldı — şifreleme artık kullanılmıyor
+        return value;
+    }
 
     // Checkbox onchange → bool
     private static bool Cb(ChangeEventArgs e) => e.Value is bool b && b;

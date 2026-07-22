@@ -331,13 +331,15 @@
     @if (!string.IsNullOrEmpty(jsonLdScript))
     {
         @Html.Raw(jsonLdScript)
+        <br />
     }
 
     @* ═══════════════════════════════════════════════════════════════
        CSS
        ═══════════════════════════════════════════════════════════════ *@
 
-    @(await Html.RenderComponentAsync<Css>(RenderMode.Static))
+    @(await Html.RenderComponentAsync<Css>(RenderMode.Static, new { use = use != null ? use : null }))
+
 
     @* ═══════════════════════════════════════════════════════════════
        DİNAMİK CSS — MainCssJs (veritabanı: IsActive && IsCssOrJs == true)
@@ -345,7 +347,7 @@
        ═══════════════════════════════════════════════════════════════ *@
     @foreach (var css in activeCssList)
     {
-                @Html.Raw(css.UserCodes)
+        @Html.Raw(css.UserCodes)
     }
 
     <!-- Google Search Console XML (gtag.js) -->
@@ -373,28 +375,6 @@
 
         <div class="page-wrapper">
             <div class="page-content" role="main">
-
-                <div class="accordion" id="accordionWarning">
-                    <div class="accordion-item border-danger">
-                        <h2 class="accordion-header" id="headingWarning">
-                            <button class="accordion-button collapsed text-warning fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWarning" aria-expanded="false" aria-controls="collapseWarning">
-                                <i class="fa fa-exclamation-triangle me-2" aria-hidden="true"></i> Önemli: Site Yapım Aşamasında
-                            </button>
-                        </h2>
-                        <div id="collapseWarning" class="accordion-collapse collapse" aria-labelledby="headingWarning" data-bs-parent="#accordionWarning">
-                            <div class="accordion-body bg-light">
-                                <div class="alert alert-white d-flex align-items-center mb-0" role="alert">
-                                    <i class="fa fa-shopping-cart fa-2x me-3" aria-hidden="true"></i>
-                                    <div>
-                                        <strong>Şu an için alışveriş yapılamamaktadır.</strong><br>
-                                        Web sitemiz henüz yapım aşamasında olduğu için ticari faaliyetlere ve online ödeme işlemlerine kapalıdır. Altyapı çalışmalarımız tamamlandığında tüm özellikler aktif olacaktır. Anlayışınız için teşekkür ederiz. Hedef <b>19 Ağustos 2026</b> tarihinde tüm özelliklerin aktif olmasıdır. Bu tarihe kadar siteyi test edebilir ve geri bildirimde bulunabilirsiniz.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 @RenderBody()
                 @if (use != null)
                 {
@@ -483,15 +463,18 @@
             ;
             break;
     }
+
     @(await Html.RenderComponentAsync<Js>(RenderMode.Static, new { use = use != null ? use : null }))
 
     @* ═══════════════════════════════════════════════════════════════
        DİNAMİK JS — MainCssJs (veritabanı: IsActive && IsCssOrJs == false)
        Temel JS bileşeninden SONRA basılır ki jQuery/Bootstrap hazır olsun.
        ═══════════════════════════════════════════════════════════════ *@
+
     @foreach (var js in activeJsList)
     {
-                @Html.Raw(js.UserCodes)
+        @Html.Raw(js.UserCodes)
+        <br />
     }
 
     @(await Html.RenderComponentAsync<razor._Shared.Notification>(RenderMode.Server))

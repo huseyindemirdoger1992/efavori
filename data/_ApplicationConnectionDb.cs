@@ -1,5 +1,6 @@
 ﻿using data;
 using data._Attribute;
+using data._BulkImportProducts;
 using data._Carts;
 using data._Categories;
 using data._Follows;
@@ -75,9 +76,40 @@ namespace data
         public DbSet<Cities> Cities { get; set; } = default!;
         public DbSet<Regions> Regions { get; set; } = default!;
 
-        // === _Products ===
+        // === _Products (Marka & Kur) ===
         public DbSet<Brands> Brands { get; set; } = default!;
         public DbSet<MoneyExchangeRate> MoneyExchangeRate { get; set; } = default!;
+
+        // === _Products (Manuel Ürün Yönetim Sistemi — Product System V1) ===
+        public DbSet<Products> Products => Set<Products>();
+        public DbSet<ProductTranslations> ProductTranslations => Set<ProductTranslations>();
+        public DbSet<ProductCategoryLinks> ProductCategoryLinks => Set<ProductCategoryLinks>();
+        public DbSet<ProductVariants> ProductVariants => Set<ProductVariants>();
+        public DbSet<ProductVariantAttributeValues> ProductVariantAttributeValues => Set<ProductVariantAttributeValues>();
+        public DbSet<ProductAttributeValues> ProductAttributeValues => Set<ProductAttributeValues>();
+        public DbSet<ProductPrices> ProductPrices => Set<ProductPrices>();
+        public DbSet<ProductMedia> ProductMedia => Set<ProductMedia>();
+        public DbSet<ProductMediaTranslations> ProductMediaTranslations => Set<ProductMediaTranslations>();
+
+        // === _Products (Yorum / Puanlama) ===
+        public DbSet<ProductReviews> ProductReviews => Set<ProductReviews>();
+        public DbSet<ProductReviewVotes> ProductReviewVotes => Set<ProductReviewVotes>();
+        public DbSet<ProductReviewReports> ProductReviewReports => Set<ProductReviewReports>();
+        public DbSet<ProductRatingSummary> ProductRatingSummary => Set<ProductRatingSummary>();
+
+        // === _Products (Soru-Cevap) ===
+        public DbSet<ProductQuestions> ProductQuestions => Set<ProductQuestions>();
+        public DbSet<ProductQuestionVotes> ProductQuestionVotes => Set<ProductQuestionVotes>();
+        public DbSet<ProductQuestionReports> ProductQuestionReports => Set<ProductQuestionReports>();
+
+        // === _BulkImportProducts (Toplu Ürün İçe Aktarım) ===
+        public DbSet<ImportProfile> ImportProfiles => Set<ImportProfile>();
+        public DbSet<ImportCredential> ImportCredentials => Set<ImportCredential>();
+        public DbSet<ImportFieldMapping> ImportFieldMappings => Set<ImportFieldMapping>();
+        public DbSet<ImportCategoryMapping> ImportCategoryMappings => Set<ImportCategoryMapping>();
+        public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
+        public DbSet<ImportRow> ImportRows => Set<ImportRow>();
+        public DbSet<ImportRowLog> ImportRowLogs => Set<ImportRowLog>();
 
         // === _Shares ===
         public DbSet<Articles> Articles { get; set; } = default!;
@@ -87,6 +119,25 @@ namespace data
         public DbSet<Store> Store { get; set; } = default!;
         public DbSet<StoreBlockingInfos> StoreBlockingInfos { get; set; } = default!;
         public DbSet<StoreIntegration> StoreIntegration { get; set; } = default!;
+        public DbSet<WareHouse> WareHouse { get; set; } = default!;
+
+        // ================= Sipariş Sistemi V1 (data._Orders) =================
+        public DbSet<data._Orders.Orders> Orders { get; set; }
+        public DbSet<data._Orders.SubOrders> SubOrders { get; set; }
+        public DbSet<data._Orders.OrderItems> OrderItems { get; set; }
+        public DbSet<data._Orders.OrderStatusHistory> OrderStatusHistory { get; set; }
+        public DbSet<data._Orders.OrderInvoices> OrderInvoices { get; set; }
+        public DbSet<data._Orders.CheckoutSessions> CheckoutSessions { get; set; }
+        public DbSet<data._Orders.OrderNumberSequences> OrderNumberSequences { get; set; }
+
+        // ================= Ödeme ve Hakediş Sistemi V1 (data._Payments) =================
+        public DbSet<data._Payments.PaymentProviders> PaymentProviders { get; set; }
+        public DbSet<data._Payments.PaymentTransactions> PaymentTransactions { get; set; }
+        public DbSet<data._Payments.UserPaymentMethods> UserPaymentMethods { get; set; }
+        public DbSet<data._Payments.CommissionRates> CommissionRates { get; set; }
+        public DbSet<data._Payments.SellerLedgerEntries> SellerLedgerEntries { get; set; }
+        public DbSet<data._Payments.SellerPayouts> SellerPayouts { get; set; }
+        public DbSet<data._Payments.Refunds> Refunds { get; set; }
 
         // === _Systems ===
         public DbSet<AccountPermissions> AccountPermissions { get; set; } = default!;
@@ -133,6 +184,23 @@ namespace data
             // FK'ler, silme davranışları, tekil/bileşik indeksler, RowVersion ve
             // decimal precision yapılandırmalarının tamamını uygular.
             _AttributeModelConfiguration.Apply(modelBuilder);
+
+            // Manuel Ürün Yönetim Sistemi (Product System V1) — ürün, çeviri (10 dil),
+            // varyant/SKU, teknik özellik değerleri, 4 para birimli fiyat, medya ve
+            // çoklu kategori atamalarının FK, indeks, silme davranışı, RowVersion ve
+            // decimal precision yapılandırmalarını uygular.
+            _ProductModelConfiguration.Apply(modelBuilder);
+
+            // Ürün Yorum/Puanlama & Soru-Cevap sistemi — yorum ağacı, fayda oyları,
+            // şikâyetler, türetilmiş puan özeti ve Q&A ağacının FK, indeks, silme
+            // davranışı, RowVersion ve decimal precision yapılandırmalarını uygular.
+            _ProductReviewModelConfiguration.Apply(modelBuilder);
+
+            // Toplu Ürün İçe Aktarım Sistemi — kullanıcıya özel profil/kimlik,
+            // alan & kategori eşleştirmeleri, lease/idempotency'li iş kuyruğu ve
+            // staging satırlarının FK, indeks, silme davranışı, RowVersion ve
+            // decimal precision yapılandırmalarını uygular.
+            _BulkImportModelConfiguration.Apply(modelBuilder);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

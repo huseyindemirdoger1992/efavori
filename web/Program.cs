@@ -2,6 +2,7 @@
 using api.tr;
 using api.tr.AI;
 using data;
+using data._Products;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;

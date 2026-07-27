@@ -1,5 +1,6 @@
 ﻿using api.tr;
 using data;
+using data._Products;
 using data._Users;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using data;
 using data._Attribute;
 using data._Categories;
+using data._Products;
 using data.Owned;
 
 using Microsoft.EntityFrameworkCore;

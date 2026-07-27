@@ -1,4 +1,5 @@
 ﻿using data; // EmailHistory sınıfının bulunduğu namespace
+using data._Products;
 using data._Users;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;

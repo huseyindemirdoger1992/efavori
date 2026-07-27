@@ -198,6 +198,8 @@ namespace data._Users
         public ContactInformation? ContactInformation { get; set; }
         public ProfileCoverGallery? ProfileCoverGallery { get; set; }
         public IsPrivateOrPublic? IsPrivateOrPublic { get; set; }
+        public UserRolesAccessPermissions? UserRolesAccessPermissions { get; set; }
+
         public IsDeleted? IsDeleted { get; set; }
     }
 }

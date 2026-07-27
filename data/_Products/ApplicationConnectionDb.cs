@@ -4,6 +4,7 @@ using data._Categories;
 using data._Follows;
 using data._Galleries;
 using data._Helper;
+using data._Inventory;
 using data._Locations;
 using data._Shares;
 using data._Store;
@@ -108,6 +109,16 @@ namespace data._Products
         public DbSet<StoreBlockingInfos> StoreBlockingInfos { get; set; } = default!;
         public DbSet<StoreIntegration> StoreIntegration { get; set; } = default!;
         public DbSet<WareHouse> WareHouse { get; set; } = default!;
+
+        // ================= Kargo ve Teslimat V1 (data._Shipping) =================
+        public DbSet<data._Shipping.Carriers> Carriers { get; set; }
+        public DbSet<data._Shipping.StoreCarrierAccounts> StoreCarrierAccounts { get; set; }
+        public DbSet<data._Shipping.ShippingZones> ShippingZones { get; set; }
+        public DbSet<data._Shipping.ShippingZoneAreas> ShippingZoneAreas { get; set; }
+        public DbSet<data._Shipping.ShippingRateRules> ShippingRateRules { get; set; }
+        public DbSet<data._Shipping.Shipments> Shipments { get; set; }
+        public DbSet<data._Shipping.ShipmentItems> ShipmentItems { get; set; }
+        public DbSet<data._Shipping.ShipmentTrackingEvents> ShipmentTrackingEvents { get; set; }
 
         // === _Systems ===
         public DbSet<AccountPermissions> AccountPermissions { get; set; } = default!;

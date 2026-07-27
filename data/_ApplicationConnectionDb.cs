@@ -111,6 +111,18 @@ namespace data
         public DbSet<ImportRow> ImportRows => Set<ImportRow>();
         public DbSet<ImportRowLog> ImportRowLogs => Set<ImportRowLog>();
 
+        // ================= Fiyat Geçmişi V1 (data._Products ek) =================
+        public DbSet<data._Products.ProductPriceHistory> ProductPriceHistory { get; set; }
+        public DbSet<data._Products.ProductPriceDailySnapshot> ProductPriceDailySnapshot { get; set; }
+        public DbSet<data._Products.PriceAlerts> PriceAlerts { get; set; }
+
+        // ================= Stok ve Çoklu Depo V1 (data._Inventory) =================
+        public DbSet<data._Inventory.VariantWarehouseStock> VariantWarehouseStock { get; set; }
+        public DbSet<data._Inventory.StockMovements> StockMovements { get; set; }
+        public DbSet<data._Inventory.StockReservations> StockReservations { get; set; }
+        public DbSet<data._Inventory.StockTransfers> StockTransfers { get; set; }
+        public DbSet<data._Inventory.StockTransferItems> StockTransferItems { get; set; }
+
         // === _Shares ===
         public DbSet<Articles> Articles { get; set; } = default!;
         public DbSet<Posts> Posts { get; set; } = default!;
@@ -119,7 +131,7 @@ namespace data
         public DbSet<Store> Store { get; set; } = default!;
         public DbSet<StoreBlockingInfos> StoreBlockingInfos { get; set; } = default!;
         public DbSet<StoreIntegration> StoreIntegration { get; set; } = default!;
-        public DbSet<WareHouse> WareHouse { get; set; } = default!;
+        public DbSet<data._Store.WareHouse> WareHouse { get; set; } = default!;
 
         // ================= Sipariş Sistemi V1 (data._Orders) =================
         public DbSet<data._Orders.Orders> Orders { get; set; }
@@ -129,6 +141,30 @@ namespace data
         public DbSet<data._Orders.OrderInvoices> OrderInvoices { get; set; }
         public DbSet<data._Orders.CheckoutSessions> CheckoutSessions { get; set; }
         public DbSet<data._Orders.OrderNumberSequences> OrderNumberSequences { get; set; }
+
+        // ================= Kargo ve Teslimat V1 (data._Shipping) =================
+        public DbSet<data._Shipping.Carriers> Carriers { get; set; }
+        public DbSet<data._Shipping.StoreCarrierAccounts> StoreCarrierAccounts { get; set; }
+        public DbSet<data._Shipping.ShippingZones> ShippingZones { get; set; }
+        public DbSet<data._Shipping.ShippingZoneAreas> ShippingZoneAreas { get; set; }
+        public DbSet<data._Shipping.ShippingRateRules> ShippingRateRules { get; set; }
+        public DbSet<data._Shipping.Shipments> Shipments { get; set; }
+        public DbSet<data._Shipping.ShipmentItems> ShipmentItems { get; set; }
+        public DbSet<data._Shipping.ShipmentTrackingEvents> ShipmentTrackingEvents { get; set; }
+
+        // ================= Kampanya ve Kupon V1 (data._Promotions) =================
+        public DbSet<data._Promotions.Coupons> Coupons { get; set; }
+        public DbSet<data._Promotions.CouponScopes> CouponScopes { get; set; }
+        public DbSet<data._Promotions.CouponUsages> CouponUsages { get; set; }
+        public DbSet<data._Promotions.Campaigns> Campaigns { get; set; }
+        public DbSet<data._Promotions.CampaignScopes> CampaignScopes { get; set; }
+
+        // ================= Bildirim V1 (data._Notifications) =================
+        public DbSet<data._Notifications.NotificationTemplates> NotificationTemplates { get; set; }
+        public DbSet<data._Notifications.NotificationTemplateTranslations> NotificationTemplateTranslations { get; set; }
+        public DbSet<data._Notifications.Notifications> Notifications { get; set; }
+        public DbSet<data._Notifications.NotificationDeliveries> NotificationDeliveries { get; set; }
+        public DbSet<data._Notifications.UserNotificationPreferences> UserNotificationPreferences { get; set; }
 
         // ================= Ödeme ve Hakediş Sistemi V1 (data._Payments) =================
         public DbSet<data._Payments.PaymentProviders> PaymentProviders { get; set; }

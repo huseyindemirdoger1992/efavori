@@ -166,6 +166,17 @@ namespace data
         public DbSet<data._Notifications.NotificationDeliveries> NotificationDeliveries { get; set; }
         public DbSet<data._Notifications.UserNotificationPreferences> UserNotificationPreferences { get; set; }
 
+        // ================= İade ve İhtilaf V1 (data._Returns) =================
+        public DbSet<data._Returns.ReturnRequests> ReturnRequests { get; set; }
+        public DbSet<data._Returns.ReturnRequestItems> ReturnRequestItems { get; set; }
+        public DbSet<data._Returns.ReturnRequestMedia> ReturnRequestMedia { get; set; }
+        public DbSet<data._Returns.ReturnStatusHistory> ReturnStatusHistory { get; set; }
+        public DbSet<data._Returns.Disputes> Disputes { get; set; }
+        public DbSet<data._Returns.DisputeMessages> DisputeMessages { get; set; }
+        public DbSet<data._Returns.DisputeAttachments> DisputeAttachments { get; set; }
+        public DbSet<data._Returns.ReturnPolicies> ReturnPolicies { get; set; }
+
+
         // ================= Ödeme ve Hakediş Sistemi V1 (data._Payments) =================
         public DbSet<data._Payments.PaymentProviders> PaymentProviders { get; set; }
         public DbSet<data._Payments.PaymentTransactions> PaymentTransactions { get; set; }

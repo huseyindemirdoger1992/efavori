@@ -9,10 +9,10 @@ namespace api.tr
 {
     public class TakeLogs
     {
-        private readonly IDbContextFactory<_ApplicationConnectionDb> _dbFactory;
+        private readonly IDbContextFactory<data._ApplicationConnectionDb> _dbFactory;
         private readonly UserInfos _userInfos;
 
-        public TakeLogs(IDbContextFactory<_ApplicationConnectionDb> dbFactory, UserInfos userInfos)
+        public TakeLogs(IDbContextFactory<data._ApplicationConnectionDb> dbFactory, UserInfos userInfos)
         {
             _dbFactory = dbFactory;
             _userInfos = userInfos;

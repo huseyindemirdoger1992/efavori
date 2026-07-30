@@ -26,10 +26,10 @@ namespace api.tr
         private string? EmailPassword = null;
 
         private readonly TakeLogs _logger;
-        private readonly _ApplicationConnectionDb _context;
+        private readonly data._ApplicationConnectionDb _context;
         private readonly UserInfos _userInfos;
 
-        public EmailSender(TakeLogs logger, _ApplicationConnectionDb context, UserInfos userInfos)
+        public EmailSender(TakeLogs logger, data._ApplicationConnectionDb context, UserInfos userInfos)
         {
             _logger = logger;
             _context = context;

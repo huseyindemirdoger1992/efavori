@@ -2,19 +2,27 @@
  *@
 @using data
 @using data.Owned;
+@using data._Attribute;
+@using data._BulkImportProducts;
 @using data._Carts;
 @using data._Categories;
 @using data._Follows;
 @using data._Galleries;
 @using data._Helper;
+@using data._Inventory;
 @using data._Locations;
+@using data._Notifications;
+@using data._Orders;
+@using data._Payments;
 @using data._Products;
+@using data._Promotions;
+@using data._Returns;
 @using data._Shares;
+@using data._Shipping;
 @using data._Store;
 @using data._Systems;
 @using data._Tasks;
 @using data._Users;
-
 
 @using System.Globalization
 @using Microsoft.EntityFrameworkCore
@@ -32,7 +40,7 @@
     [Parameter] public Users? CurrentUser { get; set; }
 
     #region Services
-    [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
+    [Inject] protected IDbContextFactory<data._ApplicationConnectionDb> DbFactory { get; init; } = default!;
     [Inject] protected GlobalStateHub StateHub { get; init; } = default!;
     [Inject] protected IJSRuntime JS { get; init; } = default!;
     #endregion
@@ -56,6 +64,25 @@
     private int _completedCount;
 
     string? UsersType = null;
+    #endregion
+
+    #region Role Flags
+    // Platform yöneticisi: kategori, özellik sistemi, birim, komisyon, kargo firması,
+    // ödeme sağlayıcı, bildirim şablonu gibi GLOBAL yapıların tek sahibi.
+    private bool IsAuthenticated => _use is not null;
+
+    private bool IsSuperAdmin => string.Equals(_use?.UsersType, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+
+    // Platform personeli (moderasyon / destek ekibi)
+    private bool IsStaff => IsSuperAdmin || _use?.UserRolesAccessPermissions?.IsItStaff == true;
+
+    // Satıcı: kendi mağazası, deposu, ürünü, siparişi, kargosu ve hakedişi üzerinde yetkili.
+    private bool IsVendor => IsSuperAdmin
+                             || _use?.IsActiveVendorStatu == true
+                             || string.Equals(_use?.UsersType, "Vendor", StringComparison.OrdinalIgnoreCase);
+
+    // Alıcı: giriş yapmış her kullanıcı aynı zamanda müşteridir.
+    private bool IsCustomer => IsAuthenticated;
     #endregion
 
 
@@ -87,8 +114,6 @@
     /// GLOBAL SİNYALİ YAKALA
     /// Başka bir kullanıcı veri eklerse/güncelleyerse burası tetiklenir
     /// </summary>
-    // ✅ Önce (mevcut):
-    // ✅ Sonra:
     private async Task HandleGlobalDataChange(string entityName)
     {
         if (_isProcessing) return;
@@ -118,6 +143,7 @@
             });
         }
     }
+
     /// <summary>
     /// ✅ MEMORY LEAK ÖNLEMİ: Event subscription'ları ve kaynakları temizle
     /// </summary>
@@ -275,149 +301,708 @@
     <!--navigation-->
     <ul class="metismenu" id="menu">
         <li>
-            <input class="form-control mb-3" type="text" placeholder="Menüde Ara..." aria-label="default input example">
+            <input class="form-control mb-3" type="text" placeholder="Menüde Ara..." aria-label="Menüde ara">
         </li>
 
-        @if (_use?.UsersType == "SuperAdmin")
-        {
-            <li class="menu-label">Yönetici Modülleri</li>
+        @* ============================================================================
+           1) PANO — her rol için giriş noktası
+           ============================================================================ *@
+        <li>
+            <a href="/@culture/Public/Home/Index/">
+                <div class="parent-icon">
+                    <i class="fa fa-tachometer" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Pano</div>
+            </a>
+        </li>
 
+        @* ============================================================================
+           2) PLATFORM YÖNETİMİ — SADECE SuperAdmin
+              Kategori, özellik sistemi, birim, marka, komisyon, kargo firması,
+              ödeme sağlayıcı, bildirim şablonu ve lokasyon verileri yalnızca
+              buradan oluşturulur/yönetilir.
+           ============================================================================ *@
+        @if (IsSuperAdmin)
+        {
+            <li class="menu-label">Platform Yönetimi</li>
+
+            @* ---------- 2.1 Onay & Moderasyon ---------- *@
             <li>
                 <a class="has-arrow" href="javascript:;">
                     <div class="parent-icon">
-                        <i class="fa fa-shield" aria-hidden="true"></i>
+                        <i class="fa fa-gavel" aria-hidden="true"></i>
                     </div>
-                    <div class="menu-title">Admin Ayarları</div>
+                    <div class="menu-title">Onay & Moderasyon</div>
                 </a>
                 <ul>
                     <li>
+                        <a href="/@culture/Admin/Moderation/ProductApprovalQueue/">
+                            <i class="fa fa-hourglass-half" aria-hidden="true"></i>
+                            Onay Bekleyen Ürünler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Moderation/RejectedProducts/">
+                            <i class="fa fa-times-circle-o" aria-hidden="true"></i>
+                            Reddedilen Ürünler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Moderation/SuspendedProducts/">
+                            <i class="fa fa-pause-circle-o" aria-hidden="true"></i>
+                            Askıya Alınan Ürünler
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Store/PendingApproval/">
+                            <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                            Mağaza Başvuruları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/BlockingInfos/">
+                            <i class="fa fa-ban" aria-hidden="true"></i>
+                            Mağaza Engel Kayıtları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Brands/PendingApproval/">
+                            <i class="fa fa-copyright" aria-hidden="true"></i>
+                            Marka Onayları
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Moderation/ProductReviews/">
+                            <i class="fa fa-star-half-o" aria-hidden="true"></i>
+                            Ürün Yorumları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Moderation/ProductQuestions/">
+                            <i class="fa fa-question-circle-o" aria-hidden="true"></i>
+                            Ürün Soru-Cevapları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Moderation/Reports/">
+                            <i class="fa fa-flag-o" aria-hidden="true"></i>
+                            Şikâyet Bildirimleri
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.2 Katalog Yapısı (admin-only) ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-sitemap" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Katalog Yapısı</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Categories/CategoriesProductPage/">
+                            <i class="fa fa-list-ul" aria-hidden="true"></i>
+                            Ürün Kategorileri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Categories/CategoryImport/">
+                            <i class="fa fa-upload" aria-hidden="true"></i>
+                            Kategori İçe Aktarma
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/ArticlesCategories/ControllerArticlesCategoriesTr/">
+                            <i class="fa fa-folder-o" aria-hidden="true"></i>
+                            Makale Kategorileri
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Brands/List/">
+                            <i class="fa fa-copyright" aria-hidden="true"></i>
+                            Markalar
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.3 Özellik Sistemi (Attribute System V3) ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-tags" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Özellik Sistemi</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Attributes/AttributeGroups/">
+                            <i class="fa fa-object-group" aria-hidden="true"></i>
+                            Özellik Grupları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Attributes/AttributeDefinitions/">
+                            <i class="fa fa-tag" aria-hidden="true"></i>
+                            Özellik Tanımları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Attributes/AttributeOptions/">
+                            <i class="fa fa-list-ol" aria-hidden="true"></i>
+                            Özellik Seçenekleri
+                        </a>
+                    </li>
+                    <li>
                         <a href="javascript:;" class="has-arrow">
-                            <div class="parent-icon">
-                                <i class="fa fa-binoculars" aria-hidden="true"></i>
-                            </div>
-                            <div class="menu-title">Gözlem Listeleri</div>
+                            <i class="fa fa-random" aria-hidden="true"></i>
+                            Eşleşme Sözlüğü
                         </a>
                         <ul>
                             <li>
-                                <a href="/@culture/Admin/PersonnelManagement/AllUsers/">
-                                    <i class="fa fa-users" aria-hidden="true"></i>
-                                    Kullanıcı Listesi
+                                <a href="/@culture/Admin/Attributes/AttributeAliases/">
+                                    <i class="fa fa-exchange" aria-hidden="true"></i>
+                                    Özellik Takma Adları
                                 </a>
                             </li>
                             <li>
-                                <a href="/@culture/Admin/Store/List/">
-                                    <i class="fa fa-shopping-bag" aria-hidden="true"></i>
-                                    Mağaza Listesi
+                                <a href="/@culture/Admin/Attributes/AttributeSynonyms/">
+                                    <i class="fa fa-share-alt" aria-hidden="true"></i>
+                                    Özellik Eş Anlamlıları
                                 </a>
                             </li>
                             <li>
-                                <a href="/@culture/Admin/AccountPermissions/Permissions/">
+                                <a href="/@culture/Admin/Attributes/AttributeOptionAliases/">
+                                    <i class="fa fa-exchange" aria-hidden="true"></i>
+                                    Seçenek Takma Adları
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/@culture/Admin/Attributes/AttributeOptionSynonyms/">
+                                    <i class="fa fa-share-alt" aria-hidden="true"></i>
+                                    Seçenek Eş Anlamlıları
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/@culture/Admin/Attributes/NormalizationRules/">
+                                    <i class="fa fa-magic" aria-hidden="true"></i>
+                                    Normalizasyon Kuralları
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="javascript:;" class="has-arrow">
+                            <i class="fa fa-balance-scale" aria-hidden="true"></i>
+                            Ölçü Birimleri
+                        </a>
+                        <ul>
+                            <li>
+                                <a href="/@culture/Admin/Attributes/UnitGroups/">
                                     <i class="fa fa-cubes" aria-hidden="true"></i>
-                                    Ürün Listesi
+                                    Birim Grupları
                                 </a>
                             </li>
                             <li>
-                                <a href="/@culture/Admin/ProductAttributes/Attributes/">
-                                    <i class="fa fa-tags" aria-hidden="true"></i>
-                                    Ürün Özellik Şablonları
-                                </a>
-                            </li>
-                            <li>
-                                <a href="/@culture/Admin/TableCleaner/Index/">
-                                    <i class="fa fa-eraser" aria-hidden="true"></i>
-                                    Tablo Temizliği
+                                <a href="/@culture/Admin/Attributes/Units/">
+                                    <i class="fa fa-superscript" aria-hidden="true"></i>
+                                    Birimler
                                 </a>
                             </li>
                         </ul>
                     </li>
                     <li>
                         <a href="javascript:;" class="has-arrow">
-                            <div class="parent-icon">
-                                <i class="fa fa-sitemap" aria-hidden="true"></i>
-                            </div>
-                            <div class="menu-title">Kategori Yönetimi</div>
+                            <i class="fa fa-clone" aria-hidden="true"></i>
+                            Şablonlar
                         </a>
                         <ul>
                             <li>
-                                <a href="javascript:;" class="has-arrow">
-                                    <div class="parent-icon">
-                                        <i class="fa fa-sitemap" aria-hidden="true"></i>
-                                    </div>
-                                    <div class="menu-title">Ürün</div>
+                                <a href="/@culture/Admin/Attributes/AttributeTemplates/">
+                                    <i class="fa fa-files-o" aria-hidden="true"></i>
+                                    Özellik Şablonları
                                 </a>
-                                <ul>
-                                    <li>
-                                        <a href="/@culture/Admin/Categories/CategoryManagementProducts/">
-                                            <i class="fa fa-list-ul" aria-hidden="true"></i>
-                                            Ürün Kategorileri
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
                             <li>
-                                <a href="javascript:;" class="has-arrow">
-                                    <div class="parent-icon">
-                                        <i class="fa fa-sitemap" aria-hidden="true"></i>
-                                    </div>
-                                    <div class="menu-title">Makale</div>
+                                <a href="/@culture/Admin/Attributes/TemplateAttributes/">
+                                    <i class="fa fa-link" aria-hidden="true"></i>
+                                    Şablon İçeriği
                                 </a>
-                                <ul>
-                                    <li>
-                                        <a href="/@culture/Admin/ArticlesCategories/ControllerArticlesCategoriesTr/">
-                                            <i class="fa fa-list-ul" aria-hidden="true"></i>
-                                            Türkçe
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="javascript:;" class="has-arrow">
-                            <div class="parent-icon">
-                                <i class="fa fa-file-code-o" aria-hidden="true"></i>
-                            </div>
-                            <div class="menu-title">Css Js Ayarları</div>
-                        </a>
-                        <ul>
                             <li>
-                                <a href="/@culture/Admin/MainCssJs/Index/">
-                                    <i class="fa fa-database" aria-hidden="true"></i>
-                                    Crud İşlemleri
+                                <a href="/@culture/Admin/Attributes/TemplateCategories/">
+                                    <i class="fa fa-sitemap" aria-hidden="true"></i>
+                                    Şablon–Kategori Eşleşmesi
                                 </a>
                             </li>
                         </ul>
                     </li>
                     <li>
-                        <a href="javascript:;" class="has-arrow">
-                            <div class="parent-icon">
-                                <i class="fa fa-desktop" aria-hidden="true"></i>
-                            </div>
-                            <div class="menu-title">Website Ayarları</div>
+                        <a href="/@culture/Admin/Attributes/CategoryAttributes/">
+                            <i class="fa fa-code-fork" aria-hidden="true"></i>
+                            Kategori Özellik Atamaları
                         </a>
-                        <ul>
-                            <li>
-                                <a href="/@culture/Admin/AccountPermissions/Permissions/">
-                                    <i class="fa fa-key" aria-hidden="true"></i>
-                                    Oturum Ayarları
-                                </a>
-                            </li>
-                            <li>
-                                <a href="/@culture/Admin/AdminSettings/AllBackgroundServicesFrequencyRateIndex/">
-                                    <i class="fa fa-server" aria-hidden="true"></i>
-                                    Arka Plan Çalışanları
-                                </a>
-                            </li>
-                        </ul>
                     </li>
+                    <li>
+                        <a href="/@culture/Admin/Attributes/AttributeDependencies/">
+                            <i class="fa fa-sliders" aria-hidden="true"></i>
+                            Bağımlılık Kuralları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Attributes/Translations/">
+                            <i class="fa fa-language" aria-hidden="true"></i>
+                            Özellik Çevirileri
+                        </a>
+                    </li>
+                </ul>
+            </li>
 
+            @* ---------- 2.4 Yapay Zekâ Operasyonları ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-microchip" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Yapay Zekâ</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Ai/GenerationJobs/">
+                            <i class="fa fa-list-alt" aria-hidden="true"></i>
+                            AI İş Kuyruğu
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Ai/NeedsReview/">
+                            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                            İnceleme Bekleyenler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Ai/GenerationHistory/">
+                            <i class="fa fa-history" aria-hidden="true"></i>
+                            AI Değişiklik Geçmişi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Ai/CategoryAttributeAnalysis/">
+                            <i class="fa fa-flask" aria-hidden="true"></i>
+                            Kategori Özellik Analizi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Ai/TranslationEngine/">
+                            <i class="fa fa-language" aria-hidden="true"></i>
+                            Çeviri Motoru
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/DraftPage/ArtificialIntelligence/">
+                            <i class="fa fa-plug" aria-hidden="true"></i>
+                            Gemini Entegrasyonu
+                        </a>
+                    </li>
+                </ul>
+            </li>
 
+            @* ---------- 2.5 Pazaryeri Entegrasyonları ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-puzzle-piece" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Entegrasyon Platformları</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Integration/Platforms/">
+                            <i class="fa fa-th-large" aria-hidden="true"></i>
+                            Platformlar
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Integration/AttributeMappings/">
+                            <i class="fa fa-exchange" aria-hidden="true"></i>
+                            Özellik Eşleştirmeleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Integration/AttributeOptionMappings/">
+                            <i class="fa fa-random" aria-hidden="true"></i>
+                            Seçenek Eşleştirmeleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Integration/GoogleMerchantCenter/">
+                            <i class="fa fa-google" aria-hidden="true"></i>
+                            Google Merchant Center
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.6 Finans & Hakediş ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-university" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Finans & Hakediş</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Payments/CommissionRates/">
+                            <i class="fa fa-percent" aria-hidden="true"></i>
+                            Komisyon Oranları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Payments/Providers/">
+                            <i class="fa fa-credit-card" aria-hidden="true"></i>
+                            Ödeme Sağlayıcıları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Payments/Transactions/">
+                            <i class="fa fa-exchange" aria-hidden="true"></i>
+                            Ödeme İşlemleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Payments/SellerLedger/">
+                            <i class="fa fa-book" aria-hidden="true"></i>
+                            Satıcı Defteri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Payments/SellerPayouts/">
+                            <i class="fa fa-money" aria-hidden="true"></i>
+                            Hakediş Ödemeleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Payments/Refunds/">
+                            <i class="fa fa-undo" aria-hidden="true"></i>
+                            Para İadeleri
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Finance/MoneyExchangeRate/">
+                            <i class="fa fa-line-chart" aria-hidden="true"></i>
+                            Döviz Kurları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Finance/OrderInvoices/">
+                            <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                            Fatura Kayıtları
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.7 Kargo & Lojistik (global tanımlar) ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-truck" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Kargo & Lojistik</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/Carriers/">
+                            <i class="fa fa-truck" aria-hidden="true"></i>
+                            Kargo Firmaları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/GlobalZones/">
+                            <i class="fa fa-map-o" aria-hidden="true"></i>
+                            Genel Kargo Bölgeleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/GlobalRateRules/">
+                            <i class="fa fa-calculator" aria-hidden="true"></i>
+                            Genel Kargo Tarifeleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/AllShipments/">
+                            <i class="fa fa-cube" aria-hidden="true"></i>
+                            Tüm Gönderiler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/TrackingEvents/">
+                            <i class="fa fa-location-arrow" aria-hidden="true"></i>
+                            Takip Olayları
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.8 İade & İhtilaf ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-balance-scale" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">İade & İhtilaf</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Returns/GlobalPolicies/">
+                            <i class="fa fa-shield" aria-hidden="true"></i>
+                            Genel İade Politikaları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Returns/AllRequests/">
+                            <i class="fa fa-reply-all" aria-hidden="true"></i>
+                            Tüm İade Talepleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Returns/Disputes/">
+                            <i class="fa fa-gavel" aria-hidden="true"></i>
+                            İhtilaf Hakemliği
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Returns/DisputeMessages/">
+                            <i class="fa fa-comments-o" aria-hidden="true"></i>
+                            İhtilaf Yazışmaları
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.9 Platform Kampanya & Kupon ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-gift" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Kampanya & Kupon</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/PlatformCampaigns/">
+                            <i class="fa fa-bullhorn" aria-hidden="true"></i>
+                            Platform Kampanyaları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/PlatformCoupons/">
+                            <i class="fa fa-ticket" aria-hidden="true"></i>
+                            Platform Kuponları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/CouponUsages/">
+                            <i class="fa fa-bar-chart" aria-hidden="true"></i>
+                            Kupon Kullanımları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/BudgetTracking/">
+                            <i class="fa fa-pie-chart" aria-hidden="true"></i>
+                            Bütçe Takibi
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.10 Bildirim Yönetimi ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-bell-o" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Bildirim Yönetimi</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Notifications/Templates/">
+                            <i class="fa fa-file-code-o" aria-hidden="true"></i>
+                            Bildirim Şablonları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Notifications/TemplateTranslations/">
+                            <i class="fa fa-language" aria-hidden="true"></i>
+                            Şablon Çevirileri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Notifications/DeliveryQueue/">
+                            <i class="fa fa-paper-plane-o" aria-hidden="true"></i>
+                            Gönderim Kuyruğu
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Notifications/History/">
+                            <i class="fa fa-inbox" aria-hidden="true"></i>
+                            Bildirim Geçmişi
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.11 Kayıt Listeleri ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-binoculars" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Kayıt Listeleri</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/PersonnelManagement/AllUsers/">
+                            <i class="fa fa-users" aria-hidden="true"></i>
+                            Kullanıcı Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/List/">
+                            <i class="fa fa-shopping-bag" aria-hidden="true"></i>
+                            Mağaza Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Warehouse/List/">
+                            <i class="fa fa-archive" aria-hidden="true"></i>
+                            Depo Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Product/ListProduct/">
+                            <i class="fa fa-cubes" aria-hidden="true"></i>
+                            Ürün Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/AllOrders/">
+                            <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                            Sipariş Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/SupportTickets/List/">
+                            <i class="fa fa-life-ring" aria-hidden="true"></i>
+                            Destek Talepleri
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.12 Lokasyon Verileri ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-globe" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Lokasyon Verileri</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Locations/Regions/">
+                            <i class="fa fa-map-signs" aria-hidden="true"></i>
+                            Bölgeler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Locations/Countries/">
+                            <i class="fa fa-flag-o" aria-hidden="true"></i>
+                            Ülkeler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Locations/States/">
+                            <i class="fa fa-map-marker" aria-hidden="true"></i>
+                            İller
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Locations/Cities/">
+                            <i class="fa fa-map-o" aria-hidden="true"></i>
+                            İlçeler
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 2.13 Sistem Ayarları ---------- *@
+            <li>
+                <a class="has-arrow" href="javascript:;">
+                    <div class="parent-icon">
+                        <i class="fa fa-cogs" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Sistem Ayarları</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/AccountPermissions/Permissions/">
+                            <i class="fa fa-key" aria-hidden="true"></i>
+                            Oturum & Kayıt İzinleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/AdminSettings/AllBackgroundServicesFrequencyRateIndex/">
+                            <i class="fa fa-server" aria-hidden="true"></i>
+                            Arka Plan Servisleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/MainCssJs/Index/">
+                            <i class="fa fa-file-code-o" aria-hidden="true"></i>
+                            Css / Js Yönetimi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/SystemEmailHistory/List/">
+                            <i class="fa fa-paper-plane-o" aria-hidden="true"></i>
+                            Sistem Mail Geçmişi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/LogManagement/List/">
+                            <i class="fa fa-bug" aria-hidden="true"></i>
+                            Hata Kayıtları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/LoginTry/List/">
+                            <i class="fa fa-sign-in" aria-hidden="true"></i>
+                            Giriş Denemeleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/TableCleaner/Index/">
+                            <i class="fa fa-eraser" aria-hidden="true"></i>
+                            Tablo Temizliği
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Seo/SitemapRobots/">
+                            <i class="fa fa-search" aria-hidden="true"></i>
+                            Sitemap & Robots
+                        </a>
+                    </li>
                     <li>
                         <a href="javascript:;" class="has-arrow">
-                            <div class="parent-icon">
-                                <i class="fa fa-file-text-o" aria-hidden="true"></i>
-                            </div>
-                            <div class="menu-title">Taslak Sayfalar</div>
+                            <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                            Taslak Sayfalar
                         </a>
                         <ul>
                             <li>
@@ -439,38 +1024,654 @@
                                 </a>
                             </li>
                             <li>
-                                <a href="/@culture/Admin/DraftPage/ArtificialIntelligence/">
-                                    <i class="fa fa-microchip" aria-hidden="true"></i>
-                                    Google Gemini AI Entegrasyonu
+                                <a href="/@culture/Admin/DraftPage/TryTableSingle/">
+                                    <i class="fa fa-flask" aria-hidden="true"></i>
+                                    Deneme Tablosu
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+        }
+
+        @* ============================================================================
+           3) MAĞAZAM — Satıcı paneli (mağaza kapsamlı kayıtlar)
+           ============================================================================ *@
+        @if (IsVendor)
+        {
+            <li class="menu-label">Mağazam</li>
+
+            @* ---------- 3.1 Mağaza ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-industry" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Mağaza Yönetimi</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Store/Add/">
+                            <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                            Yeni Mağaza Aç
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/List/">
+                            <i class="fa fa-list-ul" aria-hidden="true"></i>
+                            Mağazalarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/Documents/">
+                            <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+                            Belgelerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/WorkingHours/">
+                            <i class="fa fa-clock-o" aria-hidden="true"></i>
+                            Çalışma Saatleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/MyBlockingInfos/">
+                            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+                            Kısıtlama Bilgilerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/Followers/">
+                            <i class="fa fa-user-plus" aria-hidden="true"></i>
+                            Takipçilerim
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.2 Depo & Stok ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-archive" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Depo & Stok</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Warehouse/Add/">
+                            <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                            Yeni Depo Ekle
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Warehouse/List/">
+                            <i class="fa fa-list-ul" aria-hidden="true"></i>
+                            Depolarım
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Inventory/StockOverview/">
+                            <i class="fa fa-th-large" aria-hidden="true"></i>
+                            Stok Durumu
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Inventory/LowStock/">
+                            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                            Kritik Stok Uyarıları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Inventory/StockMovements/">
+                            <i class="fa fa-exchange" aria-hidden="true"></i>
+                            Stok Hareketleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Inventory/StockReservations/">
+                            <i class="fa fa-lock" aria-hidden="true"></i>
+                            Stok Rezervasyonları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Inventory/StockTransfers/">
+                            <i class="fa fa-random" aria-hidden="true"></i>
+                            Depolar Arası Transfer
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Inventory/StockCount/">
+                            <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                            Stok Sayımı
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.3 Ürün ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-cubes" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Ürün Yönetimi</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Product/AddProduct/">
+                            <i class="fa fa-plus" aria-hidden="true"></i>
+                            Yeni Ürün Ekle
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Product/ListProduct/">
+                            <i class="fa fa-th-list" aria-hidden="true"></i>
+                            Ürün Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:;" class="has-arrow">
+                            <i class="fa fa-filter" aria-hidden="true"></i>
+                            Durumlarına Göre
+                        </a>
+                        <ul>
+                            <li>
+                                <a href="/@culture/Admin/Product/ListProduct/Draft/">
+                                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                    Taslaklar
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/@culture/Admin/Product/ListProduct/PendingReview/">
+                                    <i class="fa fa-hourglass-half" aria-hidden="true"></i>
+                                    Onay Bekleyenler
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/@culture/Admin/Product/ListProduct/Approved/">
+                                    <i class="fa fa-check-circle-o" aria-hidden="true"></i>
+                                    Yayındakiler
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/@culture/Admin/Product/ListProduct/Rejected/">
+                                    <i class="fa fa-times-circle-o" aria-hidden="true"></i>
+                                    Reddedilenler
+                                </a>
+                            </li>
+                            <li>
+                                <a href="/@culture/Admin/Product/ListProduct/Archived/">
+                                    <i class="fa fa-archive" aria-hidden="true"></i>
+                                    Arşivlenenler
                                 </a>
                             </li>
                         </ul>
                     </li>
                     <li>
-                        <a href="/@culture/Admin/SystemEmailHistory/List/">
-                            <i class="fa fa-paper-plane-o" aria-hidden="true"></i>
-                            Sistem Mail Geçmişi
+                        <a href="/@culture/Admin/Product/Variants/">
+                            <i class="fa fa-code-fork" aria-hidden="true"></i>
+                            Varyantlar & SKU
                         </a>
                     </li>
                     <li>
-                        <a href="/@culture/Admin/LogManagement/List/">
-                            <i class="fa fa-bug" aria-hidden="true"></i>
-                            Hata Geçmişi
+                        <a href="/@culture/Admin/Product/AttributeValues/">
+                            <i class="fa fa-tags" aria-hidden="true"></i>
+                            Teknik Özellikler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Product/Media/">
+                            <i class="fa fa-picture-o" aria-hidden="true"></i>
+                            Ürün Görselleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Product/Translations/">
+                            <i class="fa fa-language" aria-hidden="true"></i>
+                            Ürün Çevirileri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Product/CategoryLinks/">
+                            <i class="fa fa-sitemap" aria-hidden="true"></i>
+                            Kategori Atamaları
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.4 Fiyatlandırma ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-money" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Fiyat Yönetimi</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Pricing/ProductPrices/">
+                            <i class="fa fa-tag" aria-hidden="true"></i>
+                            Fiyat Listesi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Pricing/BulkUpdate/">
+                            <i class="fa fa-sliders" aria-hidden="true"></i>
+                            Toplu Fiyat Güncelleme
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Pricing/CurrencyConversion/">
+                            <i class="fa fa-exchange" aria-hidden="true"></i>
+                            Kur Bazlı Dönüşüm
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Product/ProductHistoryList/">
+                            <i class="fa fa-line-chart" aria-hidden="true"></i>
+                            Fiyat Geçmişi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Pricing/DailySnapshots/">
+                            <i class="fa fa-area-chart" aria-hidden="true"></i>
+                            Günlük Fiyat Özeti
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.5 Toplu İçe Aktarma ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-cloud-download" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Toplu İçe Aktarma</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Import/Profiles/">
+                            <i class="fa fa-id-card-o" aria-hidden="true"></i>
+                            İçe Aktarma Profilleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/Credentials/">
+                            <i class="fa fa-key" aria-hidden="true"></i>
+                            API Kimlik Bilgileri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/FieldMappings/">
+                            <i class="fa fa-exchange" aria-hidden="true"></i>
+                            Alan Eşleştirme
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/CategoryMappings/">
+                            <i class="fa fa-sitemap" aria-hidden="true"></i>
+                            Kategori Eşleştirme
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Product/ProductImport/">
+                            <i class="fa fa-upload" aria-hidden="true"></i>
+                            Yeni Aktarım Başlat
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/Jobs/">
+                            <i class="fa fa-list-alt" aria-hidden="true"></i>
+                            Aktarım İşleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/Rows/">
+                            <i class="fa fa-table" aria-hidden="true"></i>
+                            Satır Sonuçları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/RowLogs/">
+                            <i class="fa fa-terminal" aria-hidden="true"></i>
+                            Aktarım Günlüğü
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Product/BulkWordPressProductImport/">
+                            <i class="fa fa-wordpress" aria-hidden="true"></i>
+                            WooCommerce / CSV
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/Xml/">
+                            <i class="fa fa-file-code-o" aria-hidden="true"></i>
+                            XML Feed
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Import/Json/">
+                            <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                            JSON / REST API
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.6 Sipariş ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Sipariş Yönetimi</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Orders/SubOrders/">
+                            <i class="fa fa-list" aria-hidden="true"></i>
+                            Tüm Siparişlerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/SubOrders/New/">
+                            <i class="fa fa-bell" aria-hidden="true"></i>
+                            Yeni Gelenler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/SubOrders/Preparing/">
+                            <i class="fa fa-hourglass-half" aria-hidden="true"></i>
+                            Hazırlananlar
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/SubOrders/Shipped/">
+                            <i class="fa fa-truck" aria-hidden="true"></i>
+                            Kargolananlar
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/SubOrders/Delivered/">
+                            <i class="fa fa-check-square-o" aria-hidden="true"></i>
+                            Teslim Edilenler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/SubOrders/Cancelled/">
+                            <i class="fa fa-times-circle" aria-hidden="true"></i>
+                            İptal Edilenler
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/Invoices/">
+                            <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                            Faturalarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Orders/StatusHistory/">
+                            <i class="fa fa-history" aria-hidden="true"></i>
+                            Durum Geçmişi
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.7 Kargo & Teslimat (mağaza kapsamlı) ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-truck" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Kargo & Teslimat</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/MyCarrierAccounts/">
+                            <i class="fa fa-address-card-o" aria-hidden="true"></i>
+                            Kargo Hesaplarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/MyZones/">
+                            <i class="fa fa-map-o" aria-hidden="true"></i>
+                            Kargo Bölgelerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/MyRateRules/">
+                            <i class="fa fa-calculator" aria-hidden="true"></i>
+                            Kargo Tarifelerim
+                        </a>
+                    </li>
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/MyShipments/">
+                            <i class="fa fa-cube" aria-hidden="true"></i>
+                            Gönderilerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/Labels/">
+                            <i class="fa fa-barcode" aria-hidden="true"></i>
+                            Kargo Etiketleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Shipping/Tracking/">
+                            <i class="fa fa-location-arrow" aria-hidden="true"></i>
+                            Gönderi Takibi
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.8 İade & İhtilaf (mağaza tarafı) ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-undo" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">İade & İhtilaf</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Returns/MyRequests/">
+                            <i class="fa fa-reply-all" aria-hidden="true"></i>
+                            İade Talepleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Returns/AwaitingResponse/">
+                            <i class="fa fa-hourglass-half" aria-hidden="true"></i>
+                            Yanıt Bekleyenler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Returns/Inspection/">
+                            <i class="fa fa-search-plus" aria-hidden="true"></i>
+                            İnceleme & Kabul
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Returns/MyPolicies/">
+                            <i class="fa fa-shield" aria-hidden="true"></i>
+                            İade Politikalarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Returns/MyDisputes/">
+                            <i class="fa fa-gavel" aria-hidden="true"></i>
+                            İhtilaflarım
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.9 Kampanya & Kupon (mağaza kapsamlı) ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-percent" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Kampanya & Kupon</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/MyCampaigns/">
+                            <i class="fa fa-bullhorn" aria-hidden="true"></i>
+                            Kampanyalarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/MyCoupons/">
+                            <i class="fa fa-ticket" aria-hidden="true"></i>
+                            Kuponlarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/Scopes/">
+                            <i class="fa fa-crosshairs" aria-hidden="true"></i>
+                            Kapsam Tanımları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Promotions/MyUsages/">
+                            <i class="fa fa-bar-chart" aria-hidden="true"></i>
+                            Kullanım Raporu
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.10 Müşteri İlişkileri ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-comments-o" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Müşteri İlişkileri</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Customer/ProductReviews/">
+                            <i class="fa fa-star-half-o" aria-hidden="true"></i>
+                            Ürün Yorumları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Customer/ProductQuestions/">
+                            <i class="fa fa-question-circle-o" aria-hidden="true"></i>
+                            Soru & Cevaplar
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Customer/RatingSummary/">
+                            <i class="fa fa-star-o" aria-hidden="true"></i>
+                            Puan Özetleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/ChatMessage/LiveChatMessage/">
+                            <i class="fa fa-commenting-o" aria-hidden="true"></i>
+                            Müşteri Mesajları
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.11 Kazanç & Hakediş ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-line-chart" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Kazanç & Hakediş</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/Finance/MyLedger/">
+                            <i class="fa fa-book" aria-hidden="true"></i>
+                            Cari Hesap Hareketleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Finance/MyPayouts/">
+                            <i class="fa fa-money" aria-hidden="true"></i>
+                            Hakediş Ödemelerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Finance/MyCommissions/">
+                            <i class="fa fa-percent" aria-hidden="true"></i>
+                            Komisyon Oranlarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Finance/MyRefunds/">
+                            <i class="fa fa-undo" aria-hidden="true"></i>
+                            Para İadeleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Finance/SalesReport/">
+                            <i class="fa fa-pie-chart" aria-hidden="true"></i>
+                            Satış Raporu
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            @* ---------- 3.12 Mağaza Ayarları ---------- *@
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-wrench" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Mağaza Ayarları</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Admin/StoreIntegration/Index/">
+                            <i class="fa fa-plug" aria-hidden="true"></i>
+                            E-Fatura Entegratörü
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/StoreIntegration/ApiKeys/">
+                            <i class="fa fa-android" aria-hidden="true"></i>
+                            API Tanımlamaları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Store/SeoSettings/">
+                            <i class="fa fa-search" aria-hidden="true"></i>
+                            SEO Ayarları
                         </a>
                     </li>
                 </ul>
             </li>
         }
 
+        @* ============================================================================
+           4) KAZANÇ YÖNETİMİ — Sponsorluk (mevcut yapı korundu)
+           ============================================================================ *@
         <li class="menu-label">Kazanç Yönetimi</li>
-
-        <!-- Sponsorluk Operasyonları -->
         <li>
             <a class="has-arrow" href="javascript:;">
                 <div class="parent-icon">
                     <i class="fa fa-handshake-o" aria-hidden="true"></i>
                 </div>
-                <div class="menu-title"> Sponsor İşlemleri </div>
+                <div class="menu-title">Sponsor İşlemleri</div>
             </a>
             <ul>
                 <li>
@@ -482,162 +1683,284 @@
             </ul>
         </li>
 
+        @* ============================================================================
+           5) ALIŞVERİŞİM — ProfileMenu.razor "ALIŞVERİŞ" bölümünden taşındı
+           ============================================================================ *@
+        @if (IsCustomer)
+        {
+            <li class="menu-label">Alışverişim</li>
 
-        <li class="menu-label">İşletme Yönetimi</li>
-        <li>
-            <a href="javascript:;" class="has-arrow">
-                <div class="parent-icon">
-                    <i class="fa fa-industry" aria-hidden="true"></i>
-                </div>
-                <div class="menu-title">Mağaza Yönetimi</div>
-            </a>
-            <ul>
-                <li>
-                    <a href="/@culture/Admin/Store/Add/">
-                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
-                        Yeni Ekle
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Admin/Store/List/">
-                        <i class="fa fa-list-ul" aria-hidden="true"></i>
-                        Listele
-                    </a>
-                </li>
-            </ul>
-        </li>
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-shopping-basket" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Sepet & Sipariş</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Public/Cart/MyCart/">
+                            <i class="fa fa-shopping-basket" aria-hidden="true"></i>
+                            Sepetim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Cart/Favorites/">
+                            <i class="fa fa-heart" aria-hidden="true"></i>
+                            Favorilerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Orders/MyOrders/">
+                            <i class="fa fa-history" aria-hidden="true"></i>
+                            Siparişlerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Orders/MyInvoices/">
+                            <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                            Faturalarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Product/ProductHistoryList/">
+                            <i class="fa fa-eye" aria-hidden="true"></i>
+                            Gezdiğim Ürünler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/PriceAlerts/MyAlerts/">
+                            <i class="fa fa-bell-o" aria-hidden="true"></i>
+                            Fiyat Alarmlarım
+                        </a>
+                    </li>
+                </ul>
+            </li>
 
-        <li>
-            <a href="javascript:;" class="has-arrow">
-                <div class="parent-icon">
-                    <i class="fa fa-archive" aria-hidden="true"></i>
-                </div>
-                <div class="menu-title">Depo Yönetimi</div>
-            </a>
-            <ul>
-                <li>
-                    <a href="/@culture/Admin/Warehouse/List/">
-                        <i class="fa fa-list-ul" aria-hidden="true"></i>
-                        Listele
-                    </a>
-                </li>
-            </ul>
-        </li>
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-undo" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">İade & Talepler</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Public/Returns/NewRequest/">
+                            <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                            Yeni İade Talebi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Returns/MyRequests/">
+                            <i class="fa fa-reply-all" aria-hidden="true"></i>
+                            İade Taleplerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Returns/MyDisputes/">
+                            <i class="fa fa-gavel" aria-hidden="true"></i>
+                            İhtilaflarım
+                        </a>
+                    </li>
+                </ul>
+            </li>
 
-        <li>
-            <a href="javascript:;" class="has-arrow">
-                <div class="parent-icon">
-                    <i class="fa fa-cubes" aria-hidden="true"></i>
-                </div>
-                <div class="menu-title">Ürün Yönetimi</div>
-            </a>
-            <ul>
-                <li>
-                    <a href="/@culture/Admin/Product/AddProduct/">
-                        <i class="fa fa-plus" aria-hidden="true"></i>
-                        Yeni Ekle
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Admin/Product/ListProduct/">
-                        <i class="fa fa-th-list" aria-hidden="true"></i>
-                        Ürün Listesi
-                    </a>
-                </li>
-                <li>
-                    <a href="javascript:;" class="has-arrow">
-                        <div class="parent-icon">
-                            <i class="fa fa-download" aria-hidden="true"></i>
-                        </div>
-                        <div class="menu-title">Toplu İçe Aktarma</div>
-                    </a>
-                    <ul>
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-star-half-o" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Katkılarım</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Public/Reviews/MyReviews/">
+                            <i class="fa fa-star-o" aria-hidden="true"></i>
+                            Değerlendirmelerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Reviews/MyQuestions/">
+                            <i class="fa fa-question-circle-o" aria-hidden="true"></i>
+                            Sorularım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Reviews/PendingReview/">
+                            <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                            Değerlendirme Bekleyenler
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li>
+                <a href="/@culture/Public/Coupons/MyCoupons/">
+                    <div class="parent-icon">
+                        <i class="fa fa-ticket" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">İndirim Kuponlarım</div>
+                </a>
+            </li>
+        }
+
+        @* ============================================================================
+           6) BAĞLANTILARIM — ProfileMenu.razor "BAĞLANTI" bölümünden taşındı
+           ============================================================================ *@
+        @if (IsAuthenticated)
+        {
+            <li class="menu-label">Bağlantılarım</li>
+
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-users" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Ağım</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Public/Follows/FollowedStores/">
+                            <i class="fa fa-building-o" aria-hidden="true"></i>
+                            Takip Ettiğim Mağazalar
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Follows/Friends/">
+                            <i class="fa fa-users" aria-hidden="true"></i>
+                            Arkadaşlarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Follows/Colleagues/">
+                            <i class="fa fa-briefcase" aria-hidden="true"></i>
+                            Çalışma Arkadaşlarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Follows/Requests/">
+                            <i class="fa fa-user-plus" aria-hidden="true"></i>
+                            Bekleyen İstekler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/Follows/Blocked/">
+                            <i class="fa fa-ban" aria-hidden="true"></i>
+                            Engellediklerim
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        }
+
+        @* ============================================================================
+           7) HESABIM — ProfileMenu.razor "HESAP AYARLARI" + "PROFİL BİLGİLERİM"
+           ============================================================================ *@
+        @if (IsAuthenticated)
+        {
+            <li class="menu-label">Hesabım</li>
+
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-id-card-o" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Profil Bilgilerim</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/BasicInfo/">
+                            <i class="fa fa-user" aria-hidden="true"></i>
+                            Temel Bilgiler
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/Social/">
+                            <i class="fa fa-share-alt" aria-hidden="true"></i>
+                            İletişim & Sosyal
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/Customize/">
+                            <i class="fa fa-paint-brush" aria-hidden="true"></i>
+                            Özelleştir
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/Security/">
+                            <i class="fa fa-shield" aria-hidden="true"></i>
+                            Güvenlik
+                        </a>
+                    </li>
+                </ul>
+            </li>
+
+            <li>
+                <a href="javascript:;" class="has-arrow">
+                    <div class="parent-icon">
+                        <i class="fa fa-cog" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title">Hesap Ayarları</div>
+                </a>
+                <ul>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/UserAddressMethod/">
+                            <i class="fa fa-map-marker" aria-hidden="true"></i>
+                            Adres Bilgilerim
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/PaymentMethods/">
+                            <i class="fa fa-credit-card" aria-hidden="true"></i>
+                            Ödeme Kartlarım
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/Privacy/">
+                            <i class="fa fa-lock" aria-hidden="true"></i>
+                            Gizlilik Ayarları
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/NotificationPreferences/">
+                            <i class="fa fa-bell-o" aria-hidden="true"></i>
+                            Bildirim Tercihleri
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Public/UserProfileSettings/Shortcuts/">
+                            <i class="fa fa-bookmark-o" aria-hidden="true"></i>
+                            Kısayollarım
+                        </a>
+                    </li>
+                    @if (!IsVendor)
+                    {
+                        <li class="border-top my-2 mx-3"></li>
                         <li>
-                            <a href="/@culture/Admin/Product/BulkWordPressProductImport/">
-                                <i class="fa fa-wordpress" aria-hidden="true"></i>
-                                Wordpress
+                            <a href="/@culture/Admin/Store/Add/">
+                                <i class="fa fa-industry" aria-hidden="true"></i>
+                                Satıcı Olmak İstiyorum
                             </a>
                         </li>
-                        <li>
-                            <a href="/@culture/Admin/Product/ListProduct/">
-                                <i class="fa fa-file-code-o" aria-hidden="true"></i>
-                                XML
-                            </a>
-                        </li>
-                        <li>
-                            <a href="/@culture/Admin/Product/ListProduct/">
-                                <i class="fa fa-file-text-o" aria-hidden="true"></i>
-                                Json
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
+                    }
+                </ul>
+            </li>
 
-        <li>
-            <a href="javascript:;" class="has-arrow">
-                <div class="parent-icon">
-                    <i class="fa fa-shopping-cart" aria-hidden="true"></i>
-                </div>
-                <div class="menu-title">Sipariş Yönetimi</div>
-            </a>
-            <ul>
-                <li>
-                    <a href="/@culture/Admin/Product/AddProduct/">
-                        <i class="fa fa-list" aria-hidden="true"></i>
-                        Tüm Siparişler
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Admin/Product/AddProduct/">
+            <li>
+                <a href="/@culture/Public/Notifications/Inbox/">
+                    <div class="parent-icon">
                         <i class="fa fa-bell" aria-hidden="true"></i>
-                        Yeni Gelenler
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Admin/Product/ListProduct/">
-                        <i class="fa fa-check-square-o" aria-hidden="true"></i>
-                        Teslim Edilenler
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Admin/Product/ListProduct/">
-                        <i class="fa fa-times-circle" aria-hidden="true"></i>
-                        İptal Edilenler
-                    </a>
-                </li>
-            </ul>
-        </li>
+                    </div>
+                    <div class="menu-title">Bildirimlerim</div>
+                </a>
+            </li>
+        }
 
-        <li>
-            <a href="javascript:;" class="has-arrow">
-                <div class="parent-icon">
-                    <i class="fa fa-cogs" aria-hidden="true"></i>
-                </div>
-                <div class="menu-title">Ayarlar</div>
-            </a>
-            <ul>
-                <li>
-                    <a href="javascript:;" class="has-arrow">
-                        <div class="parent-icon">
-                            <i class="fa fa-android" aria-hidden="true"></i>
-                        </div>
-                        <div class="menu-title">Api Tanımlamaları</div>
-                    </a>
-                    <ul>
-                        <li>
-                            <a href="/@culture/Admin/StoreIntegration/Index/">
-                                <i class="fa fa-plus-circle" aria-hidden="true"></i>
-                                E-Fatura Entegratör
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
-
-        <li class="menu-label">İletişim Araçları</li>
+        @* ============================================================================
+           8) İÇERİK & İLETİŞİM
+           ============================================================================ *@
+        <li class="menu-label">İçerik & İletişim</li>
 
         <li>
             <a href="javascript:;" class="has-arrow">
@@ -655,13 +1978,71 @@
                 </li>
                 <li>
                     <a href="/@culture/Public/_ArticleViewer/ArticleList/">
-                        <i class="fa fa-commenting-o" aria-hidden="true"></i>
+                        <i class="fa fa-newspaper-o" aria-hidden="true"></i>
                         Makaleler
                     </a>
                 </li>
+                <li>
+                    <a href="/@culture/Public/Posts/List/">
+                        <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                        Gönderiler
+                    </a>
+                </li>
+                @if (IsStaff)
+                {
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/Articles/List/">
+                            <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                            Makale Yönetimi
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/@culture/Admin/Articles/AiGenerator/">
+                            <i class="fa fa-magic" aria-hidden="true"></i>
+                            AI Makale Üretimi
+                        </a>
+                    </li>
+                }
             </ul>
         </li>
 
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-picture-o" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Medya Yönetimi</div>
+            </a>
+            <ul>
+                <li>
+                    <a href="/@culture/Public/MediaManagement/MediaGallery/">
+                        <i class="fa fa-image" aria-hidden="true"></i>
+                        Galerim
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/MediaManagement/Upload/">
+                        <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+                        Dosya Yükle
+                    </a>
+                </li>
+                @if (IsSuperAdmin)
+                {
+                    <li class="border-top my-2 mx-3"></li>
+                    <li>
+                        <a href="/@culture/Admin/MediaManagement/AllMedia/">
+                            <i class="fa fa-database" aria-hidden="true"></i>
+                            Tüm Medya Kayıtları
+                        </a>
+                    </li>
+                }
+            </ul>
+        </li>
+
+        @* ============================================================================
+           9) GÖREVLENDİRME YÖNETİMİ — mevcut dinamik yapı korundu
+           ============================================================================ *@
         <li class="menu-label">Görevlendirme Yönetimi</li>
 
         <li>
@@ -686,7 +2067,7 @@
                     <li>
                         <a class="has-arrow" href="javascript:;">
                             <i class="fa fa-clock-o" aria-hidden="true"></i>
-                            <span>Planlananlar</span>
+                            <span>Planlananlar (@_planningCount)</span>
                         </a>
                         <ul>
                             @foreach (var item in _taskFrameworks.Where(x => x.Statu == "plan" || x.Statu == null).ToList())
@@ -701,11 +2082,10 @@
                         </ul>
                     </li>
 
-
                     <li>
                         <a class="has-arrow" href="javascript:;">
                             <i class="fa fa-spinner" aria-hidden="true"></i>
-                            <span>Aktifler</span>
+                            <span>Aktifler (@_inProcessCount)</span>
                         </a>
                         <ul>
                             @foreach (var item in _taskFrameworks.Where(x => x.Statu == "aktif").ToList())
@@ -720,11 +2100,10 @@
                         </ul>
                     </li>
 
-
                     <li>
                         <a class="has-arrow" href="javascript:;">
                             <i class="fa fa-check-circle-o" aria-hidden="true"></i>
-                            <span>Tamamlananlar</span>
+                            <span>Tamamlananlar (@_completedCount)</span>
                         </a>
                         <ul>
                             @foreach (var item in _taskFrameworks.Where(x => x.Statu == "tamam").ToList())
@@ -738,7 +2117,9 @@
                             }
                         </ul>
                     </li>
+
                     <li class="border-top my-2 mx-3"></li>
+
                     <li>
                         <a class="has-arrow" href="javascript:;">
                             <i class="fa fa-trash-o" aria-hidden="true"></i>
@@ -746,19 +2127,19 @@
                         </a>
                         <ul>
                             <li>
-                                <a href="xxXxx">
+                                <a href="/@culture/Public/TaskBoard/Deleted/Frameworks/">
                                     <i class="fa fa-window-close-o" aria-hidden="true"></i>
                                     Silinen Bölümler
                                 </a>
                             </li>
                             <li>
-                                <a href="xxXxx">
+                                <a href="/@culture/Public/TaskBoard/Deleted/Categories/">
                                     <i class="fa fa-minus-circle" aria-hidden="true"></i>
                                     Silinen Kategoriler
                                 </a>
                             </li>
                             <li>
-                                <a href="xxXxx">
+                                <a href="/@culture/Public/TaskBoard/Deleted/Tasks/">
                                     <i class="fa fa-times-circle-o" aria-hidden="true"></i>
                                     Silinen Görevler
                                 </a>
@@ -766,28 +2147,108 @@
                         </ul>
                     </li>
                 }
-
             </ul>
         </li>
 
-        <li class="menu-label">Medya Yönetimi</li>
+        @* ============================================================================
+           10) BİLGİLENDİRME & DESTEK — ProfileMenu "DESTEK MERKEZİ" dahil
+           ============================================================================ *@
+        <li class="menu-label">Bilgilendirme & Destek</li>
+
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
-                    <i class="fa fa-picture-o" aria-hidden="true"></i>
+                    <i class="fa fa-life-ring" aria-hidden="true"></i>
                 </div>
-                <div class="menu-title">Medya Yönetimi</div>
+                <div class="menu-title">Destek Merkezi</div>
             </a>
             <ul>
                 <li>
-                    <a href="/@culture/Public/MediaManagement/MediaGallery/">
-                        <i class="fa fa-image" aria-hidden="true"></i>
-                        Galeri
+                    <a href="/@culture/Public/Support/NewTicket/">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
+                        Yeni Destek Talebi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Support/MyTickets/">
+                        <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+                        Taleplerim
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Support/MyTickets/Open/">
+                        <i class="fa fa-hourglass-half" aria-hidden="true"></i>
+                        Açık Talepler
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Support/MyTickets/Closed/">
+                        <i class="fa fa-check-circle" aria-hidden="true"></i>
+                        Kapanmış Talepler
                     </a>
                 </li>
             </ul>
         </li>
-        <li class="menu-label">Bilgilendirme & Destek</li>
+
+        <li>
+            <a href="javascript:;" class="has-arrow">
+                <div class="parent-icon">
+                    <i class="fa fa-question-circle" aria-hidden="true"></i>
+                </div>
+                <div class="menu-title">Nasıl Yapılır</div>
+            </a>
+            <ul>
+                <li>
+                    <a href="/@culture/Public/Guide/StoreManagement/">
+                        <i class="fa fa-industry" aria-hidden="true"></i>
+                        Mağaza Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Guide/WarehouseManagement/">
+                        <i class="fa fa-archive" aria-hidden="true"></i>
+                        Depo & Stok Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Guide/ProductManagement/">
+                        <i class="fa fa-cube" aria-hidden="true"></i>
+                        Ürün Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Guide/BulkImport/">
+                        <i class="fa fa-cloud-download" aria-hidden="true"></i>
+                        Toplu Ürün Aktarımı
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Guide/OrderManagement/">
+                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                        Sipariş Yönetimi
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Guide/ShippingManagement/">
+                        <i class="fa fa-truck" aria-hidden="true"></i>
+                        Kargo & Teslimat
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Guide/ReturnManagement/">
+                        <i class="fa fa-undo" aria-hidden="true"></i>
+                        İade Süreçleri
+                    </a>
+                </li>
+                <li>
+                    <a href="/@culture/Public/Guide/PayoutManagement/">
+                        <i class="fa fa-money" aria-hidden="true"></i>
+                        Hakediş & Ödemeler
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <li>
             <a href="javascript:;" class="has-arrow">
                 <div class="parent-icon">
@@ -802,70 +2263,36 @@
                         Geliştirme Süreçleri
                     </a>
                 </li>
-            </ul>
-        </li>
-        <li>
-            <a href="javascript:;" class="has-arrow">
-                <div class="parent-icon">
-                    <i class="fa fa-question-circle" aria-hidden="true"></i>
-                </div>
-                <div class="menu-title">Nasıl Yapılır</div>
-            </a>
-            <ul>
                 <li>
-                    <a href="/@culture/Public/Home/GetGitHubCommits/">
-                        <i class="fa fa-home" aria-hidden="true"></i>
-                        Mağaza Yönetimi
+                    <a href="/@culture/Public/Legal/Terms/">
+                        <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                        Kullanım Koşulları
                     </a>
                 </li>
                 <li>
-                    <a href="/@culture/Public/Home/GetGitHubCommits/">
-                        <i class="fa fa-archive" aria-hidden="true"></i>
-                        Depo Yönetimi
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Public/Home/GetGitHubCommits/">
-                        <i class="fa fa-cube" aria-hidden="true"></i>
-                        Ürün Yönetimi
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Public/Home/GetGitHubCommits/">
-                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
-                        Sipariş Yönetimi
+                    <a href="/@culture/Public/Legal/SellerAgreement/">
+                        <i class="fa fa-handshake-o" aria-hidden="true"></i>
+                        Satıcı Sözleşmesi
                     </a>
                 </li>
             </ul>
         </li>
-        <li>
-            <a href="javascript:;" class="has-arrow">
-                <div class="parent-icon">
-                    <i class="fa fa-life-ring" aria-hidden="true"></i>
-                </div>
-                <div class="menu-title">Destek Talepleri</div>
-            </a>
-            <ul>
-                <li>
-                    <a href="/@culture/Public/Home/GetGitHubCommits/">
-                        <i class="fa fa-plus-circle" aria-hidden="true"></i>
-                        Yeni Oluştur
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Public/Home/GetGitHubCommits/">
-                        <i class="fa fa-folder-open" aria-hidden="true"></i>
-                        Açık Talepler
-                    </a>
-                </li>
-                <li>
-                    <a href="/@culture/Public/Home/GetGitHubCommits/">
-                        <i class="fa fa-check-circle" aria-hidden="true"></i>
-                        Tamamlanmış Talepler
-                    </a>
-                </li>
-            </ul>
-        </li>
+
+        @* ============================================================================
+           11) OTURUM
+           ============================================================================ *@
+        @if (IsAuthenticated)
+        {
+            <li class="border-top my-2 mx-3"></li>
+            <li>
+                <a href="/@culture/Account/Logout/">
+                    <div class="parent-icon">
+                        <i class="fa fa-sign-out text-danger" aria-hidden="true"></i>
+                    </div>
+                    <div class="menu-title text-danger">Güvenli Çıkış</div>
+                </a>
+            </li>
+        }
 
     </ul>
 </div>

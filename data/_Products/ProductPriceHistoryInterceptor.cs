@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using data._Products;
-using data._Inventory;
 
 namespace data.Interceptors
 {
@@ -18,6 +17,13 @@ namespace data.Interceptors
     ///       opt.UseSqlServer(cs)
     ///          .AddInterceptors(sp.GetRequiredService&lt;ProductPriceHistoryInterceptor&gt;()));
     /// Interceptor stateless'tır; Singleton kaydı kısa ömürlü context deseniyle uyumludur.
+    ///
+    /// ALAN EŞLEMESİ (ProductPrices → ProductPriceHistory):
+    ///   ProductVariantId   → VariantId
+    ///   DiscountStartDate  → DiscountStartUtc
+    ///   DiscountEndDate    → DiscountEndUtc
+    /// ProductPrices.ProductVariantId nullable olduğundan ProductPriceHistory.VariantId de
+    /// 'Guid?' olmalıdır (ürün seviyesinde, varyantsız fiyat satırları da geçmişe yazılır).
     ///
     /// SINIRLARI (README §4'te ayrıntılı):
     /// - ExecuteUpdate/ExecuteDelete ve ham SQL, ChangeTracker'a uğramadığı için YAKALANMAZ.
@@ -76,14 +82,14 @@ namespace data.Interceptors
                     context.Add(new ProductPriceHistory
                     {
                         ProductId = price.ProductId,
-                        VariantId = price.VariantId,
+                        VariantId = price.ProductVariantId,
                         ProductPriceId = price.Id,
                         Currency = price.Currency,
                         NewListPrice = price.ListPrice,
                         NewSalePrice = price.SalePrice,
                         NewDiscountedPrice = price.DiscountedPrice,
-                        NewDiscountStartUtc = price.DiscountStartUtc,
-                        NewDiscountEndUtc = price.DiscountEndUtc,
+                        NewDiscountStartUtc = price.DiscountStartDate,
+                        NewDiscountEndUtc = price.DiscountEndDate,
                         NewIsActive = price.IsActive,
                         IsAutoConverted = price.IsAutoConverted,
                         ChangeSource = context_?.Source ?? PriceChangeSource.InitialCreate,
@@ -104,7 +110,7 @@ namespace data.Interceptors
                 context.Add(new ProductPriceHistory
                 {
                     ProductId = price.ProductId,
-                    VariantId = price.VariantId,
+                    VariantId = price.ProductVariantId,
                     ProductPriceId = price.Id,
                     Currency = price.Currency,
 
@@ -114,10 +120,10 @@ namespace data.Interceptors
                     NewSalePrice = price.SalePrice,
                     OldDiscountedPrice = Original<decimal?>(entry, nameof(ProductPrices.DiscountedPrice)),
                     NewDiscountedPrice = price.DiscountedPrice,
-                    OldDiscountStartUtc = Original<DateTime?>(entry, nameof(ProductPrices.DiscountStartUtc)),
-                    NewDiscountStartUtc = price.DiscountStartUtc,
-                    OldDiscountEndUtc = Original<DateTime?>(entry, nameof(ProductPrices.DiscountEndUtc)),
-                    NewDiscountEndUtc = price.DiscountEndUtc,
+                    OldDiscountStartUtc = Original<DateTime?>(entry, nameof(ProductPrices.DiscountStartDate)),
+                    NewDiscountStartUtc = price.DiscountStartDate,
+                    OldDiscountEndUtc = Original<DateTime?>(entry, nameof(ProductPrices.DiscountEndDate)),
+                    NewDiscountEndUtc = price.DiscountEndDate,
                     OldIsActive = Original<bool?>(entry, nameof(ProductPrices.IsActive)),
                     NewIsActive = price.IsActive,
 
@@ -142,8 +148,8 @@ namespace data.Interceptors
                 nameof(ProductPrices.ListPrice),
                 nameof(ProductPrices.SalePrice),
                 nameof(ProductPrices.DiscountedPrice),
-                nameof(ProductPrices.DiscountStartUtc),
-                nameof(ProductPrices.DiscountEndUtc),
+                nameof(ProductPrices.DiscountStartDate),
+                nameof(ProductPrices.DiscountEndDate),
                 nameof(ProductPrices.IsActive)
             };
 
@@ -179,7 +185,7 @@ namespace data.Interceptors
     /// "NEDEN değiştiğini" bilemez. Servis katmanı, SaveChanges çağrısını bu bağlam içine
     /// alarak kaynağı bildirir:
     ///
-    ///   using (PriceChangeContext.Begin(PriceChangeSource.AutoConversion, rate: 34.12m, rateId: id))
+    ///   using (PriceChangeContext.Begin(PriceChangeSource.AutoConversion, usedExchangeRate: 34.12m, moneyExchangeRateId: id))
     ///   {
     ///       price.SalePrice = converted;
     ///       await db.SaveChangesAsync();

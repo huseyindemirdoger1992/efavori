@@ -10,8 +10,13 @@ namespace data._Products
     /// </summary>
     public static class _ProductPriceHistoryModelConfiguration
     {
-        /// <summary>Soft-delete filtreli tekil indeks sabiti (mevcut _ProductModelConfiguration'daki sabitle aynı tutulmalıdır).</summary>
-        private const string SoftDeleteFilter = "[IsDeleted_Value] = 0";
+        /// <summary>
+        /// Soft-delete filtreli tekil indeks sabiti.
+        /// Owned tip data.Owned.IsDeleted içindeki property adı 'IsDeletedStatu' olduğundan
+        /// EF'in ürettiği kolon adı 'IsDeleted_IsDeletedStatu'dur.
+        /// (_AttributeModelConfiguration ve _ProductModelConfiguration ile aynı sabit.)
+        /// </summary>
+        private const string SoftDeleteFilter = "[IsDeleted_IsDeletedStatu] = 0";
 
         public static void Apply(ModelBuilder modelBuilder)
         {
@@ -35,6 +40,8 @@ namespace data._Products
                 e.Property(x => x.Note).HasMaxLength(500);
 
                 e.HasOne(typeof(Products)).WithMany().HasForeignKey(nameof(ProductPriceHistory.ProductId)).OnDelete(DeleteBehavior.Restrict);
+                // VariantId nullable olduğundan bu ilişki OPSİYONEL FK'dir: ürün geneli
+                // (varyantsız) fiyat satırlarının geçmişi de yazılabilir. Ek yapılandırma gerekmez.
                 e.HasOne(typeof(ProductVariants)).WithMany().HasForeignKey(nameof(ProductPriceHistory.VariantId)).OnDelete(DeleteBehavior.Restrict);
                 // ProductPriceId / MoneyExchangeRateId / ImportRowId / CampaignId: iz alanlarıdır.
                 // Fiyat satırı, kur satırı veya import satırı temizlenince GEÇMİŞ SİLİNMEMELİ,
@@ -66,6 +73,9 @@ namespace data._Products
                 e.HasOne(typeof(ProductVariants)).WithMany().HasForeignKey(nameof(ProductPriceDailySnapshot.VariantId)).OnDelete(DeleteBehavior.Restrict);
 
                 // Gün başına TEK satır: BackgroundService UPSERT'i bu indekse dayanır.
+                // NOT: VariantId burada non-nullable'dır. Özet job'ı ürün geneli satırları da
+                // özetleyecek şekilde genişletilirse alan 'Guid?' yapılmalı ve filtreye
+                // "AND [VariantId] IS NOT NULL" eklenmelidir (SQL Server NULL'ları tekil sayar).
                 e.HasIndex(x => new { x.ProductId, x.VariantId, x.Currency, x.PriceDate })
                     .IsUnique().HasFilter(SoftDeleteFilter);
 

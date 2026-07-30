@@ -69,12 +69,12 @@ namespace data._Notifications
                 e.Property(x => x.TargetUrl).HasMaxLength(1000);
                 e.Property(x => x.IdempotencyKey).HasMaxLength(150).IsRequired();
 
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(Notifications.UserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(Notifications.UserId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(NotificationTemplates)).WithMany().HasForeignKey(nameof(Notifications.NotificationTemplateId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.Orders)).WithMany().HasForeignKey(nameof(Notifications.OrderId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.SubOrders)).WithMany().HasForeignKey(nameof(Notifications.SubOrderId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Products.Products)).WithMany().HasForeignKey(nameof(Notifications.ProductId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(Notifications.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(Notifications.StoreId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Shipping.Shipments)).WithMany().HasForeignKey(nameof(Notifications.ShipmentId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Products.PriceAlerts)).WithMany().HasForeignKey(nameof(Notifications.PriceAlertId)).OnDelete(DeleteBehavior.Restrict);
                 // ImageMediaItemId / RelatedEntityId: iz alanlarıdır (FK yok).
@@ -105,7 +105,7 @@ namespace data._Notifications
                 e.Property(x => x.IdempotencyKey).HasMaxLength(200).IsRequired();
 
                 e.HasOne(typeof(Notifications)).WithMany().HasForeignKey(nameof(NotificationDeliveries.NotificationId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(NotificationDeliveries.UserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(NotificationDeliveries.UserId)).OnDelete(DeleteBehavior.Restrict);
 
                 e.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter(SoftDeleteFilter);         // aynı kanaldan çift gönderim engeli
                 // KUYRUK TARAMASININ ANA İNDEKSİ: işlenecek satırları tek seek'le bulur.
@@ -127,7 +127,7 @@ namespace data._Notifications
 
                 e.Property(x => x.TimeZoneId).HasMaxLength(60);
 
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(UserNotificationPreferences.UserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(UserNotificationPreferences.UserId)).OnDelete(DeleteBehavior.Restrict);
 
                 // Kullanıcı + tip başına tek tercih satırı.
                 e.HasIndex(x => new { x.UserId, x.NotificationType }).IsUnique().HasFilter(SoftDeleteFilter);

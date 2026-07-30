@@ -34,7 +34,7 @@ namespace data._Inventory
                 e.Property(x => x.BinLocation).HasMaxLength(50);
 
                 e.HasOne(typeof(data._Products.ProductVariants)).WithMany().HasForeignKey(nameof(VariantWarehouseStock.VariantId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data._Inventory.WareHouse)).WithMany().HasForeignKey(nameof(VariantWarehouseStock.WarehouseId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.WareHouse)).WithMany().HasForeignKey(nameof(VariantWarehouseStock.WarehouseId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Products.Products)).WithMany().HasForeignKey(nameof(VariantWarehouseStock.ProductId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(VariantWarehouseStock.StoreId)).OnDelete(DeleteBehavior.Restrict);
 
@@ -63,7 +63,7 @@ namespace data._Inventory
                 e.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
 
                 e.HasOne(typeof(data._Products.ProductVariants)).WithMany().HasForeignKey(nameof(StockMovements.VariantId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data._Inventory.WareHouse)).WithMany().HasForeignKey(nameof(StockMovements.WarehouseId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.WareHouse)).WithMany().HasForeignKey(nameof(StockMovements.WarehouseId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.SubOrders)).WithMany().HasForeignKey(nameof(StockMovements.SubOrderId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.OrderItems)).WithMany().HasForeignKey(nameof(StockMovements.OrderItemId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(StockReservations)).WithMany().HasForeignKey(nameof(StockMovements.StockReservationId)).OnDelete(DeleteBehavior.Restrict);
@@ -95,7 +95,7 @@ namespace data._Inventory
                 e.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
 
                 e.HasOne(typeof(data._Products.ProductVariants)).WithMany().HasForeignKey(nameof(StockReservations.VariantId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data._Inventory.WareHouse)).WithMany().HasForeignKey(nameof(StockReservations.WarehouseId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.WareHouse)).WithMany().HasForeignKey(nameof(StockReservations.WarehouseId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.CheckoutSessions)).WithMany().HasForeignKey(nameof(StockReservations.CheckoutSessionId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.SubOrders)).WithMany().HasForeignKey(nameof(StockReservations.SubOrderId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.OrderItems)).WithMany().HasForeignKey(nameof(StockReservations.OrderItemId)).OnDelete(DeleteBehavior.Restrict);
@@ -127,8 +127,8 @@ namespace data._Inventory
                 e.Property(x => x.Note).HasMaxLength(1000);
 
                 e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(StockTransfers.StoreId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data._Inventory.WareHouse)).WithMany().HasForeignKey(nameof(StockTransfers.SourceWarehouseId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data._Inventory.WareHouse)).WithMany().HasForeignKey(nameof(StockTransfers.TargetWarehouseId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.WareHouse)).WithMany().HasForeignKey(nameof(StockTransfers.SourceWarehouseId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.WareHouse)).WithMany().HasForeignKey(nameof(StockTransfers.TargetWarehouseId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(StockTransfers.ApprovedByUserId)).OnDelete(DeleteBehavior.Restrict);
 
                 e.HasIndex(x => x.TransferNumber).IsUnique().HasFilter(SoftDeleteFilter);

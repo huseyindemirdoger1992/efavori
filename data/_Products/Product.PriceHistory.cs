@@ -18,8 +18,14 @@ namespace data._Products
         /// <summary>Ürün (Products.Id).</summary>
         public Guid ProductId { get; set; }
 
-        /// <summary>Varyant (ProductVariants.Id). Basit üründe IsDefault=true tek varyantın Id'sidir.</summary>
-        public Guid VariantId { get; set; }
+        /// <summary>
+        /// Varyant (ProductVariants.Id).
+        /// NULL = ürün GENELİ fiyat satırının geçmişi (ProductPrices.ProductVariantId de null'dır).
+        /// Kaynak alan nullable olduğu için bu alan da nullable olmak ZORUNDADIR; aksi halde
+        /// ProductPriceHistoryInterceptor içindeki atama derlenmez (CS0266) ve Guid.Empty
+        /// yazmak ProductVariants'a olan FK'yi ihlal eder.
+        /// </summary>
+        public Guid? VariantId { get; set; }
 
         /// <summary>Değişime konu fiyat satırı (ProductPrices.Id). Satır sonradan silinse bile geçmiş yaşar (iz alanı).</summary>
         public Guid? ProductPriceId { get; set; }
@@ -48,16 +54,16 @@ namespace data._Products
         /// <summary>Yeni indirimli fiyat.</summary>
         public decimal? NewDiscountedPrice { get; set; }
 
-        /// <summary>Eski indirim başlangıcı (UTC).</summary>
+        /// <summary>Eski indirim başlangıcı (UTC). Kaynak: ProductPrices.DiscountStartDate.</summary>
         public DateTime? OldDiscountStartUtc { get; set; }
 
-        /// <summary>Yeni indirim başlangıcı (UTC).</summary>
+        /// <summary>Yeni indirim başlangıcı (UTC). Kaynak: ProductPrices.DiscountStartDate.</summary>
         public DateTime? NewDiscountStartUtc { get; set; }
 
-        /// <summary>Eski indirim bitişi (UTC).</summary>
+        /// <summary>Eski indirim bitişi (UTC). Kaynak: ProductPrices.DiscountEndDate.</summary>
         public DateTime? OldDiscountEndUtc { get; set; }
 
-        /// <summary>Yeni indirim bitişi (UTC).</summary>
+        /// <summary>Yeni indirim bitişi (UTC). Kaynak: ProductPrices.DiscountEndDate.</summary>
         public DateTime? NewDiscountEndUtc { get; set; }
 
         /// <summary>Eski aktiflik durumu.</summary>
@@ -115,7 +121,12 @@ namespace data._Products
         /// <summary>Ürün (Products.Id).</summary>
         public Guid ProductId { get; set; }
 
-        /// <summary>Varyant (ProductVariants.Id).</summary>
+        /// <summary>Varyant (ProductVariants.Id).
+        /// NOT: Bu tablo yalnızca varyant bazında özet tutar. Özet job'ı ürün geneli
+        /// (VariantId = null) fiyat satırlarını da özetleyecekse bu alan da 'Guid?'
+        /// yapılmalı ve tekil indeksin filtresine [VariantId] IS NOT NULL eklenmelidir —
+        /// SQL Server'da NULL'lar tekil sayıldığından aksi halde gün başına tek satır
+        /// garantisi bozulur.</summary>
         public Guid VariantId { get; set; }
 
         /// <summary>Para birimi.</summary>

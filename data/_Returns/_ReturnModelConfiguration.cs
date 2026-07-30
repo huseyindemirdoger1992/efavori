@@ -10,8 +10,12 @@ namespace data._Returns
     /// </summary>
     public static class _ReturnModelConfiguration
     {
-        /// <summary>Soft-delete filtreli tekil indeks sabiti (mevcut _ProductModelConfiguration'daki sabitle aynı tutulmalıdır).</summary>
-        private const string SoftDeleteFilter = "[IsDeleted_Value] = 0";
+        /// <summary>
+        /// Soft-delete filtreli tekil indeks sabiti.
+        /// Owned tip data.Owned.IsDeleted içindeki property adı 'IsDeletedStatu' olduğundan
+        /// EF'in ürettiği kolon adı 'IsDeleted_IsDeletedStatu'dur.
+        /// </summary>
+        private const string SoftDeleteFilter = "[IsDeleted_IsDeletedStatu] = 0";
 
         public static void Apply(ModelBuilder modelBuilder)
         {
@@ -37,10 +41,10 @@ namespace data._Returns
 
                 e.HasOne(typeof(data._Orders.SubOrders)).WithMany().HasForeignKey(nameof(ReturnRequests.SubOrderId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.Orders)).WithMany().HasForeignKey(nameof(ReturnRequests.OrderId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(ReturnRequests.StoreId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(ReturnRequests.UserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(ReturnRequests.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(ReturnRequests.UserId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Shipping.Shipments)).WithMany().HasForeignKey(nameof(ReturnRequests.ReturnShipmentId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.WareHouse)).WithMany().HasForeignKey(nameof(ReturnRequests.TargetWarehouseId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.WareHouse)).WithMany().HasForeignKey(nameof(ReturnRequests.TargetWarehouseId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(ReturnPolicies)).WithMany().HasForeignKey(nameof(ReturnRequests.AppliedReturnPolicyId)).OnDelete(DeleteBehavior.Restrict);
                 // DisputeId: dairesel bağımlılık (Disputes → ReturnRequests FK'sı zaten var) oluşmaması
                 // için bu yönde FK kısıtı konulmaz; iz alanıdır.
@@ -150,8 +154,8 @@ namespace data._Returns
                 e.HasOne(typeof(ReturnRequests)).WithMany().HasForeignKey(nameof(Disputes.ReturnRequestId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.SubOrders)).WithMany().HasForeignKey(nameof(Disputes.SubOrderId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.Orders)).WithMany().HasForeignKey(nameof(Disputes.OrderId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(Disputes.StoreId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(Disputes.UserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(Disputes.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(Disputes.UserId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Payments.Refunds)).WithMany().HasForeignKey(nameof(Disputes.RefundId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Payments.SellerLedgerEntries)).WithMany().HasForeignKey(nameof(Disputes.PenaltyLedgerEntryId)).OnDelete(DeleteBehavior.Restrict);
                 // DecidedByUserId: Users'a ikinci FK — EF çoklu FK'de gölge kolon adı çakışabileceğinden
@@ -180,7 +184,7 @@ namespace data._Returns
                 e.Property(x => x.Message).HasMaxLength(4000).IsRequired();
 
                 e.HasOne(typeof(Disputes)).WithMany().HasForeignKey(nameof(DisputeMessages.DisputeId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(DisputeMessages.SenderUserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(DisputeMessages.SenderUserId)).OnDelete(DeleteBehavior.Restrict);
 
                 e.HasIndex(x => new { x.DisputeId, x.CreatedAtUtc });                             // yazışma akışı
                 e.HasIndex(x => new { x.DisputeId, x.IsInternalNote });                           // taraflara gösterilecek mesajlar
@@ -222,9 +226,13 @@ namespace data._Returns
                 e.Property(x => x.PolicyText).HasMaxLength(4000);
                 e.Property(x => x.Note).HasMaxLength(500);
 
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(ReturnPolicies.StoreId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.CategoriesProduct)).WithMany().HasForeignKey(nameof(ReturnPolicies.CategoryId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Country)).WithMany().HasForeignKey(nameof(ReturnPolicies.CountryId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(ReturnPolicies.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Categories.CategoriesProduct)).WithMany().HasForeignKey(nameof(ReturnPolicies.CategoryId)).OnDelete(DeleteBehavior.Restrict);
+
+                // DİKKAT — data._Locations.Country'nin PK'si int'tir (Country.id).
+                // Bu FK'nin kurulabilmesi için ReturnPolicies.CountryId'nin tipi 'int?' olmalıdır.
+                // (Şu an Guid? ise EF model kurulumunda tip uyuşmazlığı hatası verir.)
+                e.HasOne(typeof(data._Locations.Country)).WithMany().HasForeignKey(nameof(ReturnPolicies.CountryId)).OnDelete(DeleteBehavior.Restrict);
 
                 // Kapsam çözümünün ana indeksi (README §6).
                 e.HasIndex(x => new { x.StoreId, x.CategoryId, x.CountryId, x.ValidFromUtc });

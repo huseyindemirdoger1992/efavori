@@ -9,8 +9,12 @@ namespace data._Shipping
     /// </summary>
     public static class _ShippingModelConfiguration
     {
-        /// <summary>Soft-delete filtreli tekil indeks sabiti (mevcut _ProductModelConfiguration'daki sabitle aynı tutulmalıdır).</summary>
-        private const string SoftDeleteFilter = "[IsDeleted_Value] = 0";
+        /// <summary>
+        /// Soft-delete filtreli tekil indeks sabiti.
+        /// Owned tip data.Owned.IsDeleted içindeki property adı 'IsDeletedStatu' olduğundan
+        /// EF'in ürettiği kolon adı 'IsDeleted_IsDeletedStatu'dur.
+        /// </summary>
+        private const string SoftDeleteFilter = "[IsDeleted_IsDeletedStatu] = 0";
 
         public static void Apply(ModelBuilder modelBuilder)
         {
@@ -49,7 +53,7 @@ namespace data._Shipping
                 e.Property(x => x.MaskedAccountCode).HasMaxLength(50);
                 e.Property(x => x.LastErrorMessage).HasMaxLength(1000);
 
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(StoreCarrierAccounts.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(StoreCarrierAccounts.StoreId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(Carriers)).WithMany().HasForeignKey(nameof(StoreCarrierAccounts.CarrierId)).OnDelete(DeleteBehavior.Restrict);
 
                 // Aynı mağaza + firma için aynı isimde ikinci hesap açılamaz.
@@ -72,7 +76,7 @@ namespace data._Shipping
                 e.Property(x => x.Code).HasMaxLength(50).IsRequired();
                 e.Property(x => x.Description).HasMaxLength(500);
 
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(ShippingZones.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(ShippingZones.StoreId)).OnDelete(DeleteBehavior.Restrict);
 
                 // Kod, sahip (mağaza veya platform) kapsamında tekildir.
                 e.HasIndex(x => new { x.StoreId, x.Code }).IsUnique().HasFilter(SoftDeleteFilter);
@@ -81,6 +85,13 @@ namespace data._Shipping
 
             // =====================================================================
             // ShippingZoneAreas — bölge kapsam satırları
+            //
+            // DİKKAT — data._Locations altındaki Regions / Country / States / Cities
+            // tablolarının PK'leri int'tir (int id). Aşağıdaki dört FK'nin kurulabilmesi için
+            // ShippingZoneAreas.RegionId / CountryId / StateId / CityId tiplerinin 'int?'
+            // olması gerekir. Guid? kaldıkları sürece EF model kurulumunda tip uyuşmazlığı
+            // hatası alınır. Lokasyon tablolarına FK istenmiyorsa bu dört HasOne satırı
+            // silinip alanlar iz alanı olarak bırakılabilir (indeksler çalışmaya devam eder).
             // =====================================================================
             modelBuilder.Entity<ShippingZoneAreas>(e =>
             {
@@ -93,10 +104,10 @@ namespace data._Shipping
                 e.Property(x => x.PostalCodeTo).HasMaxLength(20);
 
                 e.HasOne(typeof(ShippingZones)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.ShippingZoneId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Regions)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.RegionId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Country)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.CountryId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.States)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.StateId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Cities)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.CityId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Locations.Regions)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.RegionId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Locations.Country)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.CountryId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Locations.States)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.StateId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Locations.Cities)).WithMany().HasForeignKey(nameof(ShippingZoneAreas.CityId)).OnDelete(DeleteBehavior.Restrict);
 
                 e.HasIndex(x => x.ShippingZoneId);
                 // Bölge çözümü: adresten yukarı doğru (City → State → Country → Region) arama.
@@ -126,7 +137,7 @@ namespace data._Shipping
                 e.Property(x => x.FreeShippingThreshold).HasPrecision(18, 2);
                 e.Property(x => x.Note).HasMaxLength(500);
 
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(ShippingRateRules.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(ShippingRateRules.StoreId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(Carriers)).WithMany().HasForeignKey(nameof(ShippingRateRules.CarrierId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(ShippingZones)).WithMany().HasForeignKey(nameof(ShippingRateRules.ShippingZoneId)).OnDelete(DeleteBehavior.Restrict);
 
@@ -164,10 +175,10 @@ namespace data._Shipping
 
                 e.HasOne(typeof(data._Orders.SubOrders)).WithMany().HasForeignKey(nameof(Shipments.SubOrderId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.Orders)).WithMany().HasForeignKey(nameof(Shipments.OrderId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(Shipments.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(Shipments.StoreId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(Carriers)).WithMany().HasForeignKey(nameof(Shipments.CarrierId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(StoreCarrierAccounts)).WithMany().HasForeignKey(nameof(Shipments.StoreCarrierAccountId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.WareHouse)).WithMany().HasForeignKey(nameof(Shipments.SourceWarehouseId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.WareHouse)).WithMany().HasForeignKey(nameof(Shipments.SourceWarehouseId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Inventory.StockTransfers)).WithMany().HasForeignKey(nameof(Shipments.StockTransferId)).OnDelete(DeleteBehavior.Restrict);
                 // LabelMediaItemId / ProofMediaItemId / AppliedRateRuleId / ReturnRequestId: iz alanlarıdır.
                 // Media temizliği veya kural değişimi sevkiyat kaydını kilitlememelidir.

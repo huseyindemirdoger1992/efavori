@@ -9,8 +9,13 @@ namespace data._Promotions
     /// </summary>
     public static class _PromotionModelConfiguration
     {
-        /// <summary>Soft-delete filtreli tekil indeks sabiti (mevcut _ProductModelConfiguration'daki sabitle aynı tutulmalıdır).</summary>
-        private const string SoftDeleteFilter = "[IsDeleted_Value] = 0";
+        /// <summary>
+        /// Soft-delete filtreli tekil indeks sabiti.
+        /// Owned tip data.Owned.IsDeleted içindeki property adı 'IsDeletedStatu' olduğundan
+        /// EF'in ürettiği kolon adı 'IsDeleted_IsDeletedStatu'dur.
+        /// (_AttributeModelConfiguration ve _ProductModelConfiguration ile aynı sabit.)
+        /// </summary>
+        private const string SoftDeleteFilter = "[IsDeleted_IsDeletedStatu] = 0";
 
         public static void Apply(ModelBuilder modelBuilder)
         {
@@ -39,8 +44,8 @@ namespace data._Promotions
                 e.Property(x => x.BudgetUsed).HasPrecision(18, 2);
                 e.Property(x => x.PlatformSharePercent).HasPrecision(5, 2);
 
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(Coupons.OwnerStoreId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(Coupons.TargetUserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(Coupons.OwnerStoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(Coupons.TargetUserId)).OnDelete(DeleteBehavior.Restrict);
 
                 // Kupon kodu GLOBAL tekildir (soft-delete filtreli): silinen kodun tekrar kullanımına izin verir.
                 e.HasIndex(x => x.Code).IsUnique().HasFilter(SoftDeleteFilter);
@@ -60,11 +65,11 @@ namespace data._Promotions
                 e.OwnsOne(x => x.IsDeleted);
 
                 e.HasOne(typeof(Coupons)).WithMany().HasForeignKey(nameof(CouponScopes.CouponId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(CouponScopes.StoreId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.CategoriesProduct)).WithMany().HasForeignKey(nameof(CouponScopes.CategoryId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(CouponScopes.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Categories.CategoriesProduct)).WithMany().HasForeignKey(nameof(CouponScopes.CategoryId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Products.Products)).WithMany().HasForeignKey(nameof(CouponScopes.ProductId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Products.ProductVariants)).WithMany().HasForeignKey(nameof(CouponScopes.VariantId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Brands)).WithMany().HasForeignKey(nameof(CouponScopes.BrandId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Products.Brands)).WithMany().HasForeignKey(nameof(CouponScopes.BrandId)).OnDelete(DeleteBehavior.Restrict);
 
                 e.HasIndex(x => new { x.CouponId, x.ScopeType });                                 // kupon kapsam çözümü
                 e.HasIndex(x => new { x.ProductId, x.IsExcluded });                               // ürün → geçerli kuponlar
@@ -87,7 +92,7 @@ namespace data._Promotions
                 e.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
 
                 e.HasOne(typeof(Coupons)).WithMany().HasForeignKey(nameof(CouponUsages.CouponId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Users)).WithMany().HasForeignKey(nameof(CouponUsages.UserId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(CouponUsages.UserId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Orders.Orders)).WithMany().HasForeignKey(nameof(CouponUsages.OrderId)).OnDelete(DeleteBehavior.Restrict);
 
                 e.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter(SoftDeleteFilter);         // aynı siparişte çift sayım engeli
@@ -121,7 +126,7 @@ namespace data._Promotions
                 e.Property(x => x.BudgetCap).HasPrecision(18, 2);
                 e.Property(x => x.BudgetUsed).HasPrecision(18, 2);
 
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(Campaigns.OwnerStoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(Campaigns.OwnerStoreId)).OnDelete(DeleteBehavior.Restrict);
                 // BannerMediaItemId: iz alanı — media temizliği kampanyayı kilitlemesin.
 
                 e.HasIndex(x => x.Code).IsUnique().HasFilter(SoftDeleteFilter);
@@ -145,11 +150,11 @@ namespace data._Promotions
                 e.Property(x => x.OverrideDiscountValue).HasPrecision(18, 2);
 
                 e.HasOne(typeof(Campaigns)).WithMany().HasForeignKey(nameof(CampaignScopes.CampaignId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Store)).WithMany().HasForeignKey(nameof(CampaignScopes.StoreId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.CategoriesProduct)).WithMany().HasForeignKey(nameof(CampaignScopes.CategoryId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Store.Store)).WithMany().HasForeignKey(nameof(CampaignScopes.StoreId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Categories.CategoriesProduct)).WithMany().HasForeignKey(nameof(CampaignScopes.CategoryId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Products.Products)).WithMany().HasForeignKey(nameof(CampaignScopes.ProductId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(data._Products.ProductVariants)).WithMany().HasForeignKey(nameof(CampaignScopes.VariantId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data.Brands)).WithMany().HasForeignKey(nameof(CampaignScopes.BrandId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(data._Products.Brands)).WithMany().HasForeignKey(nameof(CampaignScopes.BrandId)).OnDelete(DeleteBehavior.Restrict);
 
                 e.HasIndex(x => new { x.CampaignId, x.ScopeType });                               // motorun kapsam çözümü
                 e.HasIndex(x => new { x.ProductId, x.IsExcluded });

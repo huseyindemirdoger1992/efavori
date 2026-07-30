@@ -390948,7 +390948,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("data")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4eb809b77e9697c2c3df992604f9987bf1961331")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b5d98a45be447c6b63e70b8aa6d6f757825c4afc")]
 [assembly: System.Reflection.AssemblyProductAttribute("data")]
 [assembly: System.Reflection.AssemblyTitleAttribute("data")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
@@ -390960,7 +390960,7 @@ using System.Reflection;
 ## Dosya: data.AssemblyInfoInputs.cache
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\obj\Debug\net10.0\
 ```
-47e9161e0ea0fb36faf495920a47ef37aeff635ad6ad66925c5ce1a92e88252c
+e8942f0ee3600c6cca6f8d1cd68f306a472d44cd1f1e1497d7e6a4d9ae357ac8
 ```
 .
 ## Dosya: data.assets.cache
@@ -393865,6 +393865,22 @@ namespace data._Attribute
 }
 ```
 .
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_BulkImportProducts\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
+.
 ## Dosya: BulkImport.Common.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_BulkImportProducts\
 ```
@@ -395502,6 +395518,22 @@ namespace data._Helper
     }
 }```
 .
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Inventory\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
+.
 ## Dosya: InventoryEntityBase.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Inventory\
 ```
@@ -396340,6 +396372,22 @@ namespace data._Locations
 }
 ```
 .
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Notifications\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
+.
 ## Dosya: NotificationEntityBase.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Notifications\
 ```
@@ -396944,6 +396992,22 @@ namespace data._Notifications
         }
     }
 }```
+.
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Orders\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
 .
 ## Dosya: Order.Checkout.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Orders\
@@ -397814,6 +397878,22 @@ namespace data._Orders
     }
 }
 ```
+.
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Payments\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
 .
 ## Dosya: CommissionRates.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Payments\
@@ -401426,6 +401506,22 @@ namespace data._Products
 }
 ```
 .
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Promotions\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
+.
 ## Dosya: Campaigns.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Promotions\
 ```
@@ -402069,6 +402165,22 @@ namespace data._Promotions
         }
     }
 }```
+.
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Returns\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
 .
 ## Dosya: Disputes.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Returns\
@@ -403289,6 +403401,22 @@ namespace data._Shares
         public IsDeleted? IsDeleted { get; set; } = new();
     }
 }```
+.
+## Dosya: All.bat
+Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Shipping\
+```
+@echo off
+chcp 65001 >nul
+echo Dosyalar birlestiriliyor...
+(for /r %%f in (*.cs) do (
+    echo ## Dosya: %%~nxf
+    echo ```csharp
+    type "%%f"
+    echo ```
+    echo.
+)) > All.md
+echo Islem tamamlandi: All.md olusturuldu.
+pause```
 .
 ## Dosya: CarrierIntegrationType.cs
 Konum: C:\Users\User\source\repos\huseyindemirdoger1992\efavori\data\_Shipping\

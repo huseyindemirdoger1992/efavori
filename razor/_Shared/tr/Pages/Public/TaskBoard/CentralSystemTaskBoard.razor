@@ -3295,7 +3295,7 @@
     [Parameter] public string? TaskCategoriesValue { get; set; }
     [Parameter] public Guid? TaskFrameworkId { get; set; }
     #region Services
-    [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
+    [Inject] protected IDbContextFactory<data._ApplicationConnectionDb> DbFactory { get; init; } = default!;
     [Inject] protected NavigationManager Navigation { get; init; } = default!;
     [Inject] protected IJSRuntime JS { get; init; } = default!;
     [Inject] protected TakeLogs Logger { get; init; } = default!;
@@ -3310,7 +3310,7 @@
     private bool _disposed;
     #endregion
     #region Data
-    _ApplicationConnectionDb db = new _ApplicationConnectionDb();
+    data._ApplicationConnectionDb db = new data._ApplicationConnectionDb();
     private List<Users> adminUsers = new();
     private List<TaskCategories> taskCategories = new();
     private List<data._Tasks.TaskStatus> tasks = new();
@@ -4530,7 +4530,7 @@
     {
         await ExecuteWithLock("EditCategori", async () =>
         {
-            await using _ApplicationConnectionDb? db = await DbFactory.CreateDbContextAsync(_cts.Token);
+            await using data._ApplicationConnectionDb? db = await DbFactory.CreateDbContextAsync(_cts.Token);
             if (tce.IsDeleted == null)
             {
                 tce.IsDeleted = new IsDeleted();

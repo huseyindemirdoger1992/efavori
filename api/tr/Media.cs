@@ -118,7 +118,7 @@ public class Media(UserInfos userInfos)
             }
 
             // 5. Media Tablosuna Kayıt (Veritabanı İşlemi)
-            using var db = new _ApplicationConnectionDb();
+            using var db = new data._ApplicationConnectionDb();
 
             var fileInfoAvif = new FileInfo(fullPathAvif);
             string urlBasePath = $"/{relativeBasePath.Replace("\\", "/")}/avif/";
@@ -166,7 +166,7 @@ public class Media(UserInfos userInfos)
             logEntry.StackTrace = ex.StackTrace;
 
             // Hata durumunda logu yine de kaydetmek için
-            using var db = new _ApplicationConnectionDb();
+            using var db = new data._ApplicationConnectionDb();
             db.Logs.Add(logEntry);
             await db.SaveChangesAsync();
         }
@@ -217,7 +217,7 @@ public class Media(UserInfos userInfos)
             }
 
             // 5. Media Tablosuna Kayıt
-            using var db = new _ApplicationConnectionDb();
+            using var db = new data._ApplicationConnectionDb();
 
             var mediaEntry = new data._Galleries.Media
             {
@@ -255,7 +255,7 @@ public class Media(UserInfos userInfos)
 
             try
             {
-                using var db = new _ApplicationConnectionDb();
+                using var db = new data._ApplicationConnectionDb();
                 db.Logs.Add(logEntry);
                 await db.SaveChangesAsync();
             }
@@ -308,7 +308,7 @@ public class Media(UserInfos userInfos)
             }
 
             // 5. Veritabanı İşlemleri (Media + Log)
-            using var db = new _ApplicationConnectionDb();
+            using var db = new data._ApplicationConnectionDb();
 
             var mediaEntry = new data._Galleries.Media
             {
@@ -349,7 +349,7 @@ public class Media(UserInfos userInfos)
 
             try
             {
-                using var db = new _ApplicationConnectionDb();
+                using var db = new data._ApplicationConnectionDb();
                 db.Logs.Add(logEntry);
                 await db.SaveChangesAsync();
             }
@@ -402,7 +402,7 @@ public class Media(UserInfos userInfos)
             }
 
             // 5. Veritabanı İşlemleri (Media + Log)
-            using var db = new _ApplicationConnectionDb();
+            using var db = new data._ApplicationConnectionDb();
 
             var mediaEntry = new data._Galleries.Media
             {
@@ -445,7 +445,7 @@ public class Media(UserInfos userInfos)
 
             try
             {
-                using var db = new _ApplicationConnectionDb();
+                using var db = new data._ApplicationConnectionDb();
                 db.Logs.Add(logEntry);
                 await db.SaveChangesAsync();
             }
@@ -498,7 +498,7 @@ public class Media(UserInfos userInfos)
             }
 
             // 5. Media ve Log Kayıtlarını Hazırla
-            using var db = new _ApplicationConnectionDb();
+            using var db = new data._ApplicationConnectionDb();
 
             var mediaEntry = new data._Galleries.Media
             {
@@ -540,7 +540,7 @@ public class Media(UserInfos userInfos)
 
             try
             {
-                using var db = new _ApplicationConnectionDb();
+                using var db = new data._ApplicationConnectionDb();
                 db.Logs.Add(logEntry);
                 await db.SaveChangesAsync();
             }

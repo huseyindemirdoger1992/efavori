@@ -31,7 +31,7 @@
     if (!string.IsNullOrEmpty(userEmail))
     {
         // Oturum açık: Veritabanından dil al
-        using (var db = new _ApplicationConnectionDb())
+        using (var db = new data._ApplicationConnectionDb())
         {
             use = await db.Users
                 .AsNoTracking()

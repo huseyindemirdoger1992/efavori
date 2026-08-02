@@ -48,12 +48,12 @@ namespace razor._Shared.tr.Modals.Account
 
         private Notification? notificationRef;
         private readonly TakeLogs _logger;
-        private readonly _ApplicationConnectionDb _db;
+        private readonly data._ApplicationConnectionDb _db;
         private readonly UserInfos _userInfos; // 1. UserInfos servisi eklendi
         private readonly EmailSender emailSender; // 2. EmailSender servisi
 
 
-        public Login(_ApplicationConnectionDb db, TakeLogs logger, UserInfos userInfos, EmailSender emailSender)
+        public Login(data._ApplicationConnectionDb db, TakeLogs logger, UserInfos userInfos, EmailSender emailSender)
         {
             _db = db;
             _logger = logger;

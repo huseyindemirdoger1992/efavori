@@ -17,7 +17,7 @@ namespace razor._Shared.tr.Modals.Account
         [Parameter] public Users? use { get; set; }
 
         #region Services 
-        [Inject] protected IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; init; } = default!;
+        [Inject] protected IDbContextFactory<data._ApplicationConnectionDb> DbFactory { get; init; } = default!;
         [Inject] protected NavigationManager Navigation { get; init; } = default!;
         [Inject] protected IJSRuntime JS { get; init; } = default!;
         [Inject] protected TakeLogs Logger { get; init; } = default!;

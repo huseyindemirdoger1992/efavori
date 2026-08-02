@@ -16,7 +16,7 @@
 @using razor._Shared
 @using System.Globalization
 
-@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject IDbContextFactory<data._ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
@@ -1919,7 +1919,7 @@ else
         finally { if (_isProcessing) { _isProcessing = false; StateHasChanged(); } _writeLock.Release(); }
     }
 
-    private async Task SyncOptionsAsync(_ApplicationConnectionDb db, Guid attributeId)
+    private async Task SyncOptionsAsync(data._ApplicationConnectionDb db, Guid attributeId)
     {
         var existingOpts = await db.Set<AttributeOption>()
             .Where(o => o.AttributeDefinitionId == attributeId && (o.IsDeleted == null || o.IsDeleted.IsDeletedStatu == null || o.IsDeleted.IsDeletedStatu == false))
@@ -1958,7 +1958,7 @@ else
         }
     }
 
-    private async Task SyncTranslationsAsync(_ApplicationConnectionDb db, Guid attributeId)
+    private async Task SyncTranslationsAsync(data._ApplicationConnectionDb db, Guid attributeId)
     {
         var existing = await db.Set<AttributeTranslation>()
             .Where(t => t.AttributeDefinitionId == attributeId && (t.IsDeleted == null || t.IsDeleted.IsDeletedStatu == null || t.IsDeleted.IsDeletedStatu == false))
@@ -1973,7 +1973,7 @@ else
         { ex.IsDeleted ??= new IsDeleted(); ex.IsDeleted.IsDeletedStatu = true; ex.IsDeleted.DeletedAtDate = DateTime.UtcNow; }
     }
 
-    private async Task SyncAliasesAsync(_ApplicationConnectionDb db, Guid attributeId)
+    private async Task SyncAliasesAsync(data._ApplicationConnectionDb db, Guid attributeId)
     {
         var existing = await db.Set<AttributeAlias>()
             .Where(a => a.AttributeDefinitionId == attributeId && (a.IsDeleted == null || a.IsDeleted.IsDeletedStatu == null || a.IsDeleted.IsDeletedStatu == false))
@@ -1988,7 +1988,7 @@ else
         { ex.IsDeleted ??= new IsDeleted(); ex.IsDeleted.IsDeletedStatu = true; ex.IsDeleted.DeletedAtDate = DateTime.UtcNow; }
     }
 
-    private async Task SyncSynonymsAsync(_ApplicationConnectionDb db, Guid attributeId)
+    private async Task SyncSynonymsAsync(data._ApplicationConnectionDb db, Guid attributeId)
     {
         var existing = await db.Set<AttributeSynonym>()
             .Where(s => s.AttributeDefinitionId == attributeId && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu == null || s.IsDeleted.IsDeletedStatu == false))
@@ -2004,7 +2004,7 @@ else
     }
 
     // Dependency sync (YENİ)
-    private async Task SyncDependenciesAsync(_ApplicationConnectionDb db, Guid attributeId)
+    private async Task SyncDependenciesAsync(data._ApplicationConnectionDb db, Guid attributeId)
     {
         var existing = await db.Set<AttributeDependency>()
             .Where(d => (d.SourceAttributeDefinitionId == attributeId || d.TargetAttributeDefinitionId == attributeId)

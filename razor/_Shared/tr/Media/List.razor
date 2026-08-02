@@ -490,7 +490,7 @@
         try
         {
             using var scope = ScopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<data._ApplicationConnectionDb>();
 
             // IsDeleted owned entity yapısına uygun sorgu
             var query = dbContext.Media
@@ -617,7 +617,7 @@
         try
         {
             using var scope = ScopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<data._ApplicationConnectionDb>();
 
             var media = await dbContext.Media.FindAsync(selectedMedia.Id);
             if (media != null)
@@ -669,7 +669,7 @@
         try
         {
             using var scope = ScopeFactory.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<data._ApplicationConnectionDb>();
 
             var media = await dbContext.Media.FindAsync(selectedMedia.Id);
             if (media != null)

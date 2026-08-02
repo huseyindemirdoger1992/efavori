@@ -29,7 +29,7 @@ namespace razor._Shared.tr.Modals.Account
 {
     public partial class NewUserRegister : ComponentBase
     {
-        [Inject] public IDbContextFactory<_ApplicationConnectionDb> DbFactory { get; set; }
+        [Inject] public IDbContextFactory<data._ApplicationConnectionDb> DbFactory { get; set; }
         [Inject] public IJSRuntime JSRuntime { get; set; }
         [Inject] public UserInfos UserInfos { get; set; }
         [Inject] protected NavigationManager Navigation { get; init; } = default!;

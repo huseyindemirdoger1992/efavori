@@ -19,7 +19,7 @@ namespace api
 
     public class AllBackgroundServices : BackgroundService
     {
-        private readonly IDbContextFactory<_ApplicationConnectionDb> _dbFactory;
+        private readonly IDbContextFactory<data._ApplicationConnectionDb> _dbFactory;
         private readonly ILogger<AllBackgroundServices> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
@@ -45,7 +45,7 @@ namespace api
         // ════════════════════════════════════════════════════════════
 
         public AllBackgroundServices(
-            IDbContextFactory<_ApplicationConnectionDb> dbFactory,
+            IDbContextFactory<data._ApplicationConnectionDb> dbFactory,
             ILogger<AllBackgroundServices> logger,
             IServiceScopeFactory scopeFactory)
         {

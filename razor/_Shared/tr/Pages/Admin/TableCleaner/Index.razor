@@ -18,7 +18,7 @@
 @using Microsoft.EntityFrameworkCore
 @using System.Reflection
 
-@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject IDbContextFactory<data._ApplicationConnectionDb> DbFactory
 @inject IJSRuntime JS
 
 <h4 class="mb-4">
@@ -209,7 +209,7 @@
 
             _tables.Clear();
 
-            var dbSets = typeof(_ApplicationConnectionDb)
+            var dbSets = typeof(data._ApplicationConnectionDb)
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(x =>
                     x.PropertyType.IsGenericType &&

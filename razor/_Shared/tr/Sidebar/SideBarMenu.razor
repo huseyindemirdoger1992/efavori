@@ -2295,4 +2295,56 @@
         }
 
     </ul>
+    @* ════════════════════════════════════════════════════════════════════════
+       AKTİF MENÜ TESPİTİ — metisMenu init'inden ÖNCE çalışır.
+       app.js'teki `this.href == window.location` tam-eşitlik kontrolü;
+       sondaki "/", culture segmenti, query string ve tekrar eden linkler
+       yüzünden bu projede tutmuyor. Burada normalize edilmiş, culture'dan
+       bağımsız, "en uzun önek" mantığıyla TEK bir dal işaretlenir.
+       jQuery gerektirmez; </ul> kapandığı anda parse sırasında çalışır.
+       ════════════════════════════════════════════════════════════════════════ *@
+    <script>
+            (function () {
+                var menu = document.getElementById('menu');
+                if (!menu) return;
+
+                var CULTURES = ['tr', 'en', 'az', 'de', 'es', 'fr', 'hi', 'pt', 'ru', 'zh'];
+
+                function normalize(path) {
+                    path = (path || '').split('?')[0].split('#')[0];
+                    try { path = decodeURIComponent(path); } catch (e) { }
+                    path = path.toLowerCase().replace(/\/+$/, '');
+                    var parts = path.split('/');
+                    if (parts.length > 1 && CULTURES.indexOf(parts[1]) > -1) parts.splice(1, 1);
+                    path = parts.join('/');
+                    return path === '' ? '/' : path;
+                }
+
+                var here = normalize(location.pathname);
+                var best = null, bestLen = -1;
+
+                var links = menu.querySelectorAll('a[href]');
+                for (var i = 0; i < links.length; i++) {
+                    var raw = (links[i].getAttribute('href') || '').toLowerCase();
+                    if (raw === '' || raw.charAt(0) === '#' || raw.indexOf('javascript:') === 0) continue;
+
+                    var target = normalize(links[i].pathname);
+                    if (target === '/') continue;
+
+                    if (here === target || here.indexOf(target + '/') === 0) {
+                        if (target.length > bestLen) { bestLen = target.length; best = links[i]; }
+                    }
+                }
+
+                if (!best) return;
+
+                best.classList.add('active');
+                var node = best.parentNode;
+                while (node && node !== menu.parentNode) {
+                    if (node.tagName === 'LI') node.classList.add('mm-active');
+                    else if (node.tagName === 'UL' && node !== menu) node.classList.add('mm-show');
+                    node = node.parentNode;
+                }
+            })();
+    </script>
 </div>

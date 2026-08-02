@@ -33,7 +33,7 @@
 @using Microsoft.JSInterop
 @using razor._Shared
  
-@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject IDbContextFactory<data._ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
@@ -678,7 +678,7 @@ else
 
     // Görünen sayfadaki loglara ait kullanıcıları tek sorguda çözer
     private async Task<List<LogRow>> ResolvePageUsersAsync(
-        _ApplicationConnectionDb db, List<Logs> pageLogs, CancellationToken token)
+        data._ApplicationConnectionDb db, List<Logs> pageLogs, CancellationToken token)
     {
         var ids = pageLogs.Where(l => l.UserId.HasValue)
                           .Select(l => l.UserId!.Value)

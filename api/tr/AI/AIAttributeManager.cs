@@ -107,7 +107,7 @@ namespace api
         };
 
         private readonly HttpClient _httpClient;
-        private readonly IDbContextFactory<_ApplicationConnectionDb> _dbFactory;
+        private readonly IDbContextFactory<data._ApplicationConnectionDb> _dbFactory;
         private readonly ILogger<AIAttributeManager> _logger;
         private readonly IMemoryCache _cache;
         private readonly AIAttributeManagerOptions _opt;
@@ -118,7 +118,7 @@ namespace api
 
         public AIAttributeManager(
             HttpClient httpClient,
-            IDbContextFactory<_ApplicationConnectionDb> dbFactory,
+            IDbContextFactory<data._ApplicationConnectionDb> dbFactory,
             ILogger<AIAttributeManager> logger,
             IMemoryCache cache,
             IConfiguration configuration)
@@ -597,7 +597,7 @@ namespace api
         private void InvalidateKnowledgeIndex() => _cache.Remove(GlobalIndexCacheKey);
 
         private async Task<List<Guid>> GetAncestorCategoryIdsAsync(
-            _ApplicationConnectionDb db, Guid categoryId, CancellationToken cancellationToken)
+            data._ApplicationConnectionDb db, Guid categoryId, CancellationToken cancellationToken)
         {
             var result = new List<Guid>();
             var current = categoryId;
@@ -813,7 +813,7 @@ namespace api
         /// UYUMLUYSA reuse sayılır → jenerik kelimelerle cross-domain yanlış merge önlenir.
         /// </summary>
         private async Task<ReuseResult> ResolveReuseAsync(
-            _ApplicationConnectionDb db, AiAttribute aiAttr, HashSet<string> tokens,
+            data._ApplicationConnectionDb db, AiAttribute aiAttr, HashSet<string> tokens,
             AttributeDataType dataType, CancellationToken cancellationToken)
         {
             string? canon = TextNormalizer.ToCanonicalCode(aiAttr.CanonicalCode);
@@ -881,7 +881,7 @@ namespace api
 
         // ── Attribute oluştur (10 dil çeviri + guard'lı synonym) ──────────────
         private async Task<Guid> CreateAttributeAsync(
-            _ApplicationConnectionDb db, AiAttribute aiAttr, string trName, HashSet<string> tokens,
+            data._ApplicationConnectionDb db, AiAttribute aiAttr, string trName, HashSet<string> tokens,
             AttributeDataType dataType, string categoryPath, int order, AiApprovalStatus approval, CancellationToken cancellationToken)
         {
             var inputType = CoerceInputType(dataType, aiAttr.InputType);
@@ -952,7 +952,7 @@ namespace api
 
         // ── Option'ları ekle/genişlet (vocabulary expansion, idempotent) ──────
         private async Task<int> UpsertOptionsAsync(
-            _ApplicationConnectionDb db, Guid attributeId, AiAttribute aiAttr, string categoryPath, CancellationToken cancellationToken)
+            data._ApplicationConnectionDb db, Guid attributeId, AiAttribute aiAttr, string categoryPath, CancellationToken cancellationToken)
         {
             int created = 0, order = 0;
 
@@ -1018,7 +1018,7 @@ namespace api
         }
 
         private static async Task<bool> OptionExistsAsync(
-            _ApplicationConnectionDb db, Guid attributeId, string? canonicalCode, HashSet<string> tokens, CancellationToken cancellationToken)
+            data._ApplicationConnectionDb db, Guid attributeId, string? canonicalCode, HashSet<string> tokens, CancellationToken cancellationToken)
         {
             if (tokens.Count > 0)
             {
@@ -1041,7 +1041,7 @@ namespace api
 
         // ── Birim çözümleme (ör. "mah" → UnitGroup/BaseUnit) ──────────────────
         private static async Task<(Guid? unitGroupId, Guid? baseUnitId)> ResolveUnitAsync(
-            _ApplicationConnectionDb db, string unitCode, CancellationToken cancellationToken)
+            data._ApplicationConnectionDb db, string unitCode, CancellationToken cancellationToken)
         {
             string code = TextNormalizer.ToCanonicalCode(unitCode);
             if (string.IsNullOrWhiteSpace(code)) return (null, null);
@@ -1245,7 +1245,7 @@ namespace api
         }
 
         private static async Task WriteHistoryAsync(
-            _ApplicationConnectionDb db, string entityType, Guid entityId, Guid jobId,
+            data._ApplicationConnectionDb db, string entityType, Guid entityId, Guid jobId,
             string action, string? promptHash, string? promptVersion, decimal? confidence, CancellationToken cancellationToken)
         {
             db.Set<AiGenerationHistory>().Add(new AiGenerationHistory
@@ -1268,7 +1268,7 @@ namespace api
         // ════════════════════════════════════════════════════════════════════
 
         private static async Task<bool> LinkExistsAsync(
-            _ApplicationConnectionDb db, Guid categoryId, Guid attributeId, CancellationToken cancellationToken)
+            data._ApplicationConnectionDb db, Guid categoryId, Guid attributeId, CancellationToken cancellationToken)
             => await db.Set<CategoryAttribute>()
                 .AnyAsync(ca => ca.CategoryId == categoryId
                                 && ca.AttributeDefinitionId == attributeId
@@ -1294,7 +1294,7 @@ namespace api
             };
 
         private static async Task<string> MakeUniqueAttributeCodeAsync(
-            _ApplicationConnectionDb db, string? rawCode, string fallbackName, CancellationToken cancellationToken)
+            data._ApplicationConnectionDb db, string? rawCode, string fallbackName, CancellationToken cancellationToken)
         {
             string baseCode = TextNormalizer.ToCanonicalCode(string.IsNullOrWhiteSpace(rawCode) ? fallbackName : rawCode);
             if (string.IsNullOrWhiteSpace(baseCode)) baseCode = "attr";
@@ -1306,7 +1306,7 @@ namespace api
         }
 
         private static async Task<string> MakeUniqueOptionCodeAsync(
-            _ApplicationConnectionDb db, Guid attributeId, string? rawCode, string fallbackValue, CancellationToken cancellationToken)
+            data._ApplicationConnectionDb db, Guid attributeId, string? rawCode, string fallbackValue, CancellationToken cancellationToken)
         {
             string baseCode = TextNormalizer.ToCanonicalCode(string.IsNullOrWhiteSpace(rawCode) ? fallbackValue : rawCode);
             if (string.IsNullOrWhiteSpace(baseCode)) baseCode = "opt";

@@ -111,7 +111,7 @@ try
         try
         {
             using var scope = app.Services.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<_ApplicationConnectionDb>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<data._ApplicationConnectionDb>();
 
             // Test connection with timeout
             var canConnect = await dbContext.Database.CanConnectAsync();
@@ -223,11 +223,11 @@ try
 
         Console.WriteLine($"Database Server: {ExtractServerFromConnectionString(connectionString)}");
 
-        b.Services.AddDbContextPool<_ApplicationConnectionDb>(options =>
+        b.Services.AddDbContextPool<data._ApplicationConnectionDb>(options =>
             ConfigureDbOptions(options, connectionString, b.Environment),
             poolSize: 128); // Optimize pool size
 
-        b.Services.AddDbContextFactory<_ApplicationConnectionDb>(
+        b.Services.AddDbContextFactory<data._ApplicationConnectionDb>(
             options => ConfigureDbOptions(options, connectionString, b.Environment),
             ServiceLifetime.Singleton);
     }

@@ -30,13 +30,13 @@ namespace web.Account.Controllers
     [Route("{culture}/Account/[action]")]
     public class AccountController : Controller
     {
-        private readonly _ApplicationConnectionDb _db;
+        private readonly data._ApplicationConnectionDb _db;
         private readonly UserInfos _userInfos;
         private readonly EmailSender _emailSender;
         private readonly ILogger<AccountController> _logger;
 
         public AccountController(
-            _ApplicationConnectionDb db,
+            data._ApplicationConnectionDb db,
             UserInfos userInfos,
             EmailSender emailSender,
             ILogger<AccountController> logger)

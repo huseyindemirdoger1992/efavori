@@ -20,7 +20,7 @@
 @using razor._Shared
 @using razor._Shared.tr.Media
 
-@inject IDbContextFactory<_ApplicationConnectionDb> DbFactory
+@inject IDbContextFactory<data._ApplicationConnectionDb> DbFactory
 @inject GlobalStateHub StateHub
 @inject IJSRuntime JS
 @inject TakeLogs Logger
@@ -2465,7 +2465,7 @@ else
 
     // Galeri merge: artık seçili olmayanlar soft-delete, tekrar seçilenler reaktive,
     // hiç kaydı olmayan yeniler eklenir. (audit izi korunur, tablo şişmez)
-    private async Task SyncGalleryAsync(_ApplicationConnectionDb db, Guid storeId, List<data._Galleries.Media> selectedFiles, string itemType)
+    private async Task SyncGalleryAsync(data._ApplicationConnectionDb db, Guid storeId, List<data._Galleries.Media> selectedFiles, string itemType)
     {
         var oldGallery = await db.MediaItems
                     .Where(g => g.ItemId == storeId && g.ItemType == itemType)

@@ -1,0 +1,1496 @@
+﻿@* ============================================================
+   Teleprompter.razor
+   ─────────────────────────────────────────────────────────────
+   ✅ Profesyonel Teleprompter / Prompter Sayfası
+   ✅ Tam ekran sunum modu + mouse wheel kaydırma
+   ✅ Ayarlanabilir kaydırma hızı (1-20)
+   ✅ Ayarlanabilir yazı boyutu (16px-300px)
+   ✅ Yazı tipi ailesi seçimi
+   ✅ Satır yüksekliği ayarı
+   ✅ Sol / Orta / Sağ metin hizalama
+   ✅ Metin rengi ve arka plan rengi seçimi
+   ✅ Yatay ayna (Mirror) modu — gerçek prompter camı için
+   ✅ Odak çizgisi (Focus Line) — okunacak satır vurgusu
+   ✅ Geri sayım (3-2-1) başlatma
+   ✅ Başlat / Duraklat / Sıfırla kontrolleri
+   ✅ Klavye kısayolları (Space, ↑, ↓, Esc, M, F, R)
+   ✅ Kenar boşluğu (margin) ayarı
+   ✅ Tahmini okuma süresi göstergesi
+   ✅ İlerleme çubuğu (%)
+   ✅ Geçen süre / Kalan süre göstergesi
+   ✅ Yer imi (Bookmark) sistemi — metinde işaret noktaları
+   ✅ Metin düzenleyici ile canlı önizleme
+   ✅ Ayarları localStorage'a kaydet / yükle (JS interop)
+   ✅ Tüm ayarlar sayfada kategorize — modal yok
+   ✅ Karanlık tema (dark admin temasına uyumlu)
+   ❌ CRUD işlemi yok — tamamen client-side
+   ============================================================ *@
+@using data
+@using data.Owned;
+@using data._Carts;
+@using data._Categories;
+@using data._Follows;
+@using data._Galleries;
+@using data._Helper;
+@using data._Locations;
+@using data._Products;
+@using data._Shares;
+@using data._Store;
+@using data._Systems;
+@using data._Tasks;
+@using data._Users;
+
+@using api
+@using api.tr
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.JSInterop
+@using razor._Shared
+
+@inject IDbContextFactory<data._ApplicationConnectionDb> DbFactory
+@inject GlobalStateHub StateHub
+@inject IJSRuntime JS
+@inject TakeLogs Logger
+
+@code {
+    // Bu alanı kesinlikle SİLME. Kullanılsın veya kullanılmasın, global state'den dil bilgisini almak ve yönlendirme yapmak için gereklidir.
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+}
+
+@implements IAsyncDisposable
+
+<Notification @ref="_notificationRef" />
+
+@* ─── Breadcrumb ─── *@
+@{
+    var roads = new List<(string icon, string Name, string Url)>
+    {
+        ("fa fa-home",       "Ana Sayfa",      "/"),
+        ("fa fa-desktop",    "Araçlar",        "javascript:void(0)"),
+        ("fa fa-television", PAGE_TITLE,       "javascript:void(0)")
+    };
+}
+<razor._Shared.BreadCrumbLinksUrl roads="roads" />
+
+@* ═══════════════════════════════════════════════════════════════
+   ANA DÜZEN — Düzenleyici + Ayarlar + Önizleme
+   ═══════════════════════════════════════════════════════════════ *@
+
+@if (!_isPresenting)
+{
+    @* ─── Toolbar ─── *@
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <button class="btn btn-info btn-sm" @onclick="StartPresentation" disabled="@(string.IsNullOrWhiteSpace(_scriptText))">
+            <i class="fa fa-play me-sm-1"></i>
+            <span class="d-none d-sm-inline">Sunuma Başla</span>
+        </button>
+
+        <button class="btn btn-light btn-sm" @onclick="TogglePreview">
+            <i class="fa @(_showPreview ? "fa-eye-slash" : "fa-eye") me-sm-1"></i>
+            <span class="d-none d-sm-inline">@(_showPreview ? "Önizlemeyi Kapat" : "Önizleme")</span>
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-light btn-sm border-0" @onclick="OpenBookmarksModal" title="Yer İmleri"
+                disabled="@(!_bookmarks.Any())">
+            <i class="fa fa-bookmark me-1"></i>
+            <span class="d-none d-sm-inline">Yer İmleri (@_bookmarks.Count)</span>
+        </button>
+
+        <div class="vr mx-1"></div>
+
+        <button class="btn btn-outline-warning btn-sm border-0" @onclick="ClearScript"
+                disabled="@(string.IsNullOrWhiteSpace(_scriptText))">
+            <i class="fa fa-eraser me-1"></i>
+            <span class="d-none d-sm-inline">Temizle</span>
+        </button>
+
+        @if (!string.IsNullOrWhiteSpace(_scriptText))
+        {
+            <div class="ms-auto d-none d-md-flex align-items-center gap-3 text-light small">
+                <span><i class="fa fa-file-text-o me-1"></i>@_wordCount kelime</span>
+                <span><i class="fa fa-clock-o me-1"></i>~@_estimatedMinutes dk @_estimatedSeconds sn</span>
+                <span><i class="fa fa-font me-1"></i>@_charCount karakter</span>
+            </div>
+        }
+    </div>
+
+    <div class="row g-3">
+        @* ─── SOL PANEL: Metin Editörü ─── *@
+        <div class="@(_showPreview ? "col-12 col-lg-6" : "col-12")">
+            <div class="card bg-dark border-secondary">
+                <div class="card-header border-secondary py-2 d-flex align-items-center justify-content-between">
+                    <h6 class="mb-0 text-white">
+                        <i class="fa fa-pencil-square-o me-1"></i>Metin Editörü
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-white-50">Satır: @_lineCount</small>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <textarea class="form-control bg-dark text-light border-0 rounded-0"
+                              style="min-height:50vh; resize:vertical; font-family:@(_fontFamily); font-size:15px; line-height:1.8;"
+                              placeholder="Metninizi buraya yapıştırın veya yazın...&#10;&#10;İpucu: Satır başına '### ' ile bölüm başlığı ekleyin.&#10;'---' ile yer imi (bookmark) noktası ekleyin.&#10;'[PAUSE]' ile otomatik duraklatma noktası ekleyin.&#10;'[SLOW]' ve '[/SLOW]' ile yavaş okuma bölgesi belirleyin.&#10;'[FAST]' ve '[/FAST]' ile hızlı okuma bölgesi belirleyin."
+                              @bind="_scriptText"
+                              @bind:event="oninput"
+                              @bind:after="OnTextChanged">
+                    </textarea>
+                </div>
+            </div>
+        </div>
+
+        @* ─── SAĞ PANEL: Önizleme ─── *@
+        @if (_showPreview)
+        {
+            <div class="col-12 col-lg-6">
+                <div class="card border-secondary overflow-hidden"
+                     style="background-color:@_bgColor; min-height:50vh;">
+                    <div class="card-header border-secondary py-2 d-flex align-items-center justify-content-between"
+                         style="background-color:rgba(0,0,0,0.3);">
+                        <h6 class="mb-0 text-white">
+                            <i class="fa fa-eye me-1"></i>Önizleme
+                        </h6>
+                        <div class="d-flex align-items-center gap-1">
+                            <button class="btn btn-sm @(_isMirrored ? "btn-info" : "btn-outline-secondary") border-0"
+                                    @onclick="() => _isMirrored = !_isMirrored" title="Ayna Modu">
+                                <i class="fa fa-exchange"></i>
+                            </button>
+                            <button class="btn btn-sm @(_showFocusLine ? "btn-info" : "btn-outline-secondary") border-0"
+                                    @onclick="() => _showFocusLine = !_showFocusLine" title="Odak Çizgisi">
+                                <i class="fa fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body position-relative p-0"
+                         style="height:47vh; overflow:hidden;">
+
+                        @if (_showFocusLine)
+                        {
+                            <div style="position:absolute; top:50%; left:0; right:0; height:2px;
+                            background:rgba(13,202,240,0.6); z-index:10;
+                            box-shadow:0 0 12px rgba(13,202,240,0.4); pointer-events:none;"></div>
+                            <div style="position:absolute; top:0; left:0; right:0; height:50%;
+                            background:linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);
+                            z-index:9; pointer-events:none;"></div>
+                            <div style="position:absolute; bottom:0; left:0; right:0; height:50%;
+                            background:linear-gradient(to top, rgba(0,0,0,0.4), transparent);
+                            z-index:9; pointer-events:none;"></div>
+                        }
+
+                        <div style="padding:2rem @(_marginPercent)%;
+                            font-size:@(_fontSize)px;
+                            line-height:@(_lineHeight.ToString("0.0"));
+                            font-family:@(_fontFamily);
+                            color:@_textColor;
+                            text-align:@_textAlign;
+                            font-weight:@_fontWeight;
+                            @(_isMirrored ? "transform:scaleX(-1);" : "")
+                            overflow-y:auto; height:100%;">
+                            @if (!string.IsNullOrWhiteSpace(_scriptText))
+                            {
+                                @foreach (var line in _scriptText.Split('\n'))
+                                {
+                                    var trimmed = line.Trim();
+                                    @if (trimmed == "---")
+                                    {
+                                        <div style="border-top:2px dashed rgba(13,202,240,0.4); margin:0.5em 0;"></div>
+                                    }
+                                    else if (trimmed.StartsWith("### "))
+                                    {
+                                        <div style="font-size:1.3em; font-weight:700; color:#0dcaf0;
+                                            margin:0.8em 0 0.3em; border-bottom:1px solid rgba(13,202,240,0.2);
+                                            padding-bottom:0.2em;">
+                                            @trimmed.Substring(4)
+                                        </div>
+                                    }
+                                    else if (trimmed == "[PAUSE]")
+                                    {
+                                        <div style="text-align:center; color:#ffc107; font-size:0.6em;
+                                            margin:0.5em 0; letter-spacing:3px;">
+                                            ⏸ DURAKLAT ⏸
+                                        </div>
+                                    }
+                                    else if (string.IsNullOrWhiteSpace(trimmed))
+                                    {
+                                        <div style="height:0.8em;"></div>
+                                    }
+                                    else
+                                    {
+                                        <div style="margin-bottom:0.15em;">@trimmed</div>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center" style="color:rgba(255,255,255,0.15); padding-top:30%;">
+                                    <i class="fa fa-television fa-3x d-block"></i>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ═══════════════════════════════════════════════════════════════
+       AYAR PANELLERİ — Sayfada kategorize (modal yok)
+       ═══════════════════════════════════════════════════════════════ *@
+    <div class="row g-3 mt-1">
+
+        @* ─── Kaydırma & Boyut ─── *@
+        <div class="col-12 col-xl-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary py-2">
+                    <h6 class="mb-0 text-info small">
+                        <i class="fa fa-sliders me-1"></i>Kaydırma & Boyut
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0">
+                                <i class="fa fa-tachometer me-1"></i>Hız: @_scrollSpeed
+                            </label>
+                            <input type="range" class="form-range" min="1" max="20" step="1"
+                                   @bind="_scrollSpeed" @bind:event="oninput" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0">
+                                <i class="fa fa-font me-1"></i>Boyut: @(_fontSize)px
+                            </label>
+                            <input type="range" class="form-range" min="16" max="300" step="2"
+                                   @bind="_fontSize" @bind:event="oninput" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0">
+                                <i class="fa fa-text-height me-1"></i>Satır: @_lineHeight.ToString("0.0")x
+                            </label>
+                            <input type="range" class="form-range" min="1.0" max="3.0" step="0.1"
+                                   @bind="_lineHeight" @bind:event="oninput" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0">
+                                <i class="fa fa-arrows-h me-1"></i>Kenar: @(_marginPercent)%
+                            </label>
+                            <input type="range" class="form-range" min="0" max="30" step="1"
+                                   @bind="_marginPercent" @bind:event="oninput" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0">
+                                <i class="fa fa-hourglass-start me-1"></i>Geri Sayım: @(_countdownDuration)s
+                            </label>
+                            <input type="range" class="form-range" min="0" max="10" step="1"
+                                   @bind="_countdownDuration" @bind:event="oninput" />
+                        </div>
+                        <div class="col-6 d-flex flex-column justify-content-center gap-1 pt-1">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="chk_autopause" @bind="_autoPauseEnabled" />
+                                <label class="form-check-label text-white-50 small" for="chk_autopause">Oto. Duraklatma</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ─── Görünüm ─── *@
+        <div class="col-12 col-xl-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary py-2">
+                    <h6 class="mb-0 text-info small">
+                        <i class="fa fa-paint-brush me-1"></i>Görünüm
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-font me-1"></i>Yazı Tipi</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_fontFamily">
+                                <option value="'Segoe UI', system-ui, sans-serif">Segoe UI (Varsayılan)</option>
+                                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="'Courier New', monospace">Courier New</option>
+                                <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                                <option value="Tahoma, sans-serif">Tahoma</option>
+                                <option value="Palatino, serif">Palatino</option>
+                                <option value="'Lucida Console', monospace">Lucida Console</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-align-left me-1"></i>Hizalama</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_textAlign">
+                                <option value="left">Sola</option>
+                                <option value="center">Ortaya</option>
+                                <option value="right">Sağa</option>
+                                <option value="justify">İki Yana</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-bold me-1"></i>Kalınlık</label>
+                            <select class="form-select form-select-sm bg-dark text-white border-secondary"
+                                    @bind="_fontWeight">
+                                <option value="300">İnce (300)</option>
+                                <option value="400">Normal (400)</option>
+                                <option value="500">Orta (500)</option>
+                                <option value="600">Yarı Kalın (600)</option>
+                                <option value="700">Kalın (700)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-tint me-1"></i>Metin Rengi</label>
+                            <input type="color" class="form-control form-control-sm form-control-color bg-dark border-secondary"
+                                   @bind="_textColor" style="width:100%;" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0"><i class="fa fa-square me-1"></i>Arka Plan</label>
+                            <input type="color" class="form-control form-control-sm form-control-color bg-dark border-secondary"
+                                   @bind="_bgColor" style="width:100%;" />
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="chk_mirror2" @bind="_isMirrored" />
+                                <label class="form-check-label text-white-50 small" for="chk_mirror2">
+                                    <i class="fa fa-exchange me-1"></i>Ayna
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check form-switch mt-1">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="chk_focus2" @bind="_showFocusLine" />
+                                <label class="form-check-label text-white-50 small" for="chk_focus2">
+                                    <i class="fa fa-minus me-1"></i>Odak Çizgisi
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* ─── Odak & Tema ─── *@
+        <div class="col-12 col-xl-4">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary py-2">
+                    <h6 class="mb-0 text-info small">
+                        <i class="fa fa-magic me-1"></i>Odak & Tema
+                    </h6>
+                </div>
+                <div class="card-body py-2 px-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0">
+                                <i class="fa fa-arrows-v me-1"></i>Odak Konumu: @(_focusLinePosition)%
+                            </label>
+                            <input type="range" class="form-range" min="15" max="85" step="5"
+                                   @bind="_focusLinePosition" @bind:event="oninput" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small mb-0">
+                                <i class="fa fa-low-vision me-1"></i>Karartma: @((_fadeOpacity * 100).ToString("0"))%
+                            </label>
+                            <input type="range" class="form-range" min="0" max="0.8" step="0.05"
+                                   @bind="_fadeOpacity" @bind:event="oninput" />
+                        </div>
+
+                        <div class="col-12 mt-1">
+                            <label class="form-label text-white-50 small mb-1"><i class="fa fa-magic me-1"></i>Hazır Temalar</label>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button class="btn btn-sm border py-0 px-2" style="background:#000; color:#fff; font-size:0.7rem;"
+                                        @onclick='() => ApplyTheme("#000000", "#FFFFFF")'>
+                                    Klasik
+                                </button>
+                                <button class="btn btn-sm border py-0 px-2" style="background:#000; color:#0f0; font-size:0.7rem;"
+                                        @onclick='() => ApplyTheme("#000000", "#00FF00")'>
+                                    Hacker
+                                </button>
+                                <button class="btn btn-sm border py-0 px-2" style="background:#001529; color:#0dcaf0; font-size:0.7rem;"
+                                        @onclick='() => ApplyTheme("#001529", "#0dcaf0")'>
+                                    Okyanus
+                                </button>
+                                <button class="btn btn-sm border py-0 px-2" style="background:#1a1a2e; color:#eaeaea; font-size:0.7rem;"
+                                        @onclick='() => ApplyTheme("#1a1a2e", "#eaeaea")'>
+                                    Gece
+                                </button>
+                                <button class="btn btn-sm border py-0 px-2" style="background:#fff; color:#222; font-size:0.7rem;"
+                                        @onclick='() => ApplyTheme("#FFFFFF", "#222222")'>
+                                    Aydınlık
+                                </button>
+                                <button class="btn btn-sm border py-0 px-2" style="background:#2d1b00; color:#ffb347; font-size:0.7rem;"
+                                        @onclick='() => ApplyTheme("#2d1b00", "#FFB347")'>
+                                    Sıcak
+                                </button>
+                                <button class="btn btn-sm border py-0 px-2" style="background:#0d1117; color:#c9d1d9; font-size:0.7rem;"
+                                        @onclick='() => ApplyTheme("#0d1117", "#c9d1d9")'>
+                                    GitHub
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mt-2">
+                            <label class="form-label text-white-50 small mb-1"><i class="fa fa-floppy-o me-1"></i>Ayar Yönetimi</label>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button class="btn btn-sm btn-outline-info py-0 px-2" @onclick="SaveSettingsAsync">
+                                    <i class="fa fa-save me-1"></i>Kaydet
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" @onclick="LoadSettingsAsync">
+                                    <i class="fa fa-download me-1"></i>Yükle
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning py-0 px-2" @onclick="ResetSettingsToDefault">
+                                    <i class="fa fa-refresh me-1"></i>Varsayılan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ═══════════════════════════════════════════════════════════════
+   TAM EKRAN SUNUM MODU
+   ═══════════════════════════════════════════════════════════════ *@
+
+@if (_isPresenting)
+{
+    <div id="prompterFullscreen"
+         style="position:fixed; top:0; left:0; right:0; bottom:0; z-index:9999;
+        background-color:@_bgColor; cursor:none; overflow:hidden;"
+         @onmousemove="OnMouseMovePresentation"
+         tabindex="0">
+
+        @* ─── Geri Sayım Overlay ─── *@
+        @if (_countdownValue > 0)
+        {
+            <div style="position:absolute; inset:0; display:flex; align-items:center;
+                justify-content:center; z-index:10002; background:rgba(0,0,0,0.85);">
+                <div style="font-size:min(30vw,200px); font-weight:900; color:#0dcaf0;
+                    animation:pulse 0.8s ease-in-out infinite alternate;">
+                    @_countdownValue
+                </div>
+            </div>
+        }
+
+        @* ─── Odak Çizgisi ─── *@
+        @if (_showFocusLine && _countdownValue == 0)
+        {
+            <div style="position:absolute; top:@(_focusLinePosition)%; left:0; right:0; height:3px;
+            background:rgba(13,202,240,0.7); z-index:10001;
+            box-shadow:0 0 20px rgba(13,202,240,0.5); pointer-events:none;"></div>
+            <div style="position:absolute; top:0; left:0; right:0; height:@(_focusLinePosition)%;
+            background:linear-gradient(to bottom, rgba(0,0,0,@_fadeOpacity), transparent);
+            z-index:10000; pointer-events:none;"></div>
+            <div style="position:absolute; left:0; right:0; bottom:0;
+            height:@(100 - _focusLinePosition)%;
+            background:linear-gradient(to top, rgba(0,0,0,@_fadeOpacity), transparent);
+            z-index:10000; pointer-events:none;"></div>
+        }
+
+        @* ─── Kayan Metin ─── *@
+        <div id="prompterScrollContainer"
+             style="position:absolute; inset:0; overflow:hidden;">
+            <div id="prompterContent"
+                 style="padding:50vh @(_marginPercent)% 50vh;
+                font-size:@(_fontSize)px;
+                line-height:@(_lineHeight.ToString("0.0"));
+                font-family:@(_fontFamily);
+                color:@_textColor;
+                text-align:@_textAlign;
+                font-weight:@_fontWeight;
+                @(_isMirrored ? "transform:scaleX(-1);" : "")
+                will-change:transform;">
+
+                @foreach (var line in _scriptText.Split('\n'))
+                {
+                    var trimmed = line.Trim();
+                    @if (trimmed == "---")
+                    {
+                        <div class="prompter-bookmark" style="border-top:3px dashed rgba(13,202,240,0.5);
+                        margin:0.5em 0;"></div>
+                    }
+                    else if (trimmed.StartsWith("### "))
+                    {
+                        <div style="font-size:1.4em; font-weight:800; color:#0dcaf0;
+                            margin:1em 0 0.4em; border-bottom:2px solid rgba(13,202,240,0.3);
+                            padding-bottom:0.3em;">
+                            @trimmed.Substring(4)
+                        </div>
+                    }
+                    else if (trimmed == "[PAUSE]")
+                    {
+                        <div class="prompter-pause-marker"
+                             data-action="pause"
+                             style="text-align:center; color:#ffc107; font-size:0.5em;
+                            margin:0.5em 0; letter-spacing:4px; opacity:0.8;">
+                            ⏸ DURAKLAT ⏸
+                        </div>
+                    }
+                    else if (string.IsNullOrWhiteSpace(trimmed))
+                    {
+                        <div style="height:0.8em;"></div>
+                    }
+                    else
+                    {
+                        <div style="margin-bottom:0.15em;">@trimmed</div>
+                    }
+                }
+            </div>
+        </div>
+
+        @* ─── Üst Kontrol Çubuğu (mouse hareketiyle görünür) ─── *@
+        <div style="position:absolute; top:0; left:0; right:0; z-index:10003;
+            padding:8px 16px; background:linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+            transition:opacity 0.4s; opacity:@(_showControls ? "1" : "0");
+            pointer-events:@(_showControls ? "auto" : "none");">
+
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-light border-0" @onclick="StopPresentation" title="Çıkış (Esc)">
+                    <i class="fa fa-sign-out me-1"></i>Çıkış
+                </button>
+
+                <div class="vr mx-1" style="border-color:rgba(255,255,255,0.3);"></div>
+
+                @if (_isScrolling)
+                {
+                    <button class="btn btn-sm btn-warning border-0" @onclick="PauseScrolling" title="Duraklat (Space)">
+                        <i class="fa fa-pause me-1"></i>Duraklat
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-sm btn-success border-0" @onclick="ResumeScrolling" title="Devam (Space)">
+                        <i class="fa fa-play me-1"></i>Devam
+                    </button>
+                }
+
+                <button class="btn btn-sm btn-outline-light border-0" @onclick="ResetScroll" title="Başa Dön (R)">
+                    <i class="fa fa-undo"></i>
+                </button>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 text-light small">
+                <span title="Hız">
+                    <i class="fa fa-tachometer me-1"></i>
+                    <button class="btn btn-sm btn-outline-light border-0 py-0 px-1" @onclick="DecreaseSpeed" title="Yavaşlat (↓)">
+                        <i class="fa fa-minus"></i>
+                    </button>
+                    <span class="mx-1 fw-bold">@_scrollSpeed</span>
+                    <button class="btn btn-sm btn-outline-light border-0 py-0 px-1" @onclick="IncreaseSpeed" title="Hızlandır (↑)">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                </span>
+
+                <span title="Yazı Boyutu">
+                    <i class="fa fa-font me-1"></i>
+                    <button class="btn btn-sm btn-outline-light border-0 py-0 px-1" @onclick="DecreaseFontSize">
+                        <i class="fa fa-minus"></i>
+                    </button>
+                    <span class="mx-1">@(_fontSize)px</span>
+                    <button class="btn btn-sm btn-outline-light border-0 py-0 px-1" @onclick="IncreaseFontSize">
+                        <i class="fa fa-plus"></i>
+                    </button>
+                </span>
+
+                <button class="btn btn-sm @(_isMirrored ? "btn-info" : "btn-outline-light") border-0"
+                        @onclick="() => _isMirrored = !_isMirrored" title="Ayna Modu (M)">
+                    <i class="fa fa-exchange"></i>
+                </button>
+
+                <button class="btn btn-sm @(_showFocusLine ? "btn-info" : "btn-outline-light") border-0"
+                        @onclick="() => _showFocusLine = !_showFocusLine" title="Odak Çizgisi (F)">
+                    <i class="fa fa-minus"></i>
+                </button>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 text-light small">
+                <span><i class="fa fa-clock-o me-1"></i>@_elapsedDisplay</span>
+                <span class="text-white-50">|</span>
+                <span><i class="fa fa-hourglass-half me-1"></i>@_remainingDisplay</span>
+                <span class="text-info fw-bold">@(_progressPercent.ToString("0"))%</span>
+            </div>
+        </div>
+
+        @* ─── İlerleme Çubuğu (her zaman görünür, altta) ─── *@
+        <div style="position:absolute; bottom:0; left:0; right:0; height:4px;
+            z-index:10003; background:rgba(255,255,255,0.1);">
+            <div style="height:100%; width:@(_progressPercent.ToString("0.0"))%;
+            background:linear-gradient(to right, #0dcaf0, #6610f2);
+            transition:width 0.3s;"></div>
+        </div>
+    </div>
+}
+
+@* ═══════════════════════════════════════════════════════════════
+   MODAL — Yer İmleri
+   ═══════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="BookmarksModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content bg-dark border border-info"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-info py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-bookmark me-1"></i>Yer İmleri
+                </h6>
+                <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                    <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                @if (_bookmarks.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @{
+                            int bmIdx = 1;
+                        }
+                        @foreach (var bm in _bookmarks)
+                        {
+                            var localIdx = bmIdx;
+                            <div class="list-group-item bg-transparent text-white border-secondary d-flex align-items-center">
+                                <span class="badge bg-info me-2">@(bmIdx++)</span>
+                                <span class="flex-grow-1 small text-truncate">@bm.PreviewText</span>
+                                <span class="text-white-50 small ms-2">Satır @bm.LineNumber</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-white-50 text-center mb-0">
+                        <i class="fa fa-info-circle me-1"></i>
+                        Metinde '---' kullanarak yer imi noktaları ekleyebilirsiniz.
+                    </p>
+                }
+            </div>
+
+            <div class="modal-footer border-top border-info py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════════════════════════
+   MODAL — Klavye Kısayolları Yardımı
+   ═══════════════════════════════════════════════════════════════ *@
+<div class="modal fade" id="ShortcutsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-secondary"
+             style="box-shadow:0 0 8px rgba(13,202,240,0.35);">
+
+            <div class="modal-header border-bottom border-secondary py-2">
+                <h6 class="modal-title text-white mb-0">
+                    <i class="fa fa-keyboard-o me-1"></i>Klavye Kısayolları
+                </h6>
+                <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close">
+                    <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <table class="table table-sm table-borderless text-white mb-0">
+                    <tbody>
+                        <tr><td class="text-info" style="width:120px;"><kbd>Space</kbd></td><td>Başlat / Duraklat</td></tr>
+                        <tr><td class="text-info"><kbd>↑</kbd></td><td>Hızı artır</td></tr>
+                        <tr><td class="text-info"><kbd>↓</kbd></td><td>Hızı azalt</td></tr>
+                        <tr><td class="text-info"><kbd>←</kbd></td><td>Yazı boyutunu küçült</td></tr>
+                        <tr><td class="text-info"><kbd>→</kbd></td><td>Yazı boyutunu büyüt</td></tr>
+                        <tr><td class="text-info"><kbd>R</kbd></td><td>Başa dön</td></tr>
+                        <tr><td class="text-info"><kbd>M</kbd></td><td>Ayna modunu aç/kapat</td></tr>
+                        <tr><td class="text-info"><kbd>F</kbd></td><td>Odak çizgisini aç/kapat</td></tr>
+                        <tr><td class="text-info"><kbd>Esc</kbd></td><td>Sunumdan çık</td></tr>
+                        <tr><td class="text-info"><kbd>Scroll</kbd></td><td>Metni elle kaydır</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer border-top border-secondary py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa fa-arrow-left me-1"></i>Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ═══════════════════════════════════════════════════════════════
+   STYLE — Teleprompter animasyonları
+   ═══════════════════════════════════════════════════════════════ *@
+<style>
+    @@keyframes pulse {
+        from {
+            transform: scale(1);
+            opacity: 0.7;
+        }
+
+        to {
+            transform: scale(1.15);
+            opacity: 1;
+        }
+    }
+
+    .prompter-kbd {
+        display: inline-block;
+        padding: 2px 6px;
+        font-size: 0.75rem;
+        font-family: monospace;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 3px;
+    }
+</style>
+
+@* ═══════════════════════════════════════════════════════════════
+   CODE BLOCK
+   ═══════════════════════════════════════════════════════════════ *@
+@code {
+
+    // ─── Sabitler ────────────────────────────────────────────────
+    private const string PAGE_TITLE = "Teleprompter";
+    private const int SCROLL_INTERVAL_MS = 50;
+    private const int WORDS_PER_MINUTE = 150;
+    private const double WHEEL_SCROLL_MULTIPLIER = 2.5;
+
+    // ─── Parametre ────────────────────────────────────────────────
+    [Parameter] public Users? use { get; set; }
+
+    // ─── Yaşam döngüsü ────────────────────────────────────────────
+    private bool _disposed;
+    private bool _isInitialized;
+
+    // ─── İptal zincirleri ─────────────────────────────────────────
+    private readonly CancellationTokenSource _cts = new();
+
+    // ─── UI durumu ────────────────────────────────────────────────
+    private Notification? _notificationRef;
+
+    // ─── Metin ────────────────────────────────────────────────────
+    private string _scriptText = string.Empty;
+    private int _wordCount;
+    private int _charCount;
+    private int _lineCount;
+    private int _estimatedMinutes;
+    private int _estimatedSeconds;
+
+    // ─── Kaydırma / Sunum ─────────────────────────────────────────
+    private bool _isPresenting;
+    private bool _isScrolling;
+    private bool _showPreview = true;
+    private bool _showControls = true;
+    private DateTime _lastMouseMove = DateTime.UtcNow;
+    private System.Threading.Timer? _scrollTimer;
+    private double _currentScrollPosition;
+    private double _maxScrollHeight;
+    private DateTime _presentationStartTime;
+    private TimeSpan _elapsedTime;
+    private string _elapsedDisplay = "00:00";
+    private string _remainingDisplay = "--:--";
+    private double _progressPercent;
+    private System.Threading.Timer? _clockTimer;
+
+    // ─── Geri sayım ──────────────────────────────────────────────
+    private int _countdownValue;
+    private int _countdownDuration = 3;
+
+    // ─── Görünüm ayarları ─────────────────────────────────────────
+    private int _scrollSpeed = 5;
+    private int _fontSize = 42;
+    private double _lineHeight = 1.6;
+    private int _marginPercent = 10;
+    private string _fontFamily = "'Segoe UI', system-ui, sans-serif";
+    private string _textAlign = "center";
+    private string _fontWeight = "400";
+    private string _textColor = "#FFFFFF";
+    private string _bgColor = "#000000";
+    private bool _isMirrored;
+    private bool _showFocusLine = true;
+    private int _focusLinePosition = 35;
+    private double _fadeOpacity = 0.45;
+    private bool _autoPauseEnabled = true;
+
+    // ─── Yer İmleri ──────────────────────────────────────────────
+    private List<BookmarkItem> _bookmarks = new();
+
+    // ─── JS interop referans ─────────────────────────────────────
+    private DotNetObjectReference<Teleprompter>? _dotNetRef;
+
+    // ══════════════════════════════════════════════════════════════
+    // YAŞAM DÖNGÜSÜ
+    // ══════════════════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_disposed || _isInitialized) return;
+        _isInitialized = true;
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+        await LoadSettingsAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RegisterKeyboardHandler();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        _scrollTimer?.Dispose();
+        _clockTimer?.Dispose();
+
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                if (window.__prompterKeyHandler) {
+                    document.removeEventListener('keydown', window.__prompterKeyHandler);
+                }
+                if (window.__prompterWheelHandler) {
+                    document.removeEventListener('wheel', window.__prompterWheelHandler);
+                    document.removeEventListener('mousewheel', window.__prompterWheelHandler);
+                    document.removeEventListener('DOMMouseScroll', window.__prompterWheelHandler);
+                }
+                window.__prompterDotNet = null;
+            ");
+        }
+        catch { }
+
+        _dotNetRef?.Dispose();
+
+        await _cts.CancelAsync();
+        _cts.Dispose();
+
+        GC.SuppressFinalize(this);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // KLAVYE & MOUSE WHEEL HANDLER (JS Interop)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task RegisterKeyboardHandler()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                if(window.__prompterKeyHandler) document.removeEventListener('keydown', window.__prompterKeyHandler);
+                window.__prompterKeyHandler = function(e) {
+                    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+                    const key = e.key;
+                    const validKeys = [' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'm', 'M', 'f', 'F', 'r', 'R'];
+                    if (validKeys.includes(key)) {
+                        e.preventDefault();
+                        window.__prompterDotNet && window.__prompterDotNet.invokeMethodAsync('HandleKeyFromJS', key);
+                    }
+                };
+                document.addEventListener('keydown', window.__prompterKeyHandler);
+            ");
+        }
+        catch { }
+    }
+
+    private async Task RegisterWheelHandler()
+    {
+        try
+        {
+            // ── Uzaktan masaüstü (RDP/VNC/AnyDesk/TeamViewer) uyumlu wheel handler ──
+            // Bazı remote desktop istemcileri standart 'wheel' eventi yerine
+            // eski 'mousewheel' veya 'DOMMouseScroll' eventlerini iletir.
+            // Ayrıca bazıları scroll'u pointer event olarak gönderir.
+            // Bu yüzden tüm varyantları dinliyoruz.
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    // Önceki handler'ları temizle
+                    if (window.__prompterWheelHandler) {
+                        document.removeEventListener('wheel', window.__prompterWheelHandler);
+                        document.removeEventListener('mousewheel', window.__prompterWheelHandler);
+                        document.removeEventListener('DOMMouseScroll', window.__prompterWheelHandler);
+                    }
+
+                    window.__prompterWheelHandler = function(e) {
+                        var el = document.getElementById('prompterFullscreen');
+                        if (!el) return;
+
+                        // Event target doğrudan fullscreen içinde olmasa bile
+                        // (z-index overlay'ler yüzünden) event'i yakala
+                        // RDP gibi protokollerde target bazen 'document' veya 'body' olabilir
+                        var isInPrompter = el.contains(e.target) ||
+                                           e.target === document.body ||
+                                           e.target === document.documentElement ||
+                                           e.target === document;
+
+                        if (!isInPrompter) return;
+
+                        if (e.preventDefault) e.preventDefault();
+                        if (e.stopPropagation) e.stopPropagation();
+
+                        // deltaY normalize — farklı event tipleri farklı değerler verir
+                        var delta = 0;
+                        if (e.deltaY !== undefined) {
+                            // Standart 'wheel' event
+                            delta = e.deltaY;
+                        } else if (e.wheelDelta !== undefined) {
+                            // Eski 'mousewheel' event (IE, eski Chrome)
+                            // wheelDelta ters işaretli ve 120 katları
+                            delta = -e.wheelDelta / 3;
+                        } else if (e.detail !== undefined) {
+                            // Firefox 'DOMMouseScroll' event
+                            // detail genellikle 3 veya -3
+                            delta = e.detail * 40;
+                        }
+
+                        if (delta === 0) return;
+
+                        if (window.__prompterDotNet) {
+                            window.__prompterDotNet.invokeMethodAsync('HandleWheelFromJS', delta);
+                        }
+                    };
+
+                    // Tüm wheel event varyantlarını dinle
+                    document.addEventListener('wheel', window.__prompterWheelHandler, {passive: false, capture: true});
+                    document.addEventListener('mousewheel', window.__prompterWheelHandler, {passive: false, capture: true});
+                    document.addEventListener('DOMMouseScroll', window.__prompterWheelHandler, {passive: false, capture: true});
+                })();
+            ");
+        }
+        catch { }
+    }
+
+    [JSInvokable("HandleKeyFromJS")]
+    public async Task HandleKeyFromJS(string key)
+    {
+        await HandleKeyPress(key);
+    }
+
+    [JSInvokable("HandleWheelFromJS")]
+    public async Task HandleWheelFromJS(double deltaY)
+    {
+        if (!_isPresenting || _disposed) return;
+
+        _currentScrollPosition += deltaY * WHEEL_SCROLL_MULTIPLIER;
+        _currentScrollPosition = Math.Max(0, _currentScrollPosition);
+
+        if (_maxScrollHeight > 0)
+        {
+            _currentScrollPosition = Math.Min(_currentScrollPosition, _maxScrollHeight);
+            _progressPercent = Math.Min(100, (_currentScrollPosition / _maxScrollHeight) * 100);
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                $"var c=document.getElementById('prompterContent'); if(c) c.style.transform='translateY(-{_currentScrollPosition.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}px)';");
+        }
+        catch { }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleKeyPress(string key)
+    {
+        switch (key)
+        {
+            case " ":
+                if (_isPresenting)
+                {
+                    if (_isScrolling) PauseScrolling();
+                    else ResumeScrolling();
+                }
+                break;
+            case "ArrowUp": IncreaseSpeed(); break;
+            case "ArrowDown": DecreaseSpeed(); break;
+            case "ArrowLeft": DecreaseFontSize(); break;
+            case "ArrowRight": IncreaseFontSize(); break;
+            case "Escape":
+                if (_isPresenting) await StopPresentation();
+                break;
+            case "m": case "M": _isMirrored = !_isMirrored; break;
+            case "f": case "F": _showFocusLine = !_showFocusLine; break;
+            case "r":
+            case "R":
+                if (_isPresenting) await ResetScroll();
+                break;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // METİN ANALİZ
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnTextChanged()
+    {
+        AnalyzeText();
+        ExtractBookmarks();
+    }
+
+    private void AnalyzeText()
+    {
+        if (string.IsNullOrWhiteSpace(_scriptText))
+        {
+            _wordCount = 0; _charCount = 0; _lineCount = 0;
+            _estimatedMinutes = 0; _estimatedSeconds = 0;
+            return;
+        }
+
+        var cleanText = _scriptText
+            .Replace("[PAUSE]", "")
+            .Replace("[SLOW]", "").Replace("[/SLOW]", "")
+            .Replace("[FAST]", "").Replace("[/FAST]", "")
+            .Replace("---", "");
+
+        var words = cleanText.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        _wordCount = words.Length;
+        _charCount = cleanText.Length;
+        _lineCount = _scriptText.Split('\n').Length;
+
+        var totalSeconds = (int)Math.Ceiling((double)_wordCount / WORDS_PER_MINUTE * 60);
+        _estimatedMinutes = totalSeconds / 60;
+        _estimatedSeconds = totalSeconds % 60;
+    }
+
+    private void ExtractBookmarks()
+    {
+        _bookmarks.Clear();
+        if (string.IsNullOrWhiteSpace(_scriptText)) return;
+
+        var lines = _scriptText.Split('\n');
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Trim() == "---")
+            {
+                var preview = "Yer İmi";
+                for (int j = i + 1; j < lines.Length && j < i + 3; j++)
+                {
+                    var next = lines[j].Trim();
+                    if (!string.IsNullOrWhiteSpace(next) && next != "---" && !next.StartsWith("["))
+                    {
+                        preview = next.Length > 60 ? next.Substring(0, 60) + "..." : next;
+                        break;
+                    }
+                }
+                _bookmarks.Add(new BookmarkItem { LineNumber = i + 1, PreviewText = preview });
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // SUNUM KONTROLÜ
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task StartPresentation()
+    {
+        if (string.IsNullOrWhiteSpace(_scriptText)) return;
+
+        _isPresenting = true;
+        _currentScrollPosition = 0;
+        _progressPercent = 0;
+        _showControls = true;
+        _countdownValue = _countdownDuration;
+        _presentationStartTime = DateTime.UtcNow;
+        _elapsedDisplay = "00:00";
+        _remainingDisplay = FormatTime(TimeSpan.FromMinutes(_estimatedMinutes).Add(TimeSpan.FromSeconds(_estimatedSeconds)));
+
+        StateHasChanged();
+
+        // Tam ekran iste
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                var el = document.getElementById('prompterFullscreen');
+                if (el && el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+            ");
+        }
+        catch { }
+
+        // DotNetObjectReference'ı JS'e kaydet (keyboard + wheel handler için)
+        _dotNetRef?.Dispose();
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        try
+        {
+            await SetDotNetRefInJS();
+        }
+        catch { }
+
+        // Klavye handler'ı kaydet
+        await RegisterKeyboardHandler();
+
+        // Mouse wheel handler'ı kaydet
+        await RegisterWheelHandler();
+
+        // Geri sayım
+        if (_countdownDuration > 0)
+        {
+            for (int i = _countdownDuration; i > 0; i--)
+            {
+                _countdownValue = i;
+                StateHasChanged();
+                await Task.Delay(1000, _cts.Token);
+            }
+        }
+        _countdownValue = 0;
+        StateHasChanged();
+
+        // Scroll yüksekliğini al
+        try
+        {
+            _maxScrollHeight = await JS.InvokeAsync<double>("eval",
+                "document.getElementById('prompterContent')?.scrollHeight || 5000");
+        }
+        catch { _maxScrollHeight = 5000; }
+
+        // Saat timer'ı başlat
+        _clockTimer = new System.Threading.Timer(async _ =>
+        {
+            if (_disposed || !_isPresenting) return;
+            _elapsedTime = DateTime.UtcNow - _presentationStartTime;
+            _elapsedDisplay = FormatTime(_elapsedTime);
+
+            var totalEstimated = TimeSpan.FromMinutes(_estimatedMinutes).Add(TimeSpan.FromSeconds(_estimatedSeconds));
+            var remaining = totalEstimated - _elapsedTime;
+            _remainingDisplay = remaining.TotalSeconds > 0 ? FormatTime(remaining) : "00:00";
+
+            await InvokeAsync(StateHasChanged);
+        }, null, 0, 1000);
+
+        // Kaydırmayı başlat
+        StartScrollTimer();
+    }
+
+    private async Task SetDotNetRefInJS()
+    {
+        // Önce JS tarafında setter fonksiyonu tanımla, sonra DotNetObjectReference'ı parametre olarak geçir
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                window.__setPrompterRef = function(ref) {
+                    window.__prompterDotNet = ref;
+                };
+            ");
+            await JS.InvokeVoidAsync("window.__setPrompterRef", _dotNetRef);
+        }
+        catch { }
+    }
+
+    private async Task StopPresentation()
+    {
+        _isPresenting = false;
+        _isScrolling = false;
+        _scrollTimer?.Dispose();
+        _scrollTimer = null;
+        _clockTimer?.Dispose();
+        _clockTimer = null;
+
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "document.exitFullscreen && document.exitFullscreen().catch(()=>{})");
+        }
+        catch { }
+
+        // Wheel handler'ı temizle (tüm varyantlar)
+        try
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                if (window.__prompterWheelHandler) {
+                    document.removeEventListener('wheel', window.__prompterWheelHandler);
+                    document.removeEventListener('mousewheel', window.__prompterWheelHandler);
+                    document.removeEventListener('DOMMouseScroll', window.__prompterWheelHandler);
+                }
+            ");
+        }
+        catch { }
+
+        // Klavye handler'ı edit modu için yeniden kaydet
+        await RegisterKeyboardHandler();
+
+        StateHasChanged();
+    }
+
+    private void StartScrollTimer()
+    {
+        _isScrolling = true;
+        _scrollTimer?.Dispose();
+
+        _scrollTimer = new System.Threading.Timer(async _ =>
+        {
+            if (_disposed || !_isPresenting || !_isScrolling) return;
+
+            var pixelsPerTick = _scrollSpeed * 0.6;
+            _currentScrollPosition += pixelsPerTick;
+
+            if (_maxScrollHeight > 0)
+            {
+                _progressPercent = Math.Min(100, (_currentScrollPosition / _maxScrollHeight) * 100);
+            }
+
+            if (_currentScrollPosition >= _maxScrollHeight)
+            {
+                _isScrolling = false;
+                _progressPercent = 100;
+                _scrollTimer?.Dispose();
+            }
+
+            try
+            {
+                await JS.InvokeVoidAsync("eval",
+                    $"var c=document.getElementById('prompterContent'); if(c) c.style.transform='translateY(-{_currentScrollPosition.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)}px)';");
+                await InvokeAsync(StateHasChanged);
+            }
+            catch { }
+
+        }, null, 0, SCROLL_INTERVAL_MS);
+    }
+
+    private void PauseScrolling()
+    {
+        _isScrolling = false;
+        _scrollTimer?.Dispose();
+        _scrollTimer = null;
+        StateHasChanged();
+    }
+
+    private void ResumeScrolling()
+    {
+        if (!_isPresenting) return;
+        StartScrollTimer();
+        StateHasChanged();
+    }
+
+    private async Task ResetScroll()
+    {
+        _currentScrollPosition = 0;
+        _progressPercent = 0;
+        _presentationStartTime = DateTime.UtcNow;
+        _elapsedDisplay = "00:00";
+
+        try
+        {
+            await JS.InvokeVoidAsync("eval",
+                "var c=document.getElementById('prompterContent'); if(c) c.style.transform='translateY(0)';");
+        }
+        catch { }
+
+        PauseScrolling();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // HIZ & BOYUT KONTROL
+    // ══════════════════════════════════════════════════════════════
+
+    private void IncreaseSpeed()
+    {
+        if (_scrollSpeed < 20) _scrollSpeed++;
+        if (_isScrolling) RestartScrollTimer();
+    }
+
+    private void DecreaseSpeed()
+    {
+        if (_scrollSpeed > 1) _scrollSpeed--;
+        if (_isScrolling) RestartScrollTimer();
+    }
+
+    private void IncreaseFontSize()
+    {
+        if (_fontSize < 300) _fontSize += 2;
+    }
+
+    private void DecreaseFontSize()
+    {
+        if (_fontSize > 16) _fontSize -= 2;
+    }
+
+    private void RestartScrollTimer()
+    {
+        if (!_isScrolling || !_isPresenting) return;
+        _scrollTimer?.Dispose();
+        StartScrollTimer();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // MOUSE HAREKETİ (kontrol çubuğunu göster/gizle)
+    // ══════════════════════════════════════════════════════════════
+
+    private void OnMouseMovePresentation()
+    {
+        _showControls = true;
+        _lastMouseMove = DateTime.UtcNow;
+
+        Task.Delay(3000).ContinueWith(_ =>
+        {
+            if (!_disposed && (DateTime.UtcNow - _lastMouseMove).TotalSeconds >= 2.8)
+            {
+                _showControls = false;
+                InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TEMİZLE & ÖNİZLEME
+    // ══════════════════════════════════════════════════════════════
+
+    private void ClearScript()
+    {
+        _scriptText = string.Empty;
+        _bookmarks.Clear();
+        AnalyzeText();
+        StateHasChanged();
+    }
+
+    private void TogglePreview()
+    {
+        _showPreview = !_showPreview;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // TEMA UYGULA
+    // ══════════════════════════════════════════════════════════════
+
+    private void ApplyTheme(string bg, string text)
+    {
+        _bgColor = bg;
+        _textColor = text;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // AYAR KAYDET / YÜKLE (localStorage via JS)
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task SaveSettingsAsync()
+    {
+        try
+        {
+            var settings = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                scrollSpeed = _scrollSpeed,
+                fontSize = _fontSize,
+                lineHeight = _lineHeight,
+                marginPercent = _marginPercent,
+                fontFamily = _fontFamily,
+                textAlign = _textAlign,
+                fontWeight = _fontWeight,
+                textColor = _textColor,
+                bgColor = _bgColor,
+                isMirrored = _isMirrored,
+                showFocusLine = _showFocusLine,
+                focusLinePosition = _focusLinePosition,
+                fadeOpacity = _fadeOpacity,
+                countdownDuration = _countdownDuration,
+                autoPauseEnabled = _autoPauseEnabled
+            });
+
+            await JS.InvokeVoidAsync("eval", $"localStorage.setItem('efavori_teleprompter_settings', '{EscapeJs(settings)}')");
+            await Notify("success", "Kaydedildi", "Prompter ayarları kaydedildi.");
+        }
+        catch (Exception ex)
+        {
+            await Notify("danger", "Hata", "Ayarlar kaydedilemedi.");
+        }
+    }
+
+    private async Task LoadSettingsAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("eval", "localStorage.getItem('efavori_teleprompter_settings')");
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("scrollSpeed", out var v1) && v1.TryGetInt32(out var ss)) _scrollSpeed = ss;
+            if (root.TryGetProperty("fontSize", out var v2) && v2.TryGetInt32(out var fs)) _fontSize = fs;
+            if (root.TryGetProperty("lineHeight", out var v3) && v3.TryGetDouble(out var lh)) _lineHeight = lh;
+            if (root.TryGetProperty("marginPercent", out var v4) && v4.TryGetInt32(out var mp)) _marginPercent = mp;
+            if (root.TryGetProperty("fontFamily", out var v5)) _fontFamily = v5.GetString() ?? _fontFamily;
+            if (root.TryGetProperty("textAlign", out var v6)) _textAlign = v6.GetString() ?? _textAlign;
+            if (root.TryGetProperty("fontWeight", out var v7)) _fontWeight = v7.GetString() ?? _fontWeight;
+            if (root.TryGetProperty("textColor", out var v8)) _textColor = v8.GetString() ?? _textColor;
+            if (root.TryGetProperty("bgColor", out var v9)) _bgColor = v9.GetString() ?? _bgColor;
+            if (root.TryGetProperty("isMirrored", out var v10)) _isMirrored = v10.GetBoolean();
+            if (root.TryGetProperty("showFocusLine", out var v11)) _showFocusLine = v11.GetBoolean();
+            if (root.TryGetProperty("focusLinePosition", out var v12) && v12.TryGetInt32(out var flp)) _focusLinePosition = flp;
+            if (root.TryGetProperty("fadeOpacity", out var v13) && v13.TryGetDouble(out var fo)) _fadeOpacity = fo;
+            if (root.TryGetProperty("countdownDuration", out var v14) && v14.TryGetInt32(out var cd)) _countdownDuration = cd;
+            if (root.TryGetProperty("autoPauseEnabled", out var v15)) _autoPauseEnabled = v15.GetBoolean();
+        }
+        catch { }
+    }
+
+    private void ResetSettingsToDefault()
+    {
+        _scrollSpeed = 5;
+        _fontSize = 42;
+        _lineHeight = 1.6;
+        _marginPercent = 10;
+        _fontFamily = "'Segoe UI', system-ui, sans-serif";
+        _textAlign = "center";
+        _fontWeight = "400";
+        _textColor = "#FFFFFF";
+        _bgColor = "#000000";
+        _isMirrored = false;
+        _showFocusLine = true;
+        _focusLinePosition = 35;
+        _fadeOpacity = 0.45;
+        _countdownDuration = 3;
+        _autoPauseEnabled = true;
+        StateHasChanged();
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // YARDIMCI
+    // ══════════════════════════════════════════════════════════════
+
+    private async Task ShowModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"new bootstrap.Modal(document.getElementById('{id}')).show()");
+
+    private async Task HideModal(string id) =>
+        await JS.InvokeVoidAsync("eval",
+            $"bootstrap.Modal.getInstance(document.getElementById('{id}'))?.hide()");
+
+    private async Task OpenBookmarksModal() => await ShowModal("BookmarksModal");
+    private async Task OpenShortcutsModal() => await ShowModal("ShortcutsModal");
+
+    private async Task Notify(string type, string title, string text)
+    {
+        if (_notificationRef == null) return;
+        await _notificationRef.Launch(type, title, text, "https://picsum.photos/120");
+    }
+
+    private static string FormatTime(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+            return $"{(int)ts.TotalHours}:{ts.Minutes:D2}:{ts.Seconds:D2}";
+        return $"{ts.Minutes:D2}:{ts.Seconds:D2}";
+    }
+
+    private static string EscapeJs(string s) =>
+        s.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "\\r");
+
+    // ─── Veri modelleri ──────────────────────────────────────────
+    private class BookmarkItem
+    {
+        public int LineNumber { get; set; }
+        public string PreviewText { get; set; } = "";
+    }
+}

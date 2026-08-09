@@ -563,7 +563,7 @@
     </div>
 
     <script>
-            (function () {
+            (function() {
                 function isExpired(card) {
                     const timerSpan = card.querySelector('span[data-target]');
                     if (!timerSpan) return false;
@@ -605,22 +605,22 @@
                         if (targetDate) {
                             const diff = targetDate - now;
                             if (diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000) counts['1month']++;
-                            if (diff > 0 && diff <= 7 * 24 * 60 * 60 * 1000)  counts['1week']++;
-                            if (diff > 0 && diff <= 24 * 60 * 60 * 1000)       counts['1day']++;
-                            if (diff > 0 && diff <= 60 * 60 * 1000)             counts['1hour']++;
+                            if (diff > 0 && diff <= 7 * 24 * 60 * 60 * 1000) counts['1week']++;
+                            if (diff > 0 && diff <= 24 * 60 * 60 * 1000) counts['1day']++;
+                            if (diff > 0 && diff <= 60 * 60 * 1000) counts['1hour']++;
                         }
                     });
 
                     const labelMap = {
-                        radioAll:    { prefix: ' Tümü',        count: counts.all },
-                        radioLow:    { prefix: ' Düşük',       count: counts.low },
-                        radioMedium: { prefix: ' Orta',        count: counts.medium },
-                        radioHigh:   { prefix: ' Yüksek',      count: counts.high },
-                        dateMonth:   { prefix: ' Son 1 Ay',    count: counts['1month'] },
-                        dateWeek:    { prefix: ' Son 1 Hafta', count: counts['1week'] },
-                        dateDay:     { prefix: ' Son 1 Gün',   count: counts['1day'] },
-                        dateHour:    { prefix: ' Son 1 Saat',  count: counts['1hour'] },
-                        dateExpired: { prefix: ' Süre Doldu',  count: counts.expired }
+                        radioAll: { prefix: ' Tümü', count: counts.all },
+                        radioLow: { prefix: ' Düşük', count: counts.low },
+                        radioMedium: { prefix: ' Orta', count: counts.medium },
+                        radioHigh: { prefix: ' Yüksek', count: counts.high },
+                        dateMonth: { prefix: ' Son 1 Ay', count: counts['1month'] },
+                        dateWeek: { prefix: ' Son 1 Hafta', count: counts['1week'] },
+                        dateDay: { prefix: ' Son 1 Gün', count: counts['1day'] },
+                        dateHour: { prefix: ' Son 1 Saat', count: counts['1hour'] },
+                        dateExpired: { prefix: ' Süre Doldu', count: counts.expired }
                     };
 
                     Object.entries(labelMap).forEach(([inputId, data]) => {
@@ -674,7 +674,7 @@
                     });
                 }
 
-                document.addEventListener('change', function (e) {
+                document.addEventListener('change', function(e) {
                     if (e.target && e.target.name === 'priorityRadio') {
                         applyFilter(e.target.value);
                     }
@@ -3063,7 +3063,7 @@
                             </button>
                         </div>
                         <script>
-                                                (function () {
+                                                (function() {
                                                     let result;
                                                     // Blazor elementleri render ettikten sonra ID'lere ulaşmak için kısa bir gecikme gerekebilir
                                                     setTimeout(() => {
@@ -3086,7 +3086,7 @@
                                                             if (op === '*') result = n1 * n2;
                                                         }
 
-                                                        answerInput.addEventListener('input', function () {
+                                                        answerInput.addEventListener('input', function() {
                                                             if (parseInt(this.value) === result) {
                                                                 // Doğru cevap: Butonu aktifleştir ve yeşil yap
                                                                 deleteBtn.disabled = false;
@@ -3880,7 +3880,8 @@
         using var db = DbFactory.CreateDbContext();
 
         // Sorguyu kategorilere göre başlatıyoruz
-        var query = db.TaskStatus.AsQueryable();
+        var query = db.TaskStatus
+            .Where(t => t.IsDeleted == null || t.IsDeleted.IsDeletedStatu != true);
 
         if (TaskCategoriesId != null)
         {

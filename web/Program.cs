@@ -182,6 +182,13 @@ try
             // E-ticaret gibi yoğun veri trafiğinde mesaj boyutunu sınırla (opsiyonel)
             options.DetailedErrors = b.Environment.IsDevelopment();
             options.DisconnectedCircuitMaxRetained = 999999; // Aynı anda kaç kopuk devre RAM'de beklesin?
+        })
+        .AddHubOptions(hubOptions =>
+        {
+            // Blazor Server SignalR varsayılan mesaj limiti 32KB'dir.
+            // Büyük textarea içerikleri (görev açıklamaları vb.) bu limiti aşabilir
+            // ve @bind değerleri sunucuya ulaşamaz. 512KB'ye yükseltiyoruz.
+            hubOptions.MaximumReceiveMessageSize = 512 * 1024; // 512KB
         });
     }
 

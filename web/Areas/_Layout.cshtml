@@ -387,7 +387,6 @@
                     ("Kariyer", "/careers"),
                     ("İletişim", "/contact"),
                     ("Basın Odası", "/press"),
-                    ("Yatırımcı İlişkileri", "/investor-relations"),
                     ("Sürdürülebilirlik", "/sustainability"),
                     ("Blog", "/blog")
                 }),
@@ -398,7 +397,6 @@
                     ("İade ve Değişim", "/returns"),
                     ("Kargo ve Teslimat", "/shipping"),
                     ("Sıkça Sorulan Sorular", "/faq"),
-                    ("Canlı Destek", "/help/live-support"),
                     ("Ürün / Satıcı Bildir", "/report")
                 }),
                 ("efavori'de Satış Yap", "ftrColSell", "fa-shopping-bag", new List<(string, string)>
@@ -417,8 +415,6 @@
                     ("Ev ve Yaşam", "/c/ev-yasam"),
                     ("Kozmetik ve Bakım", "/c/kozmetik"),
                     ("Süpermarket", "/c/supermarket"),
-                    ("Anne ve Bebek", "/c/anne-bebek"),
-                    ("Spor ve Outdoor", "/c/spor-outdoor"),
                     ("Tüm Kategoriler", "/categories")
                 })
             };
@@ -509,16 +505,16 @@
                     </address>
 
                     <div class="fw-semibold text-white small mb-2">Bizi Takip Edin</div>
-                    <nav class="d-flex flex-wrap gap-2" aria-label="Sosyal Medya">
-                        @foreach (var s in fSocial)
-                        {
-                            <a class="btn btn-sm btn-outline-light rounded-circle d-inline-flex align-items-center justify-content-center"
-                               style="width: 34px; height: 34px;"
-                               href="@s.Url" target="_blank" rel="noopener nofollow" title="@s.Name" aria-label="@s.Name">
-                                <i class="fa @s.Icon" aria-hidden="true"></i>
-                            </a>
-                        }
-                    </nav>
+<nav class="btn-group" role="group" aria-label="Sosyal Medya">
+    @foreach (var s in fSocial)
+    {
+        <a class="btn bg-light text-dark border-0 d-inline-flex align-items-center justify-content-center p-0"
+           style="width: 34px; height: 34px;"
+           href="@s.Url" target="_blank" rel="noopener nofollow" title="@s.Name" aria-label="@s.Name">
+            <i class="fa @s.Icon" aria-hidden="true"></i>
+        </a>
+    }
+</nav>
                 </div>
             </div>
 

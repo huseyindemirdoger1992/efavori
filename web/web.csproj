@@ -15,10 +15,10 @@
 	  <None Remove="Areas\Vendor\**" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Google.GenAI" Version="1.10.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.9" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+		<PackageReference Include="Google.GenAI" Version="1.17.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="10.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\api\api.csproj" />

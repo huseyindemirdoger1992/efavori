@@ -27,7 +27,6 @@
     string BackgroundImage = "/assets/images/bg-themes/1.png";
     string lang = "en";
     string TotalLang = "en_EN";
-    string currentFooterText = "All rights reserved.";
     var supportedCultures = new[] { "tr", "en", "az", "de", "es", "fr", "hi", "pt", "ru", "zh" };
 
     Users? use = null;
@@ -103,21 +102,6 @@
         }
 
         TotalLang = $"{lang}_{lang.ToUpper()}";
-
-        var footerTexts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "az", "Bütün hüquqlar qorunur." },
-            { "de", "Alle Rechte vorbehalten." },
-            { "en", "All rights reserved." },
-            { "es", "Todos los derechos reservados." },
-            { "fr", "Tous droits réservés." },
-            { "hi", "सर्वाधिकार सुरक्षित।" },
-            { "pt", "Todos os direitos reservados." },
-            { "ru", "Все права защищены." },
-            { "tr", "Tüm hakları saklıdır." },
-            { "zh", "版权所有。" }
-        };
-        currentFooterText = footerTexts.GetValueOrDefault(lang, footerTexts["en"]);
     }
     catch (Exception ex)
     {
@@ -384,16 +368,295 @@
                     }
                 }
             </div>
+        @* ═══════════════════════════════════════════════════════════
+           FOOTER — Marketplace tipi mega footer
+           ❌ Özel CSS yok  ❌ Özel JS yok
+           ✅ Bootstrap 5.3 utility sınıfları
+           ✅ Font Awesome 4.7.0 ikonları
+           ✅ Mobil akordiyon: Bootstrap "collapse" + d-lg-block
+           Not: <footer> .page-wrapper içindedir; şablonun fixed
+                ".page-footer" sınıfı bilinçli olarak KULLANILMAZ.
+           ═══════════════════════════════════════════════════════════ *@
+        @{
+            // Kolon tanımları: (başlık, collapseId, ikon, linkler)
+            var fColumns = new List<(string Title, string Id, string Icon, List<(string Text, string Url)> Links)>
+            {
+                ("Kurumsal", "ftrColCorporate", "fa-building-o", new List<(string, string)>
+                {
+                    ("Hakkımızda", "/about"),
+                    ("Kariyer", "/careers"),
+                    ("İletişim", "/contact"),
+                    ("Basın Odası", "/press"),
+                    ("Yatırımcı İlişkileri", "/investor-relations"),
+                    ("Sürdürülebilirlik", "/sustainability"),
+                    ("Blog", "/blog")
+                }),
+                ("Yardım ve Destek", "ftrColHelp", "fa-life-ring", new List<(string, string)>
+                {
+                    ("Yardım Merkezi", "/help"),
+                    ("Sipariş Takibi", "/order-tracking"),
+                    ("İade ve Değişim", "/returns"),
+                    ("Kargo ve Teslimat", "/shipping"),
+                    ("Sıkça Sorulan Sorular", "/faq"),
+                    ("Canlı Destek", "/help/live-support"),
+                    ("Ürün / Satıcı Bildir", "/report")
+                }),
+                ("efavori'de Satış Yap", "ftrColSell", "fa-shopping-bag", new List<(string, string)>
+                {
+                    ("Mağaza Aç", "/sell"),
+                    ("Satıcı Paneli", "/seller-center"),
+                    ("Satıcı Akademisi", "/seller-academy"),
+                    ("Kurumsal Satış", "/business"),
+                    ("İş Ortaklığı Programı", "/affiliate"),
+                    ("Reklam Ver", "/advertising")
+                }),
+                ("Popüler Kategoriler", "ftrColCategories", "fa-th-large", new List<(string, string)>
+                {
+                    ("Elektronik", "/c/elektronik"),
+                    ("Moda ve Giyim", "/c/moda"),
+                    ("Ev ve Yaşam", "/c/ev-yasam"),
+                    ("Kozmetik ve Bakım", "/c/kozmetik"),
+                    ("Süpermarket", "/c/supermarket"),
+                    ("Anne ve Bebek", "/c/anne-bebek"),
+                    ("Spor ve Outdoor", "/c/spor-outdoor"),
+                    ("Tüm Kategoriler", "/categories")
+                })
+            };
+
+            // Güven şeridi: (ikon, metin)
+            var fTrust = new List<(string Icon, string Text)>
+            {
+                ("fa-check-circle-o", "Doğrulanmış Satıcılar"),
+                ("fa-shield", "Alıcı Koruma Programı"),
+                ("fa-truck", "Hızlı Teslimat"),
+                ("fa-refresh", "Kolay İade"),
+                ("fa-headphones", "7/24 Destek")
+            };
+
+            // Sosyal medya: (ikon, başlık, url)
+            var fSocial = new List<(string Icon, string Name, string Url)>
+            {
+                ("fa-facebook", "Facebook", "https://www.facebook.com/efavori"),
+                ("fa-instagram", "Instagram", "https://www.instagram.com/efavori"),
+                ("fa-twitter", "X / Twitter", "https://x.com/efavori"),
+                ("fa-youtube-play", "YouTube", "https://www.youtube.com/@efavori"),
+                ("fa-linkedin", "LinkedIn", "https://www.linkedin.com/company/efavori"),
+                ("fa-whatsapp", "WhatsApp", "https://wa.me/900000000000")
+            };
+
+            // Yasal linkler: (metin, url)
+            var fLegal = new List<(string Text, string Url)>
+            {
+                ("Kullanım Koşulları", "/legal/terms"),
+                ("Gizlilik Politikası", "/legal/privacy"),
+                ("Çerez Politikası", "/legal/cookies"),
+                ("KVKK Aydınlatma Metni", "/legal/kvkk"),
+                ("Mesafeli Satış Sözleşmesi", "/legal/distance-sales"),
+                ("Üyelik Sözleşmesi", "/legal/membership"),
+                ("Çerez Tercihleri", "/legal/cookie-settings")
+            };
+        }
+
+<footer class="bg-light text-light border-top border-secondary border-opacity-25 mt-5" role="contentinfo">
+
+    @* ─── 1) Güven Şeridi Katmanı ─── *@
+    <div class="border-bottom border-secondary border-opacity-25 py-2">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-5 g-3 align-items-center justify-content-center">
+                @foreach (var t in fTrust)
+                {
+                    <div class="col">
+                        <div class="d-flex align-items-center justify-content-start justify-content-lg-center gap-2 text-nowrap">
+                            <i class="fa @t.Icon fa-lg text-info flex-shrink-0" aria-hidden="true"></i>
+                            <span class="small fw-medium text-light">@t.Text</span>
+                        </div>
+                    </div>
+                }
+            </div>                  
+        </div>
+    </div>
+
+    @* ─── 2) Marka + Link Kolonları Katmanı ─── *@
+    <div class="container-fluid px-3 px-md-4 px-xl-5 py-2">
+        <div class="row g-4 g-xl-5">
+            
+            @* Marka & İletişim Bloğu *@
+            <div class="col-12 col-lg-4 py-2">
+                <div class="pe-lg-3">
+                    <a class="d-inline-flex align-items-center gap-2 text-decoration-none mb-3" href="/" aria-label="efavori.com">
+                        <img src="https://efavori.com/_files/main/logo/logo_100.png" alt="efavori.com Logo"
+                             width="38" height="38" loading="lazy" decoding="async"
+                             class="rounded bg-white p-1 shadow-sm" />
+                        <span class="fs-5 fw-bold text-white">efavori<span class="text-info">.com</span></span>
+                    </a>
+                    <p class="small text-white-50 mb-3">Binlerce mağaza, milyonlarca ürün. efavori.com; alıcı ile satıcıyı güvenli, hızlı ve şeffaf bir pazar yerinde buluşturur.</p>
+
+                    <address class="fst-normal small mb-3">
+                        <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                            <li class="d-flex align-items-center">
+                                <i class="fa fa-envelope-o text-info me-2 text-center" style="width: 18px;" aria-hidden="true"></i>
+                                <a class="link-light text-decoration-none" href="mailto:destek@efavori.com">destek@efavori.com</a>
+                            </li>
+                            <li class="d-flex align-items-center">
+                                <i class="fa fa-comments-o text-info me-2 text-center" style="width: 18px;" aria-hidden="true"></i>
+                                <a class="link-light text-decoration-none" href="/help/live-support">Canlı Destek</a>
+                            </li>
+                            <li class="d-flex align-items-center">
+                                <i class="fa fa-map-marker text-info me-2 text-center" style="width: 18px;" aria-hidden="true"></i>
+                                <span class="text-white-50">Düzce / Türkiye</span>
+                            </li>
+                        </ul>
+                    </address>
+
+                    <div class="fw-semibold text-white small mb-2">Bizi Takip Edin</div>
+                    <nav class="d-flex flex-wrap gap-2" aria-label="Sosyal Medya">
+                        @foreach (var s in fSocial)
+                        {
+                            <a class="btn btn-sm btn-outline-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                               style="width: 34px; height: 34px;"
+                               href="@s.Url" target="_blank" rel="noopener nofollow" title="@s.Name" aria-label="@s.Name">
+                                <i class="fa @s.Icon" aria-hidden="true"></i>
+                            </a>
+                        }
+                    </nav>
+                </div>
+            </div>
+
+            @* Link Kolonları *@
+            <div class="col-12 col-lg-8 py-2">
+                <div class="row g-4 row-cols-1 row-cols-sm-2 row-cols-lg-4">
+                    @foreach (var col in fColumns)
+                    {
+                        <div class="col">
+                            @* Mobil Akordiyon Butonu *@
+                            <button type="button"
+                                    class="btn btn-link w-100 d-flex align-items-center justify-content-between text-decoration-none fw-semibold text-white px-0 py-2 shadow-none d-lg-none border-bottom border-secondary border-opacity-25"
+                                    data-bs-toggle="collapse" data-bs-target="#@col.Id"
+                                    aria-expanded="false" aria-controls="@col.Id">
+                                <span><i class="fa @col.Icon text-info me-2" aria-hidden="true"></i>@col.Title</span>
+                                <i class="fa fa-angle-down" aria-hidden="true"></i>
+                            </button>
+                            
+                            @* Masaüstü Sütun Başlığı *@
+                            <div class="d-none d-lg-block fw-semibold text-white mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                                <i class="fa @col.Icon text-info me-2" aria-hidden="true"></i>@col.Title
+                            </div>
+
+                            @* Link Listesi *@
+                            <div class="collapse d-lg-block" id="@col.Id">
+                                <ul class="list-unstyled small mb-0 pt-2 pt-lg-0 d-flex flex-column gap-2">
+                                    @foreach (var link in col.Links)
+                                    {
+                                        <li>
+                                            <a class="link-light link-opacity-75-hover text-decoration-none d-inline-block py-1" href="@link.Url">@link.Text</a>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ─── 3) Mobil Uygulama + Güvenli Ödeme Katmanı ─── *@
+    <div class="border-top border-secondary border-opacity-25 bg-light py-2">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="row g-4 align-items-center justify-content-between">
+                <div class="col-12 col-lg-5">
+                    <div class="fw-semibold text-white small mb-3">Mobil Uygulama</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-outline-light d-inline-flex align-items-center gap-2 px-3 py-2"
+                           href="https://play.google.com/store/apps/details?id=com.efavori" target="_blank" rel="noopener">
+                            <i class="fa fa-android fa-2x" aria-hidden="true"></i>
+                            <span class="text-start lh-sm">
+                                <small class="d-block text-white-50" style="font-size: 0.68rem;">GET IT ON</small>
+                                <span class="fw-semibold">Google Play</span>
+                            </span>
+                        </a>
+                        <a class="btn btn-outline-light d-inline-flex align-items-center gap-2 px-3 py-2"
+                           href="https://apps.apple.com/app/efavori" target="_blank" rel="noopener">
+                            <i class="fa fa-apple fa-2x" aria-hidden="true"></i>
+                            <span class="text-start lh-sm">
+                                <small class="d-block text-white-50" style="font-size: 0.68rem;">Download on the</small>
+                                <span class="fw-semibold">App Store</span>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-7">
+                    <div class="fw-semibold text-white small mb-3">Güvenli Ödeme</div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <span class="badge bg-light text-dark fs-6 px-3 py-2 fw-normal"><i class="fa fa-cc-visa me-1" aria-hidden="true"></i>Visa</span>
+                        <span class="badge bg-light text-dark fs-6 px-3 py-2 fw-normal"><i class="fa fa-cc-mastercard me-1" aria-hidden="true"></i>Mastercard</span>
+                        <span class="badge bg-light text-dark fs-6 px-3 py-2 fw-normal"><i class="fa fa-cc-amex me-1" aria-hidden="true"></i>Amex</span>
+                        <span class="badge bg-light text-dark fs-6 px-3 py-2 fw-normal"><i class="fa fa-cc-paypal me-1" aria-hidden="true"></i>PayPal</span>
+                        <span class="badge bg-light text-dark fs-6 px-3 py-2 fw-normal">Troy</span>
+                        <span class="badge bg-light text-dark fs-6 px-3 py-2 fw-normal"><i class="fa fa-university me-1" aria-hidden="true"></i>Havale / EFT</span>
+                    </div>
+                    <div class="small text-white-50">
+                        <i class="fa fa-shield text-success me-1" aria-hidden="true"></i>3D Secure ve 256-bit SSL ile korunan güvenli alışveriş.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ─── 4) Keşfet Katmanı ─── *@
+    <div class="border-top border-secondary border-opacity-25 py-2">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <nav class="d-flex flex-wrap align-items-center gap-2" aria-label="Hızlı Erişim">
+                <span class="text-uppercase fw-bold small text-white-50 me-2">Keşfet</span>
+                <a class="btn btn-sm btn-outline-secondary text-light rounded-pill px-3" href="/brands">
+                    <i class="fa fa-tags me-1" aria-hidden="true"></i>Markalar
+                </a>
+                <a class="btn btn-sm btn-outline-secondary text-light rounded-pill px-3" href="/stores">
+                    <i class="fa fa-shopping-basket me-1" aria-hidden="true"></i>Tüm Mağazalar
+                </a>
+                <a class="btn btn-sm btn-outline-secondary text-light rounded-pill px-3" href="/campaigns">
+                    <i class="fa fa-percent me-1" aria-hidden="true"></i>Kampanyalar
+                </a>
+                <a class="btn btn-sm btn-outline-secondary text-light rounded-pill px-3" href="/sitemap.xml">
+                    <i class="fa fa-sitemap me-1" aria-hidden="true"></i>Site Haritası
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    @* ─── 5) Alt Bar Katmanı (Copyright + Yasal Linkler) ─── *@
+    <div class="bg-black bg-opacity-25 border-top border-secondary border-opacity-25 py-2">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 text-center text-md-start">
+                <div class="small text-white-50">
+                    &copy; @DateTime.Now.Year efavori.com. Tüm hakları saklıdır.
+                </div>
+
+                <nav aria-label="Yasal Linkler">
+                    <ul class="list-inline mb-0 small">
+                        @foreach (var l in fLegal)
+                        {
+                            <li class="list-inline-item mx-2">
+                                <a class="link-light link-opacity-75-hover text-decoration-none" href="@l.Url">@l.Text</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+
+
+
+
         </div>
         <div class="overlay toggle-icon"></div>
         <a href="javaScript:;" class="back-to-top" aria-label="Sayfanın başına dön"><i class='bx bxs-up-arrow-alt' aria-hidden="true"></i></a>
 
-        @* ═══════════════════════════════════════════════════════════
-           FOOTER — Semantik <footer> etiketi zaten mevcut
-           ═══════════════════════════════════════════════════════════ *@
-        <footer class="page-footer">
-            <p class="mb-0">efavori.com © @DateTime.Now.Year. @currentFooterText</p>
-        </footer>
     </div>
 
     @* ═══════════════════════════════════════════════════════════════

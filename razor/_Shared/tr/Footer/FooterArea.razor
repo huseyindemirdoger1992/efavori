@@ -1,0 +1,661 @@
+﻿@* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER — Global marketplace tipi mega footer  (efavori.com)
+   ───────────────────────────────────────────────────────────────────────────
+   ❌ Özel CSS yok   ❌ Özel JS yok  (kullanımı yasak)
+   ✅ Bootstrap 5.3 utility sınıfları  (+ collapse / dropdown, bundle JS)
+   ✅ Font Awesome 4.7.0 ikonları (yalnızca 4.7'de VAR OLAN isimler)
+   ✅ Mobil akordiyon: Bootstrap "collapse" + d-lg-block
+   ✅ Koyu yüzey bileşenleri (form, dropdown) BS 5.3 `data-bs-theme="dark"` ile
+
+   KATMANLAR
+     1) Bülten + Mobil Uygulama
+     2) Güven Şeridi (5 sütun)
+     3) Marka / İstatistik / İletişim  +  Link Kolonları (4 × 2 = 8 kolon)
+     4) Bölge-Dil-Para Birimi  +  Güvenli Ödeme
+     5) Kargo Partnerleri  +  Sertifika & Rozetler
+     6) Keşfet  +  Popüler Aramalar (SEO link bulutu)
+     7) Kurumsal Künye (Mersis / Ticaret Sicil / ETBİS)
+     8) Alt Bar (Telif + Yasal Linkler + Yukarı Çık)
+
+   NOT: Tüm metin/link verisi @code bloğundaki f* listelerinde tek noktadan
+        yönetilir. Markup'a dokunmadan içerik güncellenebilir.
+   ═══════════════════════════════════════════════════════════════════════════ *@
+
+<footer class="page-footer">
+    <h2 class="visually-hidden">efavori.com Site Alt Bilgisi</h2>
+
+    @* ─────────────────────────────────────────────────────────────
+       1) BÜLTEN + MOBİL UYGULAMA KATMANI
+       ───────────────────────────────────────────────────────────── *@
+    <div class="bg-black bg-opacity-25 border-bottom border-secondary border-opacity-25 py-4">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="row g-4 align-items-center">
+
+                @* Bülten *@
+                <div class="col-12 col-lg-6">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="fa fa-paper-plane fa-2x text-info mt-1 d-none d-sm-block flex-shrink-0" aria-hidden="true"></i>
+                        <div class="w-100">
+                            <div class="fs-6 fw-bold text-white mb-1 text-start">Fırsatlardan ilk siz haberdar olun</div>
+                            <p class="small text-white-50 mb-2 text-start">Kampanyalar, indirim kuponları ve yeni ürün bildirimleri e-postanıza gelsin.</p>
+
+                            <form class="row g-2" action="/newsletter" method="get" data-bs-theme="dark">
+                                <div class="col-12 col-sm">
+                                    <label class="visually-hidden" for="ftrNewsletterMail">E-posta adresiniz</label>
+                                    <input id="ftrNewsletterMail" name="email" type="email" required
+                                           class="form-control form-control-sm"
+                                           placeholder="E-posta adresiniz" autocomplete="email" />
+                                </div>
+                                <div class="col-12 col-sm-auto d-grid">
+                                    <button type="submit" class="btn btn-info btn-sm fw-semibold px-4 text-nowrap">
+                                        <i class="fa fa-bell-o me-1" aria-hidden="true"></i>Abone Ol
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="text-white-50 mt-2 text-start" style="font-size: .72rem;">
+                                Abone olarak <a class="link-light" href="/legal/privacy">Gizlilik Politikası</a> ve
+                                <a class="link-light" href="/legal/kvkk">KVKK Aydınlatma Metni</a>'ni kabul etmiş olursunuz.
+                                Dilediğiniz an çıkabilirsiniz.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* Mobil Uygulama *@
+                <div class="col-12 col-lg-6">
+                    <div class="d-flex flex-column align-items-lg-end">
+                        <div class="fs-6 fw-bold text-white mb-1 text-start text-lg-end">
+                            <i class="fa fa-mobile me-2 text-info" aria-hidden="true"></i>Uygulamayı indirin, kaliteyi yaşayın
+                        </div>
+                        <p class="small text-white-50 mb-2 text-start text-lg-end">Siparişlerinizi takip edin, uygulamaya özel fırsatları kaçırmayın.</p>
+                        <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-lg-end">
+                            @foreach (var a in fApps)
+                            {
+                                <a class="btn btn-outline-light d-inline-flex align-items-center gap-2 px-3 py-2"
+                                   href="@a.Url" target="_blank" rel="noopener" aria-label="@a.Title">
+                                    <i class="fa @a.Icon fa-2x" aria-hidden="true"></i>
+                                    <span class="text-start lh-sm">
+                                        <small class="d-block text-primary-50" style="font-size: .68rem;">@a.Small</small>
+                                        <span class="fw-semibold">@a.Title</span>
+                                    </span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    @* ─────────────────────────────────────────────────────────────
+       2) GÜVEN ŞERİDİ KATMANI
+       ───────────────────────────────────────────────────────────── *@
+    <div class="border-bottom border-secondary border-opacity-25 py-3">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-5 g-3">
+                @foreach (var t in fTrust)
+                {
+                    <div class="col">
+                        <div class="d-flex align-items-center gap-3 h-100">
+                            <i class="fa @t.Icon fa-2x text-info flex-shrink-0 text-center" style="width: 32px;" aria-hidden="true"></i>
+                            <div class="text-start lh-sm">
+                                <div class="small fw-semibold text-white">@t.Title</div>
+                                <div class="text-white-50" style="font-size: .74rem;">@t.Sub</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ─────────────────────────────────────────────────────────────
+       3) MARKA + LİNK KOLONLARI KATMANI
+       ───────────────────────────────────────────────────────────── *@
+    <div class="container-fluid px-3 px-md-4 px-xl-5 py-4">
+        <div class="row g-4 g-xl-5">
+
+            @* ── Marka & İletişim Bloğu ── *@
+            <div class="col-12 col-lg-4 py-2">
+                <div class="pe-lg-3">
+
+                    <a class="d-flex align-items-center gap-2 text-decoration-none mb-3" href="/" aria-label="efavori.com Ana Sayfa">
+                        <img src="https://efavori.com/_files/main/logo/logo_100.png" alt="efavori.com Logo"
+                             width="38" height="38" loading="lazy" decoding="async"
+                             class="rounded bg-white p-1 shadow-sm" />
+                        <span class="fs-5 fw-bold text-white">efavori<span class="text-info">.com</span></span>
+                    </a>
+
+                    <p class="small text-white-50 mb-3 text-start">
+                        Binlerce mağaza, milyonlarca ürün. efavori.com; alıcı ile satıcıyı güvenli,
+                        hızlı ve şeffaf bir pazar yerinde buluşturur.
+                    </p>
+
+                    @* İstatistik Kartları (2 × 2) *@
+                    <div class="row row-cols-2 g-2 mb-3">
+                        @foreach (var s in fStats)
+                        {
+                            <div class="col">
+                                <div class="bg-black bg-opacity-25 border border-secondary border-opacity-25 rounded p-2 h-100 text-start">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fa @s.Icon text-info" aria-hidden="true"></i>
+                                        <span class="fw-bold text-white small">@s.Value</span>
+                                    </div>
+                                    <div class="text-white-50" style="font-size: .7rem;">@s.Label</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* İletişim *@
+                    <address class="fst-normal small mb-3">
+                        <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                            <li class="d-flex align-items-center">
+                                <i class="fa fa-phone text-info me-2 text-center" style="width: 18px;" aria-hidden="true"></i>
+                                <a class="link-light text-decoration-none" href="tel:+908508500000">0850 850 00 00</a>
+                                <span class="text-white-50 ms-2" style="font-size: .72rem;">(7/24)</span>
+                            </li>
+                            <li class="d-flex align-items-center">
+                                <i class="fa fa-envelope-o text-info me-2 text-center" style="width: 18px;" aria-hidden="true"></i>
+                                <a class="link-light text-decoration-none" href="mailto:destek@efavori.com">destek@efavori.com</a>
+                            </li>
+                            <li class="d-flex align-items-center">
+                                <i class="fa fa-comments-o text-info me-2 text-center" style="width: 18px;" aria-hidden="true"></i>
+                                <a class="link-light text-decoration-none" href="/help/live-support">Canlı Destek</a>
+                            </li>
+                            <li class="d-flex align-items-center">
+                                <i class="fa fa-map-marker text-info me-2 text-center" style="width: 18px;" aria-hidden="true"></i>
+                                <span class="text-white-50">Düzce / Türkiye</span>
+                            </li>
+                        </ul>
+                    </address>
+
+                    @* Sosyal Medya *@
+                    <div class="fw-semibold text-white small mb-2 text-start">Bizi Takip Edin</div>
+                    <nav class="d-flex w-100 gap-1" aria-label="Sosyal Medya Hesapları">
+                        @foreach (var s in fSocial)
+                        {
+                            <a class="btn bg-light text-light border-0 d-inline-flex align-items-center justify-content-center p-0 flex-fill rounded"
+                               style="height: 34px;"
+                               href="@s.Url" target="_blank" rel="noopener nofollow" title="@s.Name" aria-label="@s.Name">
+                                <i class="fa @s.Icon" aria-hidden="true"></i>
+                            </a>
+                        }
+                    </nav>
+                </div>
+            </div>
+
+            @* ── Link Kolonları (mobil akordiyon / masaüstü 4 × 2) ── *@
+            <div class="col-12 col-lg-8 py-2">
+                <div class="row g-4 row-cols-1 row-cols-sm-2 row-cols-lg-4">
+                    @foreach (var col in fColumns)
+                    {
+                        <div class="col">
+                            @* Mobil Akordiyon Butonu *@
+                            <button type="button"
+                                    class="btn btn-link w-100 d-flex align-items-center justify-content-between text-decoration-none fw-semibold text-white px-0 py-2 shadow-none d-lg-none border-bottom border-secondary border-opacity-25"
+                                    data-bs-toggle="collapse" data-bs-target="#@col.Id"
+                                    aria-expanded="false" aria-controls="@col.Id">
+                                <span><i class="fa @col.Icon text-info me-2" aria-hidden="true"></i>@col.Title</span>
+                                <i class="fa fa-angle-down" aria-hidden="true"></i>
+                            </button>
+
+                            @* Masaüstü Sütun Başlığı *@
+                            <h3 class="d-none d-lg-block fs-6 fw-semibold text-white mb-3 pb-2 border-bottom border-secondary border-opacity-25 text-start">
+                                <i class="fa @col.Icon text-info me-2" aria-hidden="true"></i>@col.Title
+                            </h3>
+
+                            @* Link Listesi *@
+                            <div class="collapse d-lg-block text-start" id="@col.Id">
+                                <ul class="list-unstyled small mb-0 pt-2 pt-lg-0 d-flex flex-column gap-2 text-start">
+                                    @foreach (var link in col.Links)
+                                    {
+                                        <li class="text-start w-100">
+                                            <a class="link-light link-opacity-75-hover text-decoration-none d-block py-1 text-start" href="@link.Url">@link.Text</a>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    @* ─────────────────────────────────────────────────────────────
+       4) BÖLGE / DİL / PARA BİRİMİ  +  GÜVENLİ ÖDEME KATMANI
+       ───────────────────────────────────────────────────────────── *@
+    <div class="border-top border-secondary border-opacity-25 py-3">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="row g-4">
+
+                @* Güvenli Ödeme *@
+                <div class="col-12 col-lg-12">
+                    <div class="fw-semibold text-white small mb-2 text-start">
+                        <i class="fa fa-lock text-info me-2" aria-hidden="true"></i>Güvenli Ödeme Seçenekleri
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        @foreach (var p in fPayments)
+                        {
+                            <span class="badge text-bg-light fw-normal px-3 py-2 d-inline-flex align-items-center gap-1" style="font-size: .8rem;">
+                                @if (!string.IsNullOrEmpty(p.Icon))
+                                {
+                                    <i class="fa @p.Icon" aria-hidden="true"></i>
+                                }
+                                @p.Text
+                            </span>
+                        }
+                    </div>
+                    <div class="small text-white-50 text-start">
+                        <i class="fa fa-shield text-success me-1" aria-hidden="true"></i>
+                        3D Secure, PCI-DSS ve 256-bit SSL ile korunan ödeme altyapısı. Kart bilgileriniz efavori.com sunucularında saklanmaz.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    @* ─────────────────────────────────────────────────────────────
+       5) KARGO PARTNERLERİ  +  SERTİFİKA & ROZETLER
+       ───────────────────────────────────────────────────────────── *@
+    <div class="border-top border-secondary border-opacity-25 py-3">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="row g-4">
+
+                <div class="col-12 col-lg-12">
+                    <div class="fw-semibold text-white small mb-2 text-start">
+                        <i class="fa fa-truck text-info me-2" aria-hidden="true"></i>Anlaşmalı Kargo ve Lojistik
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        @foreach (var c in fCarriers)
+                        {
+                            <span class="badge bg-black bg-opacity-25 border border-secondary border-opacity-50 text-light fw-normal px-3 py-2"
+                                  style="font-size: .78rem;">@c</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-12">
+                    <div class="fw-semibold text-white small mb-2 text-start">
+                        <i class="fa fa-certificate text-info me-2" aria-hidden="true"></i>Sertifikalar ve Uyumluluk
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        @foreach (var c in fCerts)
+                        {
+                            <span class="badge bg-black bg-opacity-25 border border-secondary border-opacity-50 text-light fw-normal px-3 py-2 d-inline-flex align-items-center gap-1"
+                                  style="font-size: .78rem;">
+                                <i class="fa @c.Icon text-success" aria-hidden="true"></i>@c.Text
+                            </span>
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    @* ─────────────────────────────────────────────────────────────
+       6) KEŞFET  +  POPÜLER ARAMALAR (SEO)
+       ───────────────────────────────────────────────────────────── *@
+    <div class="border-top border-secondary border-opacity-25 py-3">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+
+            <nav class="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Hızlı Erişim">
+                <span class="text-uppercase fw-bold small text-white-50 me-2">Keşfet</span>
+                @foreach (var d in fDiscover)
+                {
+                    <a class="btn btn-sm btn-outline-secondary text-light rounded-pill px-3" href="@d.Url">
+                        <i class="fa @d.Icon me-1" aria-hidden="true"></i>@d.Text
+                    </a>
+                }
+            </nav>
+
+            <nav class="d-flex flex-wrap align-items-center gap-2" aria-label="Popüler Aramalar">
+                <span class="text-uppercase fw-bold small text-white-50 me-2">Popüler Aramalar</span>
+                @foreach (var q in fPopularSearches)
+                {
+                    <a class="link-light link-opacity-75-hover text-decoration-none small border-end border-secondary border-opacity-50 pe-2"
+                       href="@q.Url">@q.Text</a>
+                }
+            </nav>
+
+        </div>
+    </div>
+
+    @* ─────────────────────────────────────────────────────────────
+       7) KURUMSAL KÜNYE
+       ───────────────────────────────────────────────────────────── *@
+    <div class="border-top border-secondary border-opacity-25 py-3">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="row g-2 text-white-50 text-start" style="font-size: .74rem;">
+                @foreach (var k in fCorporateInfo)
+                {
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <span class="fw-semibold text-light">@k.Label:</span> @k.Value
+                    </div>
+                }
+            </div>
+            <div class="text-white-50 mt-2 text-start" style="font-size: .74rem;">
+                efavori.com bir pazar yeri platformudur; ürünler bağımsız satıcılar tarafından sunulur ve
+                satış sözleşmesi alıcı ile satıcı arasında kurulur. Listelenen fiyatlara KDV dâhildir.
+            </div>
+        </div>
+    </div>
+
+    @* ─────────────────────────────────────────────────────────────
+       8) ALT BAR (Telif + Yasal Linkler + Yukarı Çık)
+       ───────────────────────────────────────────────────────────── *@
+    <div class="bg-black bg-opacity-25 border-top border-secondary border-opacity-25 py-3">
+        <div class="container-fluid px-3 px-md-4 px-xl-5">
+            <div class="d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3 text-center text-lg-start">
+
+<nav class="order-lg-0 flex-grow-1" aria-label="Yasal Linkler">
+    <ul class="list-inline mb-0 small d-flex flex-wrap justify-content-center justify-content-lg-start align-items-center gap-2">
+        @for (int i = 0; i < fLegal.Count; i++)
+        {
+            <li class="list-inline-item me-0 d-inline-flex align-items-center gap-2">
+                <a class="link-light link-opacity-75-hover text-decoration-none" href="@fLegal[i].Url">@fLegal[i].Text</a>
+                @if (i < fLegal.Count - 1)
+                {
+                    <i class="fa fa-circle text-light opacity-50" style="font-size: 0.35rem;" aria-hidden="true"></i>
+                }
+            </li>
+        }
+    </ul>
+</nav>
+
+                <div class="small text-white-50 order-lg-1" style="margin-right: 64px;">
+                    &copy; @DateTime.Now.Year efavori.com &mdash; Tüm hakları saklıdır.
+                </div>
+
+                @* 
+                <a class="btn btn-sm btn-outline-secondary text-light rounded-pill px-3 order-lg-2 text-nowrap"
+                   href="#" aria-label="Sayfanın başına dön">
+                    <i class="fa fa-angle-up me-1" aria-hidden="true"></i>Yukarı Çık
+                </a>
+                *@
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+@code {
+    // ═══════════════════════════════════════════════════════════════
+    // PARAMETRELER — Dışarıdan (layout / GlobalStateHub) beslenebilir.
+    // Verilmezse aşağıdaki varsayılanlar kullanılır.
+    // ═══════════════════════════════════════════════════════════════
+
+    [Parameter] public string CurrentRegion { get; set; } = "Türkiye";
+    [Parameter] public string CurrentLanguage { get; set; } = "Türkçe";
+    [Parameter] public string CurrentCurrency { get; set; } = "TRY";
+
+    [Parameter] public string StoreCount { get; set; } = "12.500+";
+    [Parameter] public string ProductCount { get; set; } = "4.8M+";
+    [Parameter] public string CustomerCount { get; set; } = "1.2M+";
+    [Parameter] public string RatingAverage { get; set; } = "4.7 / 5";
+
+    // ═══════════════════════════════════════════════════════════════
+    // FOOTER VERİ TANIMLARI
+    // ═══════════════════════════════════════════════════════════════
+
+    // İstatistik kartları: (ikon, değer, etiket)
+    private List<(string Icon, string Value, string Label)> fStats => new()
+    {
+        ("fa-shopping-bag", StoreCount,    "Aktif Mağaza"),
+        ("fa-cubes",        ProductCount,  "Ürün Çeşidi"),
+        ("fa-users",        CustomerCount, "Mutlu Müşteri"),
+        ("fa-star",         RatingAverage, "Ortalama Puan")
+    };
+
+    // Güven şeridi: (ikon, başlık, alt metin)
+    private readonly List<(string Icon, string Title, string Sub)> fTrust = new()
+    {
+        ("fa-check-circle-o", "Doğrulanmış Satıcılar", "Kimlik ve vergi kaydı kontrol edilir"),
+        ("fa-shield",         "Alıcı Koruma Programı", "Ödemeniz teslimata kadar güvencede"),
+        ("fa-truck",          "Hızlı Teslimat",        "Aynı gün kargo ve ücretsiz gönderim"),
+        ("fa-refresh",        "Kolay İade",            "14 gün içinde koşulsuz iade hakkı"),
+        ("fa-headphones",     "7/24 Destek",           "Canlı destek ve çağrı merkezi")
+    };
+
+    // Mobil uygulama: (ikon, üst metin, başlık, url)
+    private readonly List<(string Icon, string Small, string Title, string Url)> fApps = new()
+    {
+        ("fa-android", "ŞİMDİ İNDİRİN",   "Google Play", "https://play.google.com/store/apps/details?id=com.efavori"),
+        ("fa-apple",   "İNDİRİN",         "App Store",   "https://apps.apple.com/app/efavori")
+    };
+
+    // Link kolonları: (başlık, collapseId, ikon, linkler) — masaüstünde 4 × 2 simetrik ızgara
+    private readonly List<(string Title, string Id, string Icon, List<(string Text, string Url)> Links)> fColumns = new()
+    {
+        ("Kurumsal", "ftrColCorporate", "fa-building-o", new List<(string, string)>
+        {
+            ("Hakkımızda", "/about"),
+            ("Kariyer", "/careers"),
+            ("İletişim", "/contact"),
+            ("Basın Odası", "/press"),
+            ("Sürdürülebilirlik", "/sustainability"),
+            ("Yatırımcı İlişkileri", "/investor-relations"),
+            ("Blog", "/blog")
+        }),
+        ("Yardım ve Destek", "ftrColHelp", "fa-life-ring", new List<(string, string)>
+        {
+            ("Yardım Merkezi", "/help"),
+            ("Sipariş Takibi", "/order-tracking"),
+            ("İade ve Değişim", "/returns"),
+            ("Kargo ve Teslimat", "/shipping"),
+            ("Sıkça Sorulan Sorular", "/faq"),
+            ("Ürün / Satıcı Bildir", "/report"),
+            ("Talep ve Şikâyetler", "/help/complaints")
+        }),
+        ("efavori'de Satış Yap", "ftrColSell", "fa-shopping-bag", new List<(string, string)>
+        {
+            ("Mağaza Aç", "/sell"),
+            ("Satıcı Paneli", "/seller-center"),
+            ("Satıcı Akademisi", "/seller-academy"),
+            ("Komisyon Oranları", "/seller/commissions"),
+            ("Kurumsal Satış", "/business"),
+            ("İş Ortaklığı Programı", "/affiliate"),
+            ("Reklam Ver", "/advertising")
+        }),
+        ("Popüler Kategoriler", "ftrColCategories", "fa-th-large", new List<(string, string)>
+        {
+            ("Elektronik", "/c/elektronik"),
+            ("Moda ve Giyim", "/c/moda"),
+            ("Ev ve Yaşam", "/c/ev-yasam"),
+            ("Kozmetik ve Kişisel Bakım", "/c/kozmetik"),
+            ("Anne ve Bebek", "/c/anne-bebek"),
+            ("Süpermarket", "/c/supermarket"),
+            ("Tüm Kategoriler", "/categories")
+        }),
+        ("Hesabım", "ftrColAccount", "fa-user-circle-o", new List<(string, string)>
+        {
+            ("Giriş Yap / Üye Ol", "/account/login"),
+            ("Siparişlerim", "/account/orders"),
+            ("Favorilerim", "/account/favorites"),
+            ("Adreslerim", "/account/addresses"),
+            ("Kuponlarım", "/account/coupons"),
+            ("Değerlendirmelerim", "/account/reviews"),
+            ("Bildirim Tercihleri", "/account/notifications")
+        }),
+        ("Ödeme ve Avantajlar", "ftrColPayment", "fa-credit-card", new List<(string, string)>
+        {
+            ("Ödeme Seçenekleri", "/payment/methods"),
+            ("Taksit Seçenekleri", "/payment/installments"),
+            ("Banka Kampanyaları", "/payment/bank-campaigns"),
+            ("efavori Cüzdan", "/wallet"),
+            ("Hediye Kartı", "/gift-card"),
+            ("Alışveriş Kredisi", "/payment/credit"),
+            ("Fatura ve Belgeler", "/account/invoices")
+        }),
+        ("Kargo ve Lojistik", "ftrColLogistics", "fa-truck", new List<(string, string)>
+        {
+            ("Teslimat Süreleri", "/shipping/delivery-times"),
+            ("Kargo Ücretleri", "/shipping/fees"),
+            ("Aynı Gün Teslimat", "/shipping/same-day"),
+            ("Teslimat Noktaları", "/shipping/pickup-points"),
+            ("Yurt Dışı Gönderim", "/shipping/international"),
+            ("Kargo Takibi", "/shipping/track"),
+            ("Anlaşmalı Kargo Firmaları", "/shipping/carriers")
+        }),
+        ("Güvenlik ve Yasal", "ftrColLegal", "fa-balance-scale", new List<(string, string)>
+        {
+            ("Güvenli Alışveriş Rehberi", "/security/safe-shopping"),
+            ("Alıcı Koruma Programı", "/security/buyer-protection"),
+            ("Gizlilik Merkezi", "/legal/privacy-center"),
+            ("Fikri Mülkiyet Hakları", "/legal/ip-protection"),
+            ("Yasaklı ve Kısıtlı Ürünler", "/legal/prohibited-items"),
+            ("Şeffaflık Raporu", "/legal/transparency"),
+            ("ETBİS Kaydı", "/legal/etbis")
+        })
+    };
+
+    // Sosyal medya: (ikon, başlık, url) — FA 4.7'de var olan ikonlar
+    private readonly List<(string Icon, string Name, string Url)> fSocial = new()
+    {
+        ("fa-facebook",     "Facebook",   "https://www.facebook.com/efavori"),
+        ("fa-instagram",    "Instagram",  "https://www.instagram.com/efavori"),
+        ("fa-twitter",      "X / Twitter","https://x.com/efavori"),
+        ("fa-youtube-play", "YouTube",    "https://www.youtube.com/@efavori"),
+        ("fa-linkedin",     "LinkedIn",   "https://www.linkedin.com/company/efavori"),
+        ("fa-pinterest-p",  "Pinterest",  "https://www.pinterest.com/efavori"),
+        ("fa-telegram",     "Telegram",   "https://t.me/efavori"),
+        ("fa-whatsapp",     "WhatsApp",   "https://wa.me/900000000000")
+    };
+
+    // Teslimat bölgeleri: (ad, url)
+    private readonly List<(string Name, string Url)> fRegions = new()
+    {
+        ("Türkiye",         "/set-region?code=TR"),
+        ("Almanya",         "/set-region?code=DE"),
+        ("Birleşik Krallık","/set-region?code=GB"),
+        ("Amerika Birleşik Devletleri", "/set-region?code=US"),
+        ("Fransa",          "/set-region?code=FR"),
+        ("Hollanda",        "/set-region?code=NL"),
+        ("İtalya",          "/set-region?code=IT"),
+        ("Azerbaycan",      "/set-region?code=AZ"),
+        ("Suudi Arabistan", "/set-region?code=SA"),
+        ("Birleşik Arap Emirlikleri", "/set-region?code=AE")
+    };
+
+    // Diller: (kod, ad, url) — ProductTranslations ile aynı 10 dil
+    private readonly List<(string Code, string Name, string Url)> fLanguages = new()
+    {
+        ("tr", "Türkçe",     "/set-language?code=tr"),
+        ("en", "English",    "/set-language?code=en"),
+        ("de", "Deutsch",    "/set-language?code=de"),
+        ("fr", "Français",   "/set-language?code=fr"),
+        ("es", "Español",    "/set-language?code=es"),
+        ("it", "Italiano",   "/set-language?code=it"),
+        ("nl", "Nederlands", "/set-language?code=nl"),
+        ("pt", "Português",  "/set-language?code=pt"),
+        ("ru", "Русский",    "/set-language?code=ru"),
+        ("ar", "العربية",     "/set-language?code=ar")
+    };
+
+    // Para birimleri: (kod, sembol, ad, url)
+    private readonly List<(string Code, string Symbol, string Name, string Url)> fCurrencies = new()
+    {
+        ("TRY", "₺",  "Türk Lirası",     "/set-currency?code=TRY"),
+        ("USD", "$",  "Amerikan Doları", "/set-currency?code=USD"),
+        ("EUR", "€",  "Euro",            "/set-currency?code=EUR"),
+        ("GBP", "£",  "İngiliz Sterlini","/set-currency?code=GBP"),
+        ("CHF", "CHF","İsviçre Frangı",  "/set-currency?code=CHF"),
+        ("RUB", "₽",  "Rus Rublesi",     "/set-currency?code=RUB"),
+        ("AED", "د.إ","BAE Dirhemi",     "/set-currency?code=AED"),
+        ("SAR", "﷼",  "Suudi Riyali",    "/set-currency?code=SAR"),
+        ("AZN", "₼",  "Azerbaycan Manatı","/set-currency?code=AZN"),
+        ("JPY", "¥",  "Japon Yeni",      "/set-currency?code=JPY")
+    };
+
+    // Ödeme yöntemleri: (ikon, metin) — ikon boş bırakılabilir
+    private readonly List<(string Icon, string Text)> fPayments = new()
+    {
+        ("fa-cc-visa",       "Visa"),
+        ("fa-cc-mastercard", "Mastercard"),
+        ("fa-cc-amex",       "Amex"),
+        ("",                 "Troy"),
+        ("fa-cc-paypal",     "PayPal"),
+        ("fa-university",    "Havale / EFT"),
+        ("fa-money",         "Kapıda Ödeme"),
+        ("fa-credit-card-alt","Taksitli Ödeme"),
+        ("fa-gift",          "Hediye Kartı"),
+        ("fa-briefcase",     "Kurumsal Fatura")
+    };
+
+    // Anlaşmalı kargo firmaları
+    private readonly List<string> fCarriers = new()
+    {
+        "Yurtiçi Kargo", "Aras Kargo", "MNG Kargo", "PTT Kargo",
+        "Sürat Kargo", "Hepsijet", "UPS", "DHL Express", "FedEx"
+    };
+
+    // Sertifika / uyumluluk rozetleri: (ikon, metin)
+    private readonly List<(string Icon, string Text)> fCerts = new()
+    {
+        ("fa-check",     "ETBİS Kayıtlı"),
+        ("fa-lock",      "256-bit SSL"),
+        ("fa-shield",    "3D Secure"),
+        ("fa-certificate","ISO 27001"),
+        ("fa-credit-card","PCI DSS"),
+        ("fa-balance-scale","KVKK Uyumlu")
+    };
+
+    // Keşfet kısayolları: (ikon, metin, url)
+    private readonly List<(string Icon, string Text, string Url)> fDiscover = new()
+    {
+        ("fa-tags",            "Markalar",       "/brands"),
+        ("fa-shopping-basket", "Tüm Mağazalar",  "/stores"),
+        ("fa-percent",         "Kampanyalar",    "/campaigns"),
+        ("fa-line-chart",      "Çok Satanlar",   "/best-sellers"),
+        ("fa-clock-o",         "Yeni Gelenler",  "/new-arrivals"),
+        ("fa-star",            "Editörün Seçimi","/editors-choice"),
+        ("fa-sitemap",         "Site Haritası",  "/sitemap.xml")
+    };
+
+    // Popüler aramalar (SEO link bulutu): (metin, url)
+    private readonly List<(string Text, string Url)> fPopularSearches = new()
+    {
+        ("iPhone",             "/search?q=iphone"),
+        ("Robot Süpürge",      "/search?q=robot-supurge"),
+        ("Klima",              "/search?q=klima"),
+        ("Spor Ayakkabı",      "/search?q=spor-ayakkabi"),
+        ("Laptop",             "/search?q=laptop"),
+        ("Akıllı Saat",        "/search?q=akilli-saat"),
+        ("Kahve Makinesi",     "/search?q=kahve-makinesi"),
+        ("Bebek Bezi",         "/search?q=bebek-bezi"),
+        ("Parfüm",             "/search?q=parfum"),
+        ("Oyuncu Koltuğu",     "/search?q=oyuncu-koltugu"),
+        ("Buzdolabı",          "/search?q=buzdolabi"),
+        ("Bluetooth Kulaklık", "/search?q=bluetooth-kulaklik"),
+        ("Bisiklet",           "/search?q=bisiklet"),
+        ("Kışlık Mont",        "/search?q=kislik-mont")
+    };
+
+    // Kurumsal künye: (etiket, değer)
+    private readonly List<(string Label, string Value)> fCorporateInfo = new()
+    {
+        ("Unvan",         "efavori Elektronik Ticaret A.Ş."),
+        ("Mersis No",     "0000000000000000"),
+        ("Ticaret Sicil", "Düzce Ticaret Sicil Müdürlüğü – 00000"),
+        ("Adres",         "Cedidiye Mah. ... No: 0, Merkez / Düzce")
+    };
+
+    // Yasal linkler: (metin, url)
+    private readonly List<(string Text, string Url)> fLegal = new()
+    {
+        ("Kullanım Koşulları", "/legal/terms"),
+        ("Gizlilik Politikası", "/legal/privacy"),
+        ("Çerez Politikası", "/legal/cookies"),
+        ("KVKK Aydınlatma Metni", "/legal/kvkk"),
+        ("Mesafeli Satış Sözleşmesi", "/legal/distance-sales"),
+        ("Üyelik Sözleşmesi", "/legal/membership"),
+        ("Çerez Tercihleri", "/legal/cookie-settings"),
+        ("Erişilebilirlik", "/legal/accessibility")
+    };
+}

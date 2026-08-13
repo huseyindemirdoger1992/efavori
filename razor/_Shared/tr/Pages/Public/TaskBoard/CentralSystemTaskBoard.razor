@@ -29,6 +29,31 @@
     string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 }
 <div class="container-fluid p-3">
+<style>
+    /* === CentralSystemTaskBoard — mobil uyumluluk & akıcılık === */
+    .task-card { word-break: break-word; overflow-wrap: anywhere; cursor: pointer; }
+    .no-scrollbar { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .custom-btn.active { filter: brightness(.9); font-weight: 600; }
+    .kanban-column { -webkit-overflow-scrolling: touch; }
+
+    @@media (max-width: 767.98px) {
+        /* Sabit başlıkların mobilde üst üste binmesini engelle */
+        .kanban-column .card-header,
+        .card-header.sticky-top { position: static !important; top: auto !important; }
+        .task-card { font-size: .9rem; }
+        /* Modallar mobilde tam genişlik ve kaydırılabilir gövde */
+        .modal-dialog, .modal-lg { max-width: calc(100% - 1rem) !important; margin: .5rem auto; }
+        .modal-body { max-height: 72vh; overflow-y: auto; }
+        .modal-footer .btn-group[role="group"] { flex-wrap: wrap; }
+    }
+    @@media (max-width: 575.98px) {
+        .container-fluid.p-3 { padding: .5rem !important; }
+        .btn-group[role="group"] { flex-wrap: wrap; }
+    }
+</style>
     <div class="row mb-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -72,7 +97,7 @@
                             }
                             else
                             {
-                                lastName = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId)?.Title ?? "Yükleniyor...";
+                                lastName = taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId)?.Title ?? "Yükleniyor...";
                             }
                             break;
                     }
@@ -151,7 +176,7 @@
                             </div>
                         </div>
 
-                        @if (db.TaskFramework.Any())
+                        @if (taskFrameworks.Any())
                         {
                             <button type="button" class="btn btn-light btn-sm"
                                     data-bs-toggle="modal"
@@ -159,7 +184,7 @@
                                 <i class="fa fa-address-book"></i> Yeni Kategori
                             </button>
                         }
-                        @if (db.TaskCategories.Any())
+                        @if (taskCategories.Any())
                         {
                             <button type="button" class="btn btn-light btn-sm"
                                     @onclick="() => ShowAddTaskModal()"
@@ -211,7 +236,7 @@
                             </div>
 
                             <div class="list-group shadow-sm border-0 mb-4">
-                                @if (db.TaskFramework.Any(x => x.UserId == use.Id))
+                                @if (taskFrameworks.Any(x => x.UserId == use.Id))
                                 {
                                     <div class="list-group-item bg-primary d-flex align-items-center py-3 border-bottom shadow-sm">
                                         <span class="badge bg-white text-primary rounded-pill me-3">
@@ -235,7 +260,7 @@
                                     </div>
                                 }
 
-                                @if (db.TaskCategories.Any(x => x.UserId == use.Id))
+                                @if (taskCategories.Any(x => x.UserId == use.Id))
                                 {
                                     <div class="list-group-item bg-light d-flex align-items-start py-3 border-bottom shadow-sm border-start border-primary border-4">
                                         <span class="badge bg-success rounded-pill me-3 mt-1">
@@ -345,7 +370,7 @@
         {
             <div class="alert border-0 border-start border-2 border-white alert-dismissible fade show d-flex align-items-center justify-content-between">
                 <div class="text-white">
-                    <b>@db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId)?.Title</b> Bölümü için işlemler:
+                    <b>@taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId)?.Title</b> Bölümü için işlemler:
                 </div>
 
                 <div class="d-flex align-items-center ms-auto">
@@ -383,7 +408,7 @@
 
                                     <div class="col-md-4">
                                         <label class="form-label">İkon</label>
-                                        <select class="form-select bg-light" @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon">
+                                        <select class="form-select bg-light" @bind="taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon">
                                             <razor._Shared.FaIcons />
                                         </select>
                                     </div>
@@ -391,11 +416,11 @@
                                     <div class="col-md-4">
                                         <label class="form-label">Bölüm Adı</label>
                                         <input class="form-control bg-light" type="text"
-                                               @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                                               @bind="taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
                                     </div>
 
                                     <div class="col-md-4">
-                                        <label class="form-label">Bölüm Durumu</label> <select class="form-select bg-light" @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Statu">
+                                        <label class="form-label">Bölüm Durumu</label> <select class="form-select bg-light" @bind="taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Statu">
                                         <option value="plan">Plan Aşamasında</option>
                                         <option value="aktif">Aktif Aşamasında</option>
                                         <option value="tamam">Tamamlandı</option>
@@ -408,7 +433,7 @@
                             <div class="col-12">
                                 <label class="form-label">Bölüm Açıklaması</label>
                                 <textarea class="form-control bg-light" rows="3"
-                                          @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description"></textarea>
+                                          @bind="taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Description"></textarea>
                             </div>
                         </div>
                     </div>
@@ -455,13 +480,13 @@
                         <div class="col-12">
                             <label class="form-label">Bölüm Adı</label>
                             <input class="form-control mb-3 bg-light" type="text"
-                                   @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
+                                   @bind="taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Title">
                         </div>
 
                         <div class="col-12">
                             <label class="form-label">Bölüm Açıklaması</label>
                             <textarea class="form-control bg-light" rows="3"
-                                      @bind="db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description"></textarea>
+                                      @bind="taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Description"></textarea>
                         </div>
                     </div>
 
@@ -493,199 +518,38 @@
 
 
     <div class="w-100 mt-3">
+        @* ✅ Öncelik/tarih filtresi artık tamamen Blazor tabanlı (JS setInterval kaldırıldı).
+           Düşük/Orta/Yüksek butonlarına kart sürüklenirse görevin önceliği değişir. *@
         <div class="row g-1 d-flex flex-nowrap overflow-auto no-scrollbar align-items-center pb-2">
-
-            <div class="col-auto flex-fill">
-                <input type="radio" class="btn-check" name="priorityRadio" id="radioAll" value="all" checked autocomplete="off">
-                <label class="btn btn-outline-light btn-sm w-100 py-1 shadow-sm custom-btn text-nowrap" for="radioAll">
-                    <i class="fa fa-list me-1"></i> Tümü
-                </label>
-            </div>
-
-            <div class="col-auto flex-fill" @ondrop="@(() => HandleDropPri("Düşük"))" @ondragover:preventDefault="true" @ondragenter:preventDefault="true">
-                <input type="radio" class="btn-check" name="priorityRadio" id="radioLow" value="low" autocomplete="off">
-                <label class="btn btn-outline-success btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="radioLow">
-                    <i class="fa fa-arrow-circle-down me-1"></i> Düşük
-                </label>
-            </div>
-
-            <div class="col-auto flex-fill" @ondrop="@(() => HandleDropPri("Orta"))" @ondragover:preventDefault="true" @ondragenter:preventDefault="true">
-                <input type="radio" class="btn-check" name="priorityRadio" id="radioMedium" value="medium" autocomplete="off">
-                <label class="btn btn-outline-warning btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="radioMedium">
-                    <i class="fa fa-minus-circle me-1"></i> Orta
-                </label>
-            </div>
-
-            <div class="col-auto flex-fill" @ondrop="@(() => HandleDropPri("Yüksek"))" @ondragover:preventDefault="true" @ondragenter:preventDefault="true">
-                <input type="radio" class="btn-check" name="priorityRadio" id="radioHigh" value="high" autocomplete="off">
-                <label class="btn btn-outline-danger btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="radioHigh">
-                    <i class="fa fa-arrow-circle-up me-1"></i> Yüksek
-                </label>
-            </div>
-
-            <div class="col-auto flex-fill">
-                <input type="radio" class="btn-check" name="priorityRadio" id="dateMonth" value="1month" autocomplete="off">
-                <label class="btn btn-outline-info btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="dateMonth">
-                    <i class="fa fa-calendar-o me-1"></i> Son 1 Ay
-                </label>
-            </div>
-
-            <div class="col-auto flex-fill">
-                <input type="radio" class="btn-check" name="priorityRadio" id="dateWeek" value="1week" autocomplete="off">
-                <label class="btn btn-outline-primary btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="dateWeek">
-                    <i class="fa fa-hourglass-half me-1"></i> Son 1 Hafta
-                </label>
-            </div>
-
-            <div class="col-auto flex-fill">
-                <input type="radio" class="btn-check" name="priorityRadio" id="dateDay" value="1day" autocomplete="off">
-                <label class="btn btn-outline-warning btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="dateDay">
-                    <i class="fa fa-exclamation-circle me-1"></i> Son 1 Gün
-                </label>
-            </div>
-
-            <div class="col-auto flex-fill">
-                <input type="radio" class="btn-check" name="priorityRadio" id="dateHour" value="1hour" autocomplete="off">
-                <label class="btn btn-outline-danger btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="dateHour">
-                    <i class="fa fa-bolt me-1"></i> Son 1 Saat
-                </label>
-            </div>
-
-            <!-- YENİ: Süre Doldu filtresi -->
-            <div class="col-auto flex-fill">
-                <input type="radio" class="btn-check" name="priorityRadio" id="dateExpired" value="expired" autocomplete="off">
-                <label class="btn btn-outline-secondary btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap" for="dateExpired">
-                    <i class="fa fa-ban me-1"></i> Süre Doldu
-                </label>
-            </div>
-
+            @{
+                var filterDefs = new (string key, string css, string icon, string label)[]
+                {
+                    ("all", "btn-outline-light", "fa-list", "Tümü"),
+                    ("low", "btn-outline-success", "fa-arrow-circle-down", "Düşük"),
+                    ("medium", "btn-outline-warning", "fa-minus-circle", "Orta"),
+                    ("high", "btn-outline-danger", "fa-arrow-circle-up", "Yüksek"),
+                    ("1month", "btn-outline-info", "fa-calendar-o", "Son 1 Ay"),
+                    ("1week", "btn-outline-primary", "fa-hourglass-half", "Son 1 Hafta"),
+                    ("1day", "btn-outline-warning", "fa-exclamation-circle", "Son 1 Gün"),
+                    ("1hour", "btn-outline-danger", "fa-bolt", "Son 1 Saat"),
+                    ("expired", "btn-outline-secondary", "fa-ban", "Süre Doldu"),
+                };
+            }
+            @foreach (var f in filterDefs)
+            {
+                <div class="col-auto flex-fill"
+                     @ondrop="@(() => HandleFilterDrop(f.key))"
+                     @ondragover:preventDefault="true"
+                     @ondragenter:preventDefault="true">
+                    <button type="button"
+                            class="btn @f.css btn-sm w-100 py-1 text-light shadow-sm custom-btn text-nowrap @(_activeFilter == f.key ? "active" : "")"
+                            @onclick="@(() => SetActiveFilter(f.key))">
+                        <i class="fa @f.icon me-1"></i> @f.label (@GetFilterCount(f.key))
+                    </button>
+                </div>
+            }
         </div>
     </div>
-
-    <script>
-            (function() {
-                function isExpired(card) {
-                    const timerSpan = card.querySelector('span[data-target]');
-                    if (!timerSpan) return false;
-                    const text = timerSpan.textContent.trim();
-                    if (text === 'Süre Doldu') return true;
-                    const targetDateStr = timerSpan.getAttribute('data-target');
-                    if (!targetDateStr || targetDateStr === '') return false;
-                    const targetDate = new Date(targetDateStr);
-                    return (targetDate - new Date()) <= 0;
-                }
-
-                function updateCounts() {
-                    const taskCards = document.querySelectorAll('.task-card:not([data-deleted="true"])');
-                    const now = new Date();
-
-                    const counts = {
-                        all: 0, low: 0, medium: 0, high: 0,
-                        '1month': 0, '1week': 0, '1day': 0, '1hour': 0, expired: 0
-                    };
-
-                    taskCards.forEach(card => {
-                        if (card.offsetParent === null) return;
-
-                        const badge = card.querySelector('.priority-badge');
-                        const priorityText = badge ? badge.textContent.trim().toLocaleLowerCase('tr') : "";
-
-                        const timerSpan = card.querySelector('span[data-target]');
-                        const targetDateStr = timerSpan ? timerSpan.getAttribute('data-target') : null;
-                        const targetDate = (targetDateStr && targetDateStr !== '') ? new Date(targetDateStr) : null;
-
-                        counts.all++;
-
-                        if (priorityText === "düşük") counts.low++;
-                        if (priorityText === "orta") counts.medium++;
-                        if (priorityText === "yüksek" || priorityText === "kritik") counts.high++;
-
-                        if (isExpired(card)) counts.expired++;
-
-                        if (targetDate) {
-                            const diff = targetDate - now;
-                            if (diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000) counts['1month']++;
-                            if (diff > 0 && diff <= 7 * 24 * 60 * 60 * 1000) counts['1week']++;
-                            if (diff > 0 && diff <= 24 * 60 * 60 * 1000) counts['1day']++;
-                            if (diff > 0 && diff <= 60 * 60 * 1000) counts['1hour']++;
-                        }
-                    });
-
-                    const labelMap = {
-                        radioAll: { prefix: ' Tümü', count: counts.all },
-                        radioLow: { prefix: ' Düşük', count: counts.low },
-                        radioMedium: { prefix: ' Orta', count: counts.medium },
-                        radioHigh: { prefix: ' Yüksek', count: counts.high },
-                        dateMonth: { prefix: ' Son 1 Ay', count: counts['1month'] },
-                        dateWeek: { prefix: ' Son 1 Hafta', count: counts['1week'] },
-                        dateDay: { prefix: ' Son 1 Gün', count: counts['1day'] },
-                        dateHour: { prefix: ' Son 1 Saat', count: counts['1hour'] },
-                        dateExpired: { prefix: ' Süre Doldu', count: counts.expired }
-                    };
-
-                    Object.entries(labelMap).forEach(([inputId, data]) => {
-                        const label = document.querySelector(`label[for="${inputId}"]`);
-                        if (!label) return;
-                        const icon = label.querySelector('i');
-                        const iconHtml = icon ? icon.outerHTML : '';
-                        label.innerHTML = `${iconHtml}${data.prefix} (${data.count})`;
-                    });
-                }
-
-                function applyFilter(selectedPriority) {
-                    const taskCards = document.querySelectorAll('.task-card');
-                    const now = new Date();
-
-                    taskCards.forEach(card => {
-                        const badge = card.querySelector('.priority-badge');
-                        const priorityText = badge ? badge.textContent.trim().toLocaleLowerCase('tr') : "";
-
-                        const timerSpan = card.querySelector('span[data-target]');
-                        const targetDateStr = timerSpan ? timerSpan.getAttribute('data-target') : null;
-                        const targetDate = (targetDateStr && targetDateStr !== '') ? new Date(targetDateStr) : null;
-
-                        let isVisible = false;
-
-                        if (selectedPriority === "all") {
-                            isVisible = true;
-                        } else if (selectedPriority === "low" && priorityText === "düşük") {
-                            isVisible = true;
-                        } else if (selectedPriority === "medium" && priorityText === "orta") {
-                            isVisible = true;
-                        } else if (selectedPriority === "high" && (priorityText === "yüksek" || priorityText === "kritik")) {
-                            isVisible = true;
-                        } else if (selectedPriority === "expired") {
-                            isVisible = isExpired(card);
-                        } else if (targetDate && selectedPriority === "1month") {
-                            const diff = targetDate - now;
-                            isVisible = diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000;
-                        } else if (targetDate && selectedPriority === "1week") {
-                            const diff = targetDate - now;
-                            isVisible = diff > 0 && diff <= 7 * 24 * 60 * 60 * 1000;
-                        } else if (targetDate && selectedPriority === "1day") {
-                            const diff = targetDate - now;
-                            isVisible = diff > 0 && diff <= 24 * 60 * 60 * 1000;
-                        } else if (targetDate && selectedPriority === "1hour") {
-                            const diff = targetDate - now;
-                            isVisible = diff > 0 && diff <= 60 * 60 * 1000;
-                        }
-
-                        card.style.display = isVisible ? "" : "none";
-                    });
-                }
-
-                document.addEventListener('change', function(e) {
-                    if (e.target && e.target.name === 'priorityRadio') {
-                        applyFilter(e.target.value);
-                    }
-                });
-
-                setTimeout(updateCounts, 500);
-                setInterval(updateCounts, 1000);
-                document.addEventListener('blazor:navigated', () => setTimeout(updateCounts, 300));
-
-            })();
-    </script>
     <div class="row g-3 align-items-end mb-3">
         <div class="col-md-12">
             <div class="input-group shadow-sm">
@@ -2191,7 +2055,7 @@
                                             <label class="form-label">Görev Bölümü</label>
                                             <select class="form-select" @bind="TaskFrameworkId">
                                                 <option value="">...</option>
-                                                @foreach (TaskFramework tf in db.TaskFramework.ToList())
+                                                @foreach (TaskFramework tf in taskFrameworks)
                                                 {
                                                     <option value=@tf.Id>@tf.Title</option>
                                                 }
@@ -2849,6 +2713,24 @@
                             <p>@GetUserName(selectedTask.PersonInChargeUserId)</p>
                         </div>
                     </div>
+                    @* ✅ Mobil için dokunmatik durum taşıma (sürükle-bırak dokunmatikte çalışmaz) *@
+                    @if (use?.UsersType == "Customer" || use?.UsersType == "SuperAdmin")
+                    {
+                        <div class="mb-3">
+                            <strong class="d-block mb-1"><i class="fa fa-random me-1"></i> Durumu Taşı:</strong>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var st in new[] { ("NewTasks", "Yeni"), ("ToBeDone", "Yapılacak"), ("InProcess", "İşlemde"), ("InEditing", "Düzenlemede"), ("Completed", "Tamamlandı"), ("UnSuccessful", "Ertelenmiş") })
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm @(selectedTask.Status == st.Item1 ? "btn-primary" : "btn-outline-secondary")"
+                                            disabled="@(selectedTask.Status == st.Item1 || IsButtonProcessing(nameof(HandleDrop)))"
+                                            @onclick="@(() => QuickMoveStatus(st.Item1))">
+                                        @st.Item2
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
                     @{
                         var taskAssignees = GetTaskKeeperJoints(selectedTask.Id);
                     }
@@ -2988,51 +2870,7 @@
                                                                 margin-top: -2px;
                                                             }
                                 </style>
-                                <script>
-                                                            document.querySelectorAll('input[name="priorityRadio"]').forEach(radio => {
-                                                                radio.addEventListener('change', function() {
-                                                                    const selectedPriority = this.value;
-                                                                    const taskCards = document.querySelectorAll('.task-card');
-                                                                    const now = new Date();
-
-                                                                    taskCards.forEach(card => {
-                                                                        const badge = card.querySelector('.priority-badge');
-                                                                        const priorityText = badge ? badge.textContent.trim().toLowerCase() : "";
-
-                                                                        // Hedef tarihi al (data-target attribute'undan)
-                                                                        const timerSpan = card.querySelector('span[data-target]');
-                                                                        const targetDateStr = timerSpan ? timerSpan.getAttribute('data-target') : null;
-                                                                        const targetDate = targetDateStr ? new Date(targetDateStr) : null;
-
-                                                                        let isVisible = false;
-
-                                                                        if (selectedPriority === "all") {
-                                                                            isVisible = true;
-                                                                        } else if (selectedPriority === "low" && priorityText === "düşük") {
-                                                                            isVisible = true;
-                                                                        } else if (selectedPriority === "medium" && priorityText === "orta") {
-                                                                            isVisible = true;
-                                                                        } else if (selectedPriority === "high" && (priorityText === "yüksek" || priorityText === "kritik")) {
-                                                                            isVisible = true;
-                                                                        } else if (selectedPriority === "1month" && targetDate) {
-                                                                            const diff = targetDate - now;
-                                                                            isVisible = diff > 0 && diff <= 30 * 24 * 60 * 60 * 1000;
-                                                                        } else if (selectedPriority === "1week" && targetDate) {
-                                                                            const diff = targetDate - now;
-                                                                            isVisible = diff > 0 && diff <= 7 * 24 * 60 * 60 * 1000;
-                                                                        } else if (selectedPriority === "1day" && targetDate) {
-                                                                            const diff = targetDate - now;
-                                                                            isVisible = diff > 0 && diff <= 24 * 60 * 60 * 1000;
-                                                                        } else if (selectedPriority === "1hour" && targetDate) {
-                                                                            const diff = targetDate - now;
-                                                                            isVisible = diff > 0 && diff <= 60 * 60 * 1000;
-                                                                        }
-
-                                                                        card.style.display = isVisible ? "block" : "none";
-                                                                    });
-                                                                });
-                                                            });
-                                </script>
+                                @* (Eski JS öncelik filtresi kaldırıldı — filtreleme artık Blazor tarafında.) *@
                             </div>
                         </div>
                     }
@@ -3201,7 +3039,7 @@
                         <label class="form-label">Görev Bölümü</label>
                         <select class="form-select" @bind="TaskCategories.TaskFrameworkId">
                             <option value=@TaskCategories.TaskFrameworkId>@TaskCategories.TaskFrameworkId</option>
-                            @foreach (TaskFramework tf in db.TaskFramework.Where(x => (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true) && x.UserId == use.Id).ToList())
+                            @foreach (TaskFramework tf in taskFrameworks)
                             {
                                 <option value=@tf.Id>@tf.Title</option>
                             }
@@ -3310,7 +3148,12 @@
     private bool _disposed;
     #endregion
     #region Data
-    data._ApplicationConnectionDb db = new data._ApplicationConnectionDb();
+    // ✅ Uzun ömürlü DbContext KALDIRILDI. Artık tüm veriler LoadData ile
+    // bir kez belleğe yüklenir; markup'ta senkron DB sorgusu yapılmaz.
+    private List<TaskFramework> taskFrameworks = new();
+    private Dictionary<Guid, string> _userNames = new();
+    private static readonly CultureInfo _tr = new("tr-TR");
+    private string _activeFilter = "all"; // Öncelik/tarih filtresi (Blazor tabanlı)
     private List<Users> adminUsers = new();
     private List<TaskCategories> taskCategories = new();
     private List<data._Tasks.TaskStatus> tasks = new();
@@ -3382,6 +3225,10 @@
     {
         if (_disposed) return;
         _disposed = true;
+        // ✅ Event aboneliğini bırak (subscriber leak önlemi — aksi halde ölü
+        // component'ler dinlemeye devam eder ve her broadcast tüm sistemi yavaşlatır)
+        StateHub.OnDataChanged -= HandleGlobalDataChange;
+        _searchTimer?.Dispose();
         await _cts.CancelAsync();
         _cts.Dispose();
         _dbLock.Dispose();
@@ -3444,17 +3291,10 @@
     }
     private string GetUserName(Guid? userId)
     {
+        // ✅ Bellekteki sözlükten okunur — kart başına senkron DB sorgusu YOK.
         if (userId == null) return "Bilinmiyor";
-
-        using var db = DbFactory.CreateDbContext();
-
-        var userName = db.Users
-            .Where(u => u.Id == userId)
-            .Select(u => new { u.FirstName, u.LastName })
-            .FirstOrDefault();
-
-        return userName != null
-            ? $"{userName.FirstName} {userName.LastName}"
+        return _userNames.TryGetValue(userId.Value, out var name) && !string.IsNullOrWhiteSpace(name)
+            ? name
             : "Bilinmiyor";
     }
 
@@ -3684,35 +3524,18 @@
     #region Data Operations
 
     private string? _SearchText;
-    private CancellationTokenSource? _searchDebounce;
+    private System.Threading.Timer? _searchTimer;
 
     private void OnSearchInput(ChangeEventArgs e)
     {
+        // ✅ Arama tamamen bellekte yapılır (ApplyBoardFilters). DB'ye gidilmez,
+        // yeniden yükleme yapılmaz. Hızlı yazımı toplamak için 180ms hafif debounce.
         _SearchText = e.Value?.ToString();
-        // StateHasChanged burada çağrılmıyor — @oninput zaten UI'ı günceller.
-        // Böylece her tuş vuruşunda ağır bileşen yeniden render edilmez.
 
-        _searchDebounce?.Cancel();
-        _searchDebounce?.Dispose();
-        _searchDebounce = new CancellationTokenSource();
-        var token = _searchDebounce.Token;
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(500, token); // 500ms debounce
-                if (!token.IsCancellationRequested)
-                {
-                    await InvokeAsync(async () =>
-                    {
-                        await LoadData();
-                        StateHasChanged();
-                    });
-                }
-            }
-            catch (TaskCanceledException) { }
-        });
+        _searchTimer?.Dispose();
+        _searchTimer = new System.Threading.Timer(
+            _ => InvokeAsync(StateHasChanged),
+            null, 180, System.Threading.Timeout.Infinite);
     }
     protected async Task LoadData()
     {
@@ -3774,10 +3597,6 @@
                         .Any(c => c.Id == t.TaskCategoriesId &&
                                   c.TaskFrameworkId == TaskFrameworkId));
 
-                if (!string.IsNullOrWhiteSpace(_SearchText))
-                    tasksQuery = tasksQuery.Where(t =>
-                        t.TaskTitle.Contains(_SearchText) ||
-                        t.TaskDescription.Contains(_SearchText));
 
                 tasks = await tasksQuery
                     .OrderByDescending(t => t.DateCreatedAt)
@@ -3799,10 +3618,6 @@
                     .Where(t => baseCategoryFilter
                         .Any(c => c.Id == t.TaskCategoriesId));
 
-                if (!string.IsNullOrWhiteSpace(_SearchText))
-                    tasksQuery = tasksQuery.Where(t =>
-                        t.TaskTitle.Contains(_SearchText) ||
-                        t.TaskDescription.Contains(_SearchText));
 
                 tasks = await tasksQuery
                     .OrderByDescending(t => t.DateCreatedAt)
@@ -3851,6 +3666,33 @@
                     && u.IsActive == true)
                 .ToListAsync(_cts.Token);
 
+            // === Bölümleri (TaskFramework) belleğe yükle — markup artık DB'ye gitmez ===
+            taskFrameworks = await db.TaskFramework
+                .AsNoTracking()
+                .Where(f => (f.IsDeleted == null || f.IsDeleted.IsDeletedStatu != true)
+                            && f.UserId == use.Id)
+                .OrderByDescending(f => f.CreatedAt)
+                .ToListAsync(_cts.Token);
+
+            // === Kullanıcı adı sözlüğü — kart başına DB sorgusunu önler ===
+            var userIds = new HashSet<Guid>();
+            foreach (var t in tasks)
+            {
+                if (t.PersonInChargeUserId is Guid pic) userIds.Add(pic);
+                if (t.AssignedByUserId is Guid abu) userIds.Add(abu);
+            }
+            foreach (var k in taskKeepers) userIds.Add(k.UserId);
+            if (use != null) userIds.Add(use.Id);
+
+            _userNames = await db.Users
+                .AsNoTracking()
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FirstName, u.LastName })
+                .ToDictionaryAsync(
+                    u => u.Id,
+                    u => ($"{u.FirstName} {u.LastName}").Trim(),
+                    _cts.Token);
+
             await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
         }
         catch (OperationCanceledException) { }
@@ -3875,48 +3717,120 @@
 
 
 
-    private List<data._Tasks.TaskStatus> GetTasksByStatus(string status, Guid? TaskCategoriesId, Guid? TaskFramewokId)
+    // ✅ TAMAMEN BELLEK İÇİ. Artık kolon/kategori başına DB sorgusu YOK.
+    // Veriler LoadData ile bir kez yüklenir; burada yalnızca filtreleme yapılır.
+    // Kolon yerleşimi: görevde TaskKeeperJoint varsa katılımcının aşamasına,
+    // yoksa görevin ana durumuna göre belirlenir (eski DB mantığının aynısı).
+    private List<data._Tasks.TaskStatus> GetTasksByStatus(string status, Guid? taskCategoriesId, Guid? taskFrameworkId)
     {
-        using var db = DbFactory.CreateDbContext();
+        if (use == null) return new();
 
-        // Sorguyu kategorilere göre başlatıyoruz
-        var query = db.TaskStatus
-            .Where(t => t.IsDeleted == null || t.IsDeleted.IsDeletedStatu != true);
+        IEnumerable<data._Tasks.TaskStatus> query = tasks;
 
-        if (TaskCategoriesId != null)
+        if (taskCategoriesId != null)
+            query = query.Where(t => t.TaskCategoriesId == taskCategoriesId);
+
+        query = query.Where(t =>
         {
-            query = query.Where(t => t.TaskCategoriesId == TaskCategoriesId);
-        }
+            var joints = taskKeepers.Where(kj => kj.TaskId == t.Id).ToList();
+            if (joints.Count > 0)
+                return joints.Any(kj => kj.UserId == use.Id && kj.Status == status);
+            return t.PersonInChargeUserId == use.Id && t.Status == status;
+        });
 
-        // Filtreleme mantığı:
-        // 1. TaskKeeperJoint tablosunda bu görev (TaskId) için bir kayıt varsa:
-        //    Joint tablosundaki UserId ile senin gönderdiğin userId eşleşmeli VE Joint'teki status tutmalı.
-        // 2. Eğer TaskKeeperJoint'te hiç kayıt yoksa (else durumu):
-        //    TaskStatus tablosundaki PersonInChargeUserId ile userId eşleşmeli VE TaskStatus'taki ana status tutmalı.
-
-        return query.Where(t =>
-                (db.TaskKeeperJoint.Any(kj => kj.TaskId == t.Id)
-                    ? db.TaskKeeperJoint.Any(kj => kj.TaskId == t.Id && kj.UserId == use.Id && kj.Status == status)
-                    : (t.PersonInChargeUserId == use.Id && t.Status == status))
-            ).ToList();
+        query = ApplyBoardFilters(query);
+        return query.ToList();
     }
 
-
-
-
-
-
-
-    private int GetTaskCountByStatus(string status, Guid? TaskCategoriesId)
+    // Arama + öncelik/tarih filtresini bellekte uygular.
+    private IEnumerable<data._Tasks.TaskStatus> ApplyBoardFilters(IEnumerable<data._Tasks.TaskStatus> source)
     {
-        if (TaskCategoriesId == null)
+        var result = source;
+
+        // Metin arama (başlık + açıklama), Türkçe kültürüne duyarlı
+        if (!string.IsNullOrWhiteSpace(_SearchText))
         {
-            return tasks.Count(t => t.Status == status);
+            var term = _SearchText.Trim().ToLower(_tr);
+            result = result.Where(t =>
+                (t.TaskTitle ?? string.Empty).ToLower(_tr).Contains(term) ||
+                (t.TaskDescription ?? string.Empty).ToLower(_tr).Contains(term));
         }
-        else
+
+        // Öncelik / tarih filtresi
+        if (_activeFilter != "all")
         {
-            return tasks.Count(t => t.Status == status && t.TaskCategoriesId == TaskCategoriesId);
+            var now = DateTime.Now;
+            result = _activeFilter switch
+            {
+                "low"     => result.Where(t => t.Priority == "Düşük"),
+                "medium"  => result.Where(t => t.Priority == "Orta"),
+                "high"    => result.Where(t => t.Priority == "Yüksek" || t.Priority == "Kritik"),
+                "expired" => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value <= now),
+                "1month"  => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 30),
+                "1week"   => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 7),
+                "1day"    => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalHours <= 24),
+                "1hour"   => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalMinutes <= 60),
+                _         => result
+            };
         }
+
+        return result;
+    }
+
+    // Aktif öncelik/tarih filtresini değiştir (Blazor tabanlı — JS yok)
+    private void SetActiveFilter(string key)
+    {
+        _activeFilter = key;
+        StateHasChanged();
+    }
+
+    // Kart bir filtre butonuna sürüklenirse önceliğini değiştir (eski HandleDropPri davranışı)
+    private async Task HandleFilterDrop(string key)
+    {
+        var pri = key switch
+        {
+            "low" => "Düşük",
+            "medium" => "Orta",
+            "high" => "Yüksek",
+            _ => null
+        };
+        if (pri != null)
+            await HandleDropPri(pri);
+    }
+
+    // Filtre butonu rozet sayıları (arama uygulanmış tüm görevler üzerinden)
+    private int GetFilterCount(string key)
+    {
+        var now = DateTime.Now;
+        IEnumerable<data._Tasks.TaskStatus> src = tasks;
+
+        if (!string.IsNullOrWhiteSpace(_SearchText))
+        {
+            var term = _SearchText.Trim().ToLower(_tr);
+            src = src.Where(t =>
+                (t.TaskTitle ?? string.Empty).ToLower(_tr).Contains(term) ||
+                (t.TaskDescription ?? string.Empty).ToLower(_tr).Contains(term));
+        }
+
+        return key switch
+        {
+            "all"     => src.Count(),
+            "low"     => src.Count(t => t.Priority == "Düşük"),
+            "medium"  => src.Count(t => t.Priority == "Orta"),
+            "high"    => src.Count(t => t.Priority == "Yüksek" || t.Priority == "Kritik"),
+            "expired" => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value <= now),
+            "1month"  => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 30),
+            "1week"   => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 7),
+            "1day"    => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalHours <= 24),
+            "1hour"   => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalMinutes <= 60),
+            _         => 0
+        };
+    }
+
+    // Sayaç, kartlarla BİREBİR tutarlı olsun diye aynı mantığı kullanır.
+    private int GetTaskCountByStatus(string status, Guid? taskCategoriesId)
+    {
+        return GetTasksByStatus(status, taskCategoriesId, TaskFrameworkId).Count;
     }
     #endregion
     #region Drag and Drop
@@ -4154,6 +4068,17 @@
         selectedTask = task;
         await LoadTaskNotes(task.Id);
         showDetailModal = true;
+    }
+    // ✅ Mobil dokunmatik durum taşıma — sürükle-bırak yerine buton ile.
+    private async Task QuickMoveStatus(string newStatus)
+    {
+        if (selectedTask == null) return;
+        draggedTaskId = selectedTask.Id;
+        await HandleDrop(newStatus);
+        draggedTaskId = null;
+        // Seçili görevi bellekten tazele ki modal anında güncel görünsün
+        var updated = tasks.FirstOrDefault(t => t.Id == selectedTask?.Id);
+        if (updated != null) selectedTask = updated;
     }
     private void CloseDetailModal()
     {
@@ -4548,12 +4473,9 @@
     }
     public int GetTaskCount(TaskCategories tc)
     {
-        // 1. null kontrolü
+        // ✅ Bellekten sayım — sekme başına senkron DB sorgusu YOK.
         if (tc == null) return 0;
-        // 2. DbContext'i senkron olarak oluşturun
-        using var db = DbFactory.CreateDbContext();
-        // 3. Senkron Count() kullanarak sonucu döndürün
-        return db.TaskStatus.Count(x => x.TaskCategoriesId == tc.Id && x.IsDeleted.IsDeletedStatu != true);
+        return tasks.Count(t => t.TaskCategoriesId == tc.Id);
     }
     public string IsEmailNotificationEnabled(bool? Statu)
     {
@@ -4627,7 +4549,7 @@
             await ShowNotification("success", "Başarılı", "Yeni bölüm eklendi.", null);
             await JS.InvokeVoidAsync("eval", "$('#AddNewEpisodeModal').modal('hide')");
 
-            await Task.Delay(3000);
+            await Task.Delay(600);
             await JS.InvokeVoidAsync("location.reload");
             // Formu temizle
             tf = new TaskFramework();
@@ -4646,10 +4568,10 @@
                 var existing = await dbCtx.TaskFramework.FirstOrDefaultAsync(x => x.Id == _TaskFrameworkId, _cts.Token);
                 if (existing != null)
                 {
-                    existing.Icon = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon;
-                    existing.Title = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Title;
-                    existing.Description = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Description;
-                    existing.Statu = db.TaskFramework.FirstOrDefault(x => x.Id == TaskFrameworkId).Statu;
+                    existing.Icon = taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Icon;
+                    existing.Title = taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Title;
+                    existing.Description = taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Description;
+                    existing.Statu = taskFrameworks.FirstOrDefault(x => x.Id == TaskFrameworkId).Statu;
                     dbCtx.TaskFramework.Update(existing);
                     await dbCtx.SaveChangesAsync(_cts.Token);
                     success = true;
@@ -4670,7 +4592,7 @@
         {
             await JS.InvokeVoidAsync("eval", "$('#EditFramework').modal('hide')");
             await ShowNotification("success", "Başarılı", "Bölüm başarıyla güncellendi.", null);
-            await Task.Delay(3000);
+            await Task.Delay(600);
             await JS.InvokeVoidAsync("location.reload");
             // Diğer kullanıcılara bildir
             await StateHub.NotifyDataChanged("TaskFramework");
@@ -4717,7 +4639,7 @@
             // Modal kapat ve bildirim ver
             await JS.InvokeVoidAsync("eval", "$('#TrashFramework').modal('hide')");
             await ShowNotification("success", "Başarılı", "Bölüm başarıyla silindi.", null);
-            await Task.Delay(3000);
+            await Task.Delay(600);
             await JS.InvokeVoidAsync("location.reload");
             // DİKKAT: En son tetiklemeyi yap ki render başladığında DB meşgul olmasın
             await StateHub.NotifyDataChanged("TaskFramework");

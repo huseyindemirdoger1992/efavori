@@ -242,7 +242,7 @@
             var frameworkResult = await StateHub.GetOrLoadAsync("Sidebar_TaskFramework", async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-                return await db.TaskFramework.Where(x => x.IsDeleted.IsDeletedStatu != true && x.UserId == _use.Id).AsNoTracking().ToListAsync(_cts.Token);
+                return await db.TaskFramework.Where(x => (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true) && x.UserId == _use.Id).AsNoTracking().ToListAsync(_cts.Token);
             }, _cts.Token);
 
             _taskFrameworks = frameworkResult ?? new List<TaskFramework>();
@@ -256,7 +256,9 @@
                     .AsNoTracking()
                     .Where(x => x.UserId == userId && (x.IsDeleted == null || x.IsDeleted.IsDeletedStatu != true));
 
-                var planning = await baseQuery.CountAsync(x => x.Statu == "plan", _cts.Token);
+                // Menüde "Planlananlar" listesi (Statu == "plan" || Statu == null) gösterdiği için
+                // sayaç da aynı koşulu kullanmalı — aksi halde liste dolu, sayı (0) görünür.
+                var planning = await baseQuery.CountAsync(x => x.Statu == "plan" || x.Statu == null, _cts.Token);
                 var inProcess = await baseQuery.CountAsync(x => x.Statu == "aktif", _cts.Token);
                 var completed = await baseQuery.CountAsync(x => x.Statu == "tamam", _cts.Token);
 
@@ -2312,7 +2314,7 @@
        jQuery gerektirmez; </ul> kapandığı anda parse sırasında çalışır.
        ════════════════════════════════════════════════════════════════════════ *@
     <script>
-            (function () {
+            (function() {
                 var menu = document.getElementById('menu');
                 if (!menu) return;
 

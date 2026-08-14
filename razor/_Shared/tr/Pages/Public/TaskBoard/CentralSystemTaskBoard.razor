@@ -29,31 +29,79 @@
     string culture = CultureInfo.CurrentCulture.TwoLetterISOLanguageName;
 }
 <div class="container-fluid p-3">
-<style>
-    /* === CentralSystemTaskBoard — mobil uyumluluk & akıcılık === */
-    .task-card { word-break: break-word; overflow-wrap: anywhere; cursor: pointer; }
-    .no-scrollbar { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .nav-tabs::-webkit-scrollbar { display: none; }
-    .custom-btn.active { filter: brightness(.9); font-weight: 600; }
-    .kanban-column { -webkit-overflow-scrolling: touch; }
+    <style>
+            /* === CentralSystemTaskBoard — mobil uyumluluk & akıcılık === */
+            .task-card {
+                word-break: break-word;
+                overflow-wrap: anywhere;
+                cursor: pointer;
+            }
 
-    @@media (max-width: 767.98px) {
-        /* Sabit başlıkların mobilde üst üste binmesini engelle */
-        .kanban-column .card-header,
-        .card-header.sticky-top { position: static !important; top: auto !important; }
-        .task-card { font-size: .9rem; }
-        /* Modallar mobilde tam genişlik ve kaydırılabilir gövde */
-        .modal-dialog, .modal-lg { max-width: calc(100% - 1rem) !important; margin: .5rem auto; }
-        .modal-body { max-height: 72vh; overflow-y: auto; }
-        .modal-footer .btn-group[role="group"] { flex-wrap: wrap; }
-    }
-    @@media (max-width: 575.98px) {
-        .container-fluid.p-3 { padding: .5rem !important; }
-        .btn-group[role="group"] { flex-wrap: wrap; }
-    }
-</style>
+            .no-scrollbar {
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+
+            .nav-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+                .nav-tabs::-webkit-scrollbar {
+                    display: none;
+                }
+
+            .custom-btn.active {
+                filter: brightness(.9);
+                font-weight: 600;
+            }
+
+            .kanban-column {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            @@media (max-width: 767.98px) {
+                /* Sabit başlıkların mobilde üst üste binmesini engelle */
+                .kanban-column .card-header,
+                .card-header.sticky-top {
+                    position: static !important;
+                    top: auto !important;
+                }
+
+                .task-card {
+                    font-size: .9rem;
+                }
+                /* Modallar mobilde tam genişlik ve kaydırılabilir gövde */
+                .modal-dialog, .modal-lg {
+                    max-width: calc(100% - 1rem) !important;
+                    margin: .5rem auto;
+                }
+
+                .modal-body {
+                    max-height: 72vh;
+                    overflow-y: auto;
+                }
+
+                .modal-footer .btn-group[role="group"] {
+                    flex-wrap: wrap;
+                }
+            }
+
+            @@media (max-width: 575.98px) {
+                .container-fluid.p-3 {
+                    padding: .5rem !important;
+                }
+
+                .btn-group[role="group"] {
+                    flex-wrap: wrap;
+                }
+            }
+    </style>
     <div class="row mb-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -3586,7 +3634,10 @@
             if (TaskFrameworkId.HasValue && TaskFrameworkId.Value != Guid.Empty)
             {
                 taskCategories = await baseCategoryFilter
-                    .Where(c => c.TaskFrameworkId == TaskFrameworkId && c.UserId == use.Id)
+                    // Görünürlük zaten baseCategoryFilter'da (sahip VEYA atanmış) uygulanıyor;
+                    // burada yalnızca seçili bölüme daralt. Fazladan c.UserId==use.Id filtresi
+                    // sana atanmış (ama başkasının açtığı) kategorileri gizleyip paneli boş gösteriyordu.
+                    .Where(c => c.TaskFrameworkId == TaskFrameworkId)
                     .OrderByDescending(t => t.CreatedAt)
                     .AsNoTracking()
                     .ToListAsync(_cts.Token);
@@ -3762,15 +3813,15 @@
             var now = DateTime.Now;
             result = _activeFilter switch
             {
-                "low"     => result.Where(t => t.Priority == "Düşük"),
-                "medium"  => result.Where(t => t.Priority == "Orta"),
-                "high"    => result.Where(t => t.Priority == "Yüksek" || t.Priority == "Kritik"),
+                "low" => result.Where(t => t.Priority == "Düşük"),
+                "medium" => result.Where(t => t.Priority == "Orta"),
+                "high" => result.Where(t => t.Priority == "Yüksek" || t.Priority == "Kritik"),
                 "expired" => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value <= now),
-                "1month"  => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 30),
-                "1week"   => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 7),
-                "1day"    => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalHours <= 24),
-                "1hour"   => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalMinutes <= 60),
-                _         => result
+                "1month" => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 30),
+                "1week" => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 7),
+                "1day" => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalHours <= 24),
+                "1hour" => result.Where(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalMinutes <= 60),
+                _ => result
             };
         }
 
@@ -3814,16 +3865,16 @@
 
         return key switch
         {
-            "all"     => src.Count(),
-            "low"     => src.Count(t => t.Priority == "Düşük"),
-            "medium"  => src.Count(t => t.Priority == "Orta"),
-            "high"    => src.Count(t => t.Priority == "Yüksek" || t.Priority == "Kritik"),
+            "all" => src.Count(),
+            "low" => src.Count(t => t.Priority == "Düşük"),
+            "medium" => src.Count(t => t.Priority == "Orta"),
+            "high" => src.Count(t => t.Priority == "Yüksek" || t.Priority == "Kritik"),
             "expired" => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value <= now),
-            "1month"  => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 30),
-            "1week"   => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 7),
-            "1day"    => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalHours <= 24),
-            "1hour"   => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalMinutes <= 60),
-            _         => 0
+            "1month" => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 30),
+            "1week" => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalDays <= 7),
+            "1day" => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalHours <= 24),
+            "1hour" => src.Count(t => t.TargetDate.HasValue && t.TargetDate.Value > now && (t.TargetDate.Value - now).TotalMinutes <= 60),
+            _ => 0
         };
     }
 

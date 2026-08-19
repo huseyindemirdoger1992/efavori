@@ -6,9 +6,16 @@ using data._Categories;
 using data._Follows;
 using data._Galleries;
 using data._Helper;
+using data._Inventory;
 using data._Locations;
+using data._Notifications;
+using data._Orders;
+using data._Payments;
 using data._Products;
+using data._Promotions;
+using data._Returns;
 using data._Shares;
+using data._Shipping;
 using data._Store;
 using data._Systems;
 using data._Tasks;
@@ -31,32 +38,32 @@ namespace data
         public DbSet<CategoriesProduct> CategoriesProduct { get; set; } = default!;
 
         // === _Attribute (Enterprise Marketplace Attribute System V3) ===
-        public DbSet<AttributeGroup> AttributeGroups => Set<AttributeGroup>();
-        public DbSet<AttributeGroupTranslation> AttributeGroupTranslations => Set<AttributeGroupTranslation>();
-        public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
-        public DbSet<AttributeTranslation> AttributeTranslations => Set<AttributeTranslation>();
-        public DbSet<AttributeAlias> AttributeAliases => Set<AttributeAlias>();
-        public DbSet<AttributeSynonym> AttributeSynonyms => Set<AttributeSynonym>();
-        public DbSet<AttributeOption> AttributeOptions => Set<AttributeOption>();
-        public DbSet<AttributeOptionTranslation> AttributeOptionTranslations => Set<AttributeOptionTranslation>();
-        public DbSet<AttributeOptionAlias> AttributeOptionAliases => Set<AttributeOptionAlias>();
-        public DbSet<AttributeOptionSynonym> AttributeOptionSynonyms => Set<AttributeOptionSynonym>();
-        public DbSet<UnitGroup> UnitGroups => Set<UnitGroup>();
-        public DbSet<UnitGroupTranslation> UnitGroupTranslations => Set<UnitGroupTranslation>();
-        public DbSet<Unit> Units => Set<Unit>();
-        public DbSet<UnitTranslation> UnitTranslations => Set<UnitTranslation>();
-        public DbSet<AttributeTemplate> AttributeTemplates_V3 => Set<AttributeTemplate>(); // adı mevcut ile çakışmasın diye _V3
-        public DbSet<AttributeTemplateTranslation> AttributeTemplateTranslations => Set<AttributeTemplateTranslation>();
-        public DbSet<TemplateAttribute> TemplateAttributes => Set<TemplateAttribute>();
-        public DbSet<TemplateCategory> TemplateCategories => Set<TemplateCategory>();
-        public DbSet<CategoryAttribute> CategoryAttributes => Set<CategoryAttribute>();
-        public DbSet<AttributeDependency> AttributeDependencies => Set<AttributeDependency>();
-        public DbSet<NormalizationRule> NormalizationRules => Set<NormalizationRule>();
-        public DbSet<AiGenerationJob> AiGenerationJobs => Set<AiGenerationJob>();
-        public DbSet<AiGenerationHistory> AiGenerationHistories => Set<AiGenerationHistory>();
-        public DbSet<IntegrationPlatform> IntegrationPlatforms => Set<IntegrationPlatform>();
-        public DbSet<AttributeMapping> AttributeMappings => Set<AttributeMapping>();
-        public DbSet<AttributeOptionMapping> AttributeOptionMappings => Set<AttributeOptionMapping>();
+        public DbSet<AttributeGroup> AttributeGroups { get; set; } = default!;
+        public DbSet<AttributeGroupTranslation> AttributeGroupTranslations { get; set; } = default!;
+        public DbSet<AttributeDefinition> AttributeDefinitions { get; set; } = default!;
+        public DbSet<AttributeTranslation> AttributeTranslations { get; set; } = default!;
+        public DbSet<AttributeAlias> AttributeAliases { get; set; } = default!;
+        public DbSet<AttributeSynonym> AttributeSynonyms { get; set; } = default!;
+        public DbSet<AttributeOption> AttributeOptions { get; set; } = default!;
+        public DbSet<AttributeOptionTranslation> AttributeOptionTranslations { get; set; } = default!;
+        public DbSet<AttributeOptionAlias> AttributeOptionAliases { get; set; } = default!;
+        public DbSet<AttributeOptionSynonym> AttributeOptionSynonyms { get; set; } = default!;
+        public DbSet<UnitGroup> UnitGroups { get; set; } = default!;
+        public DbSet<UnitGroupTranslation> UnitGroupTranslations { get; set; } = default!;
+        public DbSet<Unit> Units { get; set; } = default!;
+        public DbSet<UnitTranslation> UnitTranslations { get; set; } = default!;
+        public DbSet<AttributeTemplate> AttributeTemplates_V3 { get; set; } = default!; // adı mevcut ile çakışmasın diye _V3
+        public DbSet<AttributeTemplateTranslation> AttributeTemplateTranslations { get; set; } = default!;
+        public DbSet<TemplateAttribute> TemplateAttributes { get; set; } = default!;
+        public DbSet<TemplateCategory> TemplateCategories { get; set; } = default!;
+        public DbSet<CategoryAttribute> CategoryAttributes { get; set; } = default!;
+        public DbSet<AttributeDependency> AttributeDependencies { get; set; } = default!;
+        public DbSet<NormalizationRule> NormalizationRules { get; set; } = default!;
+        public DbSet<AiGenerationJob> AiGenerationJobs { get; set; } = default!;
+        public DbSet<AiGenerationHistory> AiGenerationHistories { get; set; } = default!;
+        public DbSet<IntegrationPlatform> IntegrationPlatforms { get; set; } = default!;
+        public DbSet<AttributeMapping> AttributeMappings { get; set; } = default!;
+        public DbSet<AttributeOptionMapping> AttributeOptionMappings { get; set; } = default!;
 
 
         // === _Follows ===
@@ -81,47 +88,47 @@ namespace data
         public DbSet<MoneyExchangeRate> MoneyExchangeRate { get; set; } = default!;
 
         // === _Products (Manuel Ürün Yönetim Sistemi — Product System V1) ===
-        public DbSet<Products> Products => Set<Products>();
-        public DbSet<ProductTranslations> ProductTranslations => Set<ProductTranslations>();
-        public DbSet<ProductCategoryLinks> ProductCategoryLinks => Set<ProductCategoryLinks>();
-        public DbSet<ProductVariants> ProductVariants => Set<ProductVariants>();
-        public DbSet<ProductVariantAttributeValues> ProductVariantAttributeValues => Set<ProductVariantAttributeValues>();
-        public DbSet<ProductAttributeValues> ProductAttributeValues => Set<ProductAttributeValues>();
-        public DbSet<ProductPrices> ProductPrices => Set<ProductPrices>();
-        public DbSet<ProductMedia> ProductMedia => Set<ProductMedia>();
-        public DbSet<ProductMediaTranslations> ProductMediaTranslations => Set<ProductMediaTranslations>();
+        public DbSet<Products> Products { get; set; } = default!;
+        public DbSet<ProductTranslations> ProductTranslations { get; set; } = default!;
+        public DbSet<ProductCategoryLinks> ProductCategoryLinks { get; set; } = default!;
+        public DbSet<ProductVariants> ProductVariants { get; set; } = default!;
+        public DbSet<ProductVariantAttributeValues> ProductVariantAttributeValues { get; set; } = default!;
+        public DbSet<ProductAttributeValues> ProductAttributeValues { get; set; } = default!;
+        public DbSet<ProductPrices> ProductPrices { get; set; } = default!;
+        public DbSet<ProductMedia> ProductMedia { get; set; } = default!;
+        public DbSet<ProductMediaTranslations> ProductMediaTranslations { get; set; } = default!;
 
         // === _Products (Yorum / Puanlama) ===
-        public DbSet<ProductReviews> ProductReviews => Set<ProductReviews>();
-        public DbSet<ProductReviewVotes> ProductReviewVotes => Set<ProductReviewVotes>();
-        public DbSet<ProductReviewReports> ProductReviewReports => Set<ProductReviewReports>();
-        public DbSet<ProductRatingSummary> ProductRatingSummary => Set<ProductRatingSummary>();
+        public DbSet<ProductReviews> ProductReviews { get; set; } = default!;
+        public DbSet<ProductReviewVotes> ProductReviewVotes { get; set; } = default!;
+        public DbSet<ProductReviewReports> ProductReviewReports { get; set; } = default!;
+        public DbSet<ProductRatingSummary> ProductRatingSummary { get; set; } = default!;
 
         // === _Products (Soru-Cevap) ===
-        public DbSet<ProductQuestions> ProductQuestions => Set<ProductQuestions>();
-        public DbSet<ProductQuestionVotes> ProductQuestionVotes => Set<ProductQuestionVotes>();
-        public DbSet<ProductQuestionReports> ProductQuestionReports => Set<ProductQuestionReports>();
+        public DbSet<ProductQuestions> ProductQuestions { get; set; } = default!;
+        public DbSet<ProductQuestionVotes> ProductQuestionVotes { get; set; } = default!;
+        public DbSet<ProductQuestionReports> ProductQuestionReports { get; set; } = default!;
 
         // === _BulkImportProducts (Toplu Ürün İçe Aktarım) ===
-        public DbSet<ImportProfile> ImportProfiles => Set<ImportProfile>();
-        public DbSet<ImportCredential> ImportCredentials => Set<ImportCredential>();
-        public DbSet<ImportFieldMapping> ImportFieldMappings => Set<ImportFieldMapping>();
-        public DbSet<ImportCategoryMapping> ImportCategoryMappings => Set<ImportCategoryMapping>();
-        public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
-        public DbSet<ImportRow> ImportRows => Set<ImportRow>();
-        public DbSet<ImportRowLog> ImportRowLogs => Set<ImportRowLog>();
+        public DbSet<ImportProfile> ImportProfiles { get; set; } = default!;
+        public DbSet<ImportCredential> ImportCredentials { get; set; } = default!;
+        public DbSet<ImportFieldMapping> ImportFieldMappings { get; set; } = default!;
+        public DbSet<ImportCategoryMapping> ImportCategoryMappings { get; set; } = default!;
+        public DbSet<ImportJob> ImportJobs { get; set; } = default!;
+        public DbSet<ImportRow> ImportRows { get; set; } = default!;
+        public DbSet<ImportRowLog> ImportRowLogs { get; set; } = default!;
 
         // ================= Fiyat Geçmişi V1 (data._Products ek) =================
-        public DbSet<data._Products.ProductPriceHistory> ProductPriceHistory { get; set; }
-        public DbSet<data._Products.ProductPriceDailySnapshot> ProductPriceDailySnapshot { get; set; }
-        public DbSet<data._Products.PriceAlerts> PriceAlerts { get; set; }
+        public DbSet<data._Products.ProductPriceHistory> ProductPriceHistory { get; set; } = default!;
+        public DbSet<data._Products.ProductPriceDailySnapshot> ProductPriceDailySnapshot { get; set; } = default!;
+        public DbSet<data._Products.PriceAlerts> PriceAlerts { get; set; } = default!;
 
         // ================= Stok ve Çoklu Depo V1 (data._Inventory) =================
-        public DbSet<data._Inventory.VariantWarehouseStock> VariantWarehouseStock { get; set; }
-        public DbSet<data._Inventory.StockMovements> StockMovements { get; set; }
-        public DbSet<data._Inventory.StockReservations> StockReservations { get; set; }
-        public DbSet<data._Inventory.StockTransfers> StockTransfers { get; set; }
-        public DbSet<data._Inventory.StockTransferItems> StockTransferItems { get; set; }
+        public DbSet<data._Inventory.VariantWarehouseStock> VariantWarehouseStock { get; set; } = default!;
+        public DbSet<data._Inventory.StockMovements> StockMovements { get; set; } = default!;
+        public DbSet<data._Inventory.StockReservations> StockReservations { get; set; } = default!;
+        public DbSet<data._Inventory.StockTransfers> StockTransfers { get; set; } = default!;
+        public DbSet<data._Inventory.StockTransferItems> StockTransferItems { get; set; } = default!;
 
         // === _Shares ===
         public DbSet<Articles> Articles { get; set; } = default!;
@@ -134,57 +141,57 @@ namespace data
         public DbSet<data._Store.WareHouse> WareHouse { get; set; } = default!;
 
         // ================= Sipariş Sistemi V1 (data._Orders) =================
-        public DbSet<data._Orders.Orders> Orders { get; set; }
-        public DbSet<data._Orders.SubOrders> SubOrders { get; set; }
-        public DbSet<data._Orders.OrderItems> OrderItems { get; set; }
-        public DbSet<data._Orders.OrderStatusHistory> OrderStatusHistory { get; set; }
-        public DbSet<data._Orders.OrderInvoices> OrderInvoices { get; set; }
-        public DbSet<data._Orders.CheckoutSessions> CheckoutSessions { get; set; }
-        public DbSet<data._Orders.OrderNumberSequences> OrderNumberSequences { get; set; }
+        public DbSet<data._Orders.Orders> Orders { get; set; } = default!;
+        public DbSet<data._Orders.SubOrders> SubOrders { get; set; } = default!;
+        public DbSet<data._Orders.OrderItems> OrderItems { get; set; } = default!;
+        public DbSet<data._Orders.OrderStatusHistory> OrderStatusHistory { get; set; } = default!;
+        public DbSet<data._Orders.OrderInvoices> OrderInvoices { get; set; } = default!;
+        public DbSet<data._Orders.CheckoutSessions> CheckoutSessions { get; set; } = default!;
+        public DbSet<data._Orders.OrderNumberSequences> OrderNumberSequences { get; set; } = default!;
 
         // ================= Kargo ve Teslimat V1 (data._Shipping) =================
-        public DbSet<data._Shipping.Carriers> Carriers { get; set; }
-        public DbSet<data._Shipping.StoreCarrierAccounts> StoreCarrierAccounts { get; set; }
-        public DbSet<data._Shipping.ShippingZones> ShippingZones { get; set; }
-        public DbSet<data._Shipping.ShippingZoneAreas> ShippingZoneAreas { get; set; }
-        public DbSet<data._Shipping.ShippingRateRules> ShippingRateRules { get; set; }
-        public DbSet<data._Shipping.Shipments> Shipments { get; set; }
-        public DbSet<data._Shipping.ShipmentItems> ShipmentItems { get; set; }
-        public DbSet<data._Shipping.ShipmentTrackingEvents> ShipmentTrackingEvents { get; set; }
+        public DbSet<data._Shipping.Carriers> Carriers { get; set; } = default!;
+        public DbSet<data._Shipping.StoreCarrierAccounts> StoreCarrierAccounts { get; set; } = default!;
+        public DbSet<data._Shipping.ShippingZones> ShippingZones { get; set; } = default!;
+        public DbSet<data._Shipping.ShippingZoneAreas> ShippingZoneAreas { get; set; } = default!;
+        public DbSet<data._Shipping.ShippingRateRules> ShippingRateRules { get; set; } = default!;
+        public DbSet<data._Shipping.Shipments> Shipments { get; set; } = default!;
+        public DbSet<data._Shipping.ShipmentItems> ShipmentItems { get; set; } = default!;
+        public DbSet<data._Shipping.ShipmentTrackingEvents> ShipmentTrackingEvents { get; set; } = default!;
 
         // ================= Kampanya ve Kupon V1 (data._Promotions) =================
-        public DbSet<data._Promotions.Coupons> Coupons { get; set; }
-        public DbSet<data._Promotions.CouponScopes> CouponScopes { get; set; }
-        public DbSet<data._Promotions.CouponUsages> CouponUsages { get; set; }
-        public DbSet<data._Promotions.Campaigns> Campaigns { get; set; }
-        public DbSet<data._Promotions.CampaignScopes> CampaignScopes { get; set; }
+        public DbSet<data._Promotions.Coupons> Coupons { get; set; } = default!;
+        public DbSet<data._Promotions.CouponScopes> CouponScopes { get; set; } = default!;
+        public DbSet<data._Promotions.CouponUsages> CouponUsages { get; set; } = default!;
+        public DbSet<data._Promotions.Campaigns> Campaigns { get; set; } = default!;
+        public DbSet<data._Promotions.CampaignScopes> CampaignScopes { get; set; } = default!;
 
         // ================= Bildirim V1 (data._Notifications) =================
-        public DbSet<data._Notifications.NotificationTemplates> NotificationTemplates { get; set; }
-        public DbSet<data._Notifications.NotificationTemplateTranslations> NotificationTemplateTranslations { get; set; }
-        public DbSet<data._Notifications.Notifications> Notifications { get; set; }
-        public DbSet<data._Notifications.NotificationDeliveries> NotificationDeliveries { get; set; }
-        public DbSet<data._Notifications.UserNotificationPreferences> UserNotificationPreferences { get; set; }
+        public DbSet<data._Notifications.NotificationTemplates> NotificationTemplates { get; set; } = default!;
+        public DbSet<data._Notifications.NotificationTemplateTranslations> NotificationTemplateTranslations { get; set; } = default!;
+        public DbSet<data._Notifications.Notifications> Notifications { get; set; } = default!;
+        public DbSet<data._Notifications.NotificationDeliveries> NotificationDeliveries { get; set; } = default!;
+        public DbSet<data._Notifications.UserNotificationPreferences> UserNotificationPreferences { get; set; } = default!;
 
         // ================= İade ve İhtilaf V1 (data._Returns) =================
-        public DbSet<data._Returns.ReturnRequests> ReturnRequests { get; set; }
-        public DbSet<data._Returns.ReturnRequestItems> ReturnRequestItems { get; set; }
-        public DbSet<data._Returns.ReturnRequestMedia> ReturnRequestMedia { get; set; }
-        public DbSet<data._Returns.ReturnStatusHistory> ReturnStatusHistory { get; set; }
-        public DbSet<data._Returns.Disputes> Disputes { get; set; }
-        public DbSet<data._Returns.DisputeMessages> DisputeMessages { get; set; }
-        public DbSet<data._Returns.DisputeAttachments> DisputeAttachments { get; set; }
-        public DbSet<data._Returns.ReturnPolicies> ReturnPolicies { get; set; }
+        public DbSet<data._Returns.ReturnRequests> ReturnRequests { get; set; } = default!;
+        public DbSet<data._Returns.ReturnRequestItems> ReturnRequestItems { get; set; } = default!;
+        public DbSet<data._Returns.ReturnRequestMedia> ReturnRequestMedia { get; set; } = default!;
+        public DbSet<data._Returns.ReturnStatusHistory> ReturnStatusHistory { get; set; } = default!;
+        public DbSet<data._Returns.Disputes> Disputes { get; set; } = default!;
+        public DbSet<data._Returns.DisputeMessages> DisputeMessages { get; set; } = default!;
+        public DbSet<data._Returns.DisputeAttachments> DisputeAttachments { get; set; } = default!;
+        public DbSet<data._Returns.ReturnPolicies> ReturnPolicies { get; set; } = default!;
 
 
         // ================= Ödeme ve Hakediş Sistemi V1 (data._Payments) =================
-        public DbSet<data._Payments.PaymentProviders> PaymentProviders { get; set; }
-        public DbSet<data._Payments.PaymentTransactions> PaymentTransactions { get; set; }
-        public DbSet<data._Payments.UserPaymentMethods> UserPaymentMethods { get; set; }
-        public DbSet<data._Payments.CommissionRates> CommissionRates { get; set; }
-        public DbSet<data._Payments.SellerLedgerEntries> SellerLedgerEntries { get; set; }
-        public DbSet<data._Payments.SellerPayouts> SellerPayouts { get; set; }
-        public DbSet<data._Payments.Refunds> Refunds { get; set; }
+        public DbSet<data._Payments.PaymentProviders> PaymentProviders { get; set; } = default!;
+        public DbSet<data._Payments.PaymentTransactions> PaymentTransactions { get; set; } = default!;
+        public DbSet<data._Payments.UserPaymentMethods> UserPaymentMethods { get; set; } = default!;
+        public DbSet<data._Payments.CommissionRates> CommissionRates { get; set; } = default!;
+        public DbSet<data._Payments.SellerLedgerEntries> SellerLedgerEntries { get; set; } = default!;
+        public DbSet<data._Payments.SellerPayouts> SellerPayouts { get; set; } = default!;
+        public DbSet<data._Payments.Refunds> Refunds { get; set; } = default!;
 
         // === _Systems ===
         public DbSet<AccountPermissions> AccountPermissions { get; set; } = default!;

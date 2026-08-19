@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using data;
 
 #nullable disable
 
@@ -16,7 +17,7 @@ namespace data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -1687,6 +1688,674 @@ namespace data.Migrations
                     b.ToTable("UnitTranslations");
                 });
 
+            modelBuilder.Entity("data._BulkImportProducts.ImportCategoryMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Confidence")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DefaultBrandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ImportProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IntegrationPlatformId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsAiSuggested")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NormalizedSourcePath")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceCategoryCode")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SourceCategoryPath")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid>("TargetCategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DefaultBrandId");
+
+                    b.HasIndex("ImportProfileId");
+
+                    b.HasIndex("IntegrationPlatformId");
+
+                    b.HasIndex("TargetCategoryId");
+
+                    b.HasIndex("UserId", "IntegrationPlatformId", "NormalizedSourcePath");
+
+                    b.ToTable("ImportCategoryMappings");
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportCredential", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Alias")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<byte>("AuthType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EncryptedAccessToken")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("EncryptedApiKey")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("EncryptedApiSecret")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("EncryptedPassword")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("EncryptedRefreshToken")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("EncryptedUserName")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("ExternalSellerId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ExtraConfigJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("IntegrationPlatformId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastValidatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastValidationError")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("MarketplaceRegion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("TokenExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IntegrationPlatformId");
+
+                    b.HasIndex("UserId", "IntegrationPlatformId");
+
+                    b.ToTable("ImportCredentials");
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportFieldMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ImportProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("SourceColumnIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceField")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid?>("TargetAttributeDefinitionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TargetCurrencyCode")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<byte>("TargetField")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("TargetLanguageCode")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("TransformConfigJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte>("TransformType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportProfileId");
+
+                    b.HasIndex("TargetAttributeDefinitionId");
+
+                    b.ToTable("ImportFieldMappings");
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CreatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("DuplicateStrategy")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("ErrorDetailsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("ImportProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IntegrationPlatformId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("LastProcessedRowIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LeasedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("LeasedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("MatchKey")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Mode")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("NeedsReviewCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NextRetryAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OriginalFileName")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<int>("ProcessedRows")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResultSummary")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SkippedCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("SourceMediaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("SourceType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("UpdatedCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL AND [IsDeleted_IsDeletedStatu] = 0");
+
+                    b.HasIndex("ImportProfileId");
+
+                    b.HasIndex("IntegrationPlatformId");
+
+                    b.HasIndex("SourceMediaId");
+
+                    b.HasIndex("StoreId");
+
+                    b.HasIndex("Status", "NextRetryAtUtc");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("ImportJobs");
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CsvDelimiter")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<byte>("DuplicateStrategy")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Encoding")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<bool>("HasHeaderRow")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("ImportCredentialId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("IntegrationPlatformId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastUsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("MatchKey")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Mode")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal?>("PriceMultiplier")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<bool>("PublishAfterImport")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RecordsRootPath")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<bool>("RequiresReviewAfterImport")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceCurrencyCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("SourceEndpointUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("SourceLanguageCode")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<byte>("SourceType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportCredentialId");
+
+                    b.HasIndex("IntegrationPlatformId");
+
+                    b.HasIndex("StoreId");
+
+                    b.HasIndex("UserId", "IsActive");
+
+                    b.ToTable("ImportProfiles");
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CreatedProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CreatedVariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ExternalProductId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("ImportJobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ImportProfileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MappedDataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("MatchedExistingProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RawRowJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceGtin")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("SourceKeyHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("SourceName")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<int>("SourceRowIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceSku")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WarningsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedProductId");
+
+                    b.HasIndex("CreatedVariantId");
+
+                    b.HasIndex("MatchedExistingProductId");
+
+                    b.HasIndex("ImportJobId", "SourceKeyHash")
+                        .IsUnique()
+                        .HasFilter("[SourceKeyHash] IS NOT NULL AND [IsDeleted_IsDeletedStatu] = 0");
+
+                    b.HasIndex("ImportJobId", "SourceRowIndex");
+
+                    b.HasIndex("ImportJobId", "Status");
+
+                    b.ToTable("ImportRows");
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportRowLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DetailJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ImportJobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ImportRowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Step")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportJobId");
+
+                    b.HasIndex("ImportRowId");
+
+                    b.ToTable("ImportRowLogs");
+                });
+
             modelBuilder.Entity("data._Carts.CartsFavorite", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1993,6 +2662,322 @@ namespace data.Migrations
                     b.ToTable("SupportTickets");
                 });
 
+            modelBuilder.Entity("data._Inventory.StockMovements", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("BalanceAfterOnHand")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BalanceAfterReserved")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ImportRowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("MovementType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ReturnRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid?>("StockReservationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StockTransferId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StockMovements");
+                });
+
+            modelBuilder.Entity("data._Inventory.StockReservations", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CheckoutSessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StockReservations");
+                });
+
+            modelBuilder.Entity("data._Inventory.StockTransferItems", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DamagedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReceivedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RequestedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("ShippedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SkuSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StockTransferId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StockTransferItems");
+                });
+
+            modelBuilder.Entity("data._Inventory.StockTransfers", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ApprovedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ItemCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReceivedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("ShippedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("SourceWarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TargetWarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TotalReceivedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalShippedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TrackingNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TransferNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StockTransfers");
+                });
+
+            modelBuilder.Entity("data._Inventory.VariantWarehouseStock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BinLocation")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("InTransitQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsSellable")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastCountedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OnHand")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReorderPoint")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Reserved")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("VariantWarehouseStock");
+                });
+
             modelBuilder.Entity("data._Locations.Cities", b =>
                 {
                     b.Property<int>("id")
@@ -2285,6 +3270,1305 @@ namespace data.Migrations
                     b.ToTable("States");
                 });
 
+            modelBuilder.Entity("data._Notifications.NotificationDeliveries", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Channel")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeliveredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Destination")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FailureMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LeasedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LeasedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NextRetryAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("NotificationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("OpenedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderResponseJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("ScheduledForUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationDeliveries");
+                });
+
+            modelBuilder.Entity("data._Notifications.NotificationTemplateTranslations", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EmailBodyHtml")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EmailSubject")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsManuallyEdited")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Language")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("ParentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PushBody")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("SmsBody")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationTemplateTranslations");
+                });
+
+            modelBuilder.Entity("data._Notifications.NotificationTemplates", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AvailablePlaceholdersJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("DefaultChannels")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("DefaultPriority")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int?>("GroupingWindowMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsOptOutAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("NotificationType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("NotificationTemplates");
+                });
+
+            modelBuilder.Entity("data._Notifications.Notifications", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ImageMediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Language")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("NotificationTemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("NotificationType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PlaceholderDataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PriceAlertId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Priority")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("RelatedEntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("RequestedChannels")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid?>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TargetUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("data._Notifications.UserNotificationPreferences", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("EnabledChannels")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("NotificationType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte?>("QuietHoursEnd")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte?>("QuietHoursStart")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("TimeZoneId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserNotificationPreferences");
+                });
+
+            modelBuilder.Entity("data._Orders.CheckoutSessions", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CartHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CartSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("GrandTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("GuestEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CheckoutSessions");
+                });
+
+            modelBuilder.Entity("data._Orders.OrderInvoices", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("EInvoiceStatus")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("EInvoiceUuid")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InvoiceFullNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("InvoiceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InvoiceSeries")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("IssuedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("PdfMediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProviderResponseJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StoreIntegrationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrderInvoices");
+                });
+
+            modelBuilder.Entity("data._Orders.OrderItems", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Barcode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("CommissionAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CommissionRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CouponAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RefundedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("Sku")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("UnitListPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VariantSummary")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("VatRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("data._Orders.OrderNumberSequences", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("LastValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrderNumberSequences");
+                });
+
+            modelBuilder.Entity("data._Orders.OrderStatusHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("ActorType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte?>("CancellationReason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte?>("FromStatus")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid?>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("ToStatus")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrderStatusHistory");
+                });
+
+            modelBuilder.Entity("data._Orders.Orders", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BillingAddressLine")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingCityName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingCompanyName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingCountryName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingFullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("BillingIsCorporate")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("BillingPhone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingPostalCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingStateName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingTaxNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BillingTaxOffice")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("BillingUserAddressId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CheckoutSessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("CouponTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("CustomerNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("DiscountTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ExchangeRateSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("GrandTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("GuestEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GuestPhone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ItemsTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ShippingAddressLine")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ShippingCityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ShippingCityName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ShippingCountryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ShippingCountryName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShippingFullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShippingPhone")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShippingPostalCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ShippingStateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ShippingStateName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ShippingTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ShippingUserAddressId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("TaxTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("data._Orders.SubOrders", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CancellationNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte?>("CancellationReason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CommissionTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CouponTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("DeliveredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DiscountTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GrandTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ItemsTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("ShippedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ShippingTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SubOrderNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TaxTotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SubOrders");
+                });
+
+            modelBuilder.Entity("data._Payments.CommissionRates", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("FixedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("RatePercent")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ValidFromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ValidToUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CommissionRates");
+                });
+
+            modelBuilder.Entity("data._Payments.PaymentProviders", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Supports3DSecure")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SupportsRefund")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SupportsTokenization")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentProviders");
+                });
+
+            modelBuilder.Entity("data._Payments.PaymentTransactions", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("FailureCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FailureMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("InstallmentCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ParentTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PaymentProviderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProviderReferenceCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RawRequestJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RawResponseJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("ThreeDSStatus")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("TransactionType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserPaymentMethodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PaymentTransactions");
+                });
+
+            modelBuilder.Entity("data._Payments.Refunds", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PaymentTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Reason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("ReturnRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Refunds");
+                });
+
+            modelBuilder.Entity("data._Payments.SellerLedgerEntries", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte>("EntryType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PaymentTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PayoutId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RefundId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReleaseAfterUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SellerLedgerEntries");
+                });
+
+            modelBuilder.Entity("data._Payments.SellerPayouts", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountHolderSnapshot")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("FailureMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IbanSnapshot")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LeasedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LeasedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("NextRetryAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PaidAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PeriodEndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PeriodStartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReceiptMediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SellerPayouts");
+                });
+
+            modelBuilder.Entity("data._Payments.UserPaymentMethods", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CardAlias")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CardBrand")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("ExpiryMonth")
+                        .HasColumnType("tinyint");
+
+                    b.Property<short>("ExpiryYear")
+                        .HasColumnType("smallint");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Last4")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PaymentProviderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProviderCustomerReference")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserPaymentMethods");
+                });
+
             modelBuilder.Entity("data._Products.Brands", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2335,6 +4619,2390 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("MoneyExchangeRate");
+                });
+
+            modelBuilder.Entity("data._Products.PriceAlerts", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CartsFavoriteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("IsRecurring")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("NotificationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("PriceAtCreation")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("TargetPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("TriggeredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("TriggeredPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PriceAlerts");
+                });
+
+            modelBuilder.Entity("data._Products.ProductAttributeValues", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AttributeDefinitionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AttributeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsManuallyEdited")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsVisibleOnProductPage")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("UnitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool?>("ValueBool")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ValueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ValueJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte?>("ValueLanguage")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal?>("ValueNumeric")
+                        .HasPrecision(38, 10)
+                        .HasColumnType("decimal(38,10)");
+
+                    b.Property<decimal?>("ValueNumericInBaseUnit")
+                        .HasPrecision(38, 10)
+                        .HasColumnType("decimal(38,10)");
+
+                    b.Property<string>("ValueText")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttributeOptionId");
+
+                    b.HasIndex("UnitId");
+
+                    b.HasIndex("AttributeDefinitionId", "AttributeOptionId");
+
+                    b.HasIndex("AttributeDefinitionId", "ValueNumericInBaseUnit");
+
+                    b.HasIndex("ProductId", "AttributeDefinitionId");
+
+                    b.ToTable("ProductAttributeValues");
+                });
+
+            modelBuilder.Entity("data._Products.ProductCategoryLinks", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("ProductId", "CategoryId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductCategoryLinks");
+                });
+
+            modelBuilder.Entity("data._Products.ProductMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExternalUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsCover")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("MediaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("MediaType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ProductVariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MediaId");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.HasIndex("ProductId", "DisplayOrder");
+
+                    b.ToTable("ProductMedia");
+                });
+
+            modelBuilder.Entity("data._Products.ProductMediaTranslations", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AltText")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Caption")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsManuallyEdited")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Language")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("ProductMediaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductMediaId", "Language")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductMediaTranslations");
+                });
+
+            modelBuilder.Entity("data._Products.ProductPriceDailySnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ChangeCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ClosePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("HasChange")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("MaxPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MinPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("PriceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProductPriceDailySnapshot");
+                });
+
+            modelBuilder.Entity("data._Products.ProductPriceHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("ChangeSource")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("ImportRowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsAutoConverted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("MoneyExchangeRateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("NewDiscountEndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("NewDiscountStartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("NewDiscountedPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool?>("NewIsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("NewListPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("NewSalePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("OldDiscountEndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("OldDiscountStartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("OldDiscountedPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool?>("OldIsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("OldListPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("OldSalePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ProductPriceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("UsedExchangeRate")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProductPriceHistory");
+                });
+
+            modelBuilder.Entity("data._Products.ProductPrices", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("ConversionRateUsed")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<byte?>("ConvertedFromCurrency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("DiscountEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DiscountStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("DiscountedPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsAutoConverted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("ListPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ProductVariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("SalePrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.HasIndex("ProductId", "ProductVariantId", "Currency")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductPrices");
+                });
+
+            modelBuilder.Entity("data._Products.ProductQuestionReports", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid>("ProductQuestionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Reason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("ReportedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ProductQuestionId", "ReportedByUserId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductQuestionReports");
+                });
+
+            modelBuilder.Entity("data._Products.ProductQuestionVotes", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductQuestionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Vote")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ProductQuestionId", "UserId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductQuestionVotes");
+                });
+
+            modelBuilder.Entity("data._Products.ProductQuestions", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AcceptedAnswerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AnswerCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("HelpfulVoteCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsSellerAnswer")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Language")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("ModeratedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ModeratedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ModerationNote")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("NotHelpfulVoteCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ParentQuestionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcceptedAnswerId");
+
+                    b.HasIndex("ParentQuestionId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ProductId", "Status", "ParentQuestionId");
+
+                    b.ToTable("ProductQuestions");
+                });
+
+            modelBuilder.Entity("data._Products.ProductRatingSummary", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("AverageQualityRating")
+                        .HasPrecision(3, 2)
+                        .HasColumnType("decimal(3,2)");
+
+                    b.Property<decimal>("AverageRating")
+                        .HasPrecision(3, 2)
+                        .HasColumnType("decimal(3,2)");
+
+                    b.Property<decimal?>("AverageShippingRating")
+                        .HasPrecision(3, 2)
+                        .HasColumnType("decimal(3,2)");
+
+                    b.Property<decimal?>("AverageValueRating")
+                        .HasPrecision(3, 2)
+                        .HasColumnType("decimal(3,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("FiveStarCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FourStarCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastRecalculatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OneStarCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RatingCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReviewCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("ThreeStarCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TwoStarCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("VerifiedPurchaseCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductRatingSummary");
+                });
+
+            modelBuilder.Entity("data._Products.ProductReviewReports", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid>("ProductReviewId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Reason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("ReportedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ProductReviewId", "ReportedByUserId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductReviewReports");
+                });
+
+            modelBuilder.Entity("data._Products.ProductReviewVotes", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductReviewId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Vote")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ProductReviewId", "UserId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductReviewVotes");
+                });
+
+            modelBuilder.Entity("data._Products.ProductReviews", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("HelpfulVoteCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsSellerResponse")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVerifiedPurchase")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Language")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("MediaIdsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModeratedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ModeratedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ModerationNote")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("NotHelpfulVoteCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ParentReviewId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ProductVariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte?>("QualityRating")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte?>("Rating")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("ReplyCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<byte?>("ShippingRating")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte?>("ValueRating")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentReviewId");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ProductId", "Status", "ParentReviewId");
+
+                    b.ToTable("ProductReviews");
+                });
+
+            modelBuilder.Entity("data._Products.ProductTranslations", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("AiConfidence")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<string>("AiModel")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("AiTranslatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("BilledCharacterCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BulletPointsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CanonicalUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DescriptionHtml")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("FocusKeywords")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<bool>("IsManuallyEdited")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsOriginalLanguage")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Language")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("MetaDescription")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("MetaTitle")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("OgDescription")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("OgTitle")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RobotsIndex")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SearchKeywords")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("ShortDescription")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<byte>("Source")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("SubTitle")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<byte?>("TranslatedFromLanguage")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Language", "Slug")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.HasIndex("ProductId", "Language")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductTranslations");
+                });
+
+            modelBuilder.Entity("data._Products.ProductVariantAttributeValues", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AttributeDefinitionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AttributeOptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductVariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttributeDefinitionId");
+
+                    b.HasIndex("AttributeOptionId");
+
+                    b.HasIndex("ProductVariantId", "AttributeDefinitionId")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.HasIndex("ProductId", "AttributeDefinitionId", "AttributeOptionId");
+
+                    b.ToTable("ProductVariantAttributeValues");
+                });
+
+            modelBuilder.Entity("data._Products.ProductVariants", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Backorder")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte?>("ConditionOverride")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Desi")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Gtin")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal?>("HeightValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("LengthValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("Mpn")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReservedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int?>("StockAlertThreshold")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("TrackStock")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("WeightValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("WidthValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Barcode");
+
+                    b.HasIndex("Gtin");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("Sku")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted_IsDeletedStatu] = 0");
+
+                    b.ToTable("ProductVariants");
+                });
+
+            modelBuilder.Entity("data._Products.Products", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BrandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Condition")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("CountryOfOriginCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DefaultVariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Desi")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<byte>("DimensionUnitType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("FirstPublishedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Gtin")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("HasVariants")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("HeightValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<string>("HsCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<bool>("IsFreeShipping")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("LengthValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<int?>("MaxOrderQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MinOrderQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModelCode")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("Mpn")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("PrimaryCategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PublishEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PublishStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("QuantityStep")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<bool>("RequiresSeparateShipping")
+                        .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int?>("ShippingPreparationDayMax")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ShippingPreparationDayMin")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ShipsFromWarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("VatRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int?>("WarrantyMonths")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("WeightUnitType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal?>("WeightValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal?>("WidthValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("DefaultVariantId");
+
+                    b.HasIndex("Gtin");
+
+                    b.HasIndex("Mpn");
+
+                    b.HasIndex("PrimaryCategoryId");
+
+                    b.HasIndex("ShipsFromWarehouseId");
+
+                    b.HasIndex("StoreId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("StoreId", "ModelCode");
+
+                    b.HasIndex("Status", "IsPublished", "PublishStartDate", "PublishEndDate");
+
+                    b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("data._Promotions.CampaignScopes", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BrandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsExcluded")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("OverrideDiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("ScopeType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CampaignScopes");
+                });
+
+            modelBuilder.Entity("data._Promotions.Campaigns", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AffectedPriceRowCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("BannerMediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("BudgetCap")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BudgetUsed")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte>("DiscountType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("EndsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LeasedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LeasedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("MaxDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("NextRetryAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("OwnerStoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PricesAppliedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PricesRevertedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("Slug")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Campaigns");
+                });
+
+            modelBuilder.Entity("data._Promotions.CouponScopes", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BrandId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CouponId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsExcluded")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("ScopeType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CouponScopes");
+                });
+
+            modelBuilder.Entity("data._Promotions.CouponUsages", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("CostBearerSnapshot")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("CouponId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("GuestEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsReverted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("PlatformSharePercentSnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("RevertedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CouponUsages");
+                });
+
+            modelBuilder.Entity("data._Promotions.Coupons", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AppliesToDiscountedItems")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("BudgetCap")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BudgetUsed")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte>("CostBearer")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("CouponType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsNewUserOnly")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsStackable")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaxDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("MinItemCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("MinOrderAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("OwnerStoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("PerUserUsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("PlatformSharePercent")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("TotalUsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ValidFromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ValidToUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Coupons");
+                });
+
+            modelBuilder.Entity("data._Returns.DisputeAttachments", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Caption")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DisputeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DisputeMessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("UploadedBySenderType")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DisputeAttachments");
+                });
+
+            modelBuilder.Entity("data._Returns.DisputeMessages", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttachmentCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DisputeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsInternalNote")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsReadByCounterparty")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("SenderType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("SenderUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DisputeMessages");
+                });
+
+            modelBuilder.Entity("data._Returns.Disputes", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttachmentCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ClaimedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("DecidedRefundAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte?>("DecidedShippingPayer")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Decision")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("DecisionReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DisputeNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EvidenceDeadlineUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GuestEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastMessageAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte?>("LastMessageSenderType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("MessageCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OpeningClaim")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PenaltyLedgerEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RefundId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ReturnRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("SellerResponseDeadlineUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Disputes");
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnPolicies", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CountryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("DefaultShippingPayer")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("IsReturnAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PolicyText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RequiresOriginalPackaging")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequiresUnopened")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ReturnWindowDays")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("ScopeType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<int>("SellerResponseHours")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ShipBackDays")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ValidFromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ValidToUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ReturnPolicies");
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnRequestItems", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("ApprovedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("ApprovedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("DeductionNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte>("InspectionResult")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProductNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Reason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("RefundId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("RequestedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ReturnRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("SkuSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("StockMovementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ReturnRequestItems");
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnRequestMedia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Caption")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ReturnRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ReturnRequestItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("UploadedByActorType")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ReturnRequestMedia");
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnRequests", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AdminNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("AppliedReturnPolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AppliedReturnWindowDays")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("ApprovedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("CustomerNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("DisputeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("GuestEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("InspectedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("PrimaryReason")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("ReceivedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("RefundShippingCost")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("RequestedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ReturnDeadlineUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReturnNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ReturnShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("SellerNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("SellerRespondedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SellerResponseDeadlineUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("ShippingPayer")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("TargetWarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ReturnRequests");
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnStatusHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("ActorType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("DisputeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte?>("FromStatus")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ReturnRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("ToStatus")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ReturnStatusHistory");
                 });
 
             modelBuilder.Entity("data._Shares.Articles", b =>
@@ -2441,6 +7109,564 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("data._Shipping.Carriers", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AverageDeliveryDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DesiDivisor")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("IntegrationType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SupportsCashOnDelivery")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SupportsInternational")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SupportsLabelGeneration")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("SupportsPickupPoint")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TrackingUrlTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Carriers");
+                });
+
+            modelBuilder.Entity("data._Shipping.ShipmentItems", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProductNameSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SkuSnapshot")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShipmentItems");
+                });
+
+            modelBuilder.Entity("data._Shipping.ShipmentTrackingEvents", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CarrierEventId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte>("EventType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsFromWebhook")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LocationName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RawPayload")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RawStatusCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShipmentTrackingEvents");
+                });
+
+            modelBuilder.Entity("data._Shipping.Shipments", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("ActualCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("AppliedRateRuleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("CalculatedCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CarrierEstimatedDeliveryUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CarrierId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("DeliveredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeliveredToName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DeliveryAttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DeliveryLocationInfo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("Desi")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte>("Direction")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("EstimatedDeliveryFromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EstimatedDeliveryToUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("HeightCm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsFreeShipping")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LabelCreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("LabelMediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastPolledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LeasedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LeasedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("LengthCm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("NextPollAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("PackageCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PackageIndex")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PollFailureCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("ProofMediaItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("ProofType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("ReturnRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("ShippedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("SourceWarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid?>("StockTransferId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StoreCarrierAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SubOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TrackingNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TrackingUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("WeightKg")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("WidthCm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Shipments");
+                });
+
+            modelBuilder.Entity("data._Shipping.ShippingRateRules", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CarrierId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte>("Currency")
+                        .HasColumnType("tinyint");
+
+                    b.Property<decimal?>("FreeShippingThreshold")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("PricePerExtraUnit")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RangeFrom")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("RangeTo")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte>("RateBasis")
+                        .HasColumnType("tinyint");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("ShippingZoneId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ValidFromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ValidToUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShippingRateRules");
+                });
+
+            modelBuilder.Entity("data._Shipping.ShippingZoneAreas", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CountryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsExcluded")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PostalCodeFrom")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PostalCodeTo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("RegionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<byte>("ScopeType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<Guid>("ShippingZoneId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShippingZoneAreas");
+                });
+
+            modelBuilder.Entity("data._Shipping.ShippingZones", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFallback")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ShippingZones");
+                });
+
+            modelBuilder.Entity("data._Shipping.StoreCarrierAccounts", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("CarrierId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EncryptedCredentials")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EncryptionKeyVersion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSellerBilled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastVerifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MaskedAccountCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StoreCarrierAccounts");
                 });
 
             modelBuilder.Entity("data._Store.Store", b =>
@@ -2601,6 +7827,89 @@ namespace data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("StoreIntegration");
+                });
+
+            modelBuilder.Entity("data._Store.WareHouse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("AvailableAreaM2")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("FireSafetyCertificate")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("InsuranceDocument")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool?>("Is24HourOpen")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsClimateControlled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsHazardousMaterial")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsReceiveAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsReturnAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsShippingAllowed")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("LeaseAgreement")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("MaxPalletCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxShelfCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("OperatingLicense")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("TotalAreaM2")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("TotalVolumeM3")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WarehouseCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("WarehouseLayoutPlan")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("WarehouseType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("WareHouse");
                 });
 
             modelBuilder.Entity("data._Systems.AccountPermissions", b =>
@@ -4768,6 +10077,315 @@ namespace data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("data._BulkImportProducts.ImportCategoryMapping", b =>
+                {
+                    b.HasOne("data._Products.Brands", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultBrandId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._BulkImportProducts.ImportProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ImportProfileId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Attribute.IntegrationPlatform", null)
+                        .WithMany()
+                        .HasForeignKey("IntegrationPlatformId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Categories.CategoriesProduct", null)
+                        .WithMany()
+                        .HasForeignKey("TargetCategoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ImportCategoryMappingId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ImportCategoryMappingId");
+
+                            b1.ToTable("ImportCategoryMappings");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ImportCategoryMappingId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportCredential", b =>
+                {
+                    b.HasOne("data._Attribute.IntegrationPlatform", null)
+                        .WithMany()
+                        .HasForeignKey("IntegrationPlatformId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ImportCredentialId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ImportCredentialId");
+
+                            b1.ToTable("ImportCredentials");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ImportCredentialId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportFieldMapping", b =>
+                {
+                    b.HasOne("data._BulkImportProducts.ImportProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ImportProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Attribute.AttributeDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("TargetAttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ImportFieldMappingId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ImportFieldMappingId");
+
+                            b1.ToTable("ImportFieldMappings");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ImportFieldMappingId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportJob", b =>
+                {
+                    b.HasOne("data._BulkImportProducts.ImportProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ImportProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Attribute.IntegrationPlatform", null)
+                        .WithMany()
+                        .HasForeignKey("IntegrationPlatformId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Galleries.Media", null)
+                        .WithMany()
+                        .HasForeignKey("SourceMediaId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Store.Store", null)
+                        .WithMany()
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ImportJobId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ImportJobId");
+
+                            b1.ToTable("ImportJobs");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ImportJobId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportProfile", b =>
+                {
+                    b.HasOne("data._BulkImportProducts.ImportCredential", null)
+                        .WithMany()
+                        .HasForeignKey("ImportCredentialId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Attribute.IntegrationPlatform", null)
+                        .WithMany()
+                        .HasForeignKey("IntegrationPlatformId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Store.Store", null)
+                        .WithMany()
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ImportProfileId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ImportProfileId");
+
+                            b1.ToTable("ImportProfiles");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ImportProfileId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportRow", b =>
+                {
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedProductId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Products.ProductVariants", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedVariantId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._BulkImportProducts.ImportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ImportJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("MatchedExistingProductId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ImportRowId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ImportRowId");
+
+                            b1.ToTable("ImportRows");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ImportRowId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._BulkImportProducts.ImportRowLog", b =>
+                {
+                    b.HasOne("data._BulkImportProducts.ImportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ImportJobId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._BulkImportProducts.ImportRow", null)
+                        .WithMany()
+                        .HasForeignKey("ImportRowId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ImportRowLogId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ImportRowLogId");
+
+                            b1.ToTable("ImportRowLogs");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ImportRowLogId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("data._Carts.CartsFavorite", b =>
                 {
                     b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
@@ -5350,6 +10968,606 @@ namespace data.Migrations
                     b.Navigation("IsDeleted");
                 });
 
+            modelBuilder.Entity("data._Inventory.StockMovements", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("StockMovementsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("StockMovementsId");
+
+                            b1.ToTable("StockMovements");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StockMovementsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Inventory.StockReservations", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("StockReservationsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("StockReservationsId");
+
+                            b1.ToTable("StockReservations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StockReservationsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Inventory.StockTransferItems", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("StockTransferItemsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("StockTransferItemsId");
+
+                            b1.ToTable("StockTransferItems");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StockTransferItemsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Inventory.StockTransfers", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("StockTransfersId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("StockTransfersId");
+
+                            b1.ToTable("StockTransfers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StockTransfersId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Inventory.VariantWarehouseStock", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("VariantWarehouseStockId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("VariantWarehouseStockId");
+
+                            b1.ToTable("VariantWarehouseStock");
+
+                            b1.WithOwner()
+                                .HasForeignKey("VariantWarehouseStockId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Notifications.NotificationDeliveries", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("NotificationDeliveriesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("NotificationDeliveriesId");
+
+                            b1.ToTable("NotificationDeliveries");
+
+                            b1.WithOwner()
+                                .HasForeignKey("NotificationDeliveriesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Notifications.NotificationTemplateTranslations", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("NotificationTemplateTranslationsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("NotificationTemplateTranslationsId");
+
+                            b1.ToTable("NotificationTemplateTranslations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("NotificationTemplateTranslationsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Notifications.NotificationTemplates", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("NotificationTemplatesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("NotificationTemplatesId");
+
+                            b1.ToTable("NotificationTemplates");
+
+                            b1.WithOwner()
+                                .HasForeignKey("NotificationTemplatesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Notifications.Notifications", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("NotificationsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("NotificationsId");
+
+                            b1.ToTable("Notifications");
+
+                            b1.WithOwner()
+                                .HasForeignKey("NotificationsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Notifications.UserNotificationPreferences", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("UserNotificationPreferencesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("UserNotificationPreferencesId");
+
+                            b1.ToTable("UserNotificationPreferences");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UserNotificationPreferencesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Orders.CheckoutSessions", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CheckoutSessionsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CheckoutSessionsId");
+
+                            b1.ToTable("CheckoutSessions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CheckoutSessionsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Orders.OrderInvoices", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("OrderInvoicesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("OrderInvoicesId");
+
+                            b1.ToTable("OrderInvoices");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderInvoicesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Orders.OrderItems", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("OrderItemsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("OrderItemsId");
+
+                            b1.ToTable("OrderItems");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderItemsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Orders.OrderNumberSequences", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("OrderNumberSequencesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("OrderNumberSequencesId");
+
+                            b1.ToTable("OrderNumberSequences");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderNumberSequencesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Orders.OrderStatusHistory", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("OrderStatusHistoryId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("OrderStatusHistoryId");
+
+                            b1.ToTable("OrderStatusHistory");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderStatusHistoryId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Orders.Orders", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("OrdersId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("OrdersId");
+
+                            b1.ToTable("Orders");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrdersId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Orders.SubOrders", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("SubOrdersId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("SubOrdersId");
+
+                            b1.ToTable("SubOrders");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SubOrdersId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Payments.CommissionRates", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CommissionRatesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CommissionRatesId");
+
+                            b1.ToTable("CommissionRates");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CommissionRatesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Payments.PaymentProviders", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("PaymentProvidersId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("PaymentProvidersId");
+
+                            b1.ToTable("PaymentProviders");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PaymentProvidersId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Payments.PaymentTransactions", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("PaymentTransactionsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("PaymentTransactionsId");
+
+                            b1.ToTable("PaymentTransactions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PaymentTransactionsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Payments.Refunds", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("RefundsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("RefundsId");
+
+                            b1.ToTable("Refunds");
+
+                            b1.WithOwner()
+                                .HasForeignKey("RefundsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Payments.SellerLedgerEntries", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("SellerLedgerEntriesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("SellerLedgerEntriesId");
+
+                            b1.ToTable("SellerLedgerEntries");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SellerLedgerEntriesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Payments.SellerPayouts", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("SellerPayoutsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("SellerPayoutsId");
+
+                            b1.ToTable("SellerPayouts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SellerPayoutsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Payments.UserPaymentMethods", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("UserPaymentMethodsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("UserPaymentMethodsId");
+
+                            b1.ToTable("UserPaymentMethods");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UserPaymentMethodsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("data._Products.Brands", b =>
                 {
                     b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
@@ -5372,6 +11590,1035 @@ namespace data.Migrations
                         });
 
                     b.Navigation("IsDeleted");
+                });
+
+            modelBuilder.Entity("data._Products.PriceAlerts", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("PriceAlertsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("PriceAlertsId");
+
+                            b1.ToTable("PriceAlerts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PriceAlertsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductAttributeValues", b =>
+                {
+                    b.HasOne("data._Attribute.AttributeDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("AttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Attribute.AttributeOption", null)
+                        .WithMany()
+                        .HasForeignKey("AttributeOptionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Attribute.Unit", null)
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductAttributeValuesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductAttributeValuesId");
+
+                            b1.ToTable("ProductAttributeValues");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductAttributeValuesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductCategoryLinks", b =>
+                {
+                    b.HasOne("data._Categories.CategoriesProduct", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductCategoryLinksId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductCategoryLinksId");
+
+                            b1.ToTable("ProductCategoryLinks");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductCategoryLinksId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductMedia", b =>
+                {
+                    b.HasOne("data._Galleries.Media", null)
+                        .WithMany()
+                        .HasForeignKey("MediaId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Products.ProductVariants", null)
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductMediaId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductMediaId");
+
+                            b1.ToTable("ProductMedia");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductMediaId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductMediaTranslations", b =>
+                {
+                    b.HasOne("data._Products.ProductMedia", null)
+                        .WithMany()
+                        .HasForeignKey("ProductMediaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductMediaTranslationsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductMediaTranslationsId");
+
+                            b1.ToTable("ProductMediaTranslations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductMediaTranslationsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductPriceDailySnapshot", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductPriceDailySnapshotId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductPriceDailySnapshotId");
+
+                            b1.ToTable("ProductPriceDailySnapshot");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductPriceDailySnapshotId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductPriceHistory", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductPriceHistoryId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductPriceHistoryId");
+
+                            b1.ToTable("ProductPriceHistory");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductPriceHistoryId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductPrices", b =>
+                {
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Products.ProductVariants", null)
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductPricesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductPricesId");
+
+                            b1.ToTable("ProductPrices");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductPricesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductQuestionReports", b =>
+                {
+                    b.HasOne("data._Products.ProductQuestions", null)
+                        .WithMany()
+                        .HasForeignKey("ProductQuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductQuestionReportsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductQuestionReportsId");
+
+                            b1.ToTable("ProductQuestionReports");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductQuestionReportsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductQuestionVotes", b =>
+                {
+                    b.HasOne("data._Products.ProductQuestions", null)
+                        .WithMany()
+                        .HasForeignKey("ProductQuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductQuestionVotesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductQuestionVotesId");
+
+                            b1.ToTable("ProductQuestionVotes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductQuestionVotesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductQuestions", b =>
+                {
+                    b.HasOne("data._Products.ProductQuestions", null)
+                        .WithMany()
+                        .HasForeignKey("AcceptedAnswerId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Products.ProductQuestions", null)
+                        .WithMany()
+                        .HasForeignKey("ParentQuestionId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductQuestionsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductQuestionsId");
+
+                            b1.ToTable("ProductQuestions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductQuestionsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductRatingSummary", b =>
+                {
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductRatingSummaryId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductRatingSummaryId");
+
+                            b1.ToTable("ProductRatingSummary");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductRatingSummaryId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductReviewReports", b =>
+                {
+                    b.HasOne("data._Products.ProductReviews", null)
+                        .WithMany()
+                        .HasForeignKey("ProductReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductReviewReportsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductReviewReportsId");
+
+                            b1.ToTable("ProductReviewReports");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductReviewReportsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductReviewVotes", b =>
+                {
+                    b.HasOne("data._Products.ProductReviews", null)
+                        .WithMany()
+                        .HasForeignKey("ProductReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductReviewVotesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductReviewVotesId");
+
+                            b1.ToTable("ProductReviewVotes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductReviewVotesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductReviews", b =>
+                {
+                    b.HasOne("data._Products.ProductReviews", null)
+                        .WithMany()
+                        .HasForeignKey("ParentReviewId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("data._Products.ProductVariants", null)
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductReviewsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductReviewsId");
+
+                            b1.ToTable("ProductReviews");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductReviewsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductTranslations", b =>
+                {
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductTranslationsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductTranslationsId");
+
+                            b1.ToTable("ProductTranslations");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductTranslationsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductVariantAttributeValues", b =>
+                {
+                    b.HasOne("data._Attribute.AttributeDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("AttributeDefinitionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Attribute.AttributeOption", null)
+                        .WithMany()
+                        .HasForeignKey("AttributeOptionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Products.ProductVariants", null)
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductVariantAttributeValuesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductVariantAttributeValuesId");
+
+                            b1.ToTable("ProductVariantAttributeValues");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductVariantAttributeValuesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.ProductVariants", b =>
+                {
+                    b.HasOne("data._Products.Products", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductVariantsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductVariantsId");
+
+                            b1.ToTable("ProductVariants");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductVariantsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Products.Products", b =>
+                {
+                    b.HasOne("data._Products.Brands", null)
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("data._Products.ProductVariants", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultVariantId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("data._Categories.CategoriesProduct", null)
+                        .WithMany()
+                        .HasForeignKey("PrimaryCategoryId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Store.Store", null)
+                        .WithMany()
+                        .HasForeignKey("StoreId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("data._Users.Users", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ProductsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ProductsId");
+
+                            b1.ToTable("Products");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Promotions.CampaignScopes", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CampaignScopesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CampaignScopesId");
+
+                            b1.ToTable("CampaignScopes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CampaignScopesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Promotions.Campaigns", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CampaignsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CampaignsId");
+
+                            b1.ToTable("Campaigns");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CampaignsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Promotions.CouponScopes", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CouponScopesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CouponScopesId");
+
+                            b1.ToTable("CouponScopes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CouponScopesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Promotions.CouponUsages", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CouponUsagesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CouponUsagesId");
+
+                            b1.ToTable("CouponUsages");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CouponUsagesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Promotions.Coupons", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CouponsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CouponsId");
+
+                            b1.ToTable("Coupons");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CouponsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.DisputeAttachments", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("DisputeAttachmentsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("DisputeAttachmentsId");
+
+                            b1.ToTable("DisputeAttachments");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DisputeAttachmentsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.DisputeMessages", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("DisputeMessagesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("DisputeMessagesId");
+
+                            b1.ToTable("DisputeMessages");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DisputeMessagesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.Disputes", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("DisputesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("DisputesId");
+
+                            b1.ToTable("Disputes");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DisputesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnPolicies", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ReturnPoliciesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ReturnPoliciesId");
+
+                            b1.ToTable("ReturnPolicies");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReturnPoliciesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnRequestItems", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ReturnRequestItemsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ReturnRequestItemsId");
+
+                            b1.ToTable("ReturnRequestItems");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReturnRequestItemsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnRequestMedia", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ReturnRequestMediaId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ReturnRequestMediaId");
+
+                            b1.ToTable("ReturnRequestMedia");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReturnRequestMediaId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnRequests", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ReturnRequestsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ReturnRequestsId");
+
+                            b1.ToTable("ReturnRequests");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReturnRequestsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Returns.ReturnStatusHistory", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ReturnStatusHistoryId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ReturnStatusHistoryId");
+
+                            b1.ToTable("ReturnStatusHistory");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReturnStatusHistoryId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("data._Shares.Articles", b =>
@@ -5548,6 +12795,206 @@ namespace data.Migrations
                     b.Navigation("Meta");
                 });
 
+            modelBuilder.Entity("data._Shipping.Carriers", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("CarriersId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("CarriersId");
+
+                            b1.ToTable("Carriers");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CarriersId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Shipping.ShipmentItems", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ShipmentItemsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ShipmentItemsId");
+
+                            b1.ToTable("ShipmentItems");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ShipmentItemsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Shipping.ShipmentTrackingEvents", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ShipmentTrackingEventsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ShipmentTrackingEventsId");
+
+                            b1.ToTable("ShipmentTrackingEvents");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ShipmentTrackingEventsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Shipping.Shipments", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ShipmentsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ShipmentsId");
+
+                            b1.ToTable("Shipments");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ShipmentsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Shipping.ShippingRateRules", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ShippingRateRulesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ShippingRateRulesId");
+
+                            b1.ToTable("ShippingRateRules");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ShippingRateRulesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Shipping.ShippingZoneAreas", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ShippingZoneAreasId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ShippingZoneAreasId");
+
+                            b1.ToTable("ShippingZoneAreas");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ShippingZoneAreasId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Shipping.ShippingZones", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("ShippingZonesId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("ShippingZonesId");
+
+                            b1.ToTable("ShippingZones");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ShippingZonesId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("data._Shipping.StoreCarrierAccounts", b =>
+                {
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("StoreCarrierAccountsId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("StoreCarrierAccountsId");
+
+                            b1.ToTable("StoreCarrierAccounts");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StoreCarrierAccountsId");
+                        });
+
+                    b.Navigation("IsDeleted")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("data._Store.Store", b =>
                 {
                     b.OwnsOne("data.Owned.AddressInfo", "AddressInfo", b1 =>
@@ -5581,82 +13028,6 @@ namespace data.Migrations
 
                             b1.Property<string>("ZipCode")
                                 .HasColumnType("nvarchar(max)");
-
-                            b1.HasKey("StoreId");
-
-                            b1.ToTable("Store");
-
-                            b1.WithOwner()
-                                .HasForeignKey("StoreId");
-                        });
-
-                    b.OwnsOne("data.Owned.WorkingHours", "WorkingHours", b1 =>
-                        {
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<TimeOnly?>("FinishTimeFriday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeMonday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeSaturday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeSunday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeThursday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeTuesday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("FinishTimeWednesday")
-                                .HasColumnType("time");
-
-                            b1.Property<bool?>("IsActiveFriday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveMonday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveSaturday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveSunday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveThursday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveTuesday")
-                                .HasColumnType("bit");
-
-                            b1.Property<bool?>("IsActiveWednesday")
-                                .HasColumnType("bit");
-
-                            b1.Property<TimeOnly?>("StartTimeFriday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeMonday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeSaturday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeSunday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeThursday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeTuesday")
-                                .HasColumnType("time");
-
-                            b1.Property<TimeOnly?>("StartTimeWednesday")
-                                .HasColumnType("time");
 
                             b1.HasKey("StoreId");
 
@@ -5914,6 +13285,82 @@ namespace data.Migrations
                                 .HasForeignKey("StoreId");
                         });
 
+                    b.OwnsOne("data.Owned.WorkingHours", "WorkingHours", b1 =>
+                        {
+                            b1.Property<Guid>("StoreId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<TimeOnly?>("FinishTimeFriday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeMonday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeSaturday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeSunday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeThursday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeTuesday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeWednesday")
+                                .HasColumnType("time");
+
+                            b1.Property<bool?>("IsActiveFriday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveMonday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveSaturday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveSunday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveThursday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveTuesday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveWednesday")
+                                .HasColumnType("bit");
+
+                            b1.Property<TimeOnly?>("StartTimeFriday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeMonday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeSaturday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeSunday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeThursday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeTuesday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeWednesday")
+                                .HasColumnType("time");
+
+                            b1.HasKey("StoreId");
+
+                            b1.ToTable("Store");
+
+                            b1.WithOwner()
+                                .HasForeignKey("StoreId");
+                        });
+
                     b.Navigation("AddressInfo");
 
                     b.Navigation("ContactInformation");
@@ -5975,6 +13422,363 @@ namespace data.Migrations
                         });
 
                     b.Navigation("IsDeleted");
+                });
+
+            modelBuilder.Entity("data._Store.WareHouse", b =>
+                {
+                    b.OwnsOne("data.Owned.AddressInfo", "AddressInfo", b1 =>
+                        {
+                            b1.Property<Guid>("WareHouseId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("Address")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("City")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Country")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("GoogleMyBusinessAccountLink")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<decimal?>("Latitude")
+                                .HasColumnType("decimal(18,15)");
+
+                            b1.Property<decimal?>("Longitude")
+                                .HasColumnType("decimal(18,15)");
+
+                            b1.Property<string>("MapTitle")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("State")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("ZipCode")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("WareHouseId");
+
+                            b1.ToTable("WareHouse");
+
+                            b1.WithOwner()
+                                .HasForeignKey("WareHouseId");
+                        });
+
+                    b.OwnsOne("data.Owned.ContactInformation", "ContactInformation", b1 =>
+                        {
+                            b1.Property<Guid>("WareHouseId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("Behance")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("CountryPhoneCode")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Discord")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Email")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Facebook")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("FullPhoneNumber")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("GitHub")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Instagram")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<bool?>("IsActiveBehance")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveDiscord")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveEmail")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveFacebook")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveGitHub")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveInstagram")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveKakaoTalk")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveLine")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveLinkedin")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActivePhoneNumber")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActivePinterest")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveReddit")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveTelegram")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveTikTok")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveUserWebSite")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveVKontakte")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveWeChat")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveWeibo")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveWhatsApp")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveX")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveYouTube")
+                                .HasColumnType("bit");
+
+                            b1.Property<string>("KakaoTalk")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Line")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Linkedin")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<bool>("PhoneEmailConfirmed")
+                                .HasColumnType("bit");
+
+                            b1.Property<string>("PhoneNumber")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<bool>("PhoneNumberConfirmed")
+                                .HasColumnType("bit");
+
+                            b1.Property<string>("Pinterest")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Reddit")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Telegram")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("TikTok")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("UserWebSite")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("VKontakte")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("WeChat")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Weibo")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("WhatsApp")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("X")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("YouTube")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("WareHouseId");
+
+                            b1.ToTable("WareHouse");
+
+                            b1.WithOwner()
+                                .HasForeignKey("WareHouseId");
+                        });
+
+                    b.OwnsOne("data.Owned.IsDeleted", "IsDeleted", b1 =>
+                        {
+                            b1.Property<Guid>("WareHouseId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<DateTime?>("DeletedAtDate")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<bool?>("IsDeletedStatu")
+                                .HasColumnType("bit");
+
+                            b1.HasKey("WareHouseId");
+
+                            b1.ToTable("WareHouse");
+
+                            b1.WithOwner()
+                                .HasForeignKey("WareHouseId");
+                        });
+
+                    b.OwnsOne("data.Owned.Meta", "Meta", b1 =>
+                        {
+                            b1.Property<Guid>("WareHouseId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("CanonicalUrl")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("FocusKeywords")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("MetaDescription")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("MetaTitle")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("OgType")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("RobotsIndex")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("WareHouseId");
+
+                            b1.ToTable("WareHouse");
+
+                            b1.WithOwner()
+                                .HasForeignKey("WareHouseId");
+                        });
+
+                    b.OwnsOne("data.Owned.ProfileCoverGallery", "ProfileCoverGallery", b1 =>
+                        {
+                            b1.Property<Guid>("WareHouseId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("CoverImagePath")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("ProfileImagePath")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("WareHouseId");
+
+                            b1.ToTable("WareHouse");
+
+                            b1.WithOwner()
+                                .HasForeignKey("WareHouseId");
+                        });
+
+                    b.OwnsOne("data.Owned.WorkingHours", "WorkingHours", b1 =>
+                        {
+                            b1.Property<Guid>("WareHouseId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<TimeOnly?>("FinishTimeFriday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeMonday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeSaturday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeSunday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeThursday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeTuesday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("FinishTimeWednesday")
+                                .HasColumnType("time");
+
+                            b1.Property<bool?>("IsActiveFriday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveMonday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveSaturday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveSunday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveThursday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveTuesday")
+                                .HasColumnType("bit");
+
+                            b1.Property<bool?>("IsActiveWednesday")
+                                .HasColumnType("bit");
+
+                            b1.Property<TimeOnly?>("StartTimeFriday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeMonday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeSaturday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeSunday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeThursday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeTuesday")
+                                .HasColumnType("time");
+
+                            b1.Property<TimeOnly?>("StartTimeWednesday")
+                                .HasColumnType("time");
+
+                            b1.HasKey("WareHouseId");
+
+                            b1.ToTable("WareHouse");
+
+                            b1.WithOwner()
+                                .HasForeignKey("WareHouseId");
+                        });
+
+                    b.Navigation("AddressInfo");
+
+                    b.Navigation("ContactInformation");
+
+                    b.Navigation("IsDeleted");
+
+                    b.Navigation("Meta");
+
+                    b.Navigation("ProfileCoverGallery");
+
+                    b.Navigation("WorkingHours");
                 });
 
             modelBuilder.Entity("data._Systems.MainCssJs", b =>

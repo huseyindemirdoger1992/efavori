@@ -354,20 +354,20 @@
         <div class="container-fluid px-3 px-md-4 px-xl-5">
             <div class="d-flex flex-column flex-lg-row align-items-center justify-content-between gap-3 text-center text-lg-start">
 
-<nav class="order-lg-0 flex-grow-1" aria-label="Yasal Linkler">
-    <ul class="list-inline mb-0 small d-flex flex-wrap justify-content-center justify-content-lg-start align-items-center gap-2">
-        @for (int i = 0; i < fLegal.Count; i++)
-        {
-            <li class="list-inline-item me-0 d-inline-flex align-items-center gap-2">
-                <a class="link-light link-opacity-75-hover text-decoration-none" href="@fLegal[i].Url">@fLegal[i].Text</a>
-                @if (i < fLegal.Count - 1)
-                {
-                    <i class="fa fa-circle text-light opacity-50" style="font-size: 0.35rem;" aria-hidden="true"></i>
-                }
-            </li>
-        }
-    </ul>
-</nav>
+                <nav class="order-lg-0 flex-grow-1" aria-label="Yasal Linkler">
+                    <ul class="list-inline mb-0 small d-flex flex-wrap justify-content-center justify-content-lg-start align-items-center gap-2">
+                        @for (int i = 0; i < fLegal.Count; i++)
+                        {
+                            <li class="list-inline-item me-0 d-inline-flex align-items-center gap-2">
+                                <a class="link-light link-opacity-75-hover text-decoration-none" href="@fLegal[i].Url">@fLegal[i].Text</a>
+                                @if (i < fLegal.Count - 1)
+                                {
+                                    <i class="fa fa-circle text-light opacity-50" style="font-size: 0.35rem;" aria-hidden="true"></i>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </nav>
 
                 <div class="small text-white-50 order-lg-1" style="margin-right: 64px;">
                     &copy; @DateTime.Now.Year efavori.com &mdash; Tüm hakları saklıdır.
@@ -543,49 +543,25 @@
         ("Birleşik Arap Emirlikleri", "/set-region?code=AE")
     };
 
-    // Diller: (kod, ad, url) — ProductTranslations ile aynı 10 dil
-    private readonly List<(string Code, string Name, string Url)> fLanguages = new()
-    {
-        ("tr", "Türkçe",     "/set-language?code=tr"),
-        ("en", "English",    "/set-language?code=en"),
-        ("de", "Deutsch",    "/set-language?code=de"),
-        ("fr", "Français",   "/set-language?code=fr"),
-        ("es", "Español",    "/set-language?code=es"),
-        ("it", "Italiano",   "/set-language?code=it"),
-        ("nl", "Nederlands", "/set-language?code=nl"),
-        ("pt", "Português",  "/set-language?code=pt"),
-        ("ru", "Русский",    "/set-language?code=ru"),
-        ("ar", "العربية",     "/set-language?code=ar")
-    };
-
     // Para birimleri: (kod, sembol, ad, url)
     private readonly List<(string Code, string Symbol, string Name, string Url)> fCurrencies = new()
     {
         ("TRY", "₺",  "Türk Lirası",     "/set-currency?code=TRY"),
-        ("USD", "$",  "Amerikan Doları", "/set-currency?code=USD"),
-        ("EUR", "€",  "Euro",            "/set-currency?code=EUR"),
-        ("GBP", "£",  "İngiliz Sterlini","/set-currency?code=GBP"),
-        ("CHF", "CHF","İsviçre Frangı",  "/set-currency?code=CHF"),
-        ("RUB", "₽",  "Rus Rublesi",     "/set-currency?code=RUB"),
-        ("AED", "د.إ","BAE Dirhemi",     "/set-currency?code=AED"),
-        ("SAR", "﷼",  "Suudi Riyali",    "/set-currency?code=SAR"),
         ("AZN", "₼",  "Azerbaycan Manatı","/set-currency?code=AZN"),
-        ("JPY", "¥",  "Japon Yeni",      "/set-currency?code=JPY")
+        ("USD", "$",  "Dolar", "/set-currency?code=USD"),
+        ("EUR", "€",  "Euro",            "/set-currency?code=EUR")
     };
 
     // Ödeme yöntemleri: (ikon, metin) — ikon boş bırakılabilir
     private readonly List<(string Icon, string Text)> fPayments = new()
     {
+        ("fa-credit-card",       "Troy"),
         ("fa-cc-visa",       "Visa"),
         ("fa-cc-mastercard", "Mastercard"),
         ("fa-cc-amex",       "Amex"),
-        ("",                 "Troy"),
-        ("fa-cc-paypal",     "PayPal"),
-        ("fa-university",    "Havale / EFT"),
-        ("fa-money",         "Kapıda Ödeme"),
         ("fa-credit-card-alt","Taksitli Ödeme"),
-        ("fa-gift",          "Hediye Kartı"),
-        ("fa-briefcase",     "Kurumsal Fatura")
+        ("fa-money",         "Kapıda Ödeme")
+
     };
 
     // Anlaşmalı kargo firmaları

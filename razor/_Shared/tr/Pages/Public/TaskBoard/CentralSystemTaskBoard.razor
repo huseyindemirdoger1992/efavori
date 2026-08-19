@@ -572,7 +572,7 @@
             @{
                 var filterDefs = new (string key, string css, string icon, string label)[]
                 {
-                    ("all", "btn-outline-light", "fa-list", "Tümü"),
+                    ("all", "btn-outline-dark", "fa-list", "Tümü"),
                     ("low", "btn-outline-success", "fa-arrow-circle-down", "Düşük"),
                     ("medium", "btn-outline-warning", "fa-minus-circle", "Orta"),
                     ("high", "btn-outline-danger", "fa-arrow-circle-up", "Yüksek"),
@@ -779,7 +779,7 @@
                                                         var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                                         <div class="col d-flex">
                                                             <div class="task-card mb-2 bg-danger bg-opacity-25 w-100"
-                                                                 draggable="true"
+                                                                 @key="task.Id" draggable="true"
                                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                                 <span>
@@ -901,7 +901,7 @@
                                         var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                         var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                         <div class="task-card mb-2 bg-danger bg-opacity-25"
-                                             draggable="true"
+                                             @key="task.Id" draggable="true"
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <span>
@@ -1010,7 +1010,7 @@
                                         var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                         var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                         <div class="task-card mb-2 bg-light bg-opacity-25"
-                                             draggable="true"
+                                             @key="task.Id" draggable="true"
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <span>
@@ -1119,7 +1119,7 @@
                                         var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                         var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                         <div class="task-card mb-2 bg-primary bg-opacity-25"
-                                             draggable="true"
+                                             @key="task.Id" draggable="true"
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <span>
@@ -1228,7 +1228,7 @@
                                         var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                         var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                         <div class="task-card mb-2 bg-info bg-opacity-25"
-                                             draggable="true"
+                                             @key="task.Id" draggable="true"
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <span>
@@ -1337,7 +1337,7 @@
                                         var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                         var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                         <div class="task-card mb-2 bg-success bg-opacity-25"
-                                             draggable="true"
+                                             @key="task.Id" draggable="true"
                                              @ondragstart="@(() => HandleDragStart(task.Id))"
                                              @onclick="@(() => ShowTaskDetail(task))">
                                             <span>
@@ -1481,7 +1481,7 @@
                                                             var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                                             <div class="col d-flex">
                                                                 <div class="task-card mb-2 bg-danger bg-opacity-25 w-100"
-                                                                     draggable="true"
+                                                                     @key="task.Id" draggable="true"
                                                                      @ondragstart="@(() => HandleDragStart(task.Id))"
                                                                      @onclick="@(() => ShowTaskDetail(task))">
                                                                     <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
@@ -1592,7 +1592,7 @@
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                             var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                             <div class="task-card mb-2 bg-danger bg-opacity-25"
-                                                 draggable="true"
+                                                 @key="task.Id" draggable="true"
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
@@ -1693,7 +1693,7 @@
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                             var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                             <div class="task-card mb-2 bg-light bg-opacity-25"
-                                                 draggable="true"
+                                                 @key="task.Id" draggable="true"
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
@@ -1794,7 +1794,7 @@
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                             var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                             <div class="task-card mb-2 bg-primary bg-opacity-25"
-                                                 draggable="true"
+                                                 @key="task.Id" draggable="true"
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
@@ -1895,7 +1895,7 @@
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                             var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                             <div class="task-card mb-2 bg-info bg-opacity-25"
-                                                 draggable="true"
+                                                 @key="task.Id" draggable="true"
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
@@ -1996,7 +1996,7 @@
                                             var IsOktaskNotesCount = IsOkGetTaskNotesCount(task.Id);
                                             var IsNotOktaskNotesCount = IsNotOkGetTaskNotesCount(task.Id);
                                             <div class="task-card mb-2 bg-success bg-opacity-25"
-                                                 draggable="true"
+                                                 @key="task.Id" draggable="true"
                                                  @ondragstart="@(() => HandleDragStart(task.Id))"
                                                  @onclick="@(() => ShowTaskDetail(task))">
                                                 <h6 class="text-light">@((task.TaskTitle?.Length > 20) ? task.TaskTitle.Substring(0, 20) + "..." : (task.TaskTitle ?? "Başlıksız Görev"))</h6>
@@ -2078,117 +2078,6 @@
 
                     </div>
 
-                    <div class="modal fade" id="edit_@item.Id" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-lg">
-                            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
-                                <div class="modal-header border-bottom border-secondary">
-                                    <h5 class="modal-title text-white">
-                                        <i class="fa fa-edit"></i> Kategori bilgilerini düzenleyebilirsiniz
-                                    </h5>
-                                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
-                                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
-                                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
-                                        </button>
-
-                                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
-
-                                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
-                                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-6">
-                                            <label class="form-label">Görev Bölümü</label>
-                                            <select class="form-select" @bind="TaskFrameworkId">
-                                                <option value="">...</option>
-                                                @foreach (TaskFramework tf in taskFrameworks)
-                                                {
-                                                    <option value=@tf.Id>@tf.Title</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 mb-6">
-                                            <label class="form-label">Görev Durumu</label>
-                                            <select class="form-select" @bind="CategoryStructure">
-                                                <option value="">...</option>
-                                                <option value="PlanningTaskBoard">Plan Aşamasında</option>
-                                                <option value="InProcessTaskBoard">Aktif Görev</option>
-                                                <option value=CompletedTaskBoard>Tamamlandı</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-12 mb-12" style="margin-top:12px;">
-                                            <label class="form-label">Kategori Adı</label>
-                                            <input class="form-control mb-3" type="text" @bind="item.Title">
-                                        </div>
-                                        <div class="col-md-12 mb-12">
-                                            <label>Kategori Açıklaması</label>
-                                            <textarea class="form-control" rows="3" @bind="item.Description"></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-top border-secondary">
-                                    <button type="button"
-                                            class="btn btn-light @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
-                                            style="width:100%;"
-                                            @onclick='async () => await EditCategori(item)'
-                                            disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
-                                        <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-edit")"></i>
-                                        <span>
-                                            @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Düzenlemeyi Kaydet")
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal fade" id="delete_@item.Id" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-lg">
-                            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
-                                <div class="modal-header border-bottom border-secondary">
-                                    <h5 class="modal-title text-white">
-                                        <i class="fa fa-edit"></i> Kategori bilgilerini silebilirsiniz
-                                    </h5>
-                                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
-                                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
-                                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
-                                        </button>
-
-                                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
-
-                                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
-                                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="col-12">
-                                        <label>Kategori Adı</label>
-                                        <input class="form-control mb-3" type="text" @bind="item.Title" readonly>
-                                    </div>
-                                    <div class="col-12">
-                                        <label>Kategori Açıklaması</label>
-                                        <textarea class="form-control" rows="3" @bind="item.Description" readonly></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer border-top border-secondary">
-                                    <button type="button"
-                                            class="btn btn-danger @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
-                                            data-bs-dismiss="modal"
-                                            style="width:100%;"
-                                            @onclick='async () => await DeleteCategori(item)'
-                                            disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
-                                        <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-trash")"></i>
-                                        <span>
-                                            @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Kategoriyi & İçerisindekileri Sil")
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 }
 
             </div>
@@ -3086,7 +2975,7 @@
                     <div class="col-md-12 mb-12">
                         <label class="form-label">Görev Bölümü</label>
                         <select class="form-select" @bind="TaskCategories.TaskFrameworkId">
-                            <option value=@TaskCategories.TaskFrameworkId>@TaskCategories.TaskFrameworkId</option>
+                            <option value="">Görev Bölümü Seçin...</option>
                             @foreach (TaskFramework tf in taskFrameworks)
                             {
                                 <option value=@tf.Id>@tf.Title</option>
@@ -3117,6 +3006,122 @@
     </div>
 </div>
 
+@* ✅ Kategori Düzenle & Sil Modalları — sayfa kök seviyesinde render edilir.
+   tab-pane / card-body gibi overflow ancestor'lardan bağımsız çalışır. *@
+@foreach (var item in taskCategories)
+{
+    <div class="modal fade" id="edit_@item.Id" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title text-white">
+                        <i class="fa fa-edit"></i> Kategori bilgilerini düzenleyebilirsiniz
+                    </h5>
+                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+
+                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-6">
+                            <label class="form-label">Görev Bölümü</label>
+                            <select class="form-select" @bind="TaskFrameworkId">
+                                <option value="">...</option>
+                                @foreach (TaskFramework tf in taskFrameworks)
+                                {
+                                    <option value=@tf.Id>@tf.Title</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-6">
+                            <label class="form-label">Görev Durumu</label>
+                            <select class="form-select" @bind="CategoryStructure">
+                                <option value="">...</option>
+                                <option value="PlanningTaskBoard">Plan Aşamasında</option>
+                                <option value="InProcessTaskBoard">Aktif Görev</option>
+                                <option value=CompletedTaskBoard>Tamamlandı</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-12" style="margin-top:12px;">
+                            <label class="form-label">Kategori Adı</label>
+                            <input class="form-control mb-3" type="text" @bind="item.Title">
+                        </div>
+                        <div class="col-md-12 mb-12">
+                            <label>Kategori Açıklaması</label>
+                            <textarea class="form-control" rows="3" @bind="item.Description"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button"
+                            class="btn btn-light @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
+                            style="width:100%;"
+                            @onclick='async () => await EditCategori(item)'
+                            disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
+                        <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-edit")"></i>
+                        <span>
+                            @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Düzenlemeyi Kaydet")
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="delete_@item.Id" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-light border border-secondary" style="backdrop-filter: blur(10px); box-shadow: 0 0 5px rgba(13, 202, 240, 0.5);">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title text-white">
+                        <i class="fa fa-edit"></i> Kategori bilgilerini silebilirsiniz
+                    </h5>
+                    <div class="btn-group shadow-sm border border-secondary rounded" role="group">
+                        <button type="button" class="btn btn-sm text-light border-0 py-1 px-2" onclick="toggleModalFullscreen(this)" title="Tam Ekran">
+                            <i class="fa fa-expand" style="font-size: 0.85rem;"></i>
+                        </button>
+
+                        <div class="border-start border-secondary my-1" style="width: 1px; opacity: 0.5;"></div>
+
+                        <button type="button" class="btn btn-sm text-danger border-0 py-1 px-2" data-bs-dismiss="modal" aria-label="Close" title="Kapat">
+                            <i class="fa fa-times" style="font-size: 0.95rem;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="col-12">
+                        <label>Kategori Adı</label>
+                        <input class="form-control mb-3" type="text" @bind="item.Title" readonly>
+                    </div>
+                    <div class="col-12">
+                        <label>Kategori Açıklaması</label>
+                        <textarea class="form-control" rows="3" @bind="item.Description" readonly></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button"
+                            class="btn btn-danger @(IsButtonProcessing("EditBtn_" + item.Id) ? "colored" : "")"
+                            data-bs-dismiss="modal"
+                            style="width:100%;"
+                            @onclick='async () => await DeleteCategori(item)'
+                            disabled="@IsButtonProcessing("EditBtn_" + item.Id)">
+                        <i class="fa @(IsButtonProcessing("EditBtn_" + item.Id) ? "fa-refresh fa-spin" : "fa-trash")"></i>
+                        <span>
+                            @(IsButtonProcessing("EditBtn_" + item.Id) ? "Yükleniyor..." : "Kategoriyi & İçerisindekileri Sil")
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <Notification @ref="notificationRef" />
 
@@ -3194,6 +3199,7 @@
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _dbLock = new(1, 1);
     private bool _disposed;
+    private bool _mutating; // Yerel mutasyon aktifken self-notify ile çift LoadData olmasın
     #endregion
     #region Data
     // ✅ Uzun ömürlü DbContext KALDIRILDI. Artık tüm veriler LoadData ile
@@ -3253,6 +3259,7 @@
     {
         if (_disposed || !_isInitialized) return;
         if (AddTaskshowModal || EditTaskshowModal || showNoteEditlModal) return;
+        if (_mutating) return; // Yerel mutasyon zaten kendi LoadData + render'ini yapıyor (çift yükleme önlemi)
 
 
         // Sadece ilgili entity'ler için güncelle
@@ -3292,8 +3299,9 @@
         if (useDbLock) await _dbLock.WaitAsync(_cts.Token);
         try
         {
+            _mutating = true; // kendi bildirimimizle ikinci bir LoadData tetiklenmesin
             _processingStates[key] = true;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
             await action();
             return true;
         }
@@ -3307,8 +3315,9 @@
         finally
         {
             _processingStates[key] = false;
+            _mutating = false;
             if (useDbLock) _dbLock.Release();
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged); // ✅ dispatcher-güvenli render (ekran her zaman yenilenir)
         }
     }
     private async Task<bool> ExecuteWithLock(string key, Func<Task> action)
@@ -3675,16 +3684,19 @@
                     .ToListAsync(_cts.Token);
             }
 
-            taskNotes = await db.TaskNotes
-                .AsNoTracking()
-                .Where(n => n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true)
-                .OrderByDescending(t => t.NoteCreatedAt)
-                .ToListAsync(_cts.Token);
-
-            // === TaskKeeperJoint kayıtlarını yükle ===
+            // ✅ PERFORMANS: Notlar ve joint'ler yalnızca EKRANDAKİ görevler için yüklenir.
+            // (Eskiden taskNotes sistemdeki TÜM notları çekiyordu — büyük veride ağır yük.)
             var taskIds = tasks.Select(t => t.Id).ToList();
+
             if (taskIds.Any())
             {
+                taskNotes = await db.TaskNotes
+                    .AsNoTracking()
+                    .Where(n => taskIds.Contains(n.TaskStatusId)
+                        && (n.IsDeleted == null || n.IsDeleted.IsDeletedStatu != true))
+                    .OrderByDescending(t => t.NoteCreatedAt)
+                    .ToListAsync(_cts.Token);
+
                 taskKeepers = await db.TaskKeeperJoint
                     .AsNoTracking()
                     .Where(j => taskIds.Contains(j.TaskId)
@@ -3693,6 +3705,7 @@
             }
             else
             {
+                taskNotes = new List<TaskNotes>();
                 taskKeepers = new List<TaskKeeperJoint>();
             }
 
@@ -3744,7 +3757,9 @@
                     u => ($"{u.FirstName} {u.LastName}").Trim(),
                     _cts.Token);
 
-            await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+            // ✅ LoadData bir OKUMA işlemidir; broadcast etmez (self-notify döngüsü ve çift yükleme yok).
+            // Diğer kullanıcılara bildirim, mutasyon metotlarındaki NotifyDataChanged ile yapılır.
+            await InvokeAsync(StateHasChanged); // veriler tazelendi → ekranı kesin olarak yenile
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -3900,58 +3915,49 @@
                 var task = await db.TaskStatus.FirstOrDefaultAsync(t => t.Id == draggedTaskId, _cts.Token);
                 var taskjoin = await db.TaskKeeperJoint.FirstOrDefaultAsync(t => t.TaskId == draggedTaskId && t.UserId == use.Id, _cts.Token);
                 if (task == null) return;
+
+                // ✅ ÖNEMLİ: Kolon yerleşimi keeper (joint) tabanlıdır. Bu yüzden hem ana görevi
+                // hem de bu kullanıcının joint kaydını AYNI anda güncelleyip TEK SaveChanges +
+                // TEK LoadData ile bitiriyoruz. Eski kodda LoadData, joint güncellenmeden önce
+                // çalıştığı için atanmış görevlerde kart yeni kolonda görünmüyordu (geri sıçrıyordu).
+                bool changed = false;
+
                 if (task.Status != newStatus)
                 {
                     task.Status = newStatus;
                     switch (newStatus)
                     {
-                        case "NewTasks":
-                            task.DateToBeDone = DateTime.Now;
-                            break;
-                        case "ToBeDone":
-                            task.DateToBeDone = DateTime.Now;
-                            break;
-                        case "InProcess":
-                            task.DateInProcess = DateTime.Now;
-                            break;
-                        case "InEditing":
-                            task.DateInEditing = DateTime.Now;
-                            break;
-                        case "Completed":
-                            task.DateCompleted = DateTime.Now;
-                            break;
+                        case "NewTasks": task.DateToBeDone = DateTime.Now; break;
+                        case "ToBeDone": task.DateToBeDone = DateTime.Now; break;
+                        case "InProcess": task.DateInProcess = DateTime.Now; break;
+                        case "InEditing": task.DateInEditing = DateTime.Now; break;
+                        case "Completed": task.DateCompleted = DateTime.Now; break;
                     }
                     db.TaskStatus.Update(task);
-                    await db.SaveChangesAsync(_cts.Token);
-                    await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
-                    await ShowNotification("success", "Başarılı", $"Görev '{GetStatusText(newStatus)}' durumuna taşındı.", null);
-                    await LoadData();
+                    changed = true;
                 }
-                if (taskjoin == null) return;
-                if (taskjoin.Status != newStatus)
+
+                if (taskjoin != null && taskjoin.Status != newStatus)
                 {
                     taskjoin.Status = newStatus;
                     switch (newStatus)
                     {
-                        case "NewTasks":
-                            taskjoin.DateToBeDone = DateTime.Now;
-                            break;
-                        case "ToBeDone":
-                            taskjoin.DateToBeDone = DateTime.Now;
-                            break;
-                        case "InProcess":
-                            taskjoin.DateInProcess = DateTime.Now;
-                            break;
-                        case "InEditing":
-                            taskjoin.DateInEditing = DateTime.Now;
-                            break;
-                        case "Completed":
-                            taskjoin.DateCompleted = DateTime.Now;
-                            break;
+                        case "NewTasks": taskjoin.DateToBeDone = DateTime.Now; break;
+                        case "ToBeDone": taskjoin.DateToBeDone = DateTime.Now; break;
+                        case "InProcess": taskjoin.DateInProcess = DateTime.Now; break;
+                        case "InEditing": taskjoin.DateInEditing = DateTime.Now; break;
+                        case "Completed": taskjoin.DateCompleted = DateTime.Now; break;
                     }
                     db.TaskKeeperJoint.Update(taskjoin);
-                    await db.SaveChangesAsync(_cts.Token);
+                    changed = true;
                 }
+
+                if (!changed) return;
+
+                await db.SaveChangesAsync(_cts.Token);
+                await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
+                await ShowNotification("success", "Başarılı", $"Görev '{GetStatusText(newStatus)}' durumuna taşındı.", null);
+                await LoadData();
             });
         }
         else
@@ -4007,7 +4013,7 @@
                     await db.SaveChangesAsync(_cts.Token);
                     await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                     await ShowNotification("success", "Başarılı", $"Görev önceliği '{NewPri}' olarak değiştirildi.", null);
-                    // await LoadData();
+                    await LoadData(); // ✅ Bellek sürümünde öncelik değişikliğinin kartlara/filtreye yansıması için şart
                 }
 
             });
@@ -4466,6 +4472,19 @@
                 await ShowNotification("danger", "Hata", "Kategori bilgileri eksik.", null);
                 return;
             }
+            // Görev Bölümü seçilmemişse sayfa parametresinden al
+            if (!TaskCategories.TaskFrameworkId.HasValue || TaskCategories.TaskFrameworkId == Guid.Empty)
+            {
+                if (TaskFrameworkId.HasValue && TaskFrameworkId != Guid.Empty)
+                {
+                    TaskCategories.TaskFrameworkId = TaskFrameworkId;
+                }
+                else
+                {
+                    await ShowNotification("danger", "Hata", "Görev Bölümü seçmelisiniz.", null);
+                    return;
+                }
+            }
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
             TaskCategories.UserId = use?.Id;
             TaskCategories.CreatedAt = DateTime.UtcNow;
@@ -4474,8 +4493,9 @@
             await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
             await ShowNotification("success", "Başarılı", "Yeni kategori eklendi.", null);
             await JS.InvokeVoidAsync("eval", "$('#AddNewCategoryModal').modal('hide')");
-            // Formu temizle
-            TaskCategories = new();
+            // Formu temizle — mevcut bölüm ID'sini koru ki sonraki ekleme aynı bölüme kolayca yapılsın
+            TaskCategories = new() { TaskFrameworkId = TaskFrameworkId };
+            await LoadData(); // ✅ Yeni kategori panelde anında görünsün
         });
     }
     public async Task EditCategori(TaskCategories tce)
@@ -4496,6 +4516,7 @@
                 await StateHub.NotifyDataChanged("CentralSystemTaskBoard");
                 await ShowNotification("success", "Başarılı", "Kategori bilgileri güncellendi.", null);
                 await JSRuntime.InvokeVoidAsync("eval", $"$('#edit_{tce.Id}').modal('hide')");
+                await LoadData(); // ✅ Güncel kategori bilgisi panele yansısın
             }
             else
             {
@@ -4520,6 +4541,7 @@
             await ShowNotification("success", "Başarılı", "Kategori bilgileri silindi.", null);
             await JSRuntime.InvokeVoidAsync("eval", $"$('#delete_{tce.Id}').modal('hide')");
             await JSRuntime.InvokeVoidAsync("eval", $"$('delete_{tce.Id}').modal('hide')");
+            await LoadData(); // ✅ Silinen kategori panelden anında kalksın
         });
     }
     public int GetTaskCount(TaskCategories tc)

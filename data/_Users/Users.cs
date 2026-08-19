@@ -28,13 +28,9 @@ namespace data._Users
         public DateTime? DateOfBirth { get; set; } // Doğum Tarihi + 
 
         // === Kullanıcı Tercihleri ===
-        // Şifrele ***-***-***
         public string? Language { get; set; } = "en"; // Arayüz dili tercihi (Varsayılan: İngilizce) (en,tr,az,de,es,fr,hi,pt,ru,zh seçenekleri olabilir) + 
-        // Şifrele ***-***-***
         public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi (USD, EUR, TRY, AZN seçenekleri olabilir) + 
-        // Şifrele ***-***-***
-        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi (sadece "Customer", "SuperAdmin" seçenekleri olabilir) + 
-        // Şifrele ***-***-***
+        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi (sadece "Customer", "SuperAdmin" seçenekleri olabilir) + Eğer kullanıcı "SuperAdmin" ise, SuperAdmin-only yetkilerine sahip olur. (SuperAdmin, tüm kullanıcıları yönetebilir, sistem ayarlarını değiştirebilir ve diğer kullanıcıların yapamadığı işlemleri yapabilir) +
 
         // === Durum ve Yetki Bilgileri ===
         public bool? IsActive { get; set; } = true; // Kullanıcı hesabı aktif mi dondurulmuş mu?

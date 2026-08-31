@@ -35,6 +35,13 @@ namespace data._Products
         public Guid UserId { get; set; }
 
         /// <summary>
+        /// Ürünün satıcısı (Store.Id). DENORMALIZE: kaynak Products.StoreId.
+        /// Mağaza puanı ve satıcı panelindeki "yorumlarım" ekranı, ürün tablosuna
+        /// join yapmadan tek indeksle çözülsün diye tutulur.
+        /// </summary>
+        public Guid StoreId { get; set; }
+
+        /// <summary>
         /// Kök yoruma yanıt ise üst yorum (ProductReviews.Id — ağaç yapısı).
         /// null = kök yorum (puan taşır). Dolu = yanıt (puan taşımaz).
         /// </summary>
@@ -64,18 +71,39 @@ namespace data._Products
         public Language Language { get; set; } = Language.Tr;
 
         /// <summary>
-        /// Yorum medyası (ProductReviewMedia yerine hızlı erişim için) — kullanıcının
-        /// eklediği görsel/video Media.Id listesi, JSON dizi. Boşsa medyasız yorum.
+        /// Yoruma eklenen medya sayısı (ÖNBELLEK). Gerçeğin kaynağı
+        /// <see cref="ProductReviewMedia"/> tablosudur.
+        ///
+        /// KALDIRILAN ALAN (§26, §46): Eski <c>MediaIdsJson</c> alanı KALDIRILMIŞTIR.
+        /// İlişkisel veriyi JSON dizisinde tutmak; FK doğrulamasını, "bu medya
+        /// nerelerde kullanılıyor" sorgusunu, sıralamayı ve silinen medyanın
+        /// tespitini imkânsız kılıyordu. Medya artık gerçek FK'li
+        /// <see cref="ProductReviewMedia"/> tablosundadır.
         /// </summary>
-        public string? MediaIdsJson { get; set; }
+        public int MediaCount { get; set; }
 
         // ── Güven / moderasyon ───────────────────────────────────────────────
         /// <summary>
-        /// Doğrulanmış satın alma mı? (kullanıcı bu ürünü gerçekten satın aldı).
-        /// Sipariş modülü bağlanınca sipariş kontrolüyle set edilir; şimdilik
-        /// manuel/varsayılan false.
+        /// DOĞRULANMIŞ SATIN ALMA (§27).
+        ///
+        /// Bu alan İSTEMCİDEN GELEN BİR DEĞER DEĞİLDİR ve asla kullanıcı girdisiyle
+        /// set edilmez. <see cref="OrderItemId"/> dolu ve ilgili sipariş kalemi
+        /// teslim edilmiş durumdaysa servis katmanı tarafından türetilir.
+        /// Doğrulanmışlığın kanıtı <see cref="OrderItemId"/> alanıdır; bu boolean
+        /// yalnızca hızlı filtreleme içindir.
         /// </summary>
         public bool IsVerifiedPurchase { get; set; }
+
+        /// <summary>
+        /// Yorumun dayandığı sipariş kalemi (OrderItems.Id).
+        /// <see cref="IsVerifiedPurchase"/> değerinin TEK kanıtıdır; dolu olması
+        /// kullanıcının bu ürünü gerçekten satın aldığı ve teslim aldığı anlamına gelir.
+        /// Doğrulanmamış yorumlarda null olur.
+        /// </summary>
+        public Guid? OrderItemId { get; set; }
+
+        /// <summary>Yorumun dayandığı alt sipariş (SubOrders.Id) — satıcı bazlı iz.</summary>
+        public Guid? SubOrderId { get; set; }
 
         /// <summary>Moderasyon durumu (yalnızca Approved vitrinde görünür).</summary>
         public ModerationStatus Status { get; set; } = ModerationStatus.Pending;
@@ -95,6 +123,21 @@ namespace data._Products
         /// (Vitrinde "Satıcı yanıtı" rozetiyle vurgulanır.) Yalnızca yanıtlarda true olur.
         /// </summary>
         public bool IsSellerResponse { get; set; }
+
+        /// <summary>
+        /// Yanıtı yazan satıcı mağazası (Store.Id). <see cref="IsSellerResponse"/>
+        /// true iken dolu olur; vitrinde mağaza adı ve logosu bu alandan çözülür.
+        /// </summary>
+        public Guid? ResponderStoreId { get; set; }
+
+        /// <summary>
+        /// Bu kök yoruma satıcı yanıtı verildi mi? (ÖNBELLEK — yalnızca kök yorumda).
+        /// "Satıcı yanıtlamadı" filtresi satıcı panelinde bu alanla çalışır.
+        /// </summary>
+        public bool HasSellerResponse { get; set; }
+
+        /// <summary>Satıcı yanıtının anı (UTC) — yanıt süresi metriği için.</summary>
+        public DateTime? SellerRespondedAtUtc { get; set; }
 
         // ── Denormalize oy sayaçları (kaynak: ProductReviewVotes) ────────────
         /// <summary>"Faydalı" oy sayısı — hızlı sıralama için denormalize.</summary>

@@ -1,54 +1,136 @@
-﻿using data.Owned;
-using System.ComponentModel.DataAnnotations;
+using System;
 
 namespace data._Users
 {
-    public class Users
+    /// <summary>
+    /// KULLANICI — KİMLİK VE HESAP YAŞAM DÖNGÜSÜ ÇEKİRDEĞİ.
+    ///
+    /// Bu tablo bilinçli olarak DARDIR. Yalnızca "bu hesap kimdir, hangi durumdadır ve
+    /// giriş yapabilir mi?" sorularını yanıtlar. Her istekte okunan sıcak (hot) tablodur;
+    /// bu yüzden nadiren değişen ve nadiren okunan alanlar buraya KONULMAZ.
+    ///
+    /// SORUMLULUK AYRIMI (§5):
+    ///  • Sosyal profil (username, bio, avatar, sayaçlar) → <see cref="UserProfiles"/>
+    ///  • Dil/para birimi/akış/bildirim tercihleri        → <see cref="UserSettings"/>
+    ///  • Gizlilik ("kimler yapabilir")                    → <see cref="UserPrivacySettings"/>
+    ///  • Parola, MFA, kilitlenme, güvenlik damgası        → <see cref="UserSecurity"/>
+    ///  • Ödeme yöntemi (PCI DSS)                          → data._Payments.UserPaymentMethods
+    ///  • Adres                                            → <see cref="UserAddress"/>
+    ///
+    /// GÜVENLİK: Parola HASH'i dâhil hiçbir kimlik doğrulama sırrı bu tabloda TUTULMAZ.
+    /// Eski <c>Users.Password</c> alanı kaldırılmıştır (bkz. <see cref="UserSecurity"/>).
+    /// </summary>
+    public class Users : UserEntityBase
     {
-        // === Temel Kimlik Bilgileri ===
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid(); // Birincil anahtar, otomatik artan benzersiz
-        public Guid? WorkstationEmployeeGroupId { get; set; } // Bağlı olduğu İş istasyonu + 
-        public bool? UserIsEmployee { get; set; } // Kullanıcı Çalışan Mı + 
-        // Şifrele ***-***-***
-        public string? UserSponsorEmail { get; set; } // Kullanıcının Sponsor Email Adresi + 
-        // Şifrele ***-***-***
-        public string? FirstName { get; set; } // Kullanıcının adı + 
-        // Şifrele ***-***-***
-        public string? LastName { get; set; } // Kullanıcının soyadı + 
-        // Şifrele ***-***-***
-        public string? Password { get; set; } // Şifrenin hashlenmiş (şifrelenmiş) hali + 
+        // ── Hesap durumu ──────────────────────────────────────────────────────
+        /// <summary>Hesabın yaşam döngüsü durumu. Eski <c>bool? IsActive</c> yerine geçer.</summary>
+        public UserAccountStatus AccountStatus { get; set; } = UserAccountStatus.PendingActivation;
 
-        // === Tarih Bilgileri ===
-        public DateTime? RegistrationDate { get; set; } // Sisteme ilk kayıt olduğu tarih ve saat + 
-        public bool AccountActivationMailStatu { get; set; } // Hesap aktivasyon durumu +
-        public int AccountActivationMailCode { get; set; } // Hesap aktivasyon kodu +
-        public int AccountPasswordResetMailCode { get; set; } // Hesap şifre sıfırlama kodu +
-        public DateTime? AccountActivationMailDeadline { get; set; } // Hesap aktivasyon geçerlilik süresi +
-        public DateTime? DateOfBirth { get; set; } // Doğum Tarihi + 
+        /// <summary>Platformdaki temel rol. Eski <c>string UsersType</c> yerine geçer.</summary>
+        public UserType UserType { get; set; } = UserType.Customer;
 
-        // === Kullanıcı Tercihleri ===
-        public string? Language { get; set; } = "en"; // Arayüz dili tercihi (Varsayılan: İngilizce) (en,tr,az,de,es,fr,hi,pt,ru,zh seçenekleri olabilir) + 
-        public string? Currency { get; set; } = "USD"; // Kullanıcının tercih ettiği para birimi (USD, EUR, TRY, AZN seçenekleri olabilir) + 
-        public string? UsersType { get; set; } = "Customer"; // Kullanıcı Tipi (sadece "Customer", "SuperAdmin" seçenekleri olabilir) + Eğer kullanıcı "SuperAdmin" ise, SuperAdmin-only yetkilerine sahip olur. (SuperAdmin, tüm kullanıcıları yönetebilir, sistem ayarlarını değiştirebilir ve diğer kullanıcıların yapamadığı işlemleri yapabilir) +
+        /// <summary>Satıcı olma yetkisi. Eski <c>bool? IsActiveVendorStatu</c> yerine geçer.</summary>
+        public VendorCapability VendorCapability { get; set; } = VendorCapability.None;
 
-        // === Durum ve Yetki Bilgileri ===
-        public bool? IsActive { get; set; } = true; // Kullanıcı hesabı aktif mi dondurulmuş mu?
-        public bool? IsActiveVendorStatu { get; set; } = false; // Mağaza açma yetkisi var mı?
-        public bool? TermsOfUse { get; set; } // Kullanım koşullarını ve gizlilik sözleşmesini kabul etti mi?
-        //public bool? IsDeleted { get; set; } = false; // Veritabanından silmek yerine "silindi" işaretlemek için (Soft Delete)
+        /// <summary>Hesap durumunun en son değiştiği an (UTC) — askıya alma/yasaklama izi.</summary>
+        public DateTime? AccountStatusChangedAtUtc { get; set; }
 
-        // === Profil Bilgileri ===
-        // Şifrele ***-***-***
-        public string? BackgroundImagePath { get; set; } // Web site arka plan resmi +
-        public int? LogOutTimer { get; set; } // Hareketsizlik Denetimi: Kişisel verilerinizin yetkisiz erişime karşı korunması amacıyla, sistem belirli bir süre etkileşim almadığında oturumunuzu otomatik ve güvenli bir şekilde sonlandırır. (Saniye cinsinden değer alır)
+        /// <summary>Askıya alma/yasaklama gerekçesi (yalnızca yönetim panelinde görünür).</summary>
+        public string? AccountStatusReason { get; set; }
 
-        // === İlişkili Tablolar ===
-        public ContactInformation? ContactInformation { get; set; }
-        public ProfileCoverGallery? ProfileCoverGallery { get; set; }
-        public IsPrivateOrPublic? IsPrivateOrPublic { get; set; }
-        public UserRolesAccessPermissions? UserRolesAccessPermissions { get; set; }
+        /// <summary>Geçici askıya almanın kendiliğinden biteceği an (UTC). Null = süresiz.</summary>
+        public DateTime? SuspendedUntilUtc { get; set; }
 
-        public IsDeleted? IsDeleted { get; set; }
+        // ── Kimlik doğrulayıcılar (login identifier) ──────────────────────────
+        /// <summary>
+        /// Birincil e-posta adresi (giriş kimliği). Normalize edilmiş hâli
+        /// <see cref="NormalizedEmail"/> alanındadır ve TEKİL indekslidir.
+        /// </summary>
+        public string Email { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Büyük harfe/trim'e normalize edilmiş e-posta. Soft-delete filtreli TEKİL indeks
+        /// buradadır — büyük/küçük harf farkıyla ikinci hesap açılması engellenir.
+        /// </summary>
+        public string NormalizedEmail { get; set; } = string.Empty;
+
+        /// <summary>E-posta doğrulandı mı?</summary>
+        public bool IsEmailConfirmed { get; set; }
+
+        /// <summary>E-postanın doğrulandığı an (UTC).</summary>
+        public DateTime? EmailConfirmedAtUtc { get; set; }
+
+        /// <summary>Telefon ülke kodu (ör. "+90").</summary>
+        public string? PhoneCountryCode { get; set; }
+
+        /// <summary>Telefon numarası (ülke kodu hariç).</summary>
+        public string? PhoneNumber { get; set; }
+
+        /// <summary>
+        /// E.164 biçiminde tam telefon numarası (ör. "+905321234567").
+        /// Soft-delete filtreli TEKİL indeks buradadır (null'lar hariç).
+        /// </summary>
+        public string? NormalizedPhoneNumber { get; set; }
+
+        /// <summary>Telefon doğrulandı mı?</summary>
+        public bool IsPhoneConfirmed { get; set; }
+
+        /// <summary>Telefonun doğrulandığı an (UTC).</summary>
+        public DateTime? PhoneConfirmedAtUtc { get; set; }
+
+        // ── Kayıt / aktivasyon ────────────────────────────────────────────────
+        /// <summary>Sisteme ilk kayıt anı (UTC).</summary>
+        public DateTime RegistrationDateUtc { get; set; } = DateTime.UtcNow;
+
+        /// <summary>Kayıt sırasındaki IP adresi (dolandırıcılık analizi ve KVKK kaydı için).</summary>
+        public string? RegistrationIpAddress { get; set; }
+
+        /// <summary>Kullanım koşulları ve gizlilik sözleşmesi kabul edildi mi?</summary>
+        public bool TermsAccepted { get; set; }
+
+        /// <summary>Sözleşmelerin kabul edildiği an (UTC) — yasal ispat için zorunlu.</summary>
+        public DateTime? TermsAcceptedAtUtc { get; set; }
+
+        /// <summary>Kabul edilen sözleşme sürümü (ör. "2026-01-tr"). Sürüm değişince yeniden onay istenir.</summary>
+        public string? TermsVersion { get; set; }
+
+        /// <summary>Kullanıcıyı davet eden/sponsor olan kullanıcı (Users.Id). Eski e-posta tabanlı alanın FK'li karşılığı.</summary>
+        public Guid? SponsorUserId { get; set; }
+
+        // ── Kurumsal / çalışan bağlamı (mevcut iş kuralı korunmuştur) ─────────
+        /// <summary>Kullanıcı bir iş istasyonu/çalışan grubuna bağlı mı? (grup kimliği).</summary>
+        public Guid? WorkstationEmployeeGroupId { get; set; }
+
+        /// <summary>Kullanıcı çalışan mı?</summary>
+        public bool IsEmployee { get; set; }
+
+        // ── Oturum izleri ─────────────────────────────────────────────────────
+        /// <summary>Son başarılı giriş anı (UTC).</summary>
+        public DateTime? LastLoginAtUtc { get; set; }
+
+        /// <summary>Son başarılı girişteki IP adresi.</summary>
+        public string? LastLoginIpAddress { get; set; }
+
+        /// <summary>
+        /// Son etkinlik anı (UTC) — "son görülme" gösteriminin kaynağıdır.
+        /// Gösterilip gösterilmeyeceğine <c>UserPrivacySettings.ShowLastSeen</c> karar verir.
+        /// </summary>
+        public DateTime? LastSeenAtUtc { get; set; }
+
+        /// <summary>
+        /// Hareketsizlik denetimi: oturumun otomatik sonlandırılacağı süre (saniye).
+        /// Null = sistem varsayılanı geçerlidir.
+        /// </summary>
+        public int? LogOutTimerSeconds { get; set; }
+
+        // ── Silme / anonimleştirme (KVKK/GDPR) ────────────────────────────────
+        /// <summary>Kullanıcının hesap silme talebini oluşturduğu an (UTC).</summary>
+        public DateTime? DeletionRequestedAtUtc { get; set; }
+
+        /// <summary>Yasal bekleme süresi sonrası verilerin anonimleştirileceği an (UTC).</summary>
+        public DateTime? ScheduledAnonymizationAtUtc { get; set; }
+
+        /// <summary>Kişisel veriler anonimleştirildi mi? true ise profil/adres alanları maskelenmiştir.</summary>
+        public bool IsAnonymized { get; set; }
     }
 }

@@ -95,6 +95,35 @@ namespace data._Notifications
         /// <summary>Bildirimin alıcısı (Users.Id).</summary>
         public Guid UserId { get; set; }
 
+        /// <summary>
+        /// AKTÖR — olayı gerçekleştiren kullanıcı (Users.Id). Sosyal bildirimlerde
+        /// (§34) ZORUNLUDUR: "Ahmet gönderini beğendi" cümlesindeki "Ahmet" budur.
+        /// Sistem üretimi bildirimlerde (sipariş durumu, kargo) null olur.
+        ///
+        /// Avatar ve ad, gösterim anında bu kimlikten çözülür; böylece kullanıcı
+        /// adını değiştirdiğinde eski bildirimler de güncel görünür.
+        /// </summary>
+        public Guid? ActorUserId { get; set; }
+
+        /// <summary>
+        /// AKTÖR — olayı gerçekleştiren mağaza (Store.Id). Mağaza gönderisi,
+        /// mağaza yanıtı ve kampanya bildirimlerinde doldurulur.
+        /// </summary>
+        public Guid? ActorStoreId { get; set; }
+
+        /// <summary>
+        /// Aynı hedefe gelen benzer bildirimlerin gruplanması için anahtar
+        /// ("post:{postId}:reaction"). Aynı anahtara sahip okunmamış bildirimler
+        /// vitrinde "Ahmet ve 12 kişi gönderini beğendi" biçiminde birleştirilir.
+        /// </summary>
+        public string? GroupKey { get; set; }
+
+        /// <summary>
+        /// Gruplanan bildirimdeki toplam aktör sayısı (§24 sayaç önbelleği mantığı).
+        /// 1 = tekil bildirim.
+        /// </summary>
+        public int ActorCount { get; set; } = 1;
+
         /// <summary>Bildirim tipi.</summary>
         public NotificationType NotificationType { get; set; }
 
@@ -152,6 +181,32 @@ namespace data._Notifications
 
         /// <summary>Kaynak: fiyat alarmı (Faz 3 PriceAlerts.Id).</summary>
         public Guid? PriceAlertId { get; set; }
+
+        // ---------------- SOSYAL KAYNAK REFERANSLARI (§34) ----------------
+
+        /// <summary>Kaynak: sosyal gönderi (Posts.Id).</summary>
+        public Guid? PostId { get; set; }
+
+        /// <summary>Kaynak: gönderi yorumu (PostComments.Id).</summary>
+        public Guid? PostCommentId { get; set; }
+
+        /// <summary>Kaynak: sohbet (ChatConversations.Id).</summary>
+        public Guid? ConversationId { get; set; }
+
+        /// <summary>Kaynak: sohbet mesajı (ChatMessages.Id).</summary>
+        public Guid? ChatMessageId { get; set; }
+
+        /// <summary>Kaynak: arkadaşlık ilişkisi (Friendships.Id).</summary>
+        public Guid? FriendshipId { get; set; }
+
+        /// <summary>Kaynak: ürün yorumu (ProductReviews.Id).</summary>
+        public Guid? ProductReviewId { get; set; }
+
+        /// <summary>Kaynak: ürün sorusu (ProductQuestions.Id).</summary>
+        public Guid? ProductQuestionId { get; set; }
+
+        /// <summary>Kaynak: içerik şikâyeti (ContentReports.Id).</summary>
+        public Guid? ContentReportId { get; set; }
 
         /// <summary>Genel amaçlı kaynak kimliği — yukarıdakilerin hiçbirine uymayan tipler için
         /// (iade talebi, ihtilaf, hakediş...). Tip bilgisi NotificationType'tan çıkarılır.</summary>

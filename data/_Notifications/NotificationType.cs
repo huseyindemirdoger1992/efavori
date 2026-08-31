@@ -67,7 +67,85 @@
         StoreAccountNotice = 17,
 
         /// <summary>Sistem duyurusu (bakım, kesinti).</summary>
-        SystemAnnouncement = 18
+        SystemAnnouncement = 18,
+
+        // ════════════════════════════════════════════════════════════════════
+        //  SOSYAL AĞ OLAYLARI (§34) — mevcut değerlerin ARDINA eklenmiştir.
+        //  Bu tiplerde ActorUserId / ActorStoreId alanları doldurulur
+        //  ("Ahmet gönderini beğendi" — aktör bildirimin ayrılmaz parçasıdır).
+        // ════════════════════════════════════════════════════════════════════
+
+        /// <summary>Yeni arkadaşlık isteği alındı.</summary>
+        FriendRequestReceived = 19,
+
+        /// <summary>Gönderilen arkadaşlık isteği kabul edildi.</summary>
+        FriendRequestAccepted = 20,
+
+        /// <summary>Yeni takipçi kazanıldı.</summary>
+        NewFollower = 21,
+
+        /// <summary>Gizli hesapta takip isteği onay bekliyor.</summary>
+        FollowRequestReceived = 22,
+
+        /// <summary>Takip isteği onaylandı.</summary>
+        FollowRequestApproved = 23,
+
+        /// <summary>Mağaza yeni bir takipçi kazandı (satıcıya).</summary>
+        StoreFollowed = 24,
+
+        /// <summary>Gönderiye tepki verildi (beğeni dâhil).</summary>
+        PostReactionReceived = 25,
+
+        /// <summary>Gönderiye yorum yapıldı.</summary>
+        PostCommentReceived = 26,
+
+        /// <summary>Yoruma yanıt verildi.</summary>
+        CommentReplyReceived = 27,
+
+        /// <summary>Yoruma tepki verildi.</summary>
+        CommentReactionReceived = 28,
+
+        /// <summary>Gönderi veya yorumda anıldın (@mention).</summary>
+        MentionReceived = 29,
+
+        /// <summary>Gönderi yeniden paylaşıldı (repost).</summary>
+        PostReposted = 30,
+
+        /// <summary>Gönderi paylaşıldı (share).</summary>
+        PostShared = 31,
+
+        /// <summary>Takip edilen kullanıcı veya mağaza yeni gönderi paylaştı.</summary>
+        FollowedActorPosted = 32,
+
+        /// <summary>Gönderi veya yorumda ürün etiketlendi.</summary>
+        ProductTaggedInPost = 33,
+
+        /// <summary>Yeni sohbet mesajı alındı.</summary>
+        MessageReceived = 34,
+
+        /// <summary>Ürün favorilendi (satıcıya).</summary>
+        ProductFavorited = 35,
+
+        /// <summary>Ürün sorusuna cevap verildi (soruyu sorana).</summary>
+        ProductQuestionAnswered = 36,
+
+        /// <summary>Ürün yorumuna satıcı yanıtı verildi (yorumu yazana).</summary>
+        ProductReviewResponded = 37,
+
+        /// <summary>Ürüne yeni yorum yapıldı (satıcıya).</summary>
+        NewProductReview = 38,
+
+        /// <summary>İçerik şikâyeti sonuçlandı (şikâyet edene).</summary>
+        ContentReportResolved = 39,
+
+        /// <summary>İçerik moderasyon tarafından kaldırıldı (yazarına).</summary>
+        ContentRemovedByModeration = 40,
+
+        /// <summary>İstek listesindeki ürün için hediye alındı.</summary>
+        WishlistItemPurchased = 41,
+
+        /// <summary>Mağaza doğrulama belgesinin süresi dolmak üzere (satıcıya).</summary>
+        StoreDocumentExpiring = 42
     }
 
     /// <summary>

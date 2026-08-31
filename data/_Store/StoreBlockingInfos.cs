@@ -1,21 +1,46 @@
-﻿using data.Owned;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace data._Store
 {
-    public class StoreBlockingInfos
+    /// <summary>
+    /// MAĞAZA ENGELLEME / ONAYLANMAMA KAYDI — yönetim kararlarının denetim izi.
+    ///
+    /// Mağazanın anlık durumu <c>Store.Status</c> alanındadır; bu tablo o duruma
+    /// GİDEN KARARLARIN geçmişini tutar: ne zaman, hangi yönetici, hangi gerekçeyle
+    /// askıya aldı ve sorun ne zaman çözüldü.
+    ///
+    /// Ortak <see cref="StoreEntityBase"/> desenine taşınmıştır (audit + rowversion).
+    /// </summary>
+    public class StoreBlockingInfos : StoreEntityBase
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid? UserId { get; set; } // Mağazayı açan kullanıcı (satıcı) ID'si
-        public Guid? AdminId { get; set; } // Onay işlemini yürüten yönetici ID'si
-        public Guid StoreId { get; set; } // Hangi mağazanın engellendiği/onaylanmadığı ID bilgisi
+        /// <summary>Karara konu olan mağaza (Store.Id).</summary>
+        public Guid StoreId { get; set; }
 
-        public string BlockInfoDescription { get; set; } // Engelleme veya onaylanmama nedeni açıklaması
+        /// <summary>Mağazanın sahibi olan satıcı (Users.Id) — denormalize iz.</summary>
+        public Guid? OwnerUserId { get; set; }
 
-        public bool IsSucces { get; set; } // Engelleme veya onaylanmama sebebinin çözülüp çözülmediği bilgisi
-        public DateTime AtDateTime { get; set; } // Engelleme veya onaylanmama işleminin gerçekleştiği tarih ve saat bilgisi
-        public IsDeleted? IsDeleted { get; set; } = new();
+        /// <summary>Kararı veren yönetici (Users.Id).</summary>
+        public Guid? AdminUserId { get; set; }
+
+        /// <summary>Engelleme/onaylamama gerekçesinin açıklaması.</summary>
+        public string BlockInfoDescription { get; set; } = string.Empty;
+
+        /// <summary>Satıcının uygulaması gereken düzeltme adımı.</summary>
+        public string? RequiredAction { get; set; }
+
+        /// <summary>Sorun çözüldü mü?</summary>
+        public bool IsResolved { get; set; }
+
+        /// <summary>Sorunun çözüldüğü an (UTC).</summary>
+        public DateTime? ResolvedAtUtc { get; set; }
+
+        /// <summary>Çözümü onaylayan yönetici (Users.Id).</summary>
+        public Guid? ResolvedByUserId { get; set; }
+
+        /// <summary>Kararın uygulandığı an (UTC).</summary>
+        public DateTime OccurredAtUtc { get; set; } = DateTime.UtcNow;
+
+        /// <summary>Askıya almanın kendiliğinden biteceği an (UTC). Null = süresiz.</summary>
+        public DateTime? EffectiveUntilUtc { get; set; }
     }
 }

@@ -1,168 +1,206 @@
-﻿using data.Owned;
-using System.ComponentModel.DataAnnotations;
+using System;
+using data.Owned;
 
 namespace data._Galleries
 {
     /// <summary>
-    /// Sistemdeki fiziksel veya harici medya kaynağının teknik, depolama, işleme ve dosya meta verilerini tutar.
+    /// MERKEZÎ MEDYA ASSET'İ (§14, §72) — platformdaki TEK fiziksel medya deposu.
+    ///
+    /// KESİN MİMARİ KURAL:
+    /// Görsel, video, ses ve dosya asset'i YALNIZCA bu tabloda tutulur. Product, Post,
+    /// Review, User, Store, Chat, Notification gibi domainler KENDİ fiziksel medya
+    /// kolonlarını (ImageUrl, CoverImage, ProfileImagePath...) AÇMAZ. Bu domainler
+    /// medyaya yalnızca <c>MediaId</c> ile referans verir; kullanım/sunum bilgisi
+    /// <see cref="MediaItems"/> veya domaine özel ilişki tablolarında
+    /// (PostMedia, ProductReviewMedia, ChatMessageMedia, StoreDocuments) durur.
+    ///
+    /// Bu sayede aynı asset — tek bir fiziksel dosya — profil fotoğrafı, ürün görseli,
+    /// gönderi görseli, yorum eki ve mağaza banner'ı olarak aynı anda kullanılabilir;
+    /// depolama tekrarı ve tutarsız URL'ler ortadan kalkar.
+    ///
+    /// Bu sürümde (V2) değişenler:
+    ///  • <c>MediaType</c> ve <c>ProcessingStatus</c> string'den ENUM'a çevrildi.
+    ///  • <c>IsPublic</c> boolean'ı <see cref="MediaVisibility"/> enum'ına dönüştü.
+    ///  • Denetim (audit), eşzamanlılık (RowVersion) ve güvenlik taraması alanları eklendi.
     /// </summary>
     public class Media
     {
-        // Medyanın benzersiz kimliğidir.
-        [Key]
+        /// <summary>Medyanın benzersiz kimliği.</summary>
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        // Medyayı sisteme yükleyen veya oluşturan kullanıcıyı belirtir.
+        /// <summary>Medyayı sisteme yükleyen kullanıcı (Users.Id).</summary>
         public Guid? UserId { get; set; }
 
-        // Medyanın insan tarafından görülen orijinal dosya adıdır.
-        [MaxLength(512)]
+        /// <summary>Asset'in ait olduğu mağaza (Store.Id) — satıcı medya kütüphanesi ve kota denetimi için.</summary>
+        public Guid? OwnerStoreId { get; set; }
+
+        // ── Dosya kimliği ─────────────────────────────────────────────────────
+        /// <summary>Kullanıcının yüklediği orijinal dosya adı.</summary>
         public string? FileName { get; set; }
 
-        // Medyanın depolama sisteminde kullanılan benzersiz fiziksel dosya adıdır.
-        [MaxLength(512)]
+        /// <summary>Depolama sisteminde kullanılan benzersiz fiziksel dosya adı.</summary>
         public string? FileStoredName { get; set; }
 
-        // Medyanın genel türünü belirtir ve Image, Video, Audio, Document, File veya VideoEmbed gibi değerler içerebilir.
-        [MaxLength(50)]
-        public string? MediaType { get; set; }
+        /// <summary>Medyanın genel türü.</summary>
+        public MediaAssetType MediaType { get; set; } = MediaAssetType.Image;
 
-        // Medyanın MIME içerik türünü belirtir ve image/jpeg, video/mp4 veya application/pdf gibi değerler taşıyabilir.
-        [MaxLength(255)]
+        /// <summary>MIME içerik türü ("image/jpeg", "video/mp4", "application/pdf").</summary>
         public string? ContentType { get; set; }
 
-        // Medyanın dosya uzantısını belirtir ve jpg, png, mp4 veya pdf gibi değerler taşıyabilir.
-        [MaxLength(20)]
+        /// <summary>Dosya uzantısı ("jpg", "png", "mp4", "pdf") — noktasız ve küçük harf.</summary>
         public string? FileExtensionType { get; set; }
 
-        // Medyanın depolandığı servis veya altyapının adını belirtir.
-        [MaxLength(100)]
+        // ── Depolama ──────────────────────────────────────────────────────────
+        /// <summary>Depolama sağlayıcısı ("Local", "AzureBlob", "S3", "Cloudflare R2").</summary>
         public string? StorageProvider { get; set; }
 
-        // Medyanın depolandığı bucket, container veya storage alanını belirtir.
-        [MaxLength(255)]
+        /// <summary>Bucket / container / storage alanı adı.</summary>
         public string? StorageBucket { get; set; }
 
-        // Medyanın depolama sistemindeki benzersiz anahtarını belirtir.
-        [MaxLength(1024)]
+        /// <summary>Depolama sistemindeki benzersiz nesne anahtarı.</summary>
         public string? StorageKey { get; set; }
 
-        // Medyanın optimize edilmiş veya aktif olarak kullanılan public URL adresini belirtir.
-        [MaxLength(2048)]
+        /// <summary>Aktif olarak kullanılan (optimize edilmiş) public URL.</summary>
         public string? FileUrl { get; set; }
 
-        // Medyanın orijinal ve değiştirilmemiş public URL adresini belirtir.
-        [MaxLength(2048)]
+        /// <summary>Orijinal, değiştirilmemiş dosyanın public URL'i.</summary>
         public string? OrjFileUrl { get; set; }
 
-        // Medyanın sunucu veya fiziksel depolama üzerindeki aktif yolunu belirtir.
-        [MaxLength(2048)]
+        /// <summary>Sunucu üzerindeki aktif fiziksel yol.</summary>
         public string? FilePhysicalPathRoad { get; set; }
 
-        // Medyanın orijinal ve değiştirilmemiş fiziksel depolama yolunu belirtir.
-        [MaxLength(2048)]
+        /// <summary>Orijinal dosyanın fiziksel yolu.</summary>
         public string? OrjFilePhysicalPathRoad { get; set; }
 
-        // Medyanın yarı boyutlu optimize edilmiş sürümünün URL adresini belirtir.
-        [MaxLength(2048)]
+        // ── Türevler (rendition) ──────────────────────────────────────────────
+        /// <summary>1/2 ölçekli türev URL'i.</summary>
         public string? FileUrl_Ratio_1_2 { get; set; }
 
-        // Medyanın dörtte bir boyutlu optimize edilmiş sürümünün URL adresini belirtir.
-        [MaxLength(2048)]
+        /// <summary>1/4 ölçekli türev URL'i.</summary>
         public string? FileUrl_Ratio_1_4 { get; set; }
 
-        // Medyanın sekizde bir boyutlu optimize edilmiş sürümünün URL adresini belirtir.
-        [MaxLength(2048)]
+        /// <summary>1/8 ölçekli türev URL'i.</summary>
         public string? FileUrl_Ratio_1_8 { get; set; }
 
-        // Medyanın on altıda bir boyutlu optimize edilmiş sürümünün URL adresini belirtir.
-        [MaxLength(2048)]
+        /// <summary>1/16 ölçekli türev URL'i.</summary>
         public string? FileUrl_Ratio_1_16 { get; set; }
 
-        // İleride yeni boyutlar eklendiğinde migration gerektirmeden kullanılabilecek ek medya sürümlerinin JSON bilgisini tutar.
+        /// <summary>
+        /// Ek türevler (JSON). JSON KULLANIMI BURADA MEŞRUDUR (§46): şema değiştirmeden
+        /// yeni boyut/format (avif, webp, hls) eklenebilmesi gereken esnek meta veridir,
+        /// ilişkisel veri değildir.
+        /// </summary>
         public string? RenditionsJson { get; set; }
 
-        // Medyanın orijinal dosya boyutunu byte cinsinden belirtir.
+        // ── Boyut ve bütünlük ─────────────────────────────────────────────────
+        /// <summary>Orijinal dosya boyutu (byte).</summary>
         public long? OriginalSize { get; set; }
 
-        // Medyanın aktif olarak kullanılan sıkıştırılmış veya optimize edilmiş dosya boyutunu byte cinsinden belirtir.
+        /// <summary>Optimize edilmiş dosya boyutu (byte).</summary>
         public long? CompressedSize { get; set; }
 
-        // Medyanın değişmediğini doğrulamak ve aynı dosyanın tekrar yüklenmesini tespit etmek için kullanılan SHA-256 özetidir.
-        [MaxLength(64)]
+        /// <summary>SHA-256 özeti — aynı dosyanın tekrar yüklenmesini tespit eder (dedup).</summary>
         public string? Sha256 { get; set; }
 
-        // Medyanın depolama katmanındaki ETag veya benzeri bütünlük bilgisini tutar.
-        [MaxLength(255)]
+        /// <summary>Depolama katmanının ETag/bütünlük bilgisi.</summary>
         public string? ETag { get; set; }
 
-        // Görsel veya videonun yatay piksel genişliğini belirtir.
+        // ── Görsel / video teknik meta verisi ─────────────────────────────────
+        /// <summary>Piksel genişliği.</summary>
         public int? Width { get; set; }
 
-        // Görsel veya videonun dikey piksel yüksekliğini belirtir.
+        /// <summary>Piksel yüksekliği.</summary>
         public int? Height { get; set; }
 
-        // Video veya ses medyasının toplam süresini milisaniye cinsinden belirtir.
+        /// <summary>Süre (milisaniye) — video/ses için.</summary>
         public long? DurationMs { get; set; }
 
-        // Video medyasının saniyedeki kare sayısını belirtir.
+        /// <summary>Kare hızı (fps).</summary>
         public decimal? FrameRate { get; set; }
 
-        // Video veya ses medyasının bitrate değerini bit/saniye cinsinden belirtir.
+        /// <summary>Bit hızı (bit/saniye).</summary>
         public long? Bitrate { get; set; }
 
-        // Video dosyasının kullandığı codec bilgisini belirtir.
-        [MaxLength(100)]
+        /// <summary>Codec bilgisi ("h264", "vp9", "aac").</summary>
         public string? Codec { get; set; }
 
-        // Çok sayfalı dokümanlarda toplam sayfa sayısını belirtir.
+        /// <summary>Sayfa sayısı — çok sayfalı belgeler için.</summary>
         public int? PageCount { get; set; }
 
-        // Görselin şeffaf kanal içerip içermediğini belirtir.
+        /// <summary>Görselde şeffaflık kanalı var mı?</summary>
         public bool? HasAlpha { get; set; }
 
-        // Görselin EXIF veya işleme sonucunda belirlenen yön bilgisini tutar.
+        /// <summary>EXIF yön bilgisi.</summary>
         public short? Orientation { get; set; }
 
-        // Görselin düşük çözünürlüklü placeholder veya BlurHash benzeri önizleme bilgisini tutar.
-        [MaxLength(512)]
+        /// <summary>BlurHash / düşük çözünürlüklü placeholder verisi.</summary>
         public string? BlurHash { get; set; }
 
-        // Görselin baskın renk bilgisini tutar ve hızlı placeholder veya tasarım işlemlerinde kullanılabilir.
-        [MaxLength(32)]
+        /// <summary>Baskın renk (hex) — placeholder ve tema uyumu için.</summary>
         public string? DominantColor { get; set; }
 
-        // Video, YouTube, Vimeo veya başka harici medya sağlayıcılarının URL adresini tutar.
-        [MaxLength(2048)]
+        // ── Harici sağlayıcı ──────────────────────────────────────────────────
+        /// <summary>Harici medya URL'i (YouTube, Vimeo). MediaType = VideoEmbed iken dolu.</summary>
         public string? ExternalUrl { get; set; }
 
-        // Harici medya sağlayıcısının adını belirtir ve YouTube, Vimeo veya TikTok gibi değerler içerebilir.
-        [MaxLength(100)]
+        /// <summary>Harici sağlayıcı adı ("YouTube", "Vimeo", "TikTok").</summary>
         public string? ExternalProvider { get; set; }
 
-        // Medyanın işleme durumunu belirtir ve Pending, Processing, Ready veya Failed gibi değerler içerebilir.
-        [MaxLength(50)]
-        public string? ProcessingStatus { get; set; }
+        /// <summary>Harici sağlayıcıdaki video kimliği.</summary>
+        public string? ExternalVideoId { get; set; }
 
-        // Medya işleme başarısız olduğunda alınan hata mesajını tutar.
+        // ── İşleme durumu ─────────────────────────────────────────────────────
+        /// <summary>Arka plan işleme durumu.</summary>
+        public MediaProcessingStatus ProcessingStatus { get; set; } = MediaProcessingStatus.Pending;
+
+        /// <summary>İşleme başarısız olduysa hata mesajı.</summary>
         public string? ProcessingError { get; set; }
 
-        // Medyanın AI veya otomatik içerik işleme süreçlerinden geçirilip geçirilmediğini belirtir.
-        public bool? AiAvif { get; set; }
-
-        // Medyanın kullanıcı tarafından erişilebilir ve gösterilebilir durumda olup olmadığını belirtir.
-        public bool IsPublic { get; set; } = true;
-
-        // Medyanın oluşturulma tarihini UTC olarak belirtir.
-        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
-
-        // Medyanın son teknik olarak güncellendiği tarihi UTC olarak belirtir.
-        public DateTime? UpdatedAt { get; set; }
-
-        // Medyanın işleme sürecinin tamamlandığı tarihi UTC olarak belirtir.
+        /// <summary>İşlemenin tamamlandığı an (UTC).</summary>
         public DateTime? ProcessedAt { get; set; }
 
-        // Medyanın silinme durumunu ve soft-delete bilgilerini tutar.
-        public IsDeleted? IsDeleted { get; set; } = new();
+        /// <summary>Otomatik/AI içerik işlemesinden geçirildi mi? (etiketleme, alt metin üretimi)</summary>
+        public bool AiProcessed { get; set; }
+
+        // ── Güvenlik (§61) ────────────────────────────────────────────────────
+        /// <summary>Erişim düzeyi. Belgeler ve faturalar ASLA Public olmamalıdır.</summary>
+        public MediaVisibility Visibility { get; set; } = MediaVisibility.Public;
+
+        /// <summary>Zararlı yazılım taramasından geçti mi?</summary>
+        public bool IsVirusScanned { get; set; }
+
+        /// <summary>Taramanın yapıldığı an (UTC).</summary>
+        public DateTime? VirusScannedAtUtc { get; set; }
+
+        /// <summary>Otomatik içerik denetiminde uygunsuz bulundu mu? (NSFW/şiddet)</summary>
+        public bool IsFlaggedByModeration { get; set; }
+
+        /// <summary>Moderasyon puanı (0.00–1.00) — otomatik içerik denetimi skoru.</summary>
+        public decimal? ModerationScore { get; set; }
+
+        // ── Denetim ───────────────────────────────────────────────────────────
+        /// <summary>Oluşturulma anı (UTC).</summary>
+        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+        /// <summary>Kaydı oluşturan kullanıcı (Users.Id).</summary>
+        public Guid? CreatedByUserId { get; set; }
+
+        /// <summary>Son güncelleme anı (UTC).</summary>
+        public DateTime? UpdatedAtUtc { get; set; }
+
+        /// <summary>Son güncelleyen kullanıcı (Users.Id).</summary>
+        public Guid? UpdatedByUserId { get; set; }
+
+        /// <summary>
+        /// Bu asset'in kaç yerde kullanıldığı (önbellek). Kaynak: <see cref="MediaItems"/>
+        /// ve domaine özel medya tabloları. 0 ise fiziksel dosya güvenle temizlenebilir.
+        /// </summary>
+        public int UsageCount { get; set; }
+
+        /// <summary>Soft delete durumu. Fiziksel dosya, kullanım sayısı 0 olunca temizlenir.</summary>
+        public IsDeleted IsDeleted { get; set; } = new();
+
+        /// <summary>İyimser eşzamanlılık belirteci (SQL Server rowversion).</summary>
+        public byte[]? RowVersion { get; set; }
     }
 }

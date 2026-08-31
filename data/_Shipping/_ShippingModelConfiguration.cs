@@ -86,12 +86,11 @@ namespace data._Shipping
             // =====================================================================
             // ShippingZoneAreas — bölge kapsam satırları
             //
-            // DİKKAT — data._Locations altındaki Regions / Country / States / Cities
-            // tablolarının PK'leri int'tir (int id). Aşağıdaki dört FK'nin kurulabilmesi için
-            // ShippingZoneAreas.RegionId / CountryId / StateId / CityId tiplerinin 'int?'
-            // olması gerekir. Guid? kaldıkları sürece EF model kurulumunda tip uyuşmazlığı
-            // hatası alınır. Lokasyon tablolarına FK istenmiyorsa bu dört HasOne satırı
-            // silinip alanlar iz alanı olarak bırakılabilir (indeksler çalışmaya devam eder).
+            // ÇÖZÜLDÜ — data._Locations altındaki Regions / Country / States / Cities
+            // tablolarının PK'leri int'tir (int id). ShippingZoneAreas.RegionId /
+            // CountryId / StateId / CityId alanları bu sürümde Guid? tipinden int?
+            // tipine ÇEVRİLMİŞTİR; aşağıdaki dört FK artık tip uyumludur ve modül
+            // DbContext'e güvenle bağlanabilir.
             // =====================================================================
             modelBuilder.Entity<ShippingZoneAreas>(e =>
             {

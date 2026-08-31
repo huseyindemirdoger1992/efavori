@@ -74,19 +74,19 @@ namespace data._Orders
         public string ShippingCountryName { get; set; } = string.Empty;
 
         /// <summary>Teslimat: ülke izi (Country.Id).</summary>
-        public Guid? ShippingCountryId { get; set; }
+        public int? ShippingCountryId { get; set; }
 
         /// <summary>Teslimat: il adı (metin snapshot). İz için ShippingStateId.</summary>
         public string? ShippingStateName { get; set; }
 
         /// <summary>Teslimat: il izi (States.Id).</summary>
-        public Guid? ShippingStateId { get; set; }
+        public int? ShippingStateId { get; set; }
 
         /// <summary>Teslimat: ilçe/şehir adı (metin snapshot). İz için ShippingCityId.</summary>
         public string? ShippingCityName { get; set; }
 
         /// <summary>Teslimat: ilçe/şehir izi (Cities.Id).</summary>
-        public Guid? ShippingCityId { get; set; }
+        public int? ShippingCityId { get; set; }
 
         /// <summary>Teslimat: açık adres satırı.</summary>
         public string ShippingAddressLine { get; set; } = string.Empty;

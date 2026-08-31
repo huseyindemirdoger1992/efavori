@@ -11,7 +11,7 @@ namespace data._Payments
     public static class _PaymentModelConfiguration
     {
         /// <summary>Soft-delete filtreli tekil indeks sabiti (mevcut _ProductModelConfiguration'daki sabitle aynı tutulmalıdır).</summary>
-        private const string SoftDeleteFilter = "[IsDeleted_Value] = 0";
+        private const string SoftDeleteFilter = "[IsDeleted_IsDeletedStatu] = 0";
 
         public static void Apply(ModelBuilder modelBuilder)
         {

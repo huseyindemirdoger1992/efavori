@@ -197,7 +197,12 @@ namespace data._Returns
         public Guid? CategoryId { get; set; }
 
         /// <summary>Kapsam: ülke (Country.Id). Yasal asgari süreler için. Null = tüm ülkeler.</summary>
-        public Guid? CountryId { get; set; }
+        // DÜZELTME: data._Locations.Country tablosunun birincil anahtarı INT'tir
+        // (int id). Bu alan önceden Guid? tipindeydi ve _ReturnModelConfiguration
+        // içindeki HasForeignKey çağrısıyla TİP UYUŞMAZLIĞI oluşturuyordu; iade
+        // modülü yapılandırması DbContext'e bağlandığı anda model kurulumu hata
+        // verirdi. Tip int? olarak düzeltilmiştir.
+        public int? CountryId { get; set; }
 
         /// <summary>İade hakkı süresi (gün). Teslim tarihinden itibaren sayılır.
         /// 0 = iade kabul edilmez (gıda, hijyen, kişiye özel üretim).</summary>

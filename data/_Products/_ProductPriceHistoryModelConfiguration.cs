@@ -101,7 +101,7 @@ namespace data._Products
                 e.HasOne(typeof(data._Users.Users)).WithMany().HasForeignKey(nameof(PriceAlerts.UserId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(Products)).WithMany().HasForeignKey(nameof(PriceAlerts.ProductId)).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(typeof(ProductVariants)).WithMany().HasForeignKey(nameof(PriceAlerts.VariantId)).OnDelete(DeleteBehavior.Restrict);
-                e.HasOne(typeof(data._Carts.CartsFavorite)).WithMany().HasForeignKey(nameof(PriceAlerts.CartsFavoriteId)).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(typeof(ProductFavorites)).WithMany().HasForeignKey(nameof(PriceAlerts.ProductFavoriteId)).OnDelete(DeleteBehavior.NoAction);
                 // NotificationId: Faz 6 tablosu henüz yok — iz alanı; FK Faz 6 konfigürasyonunda tanımlanacak.
 
                 // Aynı kullanıcı aynı varyant için tek AKTİF alarm kurabilir.

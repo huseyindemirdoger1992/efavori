@@ -83,16 +83,35 @@ namespace data._Products
                 b.Property(x => x.Title).HasMaxLength(512);
                 b.Property(x => x.Body).HasMaxLength(8000).IsRequired();
                 b.Property(x => x.ModerationNote).HasMaxLength(2048);
-                // MediaIdsJson → nvarchar(max) (varsayılan)
+                // NOT (§26): Eski MediaIdsJson alanı KALDIRILMIŞTIR. Yorum medyası
+                // artık gerçek FK'li ProductReviewMedia tablosundadır ve
+                // _ProductSocialModelConfiguration içinde yapılandırılır.
 
                 // Ürün sayfası yorum listeleme + moderasyon kuyruğu ana indeksleri
                 b.HasIndex(x => new { x.ProductId, x.Status, x.ParentReviewId });
                 b.HasIndex(x => x.UserId);
                 b.HasIndex(x => x.ParentReviewId);
                 b.HasIndex(x => x.Status);
-                // "Bir kullanıcı bir ürüne bir kök yorum" kuralı uygulama katmanında
-                // doğrulanır (yanıtlar hariç tutulacağı için filtreli tekil indeks
-                // yerine bilinçli olarak uygulama kontrolü tercih edildi).
+                // Ürün detayında "en yeni yorumlar" sıralaması (§41).
+                b.HasIndex(x => new { x.ProductId, x.CreatedAtUtc });
+                // "Fotoğraflı yorumlar" filtresi — artık JSON taraması gerekmez.
+                b.HasIndex(x => new { x.ProductId, x.MediaCount });
+                // Doğrulanmış alıcı yorumları filtresi.
+                b.HasIndex(x => new { x.ProductId, x.IsVerifiedPurchase, x.Status });
+                // Satıcı paneli: "yanıtlanmamış yorumlarım".
+                b.HasIndex(x => new { x.StoreId, x.HasSellerResponse, x.CreatedAtUtc });
+                // Mağaza puanı hesabı.
+                b.HasIndex(x => new { x.StoreId, x.Status, x.Rating });
+                // Sipariş kaleminden yoruma geçiş ("bu ürünü değerlendir" bağlantısı).
+                b.HasIndex(x => x.OrderItemId);
+
+                // BİR KULLANICI BİR ÜRÜNE TEK KÖK YORUM.
+                // Yanıtlar (ParentReviewId dolu) hariç tutulacağı için filtreli
+                // tekil indeks kullanılır; kural artık veritabanı seviyesindedir.
+                b.HasIndex(x => new { x.ProductId, x.UserId })
+                    .IsUnique()
+                    .HasDatabaseName("UX_ProductReviews_RootPerUserProduct")
+                    .HasFilter("[ParentReviewId] IS NULL AND [IsDeleted_IsDeletedStatu] = 0");
 
                 b.HasOne(typeof(Products)).WithMany()
                     .HasForeignKey(nameof(ProductReviews.ProductId))
@@ -107,6 +126,27 @@ namespace data._Products
                 // Ağaç kendine referans → döngü/çoklu-yol hatasını önlemek için NoAction.
                 b.HasOne(typeof(ProductReviews)).WithMany()
                     .HasForeignKey(nameof(ProductReviews.ParentReviewId))
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ── Yeni ilişkiler (§27, §59) ─────────────────────────────────
+                // Mağaza izi — mağaza puanı ve satıcı paneli için.
+                b.HasOne(typeof(data._Store.Store)).WithMany()
+                    .HasForeignKey(nameof(ProductReviews.StoreId))
+                    .OnDelete(DeleteBehavior.NoAction);
+                // Yanıtı yazan mağaza.
+                b.HasOne(typeof(data._Store.Store)).WithMany()
+                    .HasForeignKey(nameof(ProductReviews.ResponderStoreId))
+                    .OnDelete(DeleteBehavior.NoAction);
+                // DOĞRULANMIŞ SATIN ALMANIN KANITI: sipariş kalemi referansı.
+                // Sipariş geçmişi ticari kayıttır; asla cascade ile silinmez.
+                b.HasOne(typeof(data._Orders.OrderItems)).WithMany()
+                    .HasForeignKey(nameof(ProductReviews.OrderItemId))
+                    .OnDelete(DeleteBehavior.NoAction);
+                b.HasOne(typeof(data._Orders.SubOrders)).WithMany()
+                    .HasForeignKey(nameof(ProductReviews.SubOrderId))
+                    .OnDelete(DeleteBehavior.NoAction);
+                b.HasOne(typeof(Users)).WithMany()
+                    .HasForeignKey(nameof(ProductReviews.ModeratedByUserId))
                     .OnDelete(DeleteBehavior.NoAction);
             });
 

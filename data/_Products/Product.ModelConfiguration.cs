@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using data.Owned;
 using data._Attribute;
 using data._Categories;
-using data._Galleries;
 using data._Store;
 using data._Users;
 
@@ -32,8 +31,12 @@ namespace data._Products
             ApplyAttributeValues(modelBuilder);
             ApplyPrices(modelBuilder);
 
-            // Ürünler artık ProductMedia kullanmaz; ortak medya sistemi kullanılır.
-            ApplyMedia(modelBuilder);
+            // MEDYA: Media ve MediaItems yapılandırması bu dosyadan ÇIKARILMIŞTIR.
+            // Merkezî medya sistemi artık kendi modülünde yapılandırılır:
+            //     data._Galleries._MediaModelConfiguration.Apply(modelBuilder);
+            // Bu çağrı _ApplicationConnectionDb.OnModelCreating içinde ve bu
+            // yapılandırmadan ÖNCE yapılır. Ürün sistemi medyaya yalnızca
+            // MediaItems (ItemType = Product / ProductVariant) üzerinden bağlanır.
 
             ApplyBaseConventions(modelBuilder);
         }
@@ -443,185 +446,5 @@ namespace data._Products
             });
         }
 
-        /// <summary>
-        /// Ortak medya sisteminin Media ve MediaItems entity'lerini ürün sistemiyle uyumlu şekilde yapılandırır.
-        /// </summary>
-        private static void ApplyMedia(ModelBuilder modelBuilder)
-        {
-            // ================================================================
-            // Media
-            // Dosyanın fiziksel veya harici medya kaydıdır.
-            // ================================================================
-            modelBuilder.Entity<Media>(b =>
-            {
-                b.HasKey(x => x.Id);
-
-                b.Property(x => x.FileName)
-                    .HasMaxLength(512);
-
-                b.Property(x => x.FileStoredName)
-                    .HasMaxLength(512);
-
-                b.Property(x => x.MediaType)
-                    .HasMaxLength(50);
-
-                b.Property(x => x.ContentType)
-                    .HasMaxLength(255);
-
-                b.Property(x => x.FileExtensionType)
-                    .HasMaxLength(20);
-
-                b.Property(x => x.StorageProvider)
-                    .HasMaxLength(100);
-
-                b.Property(x => x.StorageBucket)
-                    .HasMaxLength(255);
-
-                b.Property(x => x.StorageKey)
-                    .HasMaxLength(1024);
-
-                b.Property(x => x.FileUrl)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.OrjFileUrl)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.FilePhysicalPathRoad)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.OrjFilePhysicalPathRoad)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.FileUrl_Ratio_1_2)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.FileUrl_Ratio_1_4)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.FileUrl_Ratio_1_8)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.FileUrl_Ratio_1_16)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.Sha256)
-                    .HasMaxLength(64);
-
-                b.Property(x => x.ETag)
-                    .HasMaxLength(255);
-
-                b.Property(x => x.BlurHash)
-                    .HasMaxLength(512);
-
-                b.Property(x => x.DominantColor)
-                    .HasMaxLength(32);
-
-                b.Property(x => x.ExternalUrl)
-                    .HasMaxLength(2048);
-
-                b.Property(x => x.ExternalProvider)
-                    .HasMaxLength(100);
-
-                b.Property(x => x.ProcessingStatus)
-                    .HasMaxLength(50);
-
-                // Aynı içeriğin tekrar yüklenmesini hızlı tespit etmek için.
-                b.HasIndex(x => x.Sha256);
-
-                // Kullanıcının kendi medya kütüphanesini hızlı getirmek için.
-                b.HasIndex(x => x.UserId);
-
-                // İşleme kuyruğu için.
-                b.HasIndex(x => x.ProcessingStatus);
-
-                // Medya türüne göre filtreleme için.
-                b.HasIndex(x => x.MediaType);
-
-                // Son oluşturulan medyaları hızlı almak için.
-                b.HasIndex(x => x.CreatedAt);
-
-                // Medyanın sahibi kullanıcıdır; kullanıcı silindiğinde medya zorunlu
-                // olarak fiziksel olarak silinmemelidir.
-                b.HasOne(typeof(Users))
-                    .WithMany()
-                    .HasForeignKey(nameof(Media.UserId))
-                    .OnDelete(DeleteBehavior.NoAction);
-            });
-
-            // ================================================================
-            // MediaItems
-            // Medyanın hangi entity içerisinde ve hangi amaçla kullanıldığını tutar.
-            // ================================================================
-            modelBuilder.Entity<MediaItems>(b =>
-            {
-                b.HasKey(x => x.Id);
-
-                b.Property(x => x.ItemType)
-                    .HasMaxLength(100)
-                    .IsRequired();
-
-                b.Property(x => x.MediaRole)
-                    .HasMaxLength(50);
-
-                b.Property(x => x.AltText)
-                    .HasMaxLength(1000);
-
-                b.Property(x => x.Caption)
-                    .HasMaxLength(4000);
-
-                b.Property(x => x.Title)
-                    .HasMaxLength(500);
-
-                b.Property(x => x.LinkUrl)
-                    .HasMaxLength(2048);
-
-                // Ürün medya galerisi sorgusu.
-                b.HasIndex(x => new
-                {
-                    x.ItemType,
-                    x.ItemId,
-                    x.SortOrder
-                });
-
-                // Ürün/varyant/profil/gönderi gibi entity bazında medya sorguları.
-                b.HasIndex(x => new
-                {
-                    x.ItemType,
-                    x.ItemId
-                });
-
-                // Belirli bir medya kaydının nerelerde kullanıldığını hızlı bulmak için.
-                b.HasIndex(x => x.MediaId);
-
-                // Kullanıcı medya sorguları.
-                b.HasIndex(x => x.UserId);
-
-                // Primary medya sorguları.
-                b.HasIndex(x => new
-                {
-                    x.ItemType,
-                    x.ItemId,
-                    x.IsPrimary
-                });
-
-                // Aynı medya aynı entity'ye aynı rol ile ikinci kez bağlanmasın.
-                b.HasIndex(x => new
-                {
-                    x.ItemType,
-                    x.ItemId,
-                    x.MediaId,
-                    x.MediaRole
-                })
-                .IsUnique()
-                .HasFilter(SoftDeleteFilter);
-
-                // MediaItems → Media
-                // Media silindiğinde ilişkisel kayıt otomatik silinmez.
-                b.HasOne(typeof(Media))
-                    .WithMany()
-                    .HasForeignKey(nameof(MediaItems.MediaId))
-                    .OnDelete(DeleteBehavior.NoAction);
-            });
-        }
     }
 }

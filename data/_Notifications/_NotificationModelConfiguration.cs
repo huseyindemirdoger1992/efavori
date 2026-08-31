@@ -10,7 +10,7 @@ namespace data._Notifications
     public static class _NotificationModelConfiguration
     {
         /// <summary>Soft-delete filtreli tekil indeks sabiti (mevcut _ProductModelConfiguration'daki sabitle aynı tutulmalıdır).</summary>
-        private const string SoftDeleteFilter = "[IsDeleted_Value] = 0";
+        private const string SoftDeleteFilter = "[IsDeleted_IsDeletedStatu] = 0";
 
         public static void Apply(ModelBuilder modelBuilder)
         {
@@ -79,6 +79,34 @@ namespace data._Notifications
                 e.HasOne(typeof(data._Products.PriceAlerts)).WithMany().HasForeignKey(nameof(Notifications.PriceAlertId)).OnDelete(DeleteBehavior.Restrict);
                 // ImageMediaItemId / RelatedEntityId: iz alanlarıdır (FK yok).
 
+                // ── SOSYAL AĞ ALANLARI (§34) ──────────────────────────────────
+                e.Property(x => x.GroupKey).HasMaxLength(200);
+
+                // AKTÖR: "Ahmet gönderini beğendi" cümlesindeki kişi/mağaza.
+                e.HasOne(typeof(data._Users.Users)).WithMany()
+                    .HasForeignKey(nameof(Notifications.ActorUserId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Store.Store)).WithMany()
+                    .HasForeignKey(nameof(Notifications.ActorStoreId)).OnDelete(DeleteBehavior.NoAction);
+
+                // Sosyal kaynak referansları — hepsi NoAction: bildirim geçmişi,
+                // kaynak içerik silinse bile öksüz kalmamalı ve sessizce yok olmamalıdır.
+                e.HasOne(typeof(data._Shares.Posts)).WithMany()
+                    .HasForeignKey(nameof(Notifications.PostId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Shares.PostComments)).WithMany()
+                    .HasForeignKey(nameof(Notifications.PostCommentId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Chat.ChatConversations)).WithMany()
+                    .HasForeignKey(nameof(Notifications.ConversationId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Chat.ChatMessages)).WithMany()
+                    .HasForeignKey(nameof(Notifications.ChatMessageId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Follows.Friendships)).WithMany()
+                    .HasForeignKey(nameof(Notifications.FriendshipId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Products.ProductReviews)).WithMany()
+                    .HasForeignKey(nameof(Notifications.ProductReviewId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Products.ProductQuestions)).WithMany()
+                    .HasForeignKey(nameof(Notifications.ProductQuestionId)).OnDelete(DeleteBehavior.NoAction);
+                e.HasOne(typeof(data._Shares.ContentReports)).WithMany()
+                    .HasForeignKey(nameof(Notifications.ContentReportId)).OnDelete(DeleteBehavior.NoAction);
+
                 e.HasIndex(x => x.IdempotencyKey).IsUnique().HasFilter(SoftDeleteFilter);         // çift bildirim engeli
                 // Zil ikonundaki okunmamış sayacı ve liste — modülün en sık çalışan sorgusu.
                 e.HasIndex(x => new { x.UserId, x.IsRead, x.IsArchived, x.CreatedAtUtc });
@@ -86,6 +114,12 @@ namespace data._Notifications
                 e.HasIndex(x => new { x.NotificationType, x.CreatedAtUtc });                      // tip bazlı raporlama
                 e.HasIndex(x => x.OrderId);
                 e.HasIndex(x => x.StoreId);
+
+                // Sosyal bildirim gruplaması ("Ahmet ve 12 kişi beğendi").
+                e.HasIndex(x => new { x.UserId, x.GroupKey, x.IsRead });
+                // Sosyal kaynak üzerinden geri izleme.
+                e.HasIndex(x => x.PostId);
+                e.HasIndex(x => x.ActorUserId);
             });
 
             // =====================================================================

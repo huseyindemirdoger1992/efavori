@@ -148,17 +148,24 @@ namespace data._Shipping
         /// <summary>Bu satırın işaret ettiği coğrafi seviye.</summary>
         public ShippingZoneScopeType ScopeType { get; set; }
 
-        /// <summary>Kıta/bölge (Regions.Id). ScopeType=Region iken dolu.</summary>
-        public Guid? RegionId { get; set; }
+        // DÜZELTME: data._Locations altındaki Regions / Country / States / Cities
+        // tablolarının birincil anahtarları INT'tir (int id). Bu dört alan önceden
+        // Guid? tipindeydi ve _ShippingModelConfiguration içindeki HasForeignKey
+        // çağrılarıyla TİP UYUŞMAZLIĞI oluşturuyordu; kargo modülü yapılandırması
+        // DbContext'e bağlandığı anda model kurulumu hata verirdi. Tipler int?
+        // olarak düzeltilmiştir.
 
-        /// <summary>Ülke (Country.Id). ScopeType=Country iken dolu.</summary>
-        public Guid? CountryId { get; set; }
+        /// <summary>Kıta/bölge (Regions.id). ScopeType=Region iken dolu.</summary>
+        public int? RegionId { get; set; }
 
-        /// <summary>İl (States.Id). ScopeType=State iken dolu.</summary>
-        public Guid? StateId { get; set; }
+        /// <summary>Ülke (Country.id). ScopeType=Country iken dolu.</summary>
+        public int? CountryId { get; set; }
 
-        /// <summary>İlçe/şehir (Cities.Id). ScopeType=City iken dolu.</summary>
-        public Guid? CityId { get; set; }
+        /// <summary>İl (States.id). ScopeType=State iken dolu.</summary>
+        public int? StateId { get; set; }
+
+        /// <summary>İlçe/şehir (Cities.id). ScopeType=City iken dolu.</summary>
+        public int? CityId { get; set; }
 
         /// <summary>Posta kodu aralığı başlangıcı. ScopeType=PostalCode iken dolu.</summary>
         public string? PostalCodeFrom { get; set; }

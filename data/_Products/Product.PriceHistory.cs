@@ -199,8 +199,15 @@ namespace data._Products
         /// <summary>Üretilen bildirim izi (Faz 6 Notifications.Id). FK Faz 6'da tanımlanır.</summary>
         public Guid? NotificationId { get; set; }
 
-        /// <summary>Alarmın kaynaklandığı favori kaydı (CartsFavorite.Id). Yalnızca iz.</summary>
-        public Guid? CartsFavoriteId { get; set; }
+        /// <summary>
+        /// Alarmın kaynaklandığı favori kaydı (ProductFavorites.Id).
+        ///
+        /// DEĞİŞİKLİK (§71): Eski <c>CartsFavoriteId</c> alanı, kaldırılan
+        /// <c>data._Carts.CartsFavorite</c> entity'sine işaret ediyordu. Favori
+        /// kavramı artık sepetten ayrılmış ve <c>data._Products.ProductFavorites</c>
+        /// tablosuna taşınmıştır; alan da buna göre yeniden adlandırılmıştır.
+        /// </summary>
+        public Guid? ProductFavoriteId { get; set; }
 
         /// <summary>Tetiklendikten sonra alarm otomatik yeniden kurulsun mu?
         /// true ise bildirim sonrası Status tekrar Active'e alınır (fiyat yeniden yükselip düşerse yeniden bildirim).

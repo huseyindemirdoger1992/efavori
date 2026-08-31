@@ -65,11 +65,17 @@ namespace data._Store
         public AddressInfo? AddressInfo { get; set; } = new();
         public WorkingHours? WorkingHours { get; set; } = new();
         public ContactInformation? ContactInformation { get; set; } = new();
-        public ProfileCoverGallery? ProfileCoverGallery { get; set; } = new();
 
         // ==========================================
-        // MEDYA ve BELGELER (GUID Referansları)
+        // MEDYA ve BELGELER (data._Galleries.Media.Id referansları)
+        //
+        // §72 KURALI: Fiziksel dosya yolu/URL'i BURADA TUTULMAZ. Eski
+        // ProfileCoverGallery owned tipi (ProfileImagePath / CoverImagePath)
+        // KALDIRILMIŞTIR; yerine merkezî medya deposuna FK veren iki alan gelmiştir.
         // ==========================================
+
+        public Guid? LogoMediaId { get; set; }              // Depo logosu / görseli
+        public Guid? CoverMediaId { get; set; }             // Depo kapak görseli
 
         public Guid? WarehouseLayoutPlan { get; set; }      // Depo yerleşim planı
         public Guid? FireSafetyCertificate { get; set; }    // Yangın güvenlik belgesi

@@ -1614,24 +1614,40 @@ else
 
     private async Task UpdateAsync()
     {
-        if (_isProcessing || _editModel == null) return;
+        if (_isProcessing || _editModel == null)
+            return;
 
         await _writeLock.WaitAsync(_cts.Token);
+
         try
         {
             _isProcessing = true;
             StateHasChanged();
 
-            await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var existing = await db.TryTableSingle.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+            await using var db =
+                await DbFactory.CreateDbContextAsync(_cts.Token);
+
+            // ================================================================
+            // 1. Mevcut ana kaydı getir.
+            // ================================================================
+            var existing = await db.TryTableSingle
+                .FindAsync(
+                    new object[] { _editModel.Id },
+                    _cts.Token);
 
             if (existing == null)
             {
-                await Notify("warning", "Uyarı", "Kayıt artık mevcut değil.");
+                await Notify(
+                    "warning",
+                    "Uyarı",
+                    "Kayıt artık mevcut değil.");
+
                 return;
             }
 
-            // Güncelle
+            // ================================================================
+            // 2. Ana kayıt alanlarını güncelle.
+            // ================================================================
             existing.Country = _editModel.Country;
             existing.State = _editModel.State;
             existing.Cities = _editModel.Cities;
@@ -1640,97 +1656,296 @@ else
             existing.CheckMarked = _editModel.CheckMarked;
             existing.SelectDateTime = _editModel.SelectDateTime;
 
-            // Profil/Kapak görsel yollarını owned entity'ye yaz
+            // ================================================================
+            // 3. Profil / kapak görsellerini owned entity'ye yaz.
+            //
+            // Media dosyasının kendisi Media tablosundadır.
+            // Buradaki alanlar yalnızca mevcut sistemin ProfileCoverGallery
+            // owned yapısını korumak içindir.
+            // ================================================================
             existing.ProfileCoverGallery = new ProfileCoverGallery
             {
                 ProfileImagePath = _profileMedia?.FileUrl,
                 CoverImagePath = _coverMedia?.FileUrl
             };
 
-            // Galeri: TryTableSingle.IsDeleted mantığıyla tutarlı SOFT DELETE.
-            // Mevcut (silinmemiş) MediaItems kayıtları kalıcı olarak silinmez;
-            // sadece IsDelete = true olarak işaretlenir (audit izi korunur).
-            // Yeniden seçilen MediaId'ler için daha önce soft delete edilmiş kayıt varsa
-            // o satır yeniden aktive edilir (yeni satır oluşturmak yerine) — bu hem
-            // tablonun şişmesini önler hem de geçmiş izini bozmaz.
+            // ================================================================
+            // 4. Bu kayda ait mevcut GALERİ ilişkilerini getir.
+            //
+            // YENİ MEDYA MİMARİSİ:
+            //
+            // ItemType  = TryTableSingle entity tipi
+            // ItemId    = existing.Id
+            // MediaRole = Gallery
+            //
+            // Gallery artık ItemType değildir.
+            // ================================================================
+            const string mediaItemType = "TryTableSingle";
+            const string mediaRole = "Gallery";
+
             var oldGallery = await db.MediaItems
-                .Where(g => g.ItemId == existing.Id && g.ItemType == "Gallery")
+                .Where(g =>
+                    g.ItemId == existing.Id &&
+                    g.ItemType == mediaItemType &&
+                    g.MediaRole == mediaRole)
                 .ToListAsync(_cts.Token);
 
-            var selectedMediaIds = _galleryFiles.Select(m => m.Id).ToHashSet();
-
-            // Artık seçili olmayan, aktif kayıtları soft delete et
-            foreach (var g in oldGallery)
-            {
-                var stillSelected = g.MediaId.HasValue && selectedMediaIds.Contains(g.MediaId.Value);
-
-                if (!stillSelected && g.IsDeleted?.IsDeletedStatu != true)
-                {
-                    // Aktif → silindi
-                    g.IsDeleted ??= new IsDeleted();
-                    g.IsDeleted.IsDeletedStatu = true;
-                    g.IsDeleted.DeletedAtDate = DateTime.UtcNow;
-                }
-                else if (stillSelected && g.IsDeleted?.IsDeletedStatu == true)
-                {
-                    // Daha önce soft delete edilmiş ama tekrar seçildi → yeniden aktive et
-                    g.IsDeleted.IsDeletedStatu = false;
-                    g.IsDeleted.DeletedAtDate = null;
-                    g.ItemAddDate = DateTime.UtcNow;
-                }
-            }
-
-            // Sadece DB'de hiç kaydı olmayan (ne aktif ne soft-deleted) yeni MediaId'ler eklenir
-            var existingMediaIds = oldGallery
-                .Where(g => g.MediaId.HasValue)
-                .Select(g => g.MediaId!.Value)
+            // ================================================================
+            // 5. Kullanıcının mevcut ekranda seçtiği medya ID'lerini al.
+            // ================================================================
+            var selectedMediaIds = _galleryFiles
+                .Select(m => m.Id)
+                .Where(id => id != Guid.Empty)
                 .ToHashSet();
 
-            var trulyNewMedia = _galleryFiles
-                .Where(m => !existingMediaIds.Contains(m.Id))
-                .ToList();
+            var now = DateTime.UtcNow;
 
-            if (trulyNewMedia.Any())
+            // ================================================================
+            // 6. Mevcut MediaItems kayıtlarını senkronize et.
+            //
+            // Artık seçilmeyenler:
+            //     Active -> Soft Delete
+            //
+            // Tekrar seçilenler:
+            //     Soft Delete -> Restore
+            //
+            // Böylece gereksiz yeni MediaItems satırları oluşturulmaz.
+            // ================================================================
+            foreach (var galleryItem in oldGallery)
             {
-                var newGallery = trulyNewMedia.Select(m => new MediaItems
-                {
-                    UserId = use!.Id,
-                    ItemId = existing.Id,
-                    ItemType = "Gallery",
-                    MediaId = m.Id,
-                    ItemAddDate = DateTime.UtcNow,
-                    IsDeleted = new IsDeleted { IsDeletedStatu = false }
-                }).ToList();
+                var stillSelected =
+                    galleryItem.MediaId != Guid.Empty &&
+                    selectedMediaIds.Contains(galleryItem.MediaId);
 
-                await db.MediaItems.AddRangeAsync(newGallery, _cts.Token);
+                galleryItem.IsDeleted ??= new IsDeleted();
+
+                // ------------------------------------------------------------
+                // Seçimden çıkarılmış medya -> soft delete
+                // ------------------------------------------------------------
+                if (!stillSelected &&
+                    galleryItem.IsDeleted.IsDeletedStatu != true)
+                {
+                    galleryItem.IsDeleted.IsDeletedStatu = true;
+                    galleryItem.IsDeleted.DeletedAtDate = now;
+                    galleryItem.UpdatedAt = now;
+                    galleryItem.IsVisible = false;
+                }
+
+                // ------------------------------------------------------------
+                // Daha önce silinmiş fakat yeniden seçilmiş medya -> restore
+                // ------------------------------------------------------------
+                else if (stillSelected &&
+                         galleryItem.IsDeleted.IsDeletedStatu == true)
+                {
+                    galleryItem.IsDeleted.IsDeletedStatu = false;
+                    galleryItem.IsDeleted.DeletedAtDate = null;
+                    galleryItem.UpdatedAt = now;
+                    galleryItem.ItemAddDate = now;
+                    galleryItem.IsVisible = true;
+                }
             }
 
-            await db.SaveChangesAsync(_cts.Token);
+            // ================================================================
+            // 7. DB'de daha önce bulunan tüm medya ID'lerini al.
+            //
+            // Soft-deleted kayıtlar da dahil edilir.
+            // Böylece daha önce kullanılmış bir medya yeniden seçildiğinde
+            // yeni MediaItems satırı oluşturulmaz.
+            // ================================================================
+            var existingMediaIds = oldGallery
+                .Select(g => g.MediaId)
+                .Where(id => id != Guid.Empty)
+                .ToHashSet();
 
+            // ================================================================
+            // 8. Gerçekten yeni olan medya dosyalarını belirle.
+            // ================================================================
+            var trulyNewMedia = _galleryFiles
+                .Where(m =>
+                    m.Id != Guid.Empty &&
+                    !existingMediaIds.Contains(m.Id))
+                .ToList();
+
+            // ================================================================
+            // 9. Yeni MediaItems ilişkilerini oluştur.
+            // ================================================================
+            if (trulyNewMedia.Count > 0)
+            {
+                var newGallery = trulyNewMedia
+                    .Select((media, index) => new MediaItems
+                    {
+                        Id = Guid.NewGuid(),
+
+                        // İlişkiyi oluşturan kullanıcı.
+                        UserId = use!.Id,
+
+                        // Bu medya ilişkisinin sahibi entity.
+                        ItemId = existing.Id,
+
+                        // Yeni mimaride entity türü.
+                        ItemType = mediaItemType,
+
+                        // Yeni mimaride galeri / slot / kullanım amacı.
+                        MediaRole = mediaRole,
+
+                        // Gerçek medya kaydı.
+                        MediaId = media.Id,
+
+                        // Galerideki başlangıç sırası.
+                        SortOrder = index,
+
+                        // Yeni kayıt görünür.
+                        IsVisible = true,
+
+                        // İlk medya varsayılan primary medya.
+                        IsPrimary = index == 0,
+
+                        // İlişki oluşturulma tarihi.
+                        ItemAddDate = now,
+
+                        // Güncellenme tarihi.
+                        UpdatedAt = now,
+
+                        // Aktif kayıt.
+                        IsDeleted = new IsDeleted
+                        {
+                            IsDeletedStatu = false
+                        }
+                    })
+                    .ToList();
+
+                await db.MediaItems.AddRangeAsync(
+                    newGallery,
+                    _cts.Token);
+            }
+
+            // ================================================================
+            // 10. GALERİ SIRASINI kesin olarak senkronize et.
+            //
+            // _galleryFiles sırası UI'daki gerçek galeri sırasıdır.
+            // ================================================================
+            var selectedOrder = _galleryFiles
+                .Select((media, index) => new
+                {
+                    media.Id,
+                    SortOrder = index
+                })
+                .ToDictionary(x => x.Id, x => x.SortOrder);
+
+            foreach (var galleryItem in oldGallery)
+            {
+                if (galleryItem.IsDeleted?.IsDeletedStatu == true)
+                    continue;
+
+                if (selectedOrder.TryGetValue(
+                        galleryItem.MediaId,
+                        out var order))
+                {
+                    galleryItem.SortOrder = order;
+                    galleryItem.UpdatedAt = now;
+                    galleryItem.IsVisible = true;
+
+                    // İlk medya primary olarak işaretlenir.
+                    galleryItem.IsPrimary = order == 0;
+                }
+                else
+                {
+                    galleryItem.IsPrimary = false;
+                }
+            }
+
+            // ================================================================
+            // 11. Yeni eklenen kayıtların primary / sıra durumunu da garanti et.
+            // ================================================================
+            var activeGallery = await db.MediaItems
+                .Where(g =>
+                    g.ItemId == existing.Id &&
+                    g.ItemType == mediaItemType &&
+                    g.MediaRole == mediaRole &&
+                    g.IsDeleted != null &&
+                    g.IsDeleted.IsDeletedStatu != true)
+                .ToListAsync(_cts.Token);
+
+            foreach (var galleryItem in activeGallery)
+            {
+                if (selectedOrder.TryGetValue(
+                        galleryItem.MediaId,
+                        out var order))
+                {
+                    galleryItem.SortOrder = order;
+                    galleryItem.IsPrimary = order == 0;
+                    galleryItem.IsVisible = true;
+                    galleryItem.UpdatedAt = now;
+                }
+            }
+
+            // ================================================================
+            // 12. Değişiklikleri tek transaction kapsamında kaydet.
+            // ================================================================
+            await using var transaction =
+                await db.Database.BeginTransactionAsync(_cts.Token);
+
+            try
+            {
+                await db.SaveChangesAsync(_cts.Token);
+
+                await transaction.CommitAsync(_cts.Token);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(_cts.Token);
+                throw;
+            }
+
+            // ================================================================
+            // 13. UI / cache temizliği.
+            // ================================================================
             await HideModal("EditModal");
+
             _editModel = null;
             _profileMedia = null;
             _coverMedia = null;
             _galleryFiles.Clear();
+
             _isProcessing = false;
 
             StateHub.ClearCache(CACHE_KEY);
-            await StateHub.NotifyDataChanged(ENTITY_NAME);
-            await Logger.TakeIt(use?.Id, PAGE_TITLE, "Update");
-            await Notify("success", "Başarılı", "Kayıt güncellendi.");
+
+            await StateHub.NotifyDataChanged(
+                ENTITY_NAME);
+
+            await Logger.TakeIt(
+                use?.Id,
+                PAGE_TITLE,
+                "Update");
+
+            await Notify(
+                "success",
+                "Başarılı",
+                "Kayıt güncellendi.");
         }
         catch (Exception ex)
         {
-            await LogError("UpdateAsync", ex);
-            await Notify("danger", "Hata", "Güncelleme sırasında sorun oluştu.");
+            await LogError(
+                "UpdateAsync",
+                ex);
+
+            await Notify(
+                "danger",
+                "Hata",
+                "Güncelleme sırasında sorun oluştu.");
         }
         finally
         {
-            if (_isProcessing) { _isProcessing = false; StateHasChanged(); }
+            if (_isProcessing)
+            {
+                _isProcessing = false;
+                StateHasChanged();
+            }
+
             _writeLock.Release();
         }
     }
-
     // ══════════════════════════════════════════════════════════════
     // CRUD — Tekli Sil
     // ══════════════════════════════════════════════════════════════

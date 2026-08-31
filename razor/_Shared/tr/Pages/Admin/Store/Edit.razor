@@ -1670,102 +1670,164 @@ else
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            // ── 1) Skaler GUID sütunlarından çöz ──
-            // ÖNEMLİ: Aynı medya birden çok slota atanmış olabilir. Bu yüzden
-            // medya->slot (tekil) eşleme YAPILMAZ; tüm medyalar tek seferde çekilip
-            // HER slot kendi GUID'iyle ayrı ayrı doldurulur. (Önceki sürümde
-            // Dictionary<Guid,string> aynı dosyayı tek slota indiriyor, diğer
-            // slotlar boş kalıyordu → "aynı dosya seçilince göstermiyor" hatası.)
+            // ================================================================
+            // 1) Scalar GUID alanlarından medya kayıtlarını çöz.
+            // Aynı medya birden fazla slota atanabilir.
+            // Bu nedenle medya -> tek slot eşlemesi yapılmaz.
+            // ================================================================
             var scalarIds = slotGuid.Values
                 .Where(v => v.HasValue && v.Value != Guid.Empty)
                 .Select(v => v!.Value)
                 .Distinct()
                 .ToList();
 
-            if (scalarIds.Any())
+            if (scalarIds.Count > 0)
             {
-                var medias = await db.Media.AsNoTracking()
-                    .Where(m => scalarIds.Contains(m.Id))
+                var medias = await db.Media
+                    .AsNoTracking()
+                    .Where(m =>
+                        scalarIds.Contains(m.Id) &&
+                        m.IsDeleted != null &&
+                        m.IsDeleted.IsDeletedStatu != true)
                     .ToListAsync(_cts.Token);
 
                 var mediaById = medias.ToDictionary(m => m.Id);
 
                 foreach (var kv in slotGuid)
                 {
-                    if (kv.Value.HasValue && kv.Value.Value != Guid.Empty
-                        && mediaById.TryGetValue(kv.Value.Value, out var media)
-                        && slotSet.TryGetValue(kv.Key, out var set))
-                    {
-                        set(media); // aynı medya birden çok slota atanabilir
-                    }
+                    if (!kv.Value.HasValue || kv.Value.Value == Guid.Empty)
+                        continue;
+
+                    if (!mediaById.TryGetValue(kv.Value.Value, out var media))
+                        continue;
+
+                    if (!slotSet.TryGetValue(kv.Key, out var setter))
+                        continue;
+
+                    // Aynı medya birden fazla slota atanabilir.
+                    setter(media);
                 }
             }
 
-            // ── 2) Hâlâ boş kalan slotları ItemGallery üzerinden çöz ──
-            //     (Bazı kayıtlar evrakı ItemGallery'ye ItemType = slot adı ile yazmış olabilir.)
-            var emptySlots = slotGet.Where(kv => kv.Value() == null).Select(kv => kv.Key).ToList();
-            if (emptySlots.Any())
+            // ================================================================
+            // 2) Scalar alanlardan bulunamayan slotları MediaItems üzerinden çöz.
+            //
+            // YENİ MİMARİ:
+            // ItemType  = Store
+            // ItemId    = _Store.Id
+            // MediaRole = slot adı (InShooting / OutShooting / Document vb.)
+            // ================================================================
+            var emptySlots = slotGet
+                .Where(kv => kv.Value() == null)
+                .Select(kv => kv.Key)
+                .ToList();
+
+            if (emptySlots.Count > 0)
             {
-                var rows = await db.MediaItems.AsNoTracking()
-                    .Where(g => g.ItemId == _Store.Id
-                                && g.IsDeleted!.IsDeletedStatu != true
-                                && g.MediaId != null
-                                && g.ItemType != null
-                                && emptySlots.Contains(g.ItemType))
+                var rows = await db.MediaItems
+                    .AsNoTracking()
+                    .Where(g =>
+                        g.ItemId == _Store.Id &&
+                        g.ItemType == "Store" &&
+                        g.IsDeleted != null &&
+                        g.IsDeleted.IsDeletedStatu != true &&
+                        g.MediaId != Guid.Empty &&
+                        g.MediaRole != null &&
+                        emptySlots.Contains(g.MediaRole))
                     .OrderByDescending(g => g.ItemAddDate)
                     .ToListAsync(_cts.Token);
 
-                if (rows.Any())
+                if (rows.Count > 0)
                 {
-                    var galleryMediaIds = rows.Select(r => r.MediaId!.Value).Distinct().ToList();
-                    var galleryMedias = await db.Media.AsNoTracking()
-                        .Where(m => galleryMediaIds.Contains(m.Id) && m.IsDeleted!.IsDeletedStatu != true)
+                    var galleryMediaIds = rows
+                        .Select(r => r.MediaId)
+                        .Distinct()
+                        .ToList();
+
+                    var galleryMedias = await db.Media
+                        .AsNoTracking()
+                        .Where(m =>
+                            galleryMediaIds.Contains(m.Id) &&
+                            m.IsDeleted != null &&
+                            m.IsDeleted.IsDeletedStatu != true)
                         .ToListAsync(_cts.Token);
 
-                    var byId = galleryMedias.ToDictionary(m => m.Id);
+                    var mediaById = galleryMedias.ToDictionary(m => m.Id);
 
-                    // Her slot için en güncel (ilk) eşleşen satırı kullan
+                    // Her slot için en güncel aktif MediaItems kaydı kullanılır.
                     foreach (var slot in emptySlots)
                     {
-                        var row = rows.FirstOrDefault(r => string.Equals(r.ItemType, slot, StringComparison.OrdinalIgnoreCase));
-                        if (row?.MediaId != null && byId.TryGetValue(row.MediaId.Value, out var media) && slotSet.TryGetValue(slot, out var set))
-                            set(media);
+                        var row = rows.FirstOrDefault(r =>
+                            string.Equals(
+                                r.MediaRole,
+                                slot,
+                                StringComparison.OrdinalIgnoreCase));
+
+                        if (row == null)
+                            continue;
+
+                        if (!mediaById.TryGetValue(row.MediaId, out var media))
+                            continue;
+
+                        if (!slotSet.TryGetValue(slot, out var setter))
+                            continue;
+
+                        setter(media);
                     }
                 }
             }
 
-            // ── 3) Hiçbir slota bağlanamayan, "Document" gibi genel tipli evrak
-            //       satırları varsa bunları da topla (depolama şemasından bağımsız
-            //       olarak yüklü dosyaların görünmesini garanti eder). ──
+            // ================================================================
+            // 3) Store'a bağlı fakat InShooting / OutShooting olmayan
+            // diğer belgeleri ve medya dosyalarını getir.
+            //
+            // YENİ MİMARİDE slot bilgisi MediaRole içerisindedir.
+            // ================================================================
             var slotMediaIds = slotGet.Values
-                .Select(g => g())
-                .Where(m => m != null)
-                .Select(m => m!.Id)
+                .Select(getter => getter())
+                .Where(media => media != null)
+                .Select(media => media!.Id)
                 .ToHashSet();
 
-            var otherRows = await db.MediaItems.AsNoTracking()
-                .Where(g => g.ItemId == _Store.Id
-                            && g.IsDeleted!.IsDeletedStatu != true
-                            && g.MediaId != null
-                            && g.ItemType != "InShooting"
-                            && g.ItemType != "OutShooting")
+            var otherRows = await db.MediaItems
+                .AsNoTracking()
+                .Where(g =>
+                    g.ItemId == _Store.Id &&
+                    g.ItemType == "Store" &&
+                    g.IsDeleted != null &&
+                    g.IsDeleted.IsDeletedStatu != true &&
+                    g.MediaId != Guid.Empty &&
+                    (g.MediaRole == null ||
+                     (g.MediaRole != "InShooting" &&
+                      g.MediaRole != "OutShooting")))
                 .OrderByDescending(g => g.ItemAddDate)
                 .ToListAsync(_cts.Token);
 
             var otherMediaIds = otherRows
-                .Select(r => r.MediaId!.Value)
+                .Select(r => r.MediaId)
                 .Where(id => !slotMediaIds.Contains(id))
                 .Distinct()
                 .ToList();
 
-            if (otherMediaIds.Any())
+            if (otherMediaIds.Count > 0)
             {
-                _otherDocumentFiles = await db.Media.AsNoTracking()
-                    .Where(m => otherMediaIds.Contains(m.Id) && m.IsDeleted!.IsDeletedStatu != true)
+                _otherDocumentFiles = await db.Media
+                    .AsNoTracking()
+                    .Where(m =>
+                        otherMediaIds.Contains(m.Id) &&
+                        m.IsDeleted != null &&
+                        m.IsDeleted.IsDeletedStatu != true)
                     .ToListAsync(_cts.Token);
             }
+            else
+            {
+                _otherDocumentFiles = new List<data._Galleries.Media>();
+            }
         }
-        catch (Exception ex) { await LogError("LoadDocumentMedia", ex); }
+        catch (Exception ex)
+        {
+            await LogError("LoadDocumentMedia", ex);
+        }
     }
 
     // ── Mevcut galeri kayıtlarını DB'den yükle (ItemGallery → Media) ──
@@ -2465,58 +2527,130 @@ else
 
     // Galeri merge: artık seçili olmayanlar soft-delete, tekrar seçilenler reaktive,
     // hiç kaydı olmayan yeniler eklenir. (audit izi korunur, tablo şişmez)
-    private async Task SyncGalleryAsync(data._ApplicationConnectionDb db, Guid storeId, List<data._Galleries.Media> selectedFiles, string itemType)
+    private async Task SyncGalleryAsync(
+        data._ApplicationConnectionDb db,
+        Guid storeId,
+        List<data._Galleries.Media> selectedFiles,
+        string mediaRole)
     {
+        // ================================================================
+        // Store + MediaRole kapsamındaki mevcut medya ilişkilerini getir.
+        // ItemType sabit olarak Store'dur.
+        // MediaRole ise InShooting / OutShooting / Document vb. değerdir.
+        // ================================================================
         var oldGallery = await db.MediaItems
-                    .Where(g => g.ItemId == storeId && g.ItemType == itemType)
-                    .ToListAsync(_cts.Token);
+            .Where(g =>
+                g.ItemId == storeId &&
+                g.ItemType == "Store" &&
+                g.MediaRole == mediaRole)
+            .ToListAsync(_cts.Token);
 
-        var selectedMediaIds = selectedFiles.Select(m => m.Id).ToHashSet();
+        // Seçilen medya ID'lerinin hızlı karşılaştırma kümesi.
+        var selectedMediaIds = selectedFiles
+            .Select(m => m.Id)
+            .Where(id => id != Guid.Empty)
+            .ToHashSet();
 
+        // ================================================================
+        // 1) Mevcut kayıtların soft-delete / restore durumlarını senkronize et.
+        // ================================================================
         foreach (var g in oldGallery)
         {
-            var stillSelected = g.MediaId.HasValue && selectedMediaIds.Contains(g.MediaId.Value);
-
-            // IsDeleted nesnesini güvenli şekilde başlat[cite: 4, 11]
             g.IsDeleted ??= new data.Owned.IsDeleted();
 
-            if (!stillSelected && g.IsDeleted.IsDeletedStatu != true)
+            var mediaStillSelected =
+                g.MediaId != Guid.Empty &&
+                selectedMediaIds.Contains(g.MediaId);
+
+            // Artık seçilmemiş medya → soft delete.
+            if (!mediaStillSelected &&
+                g.IsDeleted.IsDeletedStatu != true)
             {
                 g.IsDeleted.IsDeletedStatu = true;
                 g.IsDeleted.DeletedAtDate = DateTime.UtcNow;
             }
-            else if (stillSelected && g.IsDeleted.IsDeletedStatu == true)
+            // Daha önce silinmiş fakat yeniden seçilmiş medya → restore.
+            else if (mediaStillSelected &&
+                     g.IsDeleted.IsDeletedStatu == true)
             {
                 g.IsDeleted.IsDeletedStatu = false;
-                g.IsDeleted.DeletedAtDate = null; // Silinme tarihini temizle
+                g.IsDeleted.DeletedAtDate = null;
                 g.ItemAddDate = DateTime.UtcNow;
+                g.UpdatedAt = DateTime.UtcNow;
             }
         }
 
+        // ================================================================
+        // 2) Bu kapsamda daha önce oluşturulmuş medya ID'lerini bul.
+        // Hem aktif hem soft-deleted kayıtlar dikkate alınır.
+        // Böylece soft-delete edilmiş kayıt restore edilebilir.
+        // ================================================================
         var existingMediaIds = oldGallery
-            .Where(g => g.MediaId.HasValue)
-            .Select(g => g.MediaId!.Value)
+            .Select(g => g.MediaId)
+            .Where(id => id != Guid.Empty)
             .ToHashSet();
 
-        var trulyNew = selectedFiles.Where(m => !existingMediaIds.Contains(m.Id)).ToList();
+        // ================================================================
+        // 3) Gerçekten yeni olan medya kayıtlarını oluştur.
+        // ================================================================
+        var trulyNew = selectedFiles
+            .Where(m =>
+                m.Id != Guid.Empty &&
+                !existingMediaIds.Contains(m.Id))
+            .ToList();
 
-        if (trulyNew.Any())
-        {
-            var newGallery = trulyNew.Select(m => new data._Galleries.MediaItems
+        if (trulyNew.Count == 0)
+            return;
+
+        var now = DateTime.UtcNow;
+
+        var newGallery = trulyNew
+            .Select((media, index) => new data._Galleries.MediaItems
             {
+                Id = Guid.NewGuid(),
+
+                // İlişkiyi oluşturan kullanıcı.
                 UserId = use!.Id,
+
+                // Bağlanan entity.
                 ItemId = storeId,
-                ItemType = itemType,
-                MediaId = m.Id,
-                ItemAddDate = DateTime.UtcNow,
-                // IsDeleted sahipli nesnesini başlat ve durumunu false (silinmemiş) olarak ayarla
-                IsDeleted = new data.Owned.IsDeleted { IsDeletedStatu = false }
-            }).ToList();
 
-            await db.MediaItems.AddRangeAsync(newGallery, _cts.Token);
-        }
+                // Yeni mimaride entity türü.
+                ItemType = "Store",
+
+                // Bağlantının görevi / slotu.
+                MediaRole = mediaRole,
+
+                // Gerçek medya.
+                MediaId = media.Id,
+
+                // Aynı galeri içerisindeki gösterim sırası.
+                SortOrder = index,
+
+                // Varsayılan olarak görünür.
+                IsVisible = true,
+
+                // Bu kayıt sync sırasında ana medya değil.
+                IsPrimary = index == 0,
+
+                // İlişki oluşturulma tarihi.
+                ItemAddDate = now,
+
+                // İlk oluşturulma / güncelleme bilgisi.
+                UpdatedAt = now,
+
+                // Soft-delete aktif değil.
+                IsDeleted = new data.Owned.IsDeleted
+                {
+                    IsDeletedStatu = false
+                }
+            })
+            .ToList();
+
+        await db.MediaItems.AddRangeAsync(
+            newGallery,
+            _cts.Token);
     }
-
     // ══════════════════════════════════════════════════════════════
     // YARDIMCI
     // ══════════════════════════════════════════════════════════════

@@ -95,8 +95,8 @@ namespace data
         public DbSet<ProductVariantAttributeValues> ProductVariantAttributeValues { get; set; } = default!;
         public DbSet<ProductAttributeValues> ProductAttributeValues { get; set; } = default!;
         public DbSet<ProductPrices> ProductPrices { get; set; } = default!;
-        public DbSet<ProductMedia> ProductMedia { get; set; } = default!;
-        public DbSet<ProductMediaTranslations> ProductMediaTranslations { get; set; } = default!;
+        // public DbSet<ProductMedia> ProductMedia { get; set; } = default!;
+        // public DbSet<ProductMediaTranslations> ProductMediaTranslations { get; set; } = default!;
 
         // === _Products (Yorum / Puanlama) ===
         public DbSet<ProductReviews> ProductReviews { get; set; } = default!;

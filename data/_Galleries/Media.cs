@@ -154,7 +154,7 @@ namespace data._Galleries
         public bool IsPublic { get; set; } = true;
 
         // Medyanın oluşturulma tarihini UTC olarak belirtir.
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Medyanın son teknik olarak güncellendiği tarihi UTC olarak belirtir.
         public DateTime? UpdatedAt { get; set; }

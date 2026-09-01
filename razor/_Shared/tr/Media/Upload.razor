@@ -22,7 +22,7 @@
                     <div class="border border-2 border-dashed border-light-3 rounded-3 p-3 text-center bg-dark-transparent transition-300">
                         <div class="py-2">
                             <i class="fa fa-cloud-upload text-white opacity-50 mb-2" style="font-size: 2.5rem;"></i>
-                            <h6 class="text-white mb-1">Dosyaları Buraya Sürükleyin</h6> 
+                            <h6 class="text-white mb-1">Dosyaları Buraya Sürükleyin</h6>
                             <div class="mb-2 d-none d-md-block">
                                 <span>Seçilen dosyalar dosya başına maksimum 128MB olabilir</span>
                             </div>
@@ -255,8 +255,8 @@
             fileModel.Progress = 0;
             StateHasChanged();
 
-            var userEmail = (!string.IsNullOrEmpty(use.ContactInformation.Email)) ? use.ContactInformation.Email : "null@null.com";
-            var userId = (use?.Id!= null) ? use.Id : new Guid();
+            var userEmail = (!string.IsNullOrEmpty(use.Email)) ? use.Email : "null@null.com";
+            var userId = (use?.Id != null) ? use.Id : new Guid();
             var ext = Path.GetExtension(fileModel.File.Name).ToLower();
 
             // Progress callback fonksiyonu

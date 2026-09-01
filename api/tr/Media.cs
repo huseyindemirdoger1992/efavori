@@ -144,9 +144,10 @@ public class Media(UserInfos userInfos)
                 OrjFilePhysicalPathRoad = "https://efavori.com" + $"/{relativeBasePath.Replace("\\", "/")}/original/{uniqueFileNameOriginal}",
                 FileExtensionType = ".avif",
                 ContentType = "image/avif",
+                MediaType = MediaAssetType.Image,
                 OriginalSize = file.Length,
                 CompressedSize = fileInfoAvif.Length,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAtUtc = DateTime.UtcNow,
 
                 // IsDeleted owned entity yapısına uygun atama:
                 IsDeleted = new data.Owned.IsDeleted
@@ -232,9 +233,10 @@ public class Media(UserInfos userInfos)
                 OrjFilePhysicalPathRoad = "https://efavori.com" + $"/{relativeFolder.Replace("\\", "/")}/{uniqueFileName}",
                 FileExtensionType = extension,
                 ContentType = file.ContentType, // Video formatını (video/mp4 vb.) yakalar
+                MediaType = MediaAssetType.Video,
                 OriginalSize = file.Length,
                 CompressedSize = file.Length, // Video sıkıştırma yoksa aynı kalır
-                CreatedAt = DateTime.UtcNow,
+                CreatedAtUtc = DateTime.UtcNow,
                 // IsDeleted owned entity yapısına uygun atama:
                 IsDeleted = new data.Owned.IsDeleted
                 {
@@ -324,7 +326,8 @@ public class Media(UserInfos userInfos)
                 ContentType = file.ContentType ?? "audio/mpeg", // Null gelirse varsayılan atar
                 OriginalSize = file.Length,
                 CompressedSize = file.Length, // Ses dosyalarında genelde işlem sonrası boyut aynıdır
-                CreatedAt = DateTime.UtcNow,
+                MediaType = MediaAssetType.Audio,
+                CreatedAtUtc = DateTime.UtcNow,
                 // IsDeleted owned entity yapısına uygun atama:
                 IsDeleted = new data.Owned.IsDeleted
                 {
@@ -419,7 +422,8 @@ public class Media(UserInfos userInfos)
                 ContentType = file.ContentType ?? "application/octet-stream",
                 OriginalSize = file.Length,
                 CompressedSize = file.Length,
-                CreatedAt = DateTime.UtcNow,
+                MediaType = MediaAssetType.Document,
+                CreatedAtUtc = DateTime.UtcNow,
                 // IsDeleted owned entity yapısına uygun atama:
                 IsDeleted = new data.Owned.IsDeleted
                 {
@@ -514,7 +518,8 @@ public class Media(UserInfos userInfos)
                 ContentType = file.ContentType ?? "application/octet-stream",
                 OriginalSize = file.Length,
                 CompressedSize = file.Length,
-                CreatedAt = DateTime.UtcNow,
+                MediaType = MediaAssetType.Other,
+                CreatedAtUtc = DateTime.UtcNow,
                 // IsDeleted owned entity yapısına uygun atama:
                 IsDeleted = new data.Owned.IsDeleted
                 {

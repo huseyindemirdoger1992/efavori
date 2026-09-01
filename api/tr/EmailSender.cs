@@ -1,7 +1,5 @@
 ﻿using data; // EmailHistory sınıfının bulunduğu namespace
-using data._Products;
 using data._Users;
-using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -9,7 +7,7 @@ using System.IO;
 using System.Linq; // Dosya isimlerini birleştirmek için
 using System.Net;
 using System.Net.Mail;
-using System.Runtime.Intrinsics.X86;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -17,7 +15,6 @@ namespace api.tr
 {
     public class EmailSender
     {
-        [Inject] protected IDbContextFactory<data._ApplicationConnectionDb> DbFactory { get; init; } = default!;
         protected readonly CancellationTokenSource _cts = new();
 
         private string? SmtpServer = null;
@@ -100,13 +97,13 @@ namespace api.tr
                 var history = new EmailHistory
                 {
 
-                    FromWhom = EmailAddress,
-                    ToWho = recipient,
+                    FromAddress = EmailAddress,
+                    ToAddress = recipient,
                     Subject = subject,
                     Body = body,
-                    Attachments = attachmentNames,
+                    AttachmentMediaIdsJson = attachmentNames,
                     TraceId = details.TraceId.ToString(),
-                    SentDate = DateTime.UtcNow
+                    SentAtUtc = DateTime.UtcNow
                 };
 
                 _context.EmailHistory.Add(history);
@@ -1971,9 +1968,12 @@ namespace api.tr
         //security@efavori.com | Email doğrulama kodu
         public async Task SendAccountActivationCodeInfoEmailAsync(string Culture, string Email)
         {
-            Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
-            use.AccountActivationMailCode = Random.Shared.Next(100000, 999999);
-            _context.Users.Update(use);
+            Users use = await _context.Users.FirstOrDefaultAsync(x => x.Email == Email, _cts.Token);
+            var userSecurity = await _context.UserSecurity.FirstOrDefaultAsync(x => x.UserId == use.Id, _cts.Token);
+            int activationCode = Random.Shared.Next(100000, 999999);
+            userSecurity.ActivationTokenHash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(activationCode.ToString()))).ToLowerInvariant();
+            userSecurity.ActivationTokenExpiresAtUtc = DateTime.UtcNow.AddMinutes(15);
+            _context.UserSecurity.Update(userSecurity);
             await _context.SaveChangesAsync(_cts.Token);
 
             var attachments = new List<Attachment>();
@@ -2001,7 +2001,7 @@ namespace api.tr
             
             <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
                 <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Doğrulama Kodunuz</span>
-                <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+                <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
             </div>
 
             <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2035,7 +2035,7 @@ namespace api.tr
         </div>
     </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Hesap Doğrulama Kodunuz", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Hesap Doğrulama Kodunuz", emailBody, attachments);
             }
             if (Culture == "en")
             {
@@ -2053,7 +2053,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Your Verification Code</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2087,7 +2087,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Your Account Verification Code", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Your Account Verification Code", emailBody, attachments);
             }
             if (Culture == "az")
             {
@@ -2105,7 +2105,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Təsdiqləmə Kodunuz</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2139,7 +2139,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Hesab Təsdiqləmə Kodunuz", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Hesab Təsdiqləmə Kodunuz", emailBody, attachments);
             }
             if (Culture == "de")
             {
@@ -2157,7 +2157,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ihr Bestätigungscode</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2191,7 +2191,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Ihr Bestätigungscode", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Ihr Bestätigungscode", emailBody, attachments);
             }
             if (Culture == "es")
             {
@@ -2209,7 +2209,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Su Código de Verificación</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2243,7 +2243,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Su código de verificación de cuenta", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Su código de verificación de cuenta", emailBody, attachments);
             }
             if (Culture == "fr")
             {
@@ -2261,7 +2261,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Votre Code de Vérification</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2295,7 +2295,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Votre code de vérification de compte", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Votre code de vérification de compte", emailBody, attachments);
             }
             if (Culture == "hi")
             {
@@ -2313,7 +2313,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>आपका सत्यापन कोड</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2347,7 +2347,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - आपका खाता सत्यापन कोड", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - आपका खाता सत्यापन कोड", emailBody, attachments);
             }
             if (Culture == "pt")
             {
@@ -2365,7 +2365,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Seu Código de Verificação</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2399,7 +2399,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Seu Código de Verificação de Conta", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Seu Código de Verificação de Conta", emailBody, attachments);
             }
             if (Culture == "ru")
             {
@@ -2417,7 +2417,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ваш код подтверждения</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2451,7 +2451,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - Ваш код подтверждения аккаунта", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - Ваш код подтверждения аккаунта", emailBody, attachments);
             }
             if (Culture == "zh")
             {
@@ -2469,7 +2469,7 @@ namespace api.tr
         
         <div style='background-color: #f0f4ff; border: 1px solid #d1d9e6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #5c6bc0; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>您的验证码</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{use.AccountActivationMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #1a237e; letter-spacing: 6px;'>{activationCode}</span>
         </div>
 
         <div style='border-top: 1px solid #eee; padding-top: 20px;'>
@@ -2503,14 +2503,14 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountActivationMailCode} - 您的账户验证码", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{activationCode} - 您的账户验证码", emailBody, attachments);
             }
         }
 
         //security@efavori.com | Email doğrulandı
         public async Task SendAccountEmailAddressVerifiedNotificationAsync(string Culture, string Email)
         {
-            Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
+            Users use = await _context.Users.FirstOrDefaultAsync(x => x.Email == Email, _cts.Token);
 
             var attachments = new List<Attachment>();
 
@@ -2536,7 +2536,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Sayın <strong>{use.ContactInformation.Email}</strong>,<br>
+            Sayın <strong>{use.Email}</strong>,<br>
             E-posta adresiniz başarıyla doğrulanmıştır ve hesabınız artık tamamen aktiftir.
         </p>
 
@@ -2571,7 +2571,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ E-posta Adresiniz Doğrulandı", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ E-posta Adresiniz Doğrulandı", emailBody, attachments);
             }
             if (Culture == "en")
             {
@@ -2590,7 +2590,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Dear <strong>{use.ContactInformation.Email}</strong>,<br>
+            Dear <strong>{use.Email}</strong>,<br>
             Your email address has been successfully verified and your account is now fully active.
         </p>
 
@@ -2625,7 +2625,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Your Email Address Has Been Verified", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ Your Email Address Has Been Verified", emailBody, attachments);
             }
             if (Culture == "az")
             {
@@ -2644,7 +2644,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Hörmətli <strong>{use.ContactInformation.Email}</strong>,<br>
+            Hörmətli <strong>{use.Email}</strong>,<br>
             E-poçt ünvanınız uğurla təsdiqlənmişdir və hesabınız indi tamamilə aktivdir.
         </p>
 
@@ -2679,7 +2679,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ E-poçt Ünvanınız Təsdiqləndi", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ E-poçt Ünvanınız Təsdiqləndi", emailBody, attachments);
             }
             if (Culture == "de")
             {
@@ -2698,7 +2698,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Sehr geehrte/r <strong>{use.ContactInformation.Email}</strong>,<br>
+            Sehr geehrte/r <strong>{use.Email}</strong>,<br>
             Ihre E-Mail-Adresse wurde erfolgreich bestätigt und Ihr Konto ist jetzt vollständig aktiv.
         </p>
 
@@ -2733,7 +2733,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Ihre E-Mail-Adresse Wurde Bestätigt", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ Ihre E-Mail-Adresse Wurde Bestätigt", emailBody, attachments);
             }
             if (Culture == "es")
             {
@@ -2752,7 +2752,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Estimado/a <strong>{use.ContactInformation.Email}</strong>,<br>
+            Estimado/a <strong>{use.Email}</strong>,<br>
             Su dirección de correo electrónico ha sido verificada exitosamente y su cuenta ahora está completamente activa.
         </p>
 
@@ -2787,7 +2787,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Su Dirección de Correo Ha Sido Verificada", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ Su Dirección de Correo Ha Sido Verificada", emailBody, attachments);
             }
             if (Culture == "fr")
             {
@@ -2806,7 +2806,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Cher/Chère <strong>{use.ContactInformation.Email}</strong>,<br>
+            Cher/Chère <strong>{use.Email}</strong>,<br>
             Votre adresse e-mail a été vérifiée avec succès et votre compte est maintenant entièrement actif.
         </p>
 
@@ -2841,7 +2841,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Votre Adresse E-mail a Été Vérifiée", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ Votre Adresse E-mail a Été Vérifiée", emailBody, attachments);
             }
             if (Culture == "hi")
             {
@@ -2860,7 +2860,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            प्रिय <strong>{use.ContactInformation.Email}</strong>,<br>
+            प्रिय <strong>{use.Email}</strong>,<br>
             आपका ईमेल पता सफलतापूर्वक सत्यापित हो गया है और आपका खाता अब पूरी तरह से सक्रिय है।
         </p>
 
@@ -2895,7 +2895,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ आपका ईमेल पता सत्यापित हो गया है", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ आपका ईमेल पता सत्यापित हो गया है", emailBody, attachments);
             }
             if (Culture == "pt")
             {
@@ -2914,7 +2914,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Prezado(a) <strong>{use.ContactInformation.Email}</strong>,<br>
+            Prezado(a) <strong>{use.Email}</strong>,<br>
             Seu endereço de e-mail foi verificado com sucesso e sua conta agora está totalmente ativa.
         </p>
 
@@ -2949,7 +2949,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Seu Endereço de E-mail Foi Verificado", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ Seu Endereço de E-mail Foi Verificado", emailBody, attachments);
             }
             if (Culture == "ru")
             {
@@ -2968,7 +2968,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            Уважаемый(ая) <strong>{use.ContactInformation.Email}</strong>,<br>
+            Уважаемый(ая) <strong>{use.Email}</strong>,<br>
             Ваш адрес электронной почты успешно подтвержден и ваш аккаунт теперь полностью активен.
         </p>
 
@@ -3003,7 +3003,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ Ваш Адрес Электронной Почты Подтвержден", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ Ваш Адрес Электронной Почты Подтвержден", emailBody, attachments);
             }
             if (Culture == "zh")
             {
@@ -3022,7 +3022,7 @@ namespace api.tr
         </div>
 
         <p style='font-size: 14px; color: #555; text-align: center; margin-bottom: 25px;'>
-            尊敬的 <strong>{use.ContactInformation.Email}</strong>,<br>
+            尊敬的 <strong>{use.Email}</strong>,<br>
             您的电子邮件地址已成功验证，您的账户现已完全激活。
         </p>
 
@@ -3057,7 +3057,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, "✓ 您的电子邮件地址已验证", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, "✓ 您的电子邮件地址已验证", emailBody, attachments);
             }
         }
 
@@ -3646,9 +3646,12 @@ namespace api.tr
         // security@efavori.com | Şifre sıfırlama kodu  
         public async Task SendAccountAccountPasswordResetMailCodeInformationEmailAsync(string Culture, string Email)
         {
-            Users use = await _context.Users.FirstOrDefaultAsync(x => x.ContactInformation.Email == Email, _cts.Token);
-            use.AccountPasswordResetMailCode = Random.Shared.Next(100000, 999999);
-            _context.Users.Update(use);
+            Users use = await _context.Users.FirstOrDefaultAsync(x => x.Email == Email, _cts.Token);
+            var userSecurity = await _context.UserSecurity.FirstOrDefaultAsync(x => x.UserId == use.Id, _cts.Token);
+            int resetCode = Random.Shared.Next(100000, 999999);
+            userSecurity.PasswordResetTokenHash = Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(resetCode.ToString()))).ToLowerInvariant();
+            userSecurity.PasswordResetTokenExpiresAtUtc = DateTime.UtcNow.AddMinutes(15);
+            _context.UserSecurity.Update(userSecurity);
             await _context.SaveChangesAsync(_cts.Token);
 
             var attachments = new List<Attachment>();
@@ -3674,7 +3677,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Şifre Sıfırlama Kodunuz</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -3713,7 +3716,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Şifre Sıfırlama Kodunuz", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Şifre Sıfırlama Kodunuz", emailBody, attachments);
             }
             if (Culture == "en")
             {
@@ -3731,7 +3734,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Your Password Reset Code</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -3770,7 +3773,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Your Password Reset Code", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Your Password Reset Code", emailBody, attachments);
             }
             if (Culture == "az")
             {
@@ -3788,7 +3791,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Şifrə Sıfırlama Kodunuz</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -3827,7 +3830,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Şifrə Sıfırlama Kodunuz", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Şifrə Sıfırlama Kodunuz", emailBody, attachments);
             }
             if (Culture == "de")
             {
@@ -3845,7 +3848,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ihr Code zum Zurücksetzen</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -3884,7 +3887,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Ihr Code zum Passwort zurücksetzen", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Ihr Code zum Passwort zurücksetzen", emailBody, attachments);
             }
             if (Culture == "es")
             {
@@ -3902,7 +3905,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Su Código de Restablecimiento</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -3941,7 +3944,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Su código de restablecimiento de contraseña", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Su código de restablecimiento de contraseña", emailBody, attachments);
             }
             if (Culture == "fr")
             {
@@ -3959,7 +3962,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Votre Code de Réinitialisation</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -3998,7 +4001,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Votre code de réinitialisation de mot de passe", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Votre code de réinitialisation de mot de passe", emailBody, attachments);
             }
             if (Culture == "hi")
             {
@@ -4016,7 +4019,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>आपका रीसेट कोड</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -4055,7 +4058,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - आपका पासवर्ड रीसेट कोड", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - आपका पासवर्ड रीसेट कोड", emailBody, attachments);
             }
             if (Culture == "pt")
             {
@@ -4073,7 +4076,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Seu Código de Redefinição</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -4112,7 +4115,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Seu Código de Redefinição de Senha", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Seu Código de Redefinição de Senha", emailBody, attachments);
             }
             if (Culture == "ru")
             {
@@ -4130,7 +4133,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>Ваш код сброса пароля</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -4169,7 +4172,7 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - Ваш код сброса пароля", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - Ваш код сброса пароля", emailBody, attachments);
             }
             if (Culture == "zh")
             {
@@ -4187,7 +4190,7 @@ namespace api.tr
         
         <div style='background-color: #ffebee; border: 1px solid #ef9a9a; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 30px;'>
             <span style='display: block; font-size: 11px; color: #d32f2f; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;'>您的重置代码</span>
-            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{use.AccountPasswordResetMailCode}</span>
+            <span style='font-family: ""Courier New"", Courier, monospace; font-size: 36px; font-weight: bold; color: #c62828; letter-spacing: 6px;'>{resetCode}</span>
         </div>
 
         <div style='background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;'>
@@ -4226,11 +4229,11 @@ namespace api.tr
     </div>
 </div>";
 
-                await SendEmailAsync("security@efavori.com", use.ContactInformation.Email, $"{use.AccountPasswordResetMailCode} - 您的密码重置代码", emailBody, attachments);
+                await SendEmailAsync("security@efavori.com", use.Email, $"{resetCode} - 您的密码重置代码", emailBody, attachments);
             }
         }
 
-        public async Task SendTaskStatuNewTasksMailEmail(string Culture, string Email,string Boss, string Categories, string TaskTitle)
+        public async Task SendTaskStatuNewTasksMailEmail(string Culture, string Email, string Boss, string Categories, string TaskTitle)
         {
             var attachments = new List<Attachment>();
             var details = _userInfos.GetCurrentUserDetails();

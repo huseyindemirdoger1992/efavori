@@ -145,7 +145,7 @@
                                 <hr />
                                 <div class="d-flex justify-content-between align-items-center opacity-75 text-white" style="font-size: 0.65rem;">
                                     <span><i class="fa fa-hdd-o me-1"></i>@FormatFileSize(media.CompressedSize ?? media.OriginalSize ?? 0)</span>
-                                    <span><i class="fa fa-calendar me-1"></i>@media.CreatedAt?.ToLocalTime().ToString("dd.MM.yy")</span>
+                                    <span><i class="fa fa-calendar me-1"></i>@media.CreatedAtUtc.ToLocalTime().ToString("dd.MM.yy")</span>
                                 </div>
                             </div>
 
@@ -269,7 +269,7 @@
                                     </tr>
                                     <tr>
                                         <th class="text-white-50">Oluşturulma:</th>
-                                        <td>@selectedMedia.CreatedAt?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@selectedMedia.CreatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
                                     </tr>
                                     <tr>
                                         <th class="text-white-50">Bağlantı:</th>
@@ -503,7 +503,7 @@
 
             filteredTotalCount = await query.CountAsync();
             mediaItems = await query
-                .OrderByDescending(m => m.CreatedAt)
+                .OrderByDescending(m => m.CreatedAtUtc)
                 .ToListAsync();
         }
         catch (Exception ex)
@@ -556,13 +556,13 @@
 
     private RenderFragment GetDocumentIcon(string ext) => ext switch
     {
-        ".pdf" => @<i class="fa fa-file-pdf-o fa-4x"></i>,
+    ".pdf" => @<i class="fa fa-file-pdf-o fa-4x"></i>,
         ".doc" or ".docx" => @<i class="fa fa-file-word-o fa-4x"></i>,
         ".xls" or ".xlsx" => @<i class="fa fa-file-excel-o fa-4x"></i>,
         ".ppt" or ".pptx" => @<i class="fa fa-file-powerpoint-o fa-4x"></i>,
         ".txt" or ".rtf" => @<i class="fa fa-file-text-o fa-4x"></i>,
         _ => @<i class="fa fa-file-o fa-4x"></i>
-    };
+        };
 
     private string FormatFileSize(long bytes)
     {

@@ -71,15 +71,19 @@
     // ödeme sağlayıcı, bildirim şablonu gibi GLOBAL yapıların tek sahibi.
     private bool IsAuthenticated => _use is not null;
 
-    private bool IsSuperAdmin => string.Equals(_use?.UsersType, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+    // Users.UserType (enum UserType: Customer=1, SuperAdmin=2) — eski string UsersType kaldırıldı.
+    private bool IsSuperAdmin => _use?.UserType == UserType.SuperAdmin;
 
     // Platform personeli (moderasyon / destek ekibi)
-    private bool IsStaff => IsSuperAdmin || _use?.UserRolesAccessPermissions?.IsItStaff == true;
+    // Not: UserType enum'ında şu an Staff yok; SuperAdmin tüm yetkilere sahiptir.
+    // İleride Staff rolü eklendiğinde bu koşul genişletilir.
+    private bool IsStaff => IsSuperAdmin;
 
     // Satıcı: kendi mağazası, deposu, ürünü, siparişi, kargosu ve hakedişi üzerinde yetkili.
+    // Users.VendorCapability (enum: None=1, Pending=2, Approved=3, Suspended=4, Rejected=5)
+    // — eski bool? IsActiveVendorStatu kaldırıldı.
     private bool IsVendor => IsSuperAdmin
-                             || _use?.IsActiveVendorStatu == true
-                             || string.Equals(_use?.UsersType, "Vendor", StringComparison.OrdinalIgnoreCase);
+                             || _use?.VendorCapability == VendorCapability.Approved;
 
     // Alıcı: giriş yapmış her kullanıcı aynı zamanda müşteridir.
     private bool IsCustomer => IsAuthenticated;
@@ -190,16 +194,26 @@
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
 
-                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+                // Users.AccountStatus (enum UserAccountStatus) — eski bool? IsActive kaldırıldı.
+                var query = db.Users.AsNoTracking()
+                    .Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
-                    query = query.Where(u =>
-                        u.FirstName.Contains(search) ||
-                        u.LastName.Contains(search));
+                    // FirstName/LastName artık Users'ta değil, UserProfiles tablosundadır.
+                    // Navigation property kullanılmaz (mimari kuralı); join ile erişilir.
+                    var profileQuery = db.UserProfiles.AsNoTracking();
+
+                    var matchedUserIds = profileQuery
+                        .Where(p => p.FirstName != null && p.FirstName.Contains(search)
+                                 || p.LastName != null && p.LastName.Contains(search))
+                        .Select(p => p.UserId);
+
+                    query = query.Where(u => matchedUserIds.Contains(u.Id));
                 }
 
-                var users = await query.OrderByDescending(u => u.RegistrationDate)
+                // RegistrationDate → RegistrationDateUtc (yeni alan adı).
+                var users = await query.OrderByDescending(u => u.RegistrationDateUtc)
                                        .ToListAsync(token);
                 return new { Users = users };
             }, token);

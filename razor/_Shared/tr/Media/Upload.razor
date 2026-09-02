@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Http
 @using api.tr
+@using data._Users
 @using Microsoft.AspNetCore.Components.Forms
 @inject Media MediaService
 @rendermode InteractiveServer
@@ -167,6 +168,9 @@
 </div>
 
 @code {
+    // ── Parametre (eski Upload.razor.cs'ten taşındı) ───────────────────────────
+    [Parameter] public Users? use { get; set; }
+
     private List<FileUploadModel> selectedFiles = new();
     private int totalProgress = 0;
     private Guid inputFileId = Guid.NewGuid();
@@ -237,7 +241,7 @@
         Console.WriteLine("Hata: Maksimum 16 dosya seçebilirsiniz.");
         await ShowNotification("danger", "Hata", "En fazla 16 seçim yapabilirsiniz.", null);
         await Task.Delay(2000);
-        Clean();
+        await Clean();
     }
     private async Task Clean()
     {
@@ -250,13 +254,16 @@
     private async Task ProcessUploads()
     {
         int processedCount = 0;
+
+        // Kullanıcı bilgisi (bileşen parametresinden).
+        var userEmail = (!string.IsNullOrEmpty(use?.Email)) ? use!.Email : "null@null.com";
+        var userId = (use?.Id != null) ? use.Id : Guid.Empty;
+
         foreach (var fileModel in selectedFiles)
         {
             fileModel.Progress = 0;
             StateHasChanged();
 
-            var userEmail = (!string.IsNullOrEmpty(use.Email)) ? use.Email : "null@null.com";
-            var userId = (use?.Id != null) ? use.Id : new Guid();
             var ext = Path.GetExtension(fileModel.File.Name).ToLower();
 
             // Progress callback fonksiyonu
@@ -270,25 +277,28 @@
             using var stream = fileModel.File.OpenReadStream(maxAllowedSize: 1024 * 1024 * 128); // 128MB
             var progressStream = new ProgressStream(stream, fileModel.File.Size, progressCallback);
 
+            // İçerik türü ve dosya adını taşıyan wrapper — servis Azure Blob'a yükler.
+            var wrapper = new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size, fileModel.File.ContentType);
+
             if (allowedExtensions_image.Contains(ext))
             {
-                await MediaService.ConvertToAvifWithLogAsync(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
+                await MediaService.ConvertToAvifWithLogAsync(wrapper, userEmail, userId);
             }
             else if (allowedExtensions_videos.Contains(ext))
             {
-                await MediaService.allowedExtensions_videos(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
+                await MediaService.allowedExtensions_videos(wrapper, userEmail, userId);
             }
             else if (allowedExtensions_sountds.Contains(ext))
             {
-                await MediaService.allowedExtensions_sountds(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
+                await MediaService.allowedExtensions_sountds(wrapper, userEmail, userId);
             }
             else if (allowedExtensions_documents.Contains(ext))
             {
-                await MediaService.allowedExtensions_documents(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
+                await MediaService.allowedExtensions_documents(wrapper, userEmail, userId);
             }
             else if (allowedExtensions_others.Contains(ext))
             {
-                await MediaService.allowedExtensions_others(new FormFileWrapper(progressStream, fileModel.File.Name, fileModel.File.Size), userEmail, userId);
+                await MediaService.allowedExtensions_others(wrapper, userEmail, userId);
             }
 
             fileModel.Progress = 100;
@@ -386,15 +396,17 @@
     {
         private readonly Stream _stream;
         private readonly long _length;
+        private readonly string _contentType;
 
-        public FormFileWrapper(Stream stream, string name, long length)
+        public FormFileWrapper(Stream stream, string name, long length, string? contentType)
         {
             _stream = stream;
             FileName = name;
             _length = length;
+            _contentType = string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType;
         }
 
-        public string ContentType => "application/octet-stream";
+        public string ContentType => _contentType;
         public string ContentDisposition => "";
         public IHeaderDictionary Headers => new HeaderDictionary();
         public long Length => _length;

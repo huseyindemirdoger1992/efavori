@@ -47,7 +47,7 @@
         </div>
     </div>
 }
-else if (use != null)
+else if (use != null && _profile != null)
 {
     <div class="container-fluid px-3 py-4">
 
@@ -58,7 +58,10 @@ else if (use != null)
 
             <!-- Kapak Fotoğrafı -->
             <div class="position-relative">
-                <img src="@(use?.ProfileCoverGallery?.CoverImagePath ?? _coverMedia?.FileUrl ?? "https://efavori.com/_files/main/NoImage.png")"
+                @* §72: ProfileCoverGallery kaldırıldı. Kapak görseli artık
+                   UserProfiles.CoverMediaId FK → Media.FileUrl ile çözülür.
+                   _coverMedia modal'dan seçilen geçici medyadır. *@
+                <img src="@(_coverMedia?.FileUrl ?? "https://efavori.com/_files/main/NoImage.png")"
                      class="img-fluid w-100 object-fit-cover"
                      style="height: 350px; min-height: 200px;"
                      alt="Kapak Fotoğrafı">
@@ -73,7 +76,9 @@ else if (use != null)
                 <div class="d-flex flex-column flex-md-row align-items-center align-items-md-end gap-3" style="margin-top: -84px;">
                     <!-- Profil Fotoğrafı -->
                     <div class="position-relative flex-shrink-0">
-                        <img src="@(use?.ProfileCoverGallery?.ProfileImagePath ?? _profileMedia?.FileUrl ?? "https://efavori.com/_files/main/NoImage.png")" class="rounded-circle border border-5 border-white bg-light shadow-sm"
+                        @* §72: ProfileCoverGallery kaldırıldı. Profil görseli artık
+                           UserProfiles.AvatarMediaId FK → Media.FileUrl ile çözülür. *@
+                        <img src="@(_profileMedia?.FileUrl ?? "https://efavori.com/_files/main/NoImage.png")" class="rounded-circle border border-5 border-white bg-light shadow-sm"
                              width="168" height="168" style="object-fit: cover;" alt="Profil Fotoğrafı">
                         <button type="button"
                                 class="btn btn-outline-light border-0 btn-sm rounded-circle position-absolute bottom-0 end-0 mb-2 me-1 shadow d-flex align-items-center justify-content-center"
@@ -87,7 +92,7 @@ else if (use != null)
                     <div class="pb-1 mt-3 mt-md-0">
                         <h5 class="mb-0 fw-semibold">@@_profile?.FirstName @@_profile?.LastName</h5>
                         <small class="text-light">
-                            @use.UserType &bull; @use.ContactInformation?.Email
+                            @use.UserType &bull; @use.Email
                         </small>
                     </div>
 
@@ -139,17 +144,19 @@ else if (use != null)
 
                         <div class="col-md-4">
                             <label class="form-label  small fw-semibold">Doğum Tarihi</label>
+                            @* BirthDate artık UserProfiles üzerinde (DateOnly tipinde). *@
                             <input type="date" class="form-control "
-                                   value="@(use.DateOfBirth?.ToString("yyyy-MM-dd"))"
-                                   @onchange="e => use.DateOfBirth = DateTime.TryParse(e.Value?.ToString(), out var d) ? d : use.DateOfBirth" />
+                                   value="@(_profile?.BirthDate?.ToString("yyyy-MM-dd"))"
+                                   @onchange="e => { if (_profile != null && DateOnly.TryParse(e.Value?.ToString(), out var d)) _profile.BirthDate = d; }" />
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label  small fw-semibold">
-                                <i class="fa fa-user-plus me-1"></i>Sponsor E-posta
+                                <i class="fa fa-user-plus me-1"></i>Sponsor Kullanıcı ID
                             </label>
-                            <input type="email" class="form-control "
-                                   @bind="use.UserSponsorEmail" placeholder="sponsor@email.com" />
+                            @* Eski UserSponsorEmail kaldırıldı. Yeni alan: Users.SponsorUserId (Guid? FK). *@
+                            <input type="text" class="form-control "
+                                   @bind="use.SponsorUserId" placeholder="Sponsor kullanıcı kimliği" />
                         </div>
 
                         <div class="col-md-4">
@@ -235,24 +242,24 @@ else if (use != null)
                         <div class="col-md-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="chkVendor"
-                                       checked="@(use.IsActiveVendorStatu == true)"
-                                       @onchange="e => use.IsActiveVendorStatu = (bool?)e.Value" />
+                                       checked="@(use.VendorCapability == VendorCapability.Approved)"
+                                       @onchange="e => use.VendorCapability = ((bool?)e.Value == true) ? VendorCapability.Approved : VendorCapability.None" />
                                 <label class="form-check-label small" for="chkVendor">Satıcı Yetkisi</label>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="chkEmployee"
-                                       checked="@(use.UserIsEmployee == true)"
-                                       @onchange="e => use.UserIsEmployee = (bool?)e.Value" />
+                                       checked="@(use.IsEmployee)"
+                                       @onchange="e => use.IsEmployee = (bool?)e.Value == true" />
                                 <label class="form-check-label small" for="chkEmployee">Çalışan</label>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="chkTerms"
-                                       checked="@(use.TermsOfUse == true)"
-                                       @onchange="e => use.TermsOfUse = (bool?)e.Value" />
+                                       checked="@(use.TermsAccepted)"
+                                       @onchange="e => use.TermsAccepted = (bool?)e.Value == true" />
                                 <label class="form-check-label small" for="chkTerms">
                                     Kullanım Koşullarını Kabul Etti
                                 </label>
@@ -260,10 +267,11 @@ else if (use != null)
                         </div>
                         <div class="col-md-4">
                             <div class="form-check form-switch">
+                                @* UserType enum'ında Staff/Admin yok — sadece Customer=1, SuperAdmin=2. *@
                                 <input class="form-check-input" type="checkbox" id="chkStaff"
-                                       checked="@(use.UserType == UserType.Staff || use.UserType == UserType.Admin || use.UserType == UserType.SuperAdmin)"
-                                       @onchange="e => use.UserType = ((bool?)e.Value == true) ? UserType.Staff : UserType.Customer" />
-                                <label class="form-check-label small" for="chkStaff">Personel Rolü</label>
+                                       checked="@(use.UserType == UserType.SuperAdmin)"
+                                       @onchange="e => use.UserType = ((bool?)e.Value == true) ? UserType.SuperAdmin : UserType.Customer" />
+                                <label class="form-check-label small" for="chkStaff">SuperAdmin Rolü</label>
                             </div>
                         </div>
 
@@ -364,13 +372,20 @@ else if (use != null)
         set
         {
             _use = value;
-            if (_use is null) return;
-            _use.ContactInformation ??= new ContactInformation();
-
-            
-            
         }
     }
+
+    /// <summary>
+    /// Kullanıcının profil kaydı (UserProfiles — 1:1).
+    /// FirstName, LastName, BirthDate, ContactInformation, AvatarMediaId, CoverMediaId burada.
+    /// </summary>
+    private UserProfiles? _profile;
+
+    /// <summary>
+    /// Kullanıcının tercihleri (UserSettings — 1:1).
+    /// Language, Currency burada.
+    /// </summary>
+    private UserSettings? _settings;
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -479,6 +494,36 @@ else if (use != null)
         FileService.OnFileSelected += HandleSingleFileSelected;
         StateHub.OnDataChanged += HandleGlobalDataChange;
         await LoadData(null);
+        await LoadProfileAndSettings();
+    }
+
+    /// <summary>
+    /// UserProfiles ve UserSettings kayıtlarını yükler.
+    /// Navigation property kullanılmaz; UserId FK ile ayrı sorgu.
+    /// </summary>
+    private async Task LoadProfileAndSettings()
+    {
+        if (use is null) return;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            _profile = await db.UserProfiles
+                .FirstOrDefaultAsync(p => p.UserId == use.Id
+                    && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true));
+            _profile ??= new UserProfiles { UserId = use.Id };
+            _profile.ContactInformation ??= new ContactInformation();
+
+            _settings = await db.UserSettings
+                .FirstOrDefaultAsync(s => s.UserId == use.Id
+                    && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu != true));
+            _settings ??= new UserSettings { UserId = use.Id };
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadProfileAndSettings",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -534,9 +579,13 @@ else if (use != null)
                 var query = db2.Users.AsNoTracking().Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
-                    query = query.Where(u =>
-                        true ||
-                        true);
+                {
+                    var matchedUserIds = db2.UserProfiles.AsNoTracking()
+                        .Where(p => p.FirstName != null && p.FirstName.Contains(search)
+                                 || p.LastName != null && p.LastName.Contains(search))
+                        .Select(p => p.UserId);
+                    query = query.Where(u => matchedUserIds.Contains(u.Id));
+                }
 
                 var users = await query
                     .OrderByDescending(u => u.RegistrationDateUtc)
@@ -608,13 +657,13 @@ else if (use != null)
 
     private async Task OnProfileImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.ProfileImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → _profile!.AvatarMediaId güncelle (§72)
         await ShowNotification("info", "Bilgi", "Profil fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
     private async Task OnCoverImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.CoverImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → _profile!.CoverMediaId güncelle (§72)
         await ShowNotification("info", "Bilgi", "Kapak fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
@@ -629,19 +678,21 @@ else if (use != null)
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Medya seçimi → UserProfiles FK güncelle (§72)
             if (_profileMedia != null)
-            {
-                // ProfileCoverGallery removed — use UserProfiles.AvatarMediaId;
-            }
+                _profile!.AvatarMediaId = _profileMedia.Id;
             if (_coverMedia != null)
-            {
-                // ProfileCoverGallery removed — use UserProfiles.CoverMediaId;
-            }
+                _profile!.CoverMediaId = _coverMedia.Id;
+
             db.Users.Update(use!);
+            db.UserProfiles.Update(_profile!);
+            db.UserSettings.Update(_settings!);
             await db.SaveChangesAsync();
-            StateHub.ClearCache("ProfileEdit_Main"); // GlobalStateHub.ClearCache(string)
+
+            StateHub.ClearCache("ProfileEdit_Main");
             await ShowNotification("success", "Başarılı", "Temel bilgiler kaydedildi.", null);
-            await Task.Delay(3000); // 3000 milisaniye = 3 saniye bekler
+            await Task.Delay(3000);
             await JS.InvokeVoidAsync("location.reload");
         }
         catch (Exception ex)
@@ -741,8 +792,9 @@ else if (use != null)
             "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        // Users.IsDeleted → bool? (Soft Delete flag)
-        use!.IsDeleted.IsDeletedStatu = true;
+        use!.AccountStatus = UserAccountStatus.PendingDeletion;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
+        use.DeletionRequestedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 

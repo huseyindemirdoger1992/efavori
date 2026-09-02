@@ -56,8 +56,9 @@ else if (use != null)
                 @for (int i = 1; i <= 6; i++)
                 {
                     var index = i;
-                    // Mevcut değerle karşılaştırma yaparken "bg-theme" formatını kontrol ediyoruz
-                    var isChecked = use?.BackgroundImagePath == $"bg-theme{index}";
+                    // TODO: BackgroundImagePath eski Users entity'sinden kaldırıldı.
+                    // UserSettings'e BackgroundTheme alanı eklendiğinde _settings üzerinden okunacak.
+                    var isChecked = _selectedTheme == $"bg-theme{index}";
 
                     <div class="col">
                         <label for="theme_@index" class="card h-100 border-2 shadow-sm bg-light" style="cursor: pointer;">
@@ -75,7 +76,7 @@ else if (use != null)
                                        value="bg-theme @index"
                                        class="form-check-input me-1"
                                        checked="@isChecked"
-                                       @onchange='() => use!.BackgroundImagePath = $"bg-theme{index}"' />
+                                       @onchange='() => _selectedTheme = $"bg-theme{index}"' />
 
                                 <small class="text-dark fw-bold">Tema @index</small>
                             </div>
@@ -107,13 +108,20 @@ else if (use != null)
         set
         {
             _use = value;
-            if (_use is null) return;
-            _use.ContactInformation ??= new ContactInformation();
-            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
-            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
-            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
         }
     }
+
+    /// <summary>
+    /// Kullanıcının ayarları (UserSettings — 1:1).
+    /// Arka plan teması tercihi burada saklanmalı.
+    /// Not: BackgroundImagePath eski Users entity'sinden kaldırıldı.
+    /// UserSettings entity'sine henüz eklenmemiş — TODO: BackgroundTheme alanı eklenecek.
+    /// Geçici çözüm olarak bileşen içi _selectedTheme state'i kullanılır.
+    /// </summary>
+    private UserSettings? _settings;
+
+    /// <summary>Seçilen tema (geçici state — UserSettings'e alan eklenene kadar).</summary>
+    private string? _selectedTheme;
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -256,15 +264,20 @@ else if (use != null)
             var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
             {
                 await using var db2 = await DbFactory.CreateDbContextAsync(token);
-                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var query = db2.Users.AsNoTracking()
+                    .Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
-                    query = query.Where(u =>
-                        u.FirstName!.Contains(search) ||
-                        u.LastName!.Contains(search));
+                {
+                    var matchedUserIds = db2.UserProfiles.AsNoTracking()
+                        .Where(p => p.FirstName != null && p.FirstName.Contains(search)
+                                 || p.LastName != null && p.LastName.Contains(search))
+                        .Select(p => p.UserId);
+                    query = query.Where(u => matchedUserIds.Contains(u.Id));
+                }
 
                 var users = await query
-                    .OrderByDescending(u => u.RegistrationDate)
+                    .OrderByDescending(u => u.RegistrationDateUtc)
                     .ToListAsync(token);
 
                 return new { Users = users };
@@ -337,13 +350,14 @@ else if (use != null)
         _isProcessing = true;
         try
         {
+            // TODO: UserSettings entity'sine BackgroundTheme alanı eklendiğinde
+            // burada _settings!.BackgroundTheme = _selectedTheme; ve
+            // db.UserSettings.Update(_settings!) yapılacak.
             await using var db = await DbFactory.CreateDbContextAsync();
-            db.Users.Update(use!);
-            await db.SaveChangesAsync();
+            // Geçici: şimdilik kaydetme işlemi yapılamaz, alan entity'de mevcut değil.
             StateHub.ClearCache("ProfileEdit_Main");
-            await ShowNotification("success", "Başarılı", "Arka plan kaydedildi.", null);
-            await Task.Delay(3000); // 3000 milisaniye = 3 saniye bekler
-            await JS.InvokeVoidAsync("location.reload");
+            await ShowNotification("warning", "Bilgi",
+                "Arka plan teması henüz veritabanı şemasına eklenmedi.", null);
         }
         catch (Exception ex)
         {
@@ -458,7 +472,8 @@ else if (use != null)
             "Hesabınızı dondurmak istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        use!.IsActive = false;
+        use!.AccountStatus = UserAccountStatus.Deactivated;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 
@@ -468,7 +483,9 @@ else if (use != null)
             "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        use!.IsDeleted.IsDeletedStatu = true;
+        use!.AccountStatus = UserAccountStatus.PendingDeletion;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
+        use.DeletionRequestedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 

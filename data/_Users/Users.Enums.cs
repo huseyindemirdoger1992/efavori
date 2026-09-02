@@ -44,20 +44,11 @@ namespace data._Users
     /// </summary>
     public enum UserType : byte
     {
-        /// <summary>Standart son kullanıcı / alıcı.</summary>
+        /// <summary>Standart son kullanıcı alışveriş/satış yapabilir. Mağaza açabilir ve ürün satabilir. Sosyal medyayı kullanabilir. Yani tüm temel kullanıcı yetkilerine sahiptir.</summary>
         Customer = 1,
 
-        /// <summary>Platform personeli (destek, moderasyon, operasyon).</summary>
-        Staff = 2,
-
-        /// <summary>Yönetici — modül bazlı yetkilerle sınırlı.</summary>
-        Admin = 3,
-
-        /// <summary>Tam yetkili sistem yöneticisi.</summary>
-        SuperAdmin = 4,
-
-        /// <summary>Servis/robot hesabı (entegrasyon, otomasyon). İnsan girişi yapamaz.</summary>
-        System = 5
+        /// <summary>Yönetici / moderatör / içerik denetleyici. Kısacası tüm yetkilere sahiptir.(Admin)</summary>
+        SuperAdmin = 2
     }
 
     /// <summary>

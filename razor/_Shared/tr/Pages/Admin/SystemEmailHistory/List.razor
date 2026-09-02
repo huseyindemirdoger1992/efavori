@@ -124,14 +124,14 @@ else
                 }
                 @foreach (var mail in _pagedItems)
                 {
-                    var hasAttachment = !string.IsNullOrWhiteSpace(mail.Attachments);
+                    var hasAttachment = !string.IsNullOrWhiteSpace(mail.AttachmentMediaIdsJson);
                     <tr>
                         <td class="d-none d-md-table-cell text-light small">@(rowNo++)</td>
                         <td class="text-truncate" style="max-width:14rem;">
-                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(mail.FromWhom) ? "—" : mail.FromWhom)</div>
+                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(mail.FromAddress) ? "—" : mail.FromAddress)</div>
                         </td>
                         <td class="text-truncate" style="max-width:14rem;">
-                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(mail.ToWho) ? "—" : mail.ToWho)</div>
+                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(mail.ToAddress) ? "—" : mail.ToAddress)</div>
                         </td>
                         <td class="text-truncate" style="max-width:18rem;">
                             @(string.IsNullOrWhiteSpace(mail.Subject) ? "—" : mail.Subject)
@@ -139,7 +139,7 @@ else
                         <td class="d-none d-lg-table-cell text-center">
                             @if (hasAttachment)
                             {
-                                <span title="@mail.Attachments"><i class="fa fa-paperclip text-info"></i></span>
+                                <span title="@mail.AttachmentMediaIdsJson"><i class="fa fa-paperclip text-info"></i></span>
                             }
                             else
                             {
@@ -148,8 +148,8 @@ else
                         </td>
                         <td class="d-none d-md-table-cell text-nowrap">
                             <div class="small">
-                                @mail.SentDate.ToString("dd.MM.yyyy")
-                                <span class="text-light"> | @mail.SentDate.ToString("HH:mm")</span>
+                                @mail.SentAtUtc.ToString("dd.MM.yyyy")
+                                <span class="text-light"> | @mail.SentAtUtc.ToString("HH:mm")</span>
                             </div>
                         </td>
                         <td class="text-end text-nowrap">
@@ -287,11 +287,11 @@ else
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <label class="form-label text-white-50 small mb-0"><i class="fa fa-user me-1"></i>Gönderen</label>
-                            <div class="text-light text-break">@(string.IsNullOrWhiteSpace(mail.FromWhom) ? "—" : mail.FromWhom)</div>
+                            <div class="text-light text-break">@(string.IsNullOrWhiteSpace(mail.FromAddress) ? "—" : mail.FromAddress)</div>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label text-white-50 small mb-0"><i class="fa fa-users me-1"></i>Alıcı</label>
-                            <div class="text-light text-break">@(string.IsNullOrWhiteSpace(mail.ToWho) ? "—" : mail.ToWho)</div>
+                            <div class="text-light text-break">@(string.IsNullOrWhiteSpace(mail.ToAddress) ? "—" : mail.ToAddress)</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label text-white-50 small mb-0"><i class="fa fa-tag me-1"></i>Konu</label>
@@ -299,7 +299,7 @@ else
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label text-white-50 small mb-0"><i class="fa fa-calendar me-1"></i>Gönderim Tarihi (UTC)</label>
-                            <div class="text-light">@mail.SentDate.ToString("dd.MM.yyyy HH:mm:ss")</div>
+                            <div class="text-light">@mail.SentAtUtc.ToString("dd.MM.yyyy HH:mm:ss")</div>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label text-white-50 small mb-0"><i class="fa fa-hashtag me-1"></i>Trace Id</label>
@@ -307,7 +307,7 @@ else
                         </div>
                         <div class="col-12">
                             <label class="form-label text-white-50 small mb-0"><i class="fa fa-paperclip me-1"></i>Ekler</label>
-                            <div class="text-light small text-break">@(string.IsNullOrWhiteSpace(mail.Attachments) ? "Ek yok" : mail.Attachments)</div>
+                            <div class="text-light small text-break">@(string.IsNullOrWhiteSpace(mail.AttachmentMediaIdsJson) ? "Ek yok" : mail.AttachmentMediaIdsJson)</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label text-white-50 small mb-0"><i class="fa fa-key me-1"></i>Kayıt Id</label>
@@ -458,12 +458,13 @@ else
             if (search != null)
             {
                 query = query.Where(e =>
-                    (e.FromWhom != null && e.FromWhom.Contains(search)) ||
-                    (e.ToWho != null && e.ToWho.Contains(search)) ||
+                    (e.FromAddress != null && e.FromAddress.Contains(search)) ||
+                    (e.ToAddress != null && e.ToAddress.Contains(search)) ||
                     (e.Subject != null && e.Subject.Contains(search)) ||
                     (e.Body != null && e.Body.Contains(search)) ||
-                    (e.Attachments != null && e.Attachments.Contains(search)) ||
-                    (e.TraceId != null && e.TraceId.Contains(search)));
+                    (e.AttachmentMediaIdsJson != null && e.AttachmentMediaIdsJson.Contains(search)) ||
+                    (e.TraceId != null && e.TraceId.Contains(search)) ||
+                    (e.ProviderMessageId != null && e.ProviderMessageId.Contains(search)));
             }
 
             // ── Toplam sayım + sayfa sınırlama ──
@@ -474,7 +475,7 @@ else
 
             // ── Sadece o anki 10 kaydı çek (Skip/Take DB tarafında) ──
             _pagedItems = await query
-                .OrderByDescending(x => x.SentDate)
+                .OrderByDescending(x => x.SentAtUtc)
                 .Skip((_currentPage - 1) * PAGE_SIZE)
                 .Take(PAGE_SIZE)
                 .ToListAsync(token);

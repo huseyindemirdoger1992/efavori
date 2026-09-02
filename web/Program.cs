@@ -62,6 +62,15 @@ try
     builder.Services.AddHttpClient<AIProductTranslationGeneratorTurkishToEnglish>();
     builder.Services.AddHostedService<AllBackgroundServices>();
 
+    // Azure Blob altyapısı (thread-safe → Singleton)
+    builder.Services.AddSingleton<api.tr.AzureBlobService>();
+
+    // Yükleme servisi (UserInfos + AzureBlobService bağımlı)
+    builder.Services.AddScoped<api.tr.Media>();
+
+    // UI seçim/yenileme köprüsü (devre başına tek örnek → Scoped)
+    builder.Services.AddScoped<razor._Shared.tr.Media.FileUploadService>();
+
     var app = builder.Build();
 
     // ============================================================================

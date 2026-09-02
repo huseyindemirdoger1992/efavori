@@ -29,7 +29,7 @@
 @code {
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
-    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
+    // NavigationManager.NavigateTo($@"/{CultureInfo.CurrentCulture.TwoLetterISOLanguageName}/Admin/Store/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
 }
 
 @implements IAsyncDisposable
@@ -593,8 +593,8 @@ else
                                                     @foreach (var f in _otherDocumentFiles)
                                                     {
                                                         <a href="@f.FileUrl" target="_blank" rel="noopener noreferrer"
-                                                               class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
-                                                               title="@f.FileName">
+                                                           class="btn btn-sm btn-outline-primary d-inline-flex align-items-center"
+                                                           title="@f.FileName">
                                                             <i class="fa fa-file-o me-1"></i>
                                                             <span class="text-truncate d-inline-block" style="max-width:160px;">@(string.IsNullOrWhiteSpace(f.FileName) ? "Dosya" : f.FileName)</span>
                                                             <i class="fa fa-external-link ms-2"></i>
@@ -1228,21 +1228,29 @@ else
     private bool _vendorBlockChanged;                // satıcı IsSucces değerini değiştirdi mi
 
     // Kullanıcı SuperAdmin mi? (yetki ayrımı buradan yapılır)
-    private bool IsSuperAdmin => string.Equals(use?.UsersType, "SuperAdmin", StringComparison.OrdinalIgnoreCase);
+    // Users.UserType (enum) — eski string UsersType kaldırıldı.
+    private bool IsSuperAdmin => use?.UserType == UserType.SuperAdmin;
 
-    // Store.IsActiveStateAdmin → görsel durum metni/rozeti
-    // true  = Onaylı, false = Onaylanmadı, null = Yeniden Değerlendiriliyor
-    private string AdminStatusText => _Store?.IsActiveStateAdmin switch
+    // Store.Status (enum StoreStatus) — eski IsActiveStateAdmin/IsActiveStateVendor kaldırıldı.
+    private string AdminStatusText => _Store?.Status switch
     {
-        true => "Onaylı",
-        false => "Onaylanmadı",
-        _ => "Yeniden Değerlendiriliyor"
+        StoreStatus.Active => "Onaylı",
+        StoreStatus.PendingApproval => "Onay Bekliyor",
+        StoreStatus.Rejected => "Reddedildi",
+        StoreStatus.Suspended => "Askıya Alındı",
+        StoreStatus.Draft => "Taslak",
+        StoreStatus.ClosedByOwner => "Satıcı Kapattı",
+        StoreStatus.ClosedByAdmin => "Yönetim Kapattı",
+        _ => "Bilinmiyor"
     };
-    private string AdminStatusBadgeClass => _Store?.IsActiveStateAdmin switch
+    private string AdminStatusBadgeClass => _Store?.Status switch
     {
-        true => "bg-success",
-        false => "bg-danger",
-        _ => "bg-info text-dark"
+        StoreStatus.Active => "bg-success",
+        StoreStatus.PendingApproval => "bg-info text-dark",
+        StoreStatus.Rejected => "bg-danger",
+        StoreStatus.Suspended => "bg-warning text-dark",
+        StoreStatus.Draft => "bg-secondary",
+        _ => "bg-secondary"
     };
 
     // ══════════════════════════════════════════════════════════════
@@ -1433,59 +1441,47 @@ else
         _Store = new Store
         {
             Id = src.Id,
-            UserId = src.UserId,
+            OwnerUserId = src.OwnerUserId,
             Name = src.Name,
             Description = src.Description,
-            IsActiveStateAdmin = src.IsActiveStateAdmin,     // SALT OKUNUR — yalnızca gösterilir
-            IsActiveDateAdmin = src.IsActiveDateAdmin,
-            IsActiveStateVendor = src.IsActiveStateVendor,
-            IsActiveDateVendor = src.IsActiveDateVendor,
-            CreatedAt = src.CreatedAt,
 
-            CertificateOfIncorporation = src.CertificateOfIncorporation,
-            ActivityCertificate = src.ActivityCertificate,
-            TaxRegistration = src.TaxRegistration,
-            TradeRegistryGazette = src.TradeRegistryGazette,
-            SignatureCircular = src.SignatureCircular,
-            AuthorizedPersonId = src.AuthorizedPersonId,
-            ProofOfBusinessAddress = src.ProofOfBusinessAddress,
-            BankStatement = src.BankStatement,
-            BankAccountConfirmation = src.BankAccountConfirmation,
-            TrademarkCertificate = src.TrademarkCertificate,
-            LetterOfAuthorization = src.LetterOfAuthorization,
-            QualityCertificates = src.QualityCertificates,
-            CustomsRegistration = src.CustomsRegistration,
-            SocialSecurityRegistration = src.SocialSecurityRegistration,
-            ProofOfOwnership = src.ProofOfOwnership,
+            // StoreStatus enum — eski IsActiveStateAdmin/IsActiveStateVendor kaldırıldı.
+            Status = src.Status,
+            StatusChangedAtUtc = src.StatusChangedAtUtc,
+            StatusReason = src.StatusReason,
+
+            // Satıcının geçici kapatma ("tatil modu") alanı — eski IsActiveStateVendor'ın karşılığı.
+            IsTemporarilyClosed = src.IsTemporarilyClosed,
+            TemporarilyClosedUntilUtc = src.TemporarilyClosedUntilUtc,
+            TemporaryClosureMessage = src.TemporaryClosureMessage,
+
+            CreatedAtUtc = src.CreatedAtUtc,
+
+            // §72: ProfileCoverGallery kaldırıldı. Logo/kapak artık merkezî medya FK'si.
+            LogoMediaId = src.LogoMediaId,
+            CoverMediaId = src.CoverMediaId,
+
+            // 15 belge kolonu StoreDocuments tablosuna normalize edildi (§57).
+            // Belgeler artık burada değil, ayrı sorguyla yüklenir.
 
             ContactInformation = CloneContact(src.ContactInformation),
-            ProfileCoverGallery = new ProfileCoverGallery
-            {
-                ProfileImagePath = src.ProfileCoverGallery?.ProfileImagePath,
-                CoverImagePath = src.ProfileCoverGallery?.CoverImagePath
-            },
             AddressInfo = CloneAddress(src.AddressInfo),
             WorkingHours = CloneWorkingHours(src.WorkingHours),
             Meta = src.Meta,
-            Interaction = src.Interaction,
             IsDeleted = src.IsDeleted
         };
 
-        _vendorActive = _Store.IsActiveStateVendor ?? false;
-        _adminActive = _Store.IsActiveStateAdmin ?? false;
+        _vendorActive = !_Store.IsTemporarilyClosed;
+        _adminActive = _Store.Status == StoreStatus.Active;
 
         // UI yardımcı satırlarını kur
         BuildDocumentRows();
         BuildDayRows();
 
-        // Profil / Kapak görsellerini geri yükle
-        _profileMedia = string.IsNullOrWhiteSpace(_Store.ProfileCoverGallery?.ProfileImagePath)
-            ? null
-            : new data._Galleries.Media { FileUrl = _Store.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
-
-        _coverMedia = string.IsNullOrWhiteSpace(_Store.ProfileCoverGallery?.CoverImagePath)
-            ? null
-            : new data._Galleries.Media { FileUrl = _Store.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
+        // §72: ProfileCoverGallery kaldırıldı. Logo/kapak artık LogoMediaId/CoverMediaId FK.
+        // Medya görselleri ayrı Media tablosundan çekilecek (TODO: LoadMediaAsync ile).
+        _profileMedia = null;
+        _coverMedia = null;
 
         // Evrak medyalarını ve galerileri DB'den yükle
         await LoadDocumentMediaAsync();
@@ -2029,7 +2025,7 @@ else
 
     // ── Satıcı (SuperAdmin olmayan): yalnızca IsSucces değişikliklerini kaydet ──
     //    KURAL: En az bir madde "Giderildi" (true) olarak işaretlenip kaydedilirse
-    //           Store.IsActiveStateAdmin = NULL yapılır → mağaza yeniden
+    //           Store.Status = PendingApproval yapılır → mağaza yeniden
     //           değerlendirmeye alınır.
     private async Task SaveVendorBlockResolution()
     {
@@ -2066,12 +2062,12 @@ else
                 var store = await db.Store.FirstOrDefaultAsync(s => s.Id == _Store.Id, _cts.Token);
                 if (store != null)
                 {
-                    store.IsActiveStateAdmin = null;   // → "Yeniden Değerlendiriliyor"
-                    store.IsActiveDateAdmin = null;     // önceki onay tarihi temizlenir
+                    store.Status = StoreStatus.PendingApproval;
+                    store.StatusChangedAtUtc = DateTime.UtcNow;
 
                     // Çalışma modelini de senkron tut (UI rozeti güncellensin)
-                    _Store.IsActiveStateAdmin = null;
-                    _Store.IsActiveDateAdmin = null;
+                    _Store.Status = StoreStatus.PendingApproval;
+                    _Store.StatusChangedAtUtc = DateTime.UtcNow;
                 }
             }
 
@@ -2480,28 +2476,24 @@ else
             };
 
             // Belge GUID atamaları (değiştirilmeyenler aynı Id ile korunur)
-            existing.CertificateOfIncorporation = _certificateOfIncorporation?.Id;
-            existing.ActivityCertificate = _activityCertificate?.Id;
-            existing.TaxRegistration = _taxRegistration?.Id;
-            existing.TradeRegistryGazette = _tradeRegistryGazette?.Id;
-            existing.SignatureCircular = _signatureCircular?.Id;
-            existing.AuthorizedPersonId = _authorizedPersonId?.Id;
-            existing.ProofOfBusinessAddress = _proofOfBusinessAddress?.Id;
-            existing.BankStatement = _bankStatement?.Id;
-            existing.BankAccountConfirmation = _bankAccountConfirmation?.Id;
-            existing.TrademarkCertificate = _trademarkCertificate?.Id;
-            existing.LetterOfAuthorization = _letterOfAuthorization?.Id;
-            existing.QualityCertificates = _qualityCertificates?.Id;
-            existing.CustomsRegistration = _customsRegistration?.Id;
-            existing.SocialSecurityRegistration = _socialSecurityRegistration?.Id;
-            existing.ProofOfOwnership = _proofOfOwnership?.Id;
+            // §72: Logo/kapak artık merkezî medya FK'si.
+            if (_profileMedia != null)
+                existing.LogoMediaId = _profileMedia.Id;
+            if (_coverMedia != null)
+                existing.CoverMediaId = _coverMedia.Id;
+
+            // §57: 15 belge kolonu StoreDocuments tablosuna normalize edildi.
+            // Belgeler artık bu entity üzerinde değil, StoreDocuments tablosunda yönetilir.
+            // TODO: StoreDocuments CRUD işlemleri ayrı bir bölümde yapılmalı.
 
             // ── 4. GALERİ SOFT-DELETE MERGE ──
             await SyncGalleryAsync(db, existing.Id, _galleryOutSideFiles, "OutShooting");
             await SyncGalleryAsync(db, existing.Id, _galleryInSideFiles, "InShooting");
             if (!IsSuperAdmin)
             {
-                existing.IsActiveStateAdmin = null; // satıcı değişikliği → mağaza yeniden değerlendirmeye alınır
+                // Satıcı değişikliği → mağaza yeniden değerlendirmeye alınır.
+                existing.Status = StoreStatus.PendingApproval;
+                existing.StatusChangedAtUtc = DateTime.UtcNow;
             }
             await db.SaveChangesAsync(_cts.Token);
 
@@ -2522,7 +2514,7 @@ else
             _writeLock.Release();
             StateHasChanged();
         }
-        NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true);
+        NavigationManager.NavigateTo($@"/{CultureInfo.CurrentCulture.TwoLetterISOLanguageName}/Admin/Store/List/", true);
     }
 
     // Galeri merge: artık seçili olmayanlar soft-delete, tekrar seçilenler reaktive,

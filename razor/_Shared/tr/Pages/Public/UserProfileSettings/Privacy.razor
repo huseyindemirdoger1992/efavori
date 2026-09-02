@@ -47,7 +47,7 @@
         </div>
     </div>
 }
-else if (use != null)
+else if (use != null && _privacy != null)
 {
     <div class="container-fluid px-3 py-4">
 
@@ -64,11 +64,28 @@ else if (use != null)
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @RenderPrivacySwitch("Profil Herkese Açık", use.IsPrivateOrPublic!.IsProfilePublic, v => use.IsPrivateOrPublic!.IsProfilePublic = v, "priv1")
-                        @RenderPrivacySwitch("Paylaşımlarımı Herkes Görebilir", use.IsPrivateOrPublic!.IsAllowPostsView, v => use.IsPrivateOrPublic!.IsAllowPostsView = v, "priv2")
-                        @RenderPrivacySwitch("Son Görülmeyi Göster", use.IsPrivateOrPublic!.IsShowLastSeen, v => use.IsPrivateOrPublic!.IsShowLastSeen = v, "priv3")
-                        @RenderPrivacySwitch("Çevrimiçi Durumunu Göster", use.IsPrivateOrPublic!.IsShowOnlineStatus, v => use.IsPrivateOrPublic!.IsShowOnlineStatus = v, "priv4")
-                        @RenderPrivacySwitch("Arama Motorlarında Listelen", use.IsPrivateOrPublic!.IsSearchEngineIndexingAllowed, v => use.IsPrivateOrPublic!.IsSearchEngineIndexingAllowed = v, "priv5")
+                        @* ProfileVisibility artık UserProfiles üzerinde enum (Public/FollowersOnly/FriendsOnly/Private).
+                           Basit toggle için Public ↔ FriendsOnly kullanılır. *@
+                        @RenderPrivacySwitch("Profil Herkese Açık",
+                            _profile?.ProfileVisibility == ProfileVisibility.Public,
+                            v => { if (_profile != null) _profile.ProfileVisibility = (v == true) ? ProfileVisibility.Public : ProfileVisibility.FriendsOnly; }, "priv1")
+
+                        @* DefaultPostVisibility: 1=Public, 2=FollowersOnly vb. *@
+                        @RenderPrivacySwitch("Paylaşımlarımı Herkes Görebilir",
+                            _privacy?.DefaultPostVisibility == 1,
+                            v => { if (_privacy != null) _privacy.DefaultPostVisibility = (byte)((v == true) ? 1 : 2); }, "priv2")
+
+                        @RenderPrivacySwitch("Son Görülmeyi Göster",
+                            _privacy?.ShowLastSeen,
+                            v => { if (_privacy != null) _privacy.ShowLastSeen = v == true; }, "priv3")
+
+                        @RenderPrivacySwitch("Çevrimiçi Durumunu Göster",
+                            _privacy?.ShowOnlineStatus,
+                            v => { if (_privacy != null) _privacy.ShowOnlineStatus = v == true; }, "priv4")
+
+                        @RenderPrivacySwitch("Arama Motorlarında Listelen",
+                            _profile?.AllowSearchEngineIndexing,
+                            v => { if (_profile != null) _profile.AllowSearchEngineIndexing = v == true; }, "priv5")
                     </div>
                 </div>
             </div>
@@ -81,11 +98,26 @@ else if (use != null)
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @RenderPrivacySwitch("Arkadaşlık İsteklerine İzin Ver", use.IsPrivateOrPublic!.IsAllowFriendRequest, v => use.IsPrivateOrPublic!.IsAllowFriendRequest = v, "priv6")
-                        @RenderPrivacySwitch("Doğrudan Mesajlara İzin Ver", use.IsPrivateOrPublic!.IsAllowDirectMessages, v => use.IsPrivateOrPublic!.IsAllowDirectMessages = v, "priv7")
-                        @RenderPrivacySwitch("Sesli Arama İzni", use.IsPrivateOrPublic!.IsAllowVoiceCalls, v => use.IsPrivateOrPublic!.IsAllowVoiceCalls = v, "priv8")
-                        @RenderPrivacySwitch("Görüntülü Arama İzni", use.IsPrivateOrPublic!.IsAllowVideoCalls, v => use.IsPrivateOrPublic!.IsAllowVideoCalls = v, "priv9")
-                        @RenderPrivacySwitch("Okundu Bilgisi (Mavi Tık)", use.IsPrivateOrPublic!.IsReadReceiptsEnabled, v => use.IsPrivateOrPublic!.IsReadReceiptsEnabled = v, "priv10")
+                        @* WhoCanSendFriendRequest → PrivacyAudience enum; toggle Everyone ↔ NoOne *@
+                        @RenderPrivacySwitch("Arkadaşlık İsteklerine İzin Ver",
+                            _privacy?.WhoCanSendFriendRequest != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanSendFriendRequest = (v == true) ? PrivacyAudience.Everyone : PrivacyAudience.NoOne; }, "priv6")
+
+                        @RenderPrivacySwitch("Doğrudan Mesajlara İzin Ver",
+                            _privacy?.WhoCanMessage != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanMessage = (v == true) ? PrivacyAudience.Everyone : PrivacyAudience.NoOne; }, "priv7")
+
+                        @RenderPrivacySwitch("Sesli Arama İzni",
+                            _privacy?.WhoCanVoiceCall != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanVoiceCall = (v == true) ? PrivacyAudience.FriendsOnly : PrivacyAudience.NoOne; }, "priv8")
+
+                        @RenderPrivacySwitch("Görüntülü Arama İzni",
+                            _privacy?.WhoCanVideoCall != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanVideoCall = (v == true) ? PrivacyAudience.FriendsOnly : PrivacyAudience.NoOne; }, "priv9")
+
+                        @RenderPrivacySwitch("Okundu Bilgisi (Mavi Tık)",
+                            _privacy?.SendReadReceipts,
+                            v => { if (_privacy != null) _privacy.SendReadReceipts = v == true; }, "priv10")
                     </div>
                 </div>
             </div>
@@ -98,10 +130,21 @@ else if (use != null)
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @RenderPrivacySwitch("Konum Bilgimi Paylaş", use.IsPrivateOrPublic!.IsLocationVisible, v => use.IsPrivateOrPublic!.IsLocationVisible = v, "priv11")
-                        @RenderPrivacySwitch("Takipçi Sayısını Göster", use.IsPrivateOrPublic!.IsShowFollowerCount, v => use.IsPrivateOrPublic!.IsShowFollowerCount = v, "priv12")
-                        @RenderPrivacySwitch("Takip Ettiğim Listeyi Göster", use.IsPrivateOrPublic!.IsShowFollowingList, v => use.IsPrivateOrPublic!.IsShowFollowingList = v, "priv13")
-                        @RenderPrivacySwitch("Takipçi Listemi Göster", use.IsPrivateOrPublic!.IsShowFollowerList, v => use.IsPrivateOrPublic!.IsShowFollowerList = v, "priv14")
+                        @RenderPrivacySwitch("Konum Bilgimi Paylaş",
+                            _privacy?.WhoCanSeeLocation != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanSeeLocation = (v == true) ? PrivacyAudience.FriendsOnly : PrivacyAudience.NoOne; }, "priv11")
+
+                        @RenderPrivacySwitch("Takipçi Sayısını Göster",
+                            _privacy?.ShowFollowerCount,
+                            v => { if (_privacy != null) _privacy.ShowFollowerCount = v == true; }, "priv12")
+
+                        @RenderPrivacySwitch("Takip Ettiğim Listeyi Göster",
+                            _privacy?.WhoCanSeeFollowingList != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanSeeFollowingList = (v == true) ? PrivacyAudience.Everyone : PrivacyAudience.NoOne; }, "priv13")
+
+                        @RenderPrivacySwitch("Takipçi Listemi Göster",
+                            _privacy?.WhoCanSeeFollowerList != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanSeeFollowerList = (v == true) ? PrivacyAudience.Everyone : PrivacyAudience.NoOne; }, "priv14")
                     </div>
                 </div>
             </div>
@@ -114,10 +157,21 @@ else if (use != null)
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @RenderPrivacySwitch("Yorum Yapılmasına İzin Ver", use.IsPrivateOrPublic!.IsAllowComments, v => use.IsPrivateOrPublic!.IsAllowComments = v, "priv15")
-                        @RenderPrivacySwitch("Etiketlenmeye İzin Ver", use.IsPrivateOrPublic!.IsAllowTagging, v => use.IsPrivateOrPublic!.IsAllowTagging = v, "priv16")
-                        @RenderPrivacySwitch("Hikaye Paylaşımına İzin Ver", use.IsPrivateOrPublic!.IsAllowStorySharing, v => use.IsPrivateOrPublic!.IsAllowStorySharing = v, "priv17")
-                        @RenderPrivacySwitch("İçerik İndirilmesine İzin Ver", use.IsPrivateOrPublic!.IsAllowPostDownloading, v => use.IsPrivateOrPublic!.IsAllowPostDownloading = v, "priv18")
+                        @RenderPrivacySwitch("Yorum Yapılmasına İzin Ver",
+                            _privacy?.WhoCanComment != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanComment = (v == true) ? PrivacyAudience.Everyone : PrivacyAudience.NoOne; }, "priv15")
+
+                        @RenderPrivacySwitch("Etiketlenmeye İzin Ver",
+                            _privacy?.WhoCanTag != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanTag = (v == true) ? PrivacyAudience.FriendsOnly : PrivacyAudience.NoOne; }, "priv16")
+
+                        @RenderPrivacySwitch("Paylaşımlarımın Paylaşılmasına İzin Ver",
+                            _privacy?.WhoCanShareMyPosts != PrivacyAudience.NoOne,
+                            v => { if (_privacy != null) _privacy.WhoCanShareMyPosts = (v == true) ? PrivacyAudience.Everyone : PrivacyAudience.NoOne; }, "priv17")
+
+                        @RenderPrivacySwitch("İçerik İndirilmesine İzin Ver",
+                            _privacy?.AllowContentDownload,
+                            v => { if (_privacy != null) _privacy.AllowContentDownload = v == true; }, "priv18")
                     </div>
                 </div>
             </div>
@@ -130,9 +184,17 @@ else if (use != null)
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @RenderPrivacySwitch("E-posta Bildirimleri", use.IsPrivateOrPublic!.IsEmailNotificationEnabled, v => use.IsPrivateOrPublic!.IsEmailNotificationEnabled = v, "priv19")
-                        @RenderPrivacySwitch("Uygulama (Push) Bildirimleri", use.IsPrivateOrPublic!.IsPushNotificationEnabled, v => use.IsPrivateOrPublic!.IsPushNotificationEnabled = v, "priv20")
-                        @RenderPrivacySwitch("SMS Bildirimleri", use.IsPrivateOrPublic!.IsSmsNotificationEnabled, v => use.IsPrivateOrPublic!.IsSmsNotificationEnabled = v, "priv21")
+                        @RenderPrivacySwitch("E-posta Bildirimleri",
+                            _settings?.EmailNotificationsEnabled,
+                            v => { if (_settings != null) _settings.EmailNotificationsEnabled = v == true; }, "priv19")
+
+                        @RenderPrivacySwitch("Uygulama (Push) Bildirimleri",
+                            _settings?.PushNotificationsEnabled,
+                            v => { if (_settings != null) _settings.PushNotificationsEnabled = v == true; }, "priv20")
+
+                        @RenderPrivacySwitch("SMS Bildirimleri",
+                            _settings?.SmsNotificationsEnabled,
+                            v => { if (_settings != null) _settings.SmsNotificationsEnabled = v == true; }, "priv21")
                     </div>
                 </div>
             </div>
@@ -145,9 +207,17 @@ else if (use != null)
                 </div>
                 <div class="card-body">
                     <div class="row g-2">
-                        @RenderPrivacySwitch("Kişiselleştirilmiş Reklamlar", use.IsPrivateOrPublic!.IsPersonalizedAdsEnabled, v => use.IsPrivateOrPublic!.IsPersonalizedAdsEnabled = v, "priv22")
-                        @RenderPrivacySwitch("Anonim Veri Toplanmasına İzin Ver", use.IsPrivateOrPublic!.IsDataCollectionAllowed, v => use.IsPrivateOrPublic!.IsDataCollectionAllowed = v, "priv23")
-                        @RenderPrivacySwitch("Yapay Zeka Eğitimine İzin Ver", use.IsPrivateOrPublic!.IsAiTrainingAllowed, v => use.IsPrivateOrPublic!.IsAiTrainingAllowed = v, "priv24")
+                        @RenderPrivacySwitch("Kişiselleştirilmiş Reklamlar",
+                            _settings?.PersonalizedAdsEnabled,
+                            v => { if (_settings != null) _settings.PersonalizedAdsEnabled = v == true; }, "priv22")
+
+                        @RenderPrivacySwitch("Anonim Veri Toplanmasına İzin Ver",
+                            _settings?.AnalyticsCollectionAllowed,
+                            v => { if (_settings != null) _settings.AnalyticsCollectionAllowed = v == true; }, "priv23")
+
+                        @RenderPrivacySwitch("Yapay Zeka Eğitimine İzin Ver",
+                            _settings?.AiTrainingAllowed,
+                            v => { if (_settings != null) _settings.AiTrainingAllowed = v == true; }, "priv24")
                     </div>
                 </div>
             </div>
@@ -245,13 +315,27 @@ else if (use != null)
         set
         {
             _use = value;
-            if (_use is null) return;
-            _use.ContactInformation ??= new ContactInformation();
-            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
-            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
-            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
         }
     }
+
+    /// <summary>
+    /// Kullanıcının gizlilik ayarları (UserPrivacySettings — 1:1).
+    /// Eski IsPrivateOrPublic owned type'ı kaldırıldı; tüm "WhoCan..." ve görünürlük
+    /// ayarları artık bu ayrı entity'dedir. Navigation property kullanılmaz.
+    /// </summary>
+    private UserPrivacySettings? _privacy;
+
+    /// <summary>
+    /// Kullanıcının profil kaydı (UserProfiles — 1:1).
+    /// ProfileVisibility ve AllowSearchEngineIndexing burada.
+    /// </summary>
+    private UserProfiles? _profile;
+
+    /// <summary>
+    /// Kullanıcının tercihleri (UserSettings — 1:1).
+    /// Bildirim ana anahtarları ve veri/reklam politikası burada.
+    /// </summary>
+    private UserSettings? _settings;
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -360,6 +444,40 @@ else if (use != null)
         FileService.OnFileSelected += HandleSingleFileSelected;
         StateHub.OnDataChanged += HandleGlobalDataChange;
         await LoadData(null);
+        await LoadPrivacyData();
+    }
+
+    /// <summary>
+    /// Gizlilik sayfasının ihtiyaç duyduğu 3 ayrı entity'yi yükler.
+    /// Navigation property kullanılmaz; her biri UserId FK ile ayrı sorgu.
+    /// </summary>
+    private async Task LoadPrivacyData()
+    {
+        if (use is null) return;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            _privacy = await db.UserPrivacySettings
+                .FirstOrDefaultAsync(p => p.UserId == use.Id
+                    && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true));
+            _privacy ??= new UserPrivacySettings { UserId = use.Id };
+
+            _profile = await db.UserProfiles
+                .FirstOrDefaultAsync(p => p.UserId == use.Id
+                    && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true));
+            _profile ??= new UserProfiles { UserId = use.Id };
+
+            _settings = await db.UserSettings
+                .FirstOrDefaultAsync(s => s.UserId == use.Id
+                    && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu != true));
+            _settings ??= new UserSettings { UserId = use.Id };
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadPrivacyData",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -412,15 +530,20 @@ else if (use != null)
             var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
             {
                 await using var db2 = await DbFactory.CreateDbContextAsync(token);
-                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var query = db2.Users.AsNoTracking()
+                    .Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
-                    query = query.Where(u =>
-                        u.FirstName!.Contains(search) ||
-                        u.LastName!.Contains(search));
+                {
+                    var matchedUserIds = db2.UserProfiles.AsNoTracking()
+                        .Where(p => p.FirstName != null && p.FirstName.Contains(search)
+                                 || p.LastName != null && p.LastName.Contains(search))
+                        .Select(p => p.UserId);
+                    query = query.Where(u => matchedUserIds.Contains(u.Id));
+                }
 
                 var users = await query
-                    .OrderByDescending(u => u.RegistrationDate)
+                    .OrderByDescending(u => u.RegistrationDateUtc)
                     .ToListAsync(token);
 
                 return new { Users = users };
@@ -489,13 +612,13 @@ else if (use != null)
 
     private async Task OnProfileImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.ProfileImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → UserProfiles.AvatarMediaId güncelle (§72)
         await ShowNotification("info", "Bilgi", "Profil fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
     private async Task OnCoverImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.CoverImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → UserProfiles.CoverMediaId güncelle (§72)
         await ShowNotification("info", "Bilgi", "Kapak fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
@@ -562,7 +685,10 @@ else if (use != null)
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            db.Users.Update(use!);
+            // Gizlilik ayarları 3 ayrı entity'ye dağıldı — hepsini kaydet.
+            db.UserPrivacySettings.Update(_privacy!);
+            db.UserProfiles.Update(_profile!);
+            db.UserSettings.Update(_settings!);
             await db.SaveChangesAsync();
             StateHub.ClearCache("ProfileEdit_Main");
             await ShowNotification("success", "Başarılı", "Gizlilik ayarları kaydedildi.", null);
@@ -602,7 +728,8 @@ else if (use != null)
             "Hesabınızı dondurmak istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        use!.IsActive = false;
+        use!.AccountStatus = UserAccountStatus.Deactivated;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 
@@ -612,8 +739,9 @@ else if (use != null)
             "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        // Users.IsDeleted → bool? (Soft Delete flag)
-        use!.IsDeleted.IsDeletedStatu = true;
+        use!.AccountStatus = UserAccountStatus.PendingDeletion;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
+        use.DeletionRequestedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 

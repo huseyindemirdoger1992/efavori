@@ -7,6 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
 		<PackageReference Include="Google.GenAI" Version="1.17.0" />
 		<PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.16.0" />
 		<PackageReference Include="Magick.NET.Core" Version="14.16.0" />

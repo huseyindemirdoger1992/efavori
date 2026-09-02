@@ -720,11 +720,11 @@ else
                     <table class="info-table">
                         <tr>
                             <td>Atayan Kişi</td>
-                            <td>@(assignedByUser != null ? $"{assignedByUser.FirstName} {assignedByUser.LastName}" : "—")</td>
+                            <td>@(assignedByProfile != null ? $"{assignedByProfile?.FirstName} {assignedByProfile?.LastName}" : "—")</td>
                         </tr>
                         <tr>
                             <td>Sorumlu Kişi</td>
-                            <td>@(personInChargeUser != null ? $"{personInChargeUser.FirstName} {personInChargeUser.LastName}" : "—")</td>
+                            <td>@(personInChargeProfile != null ? $"{personInChargeProfile?.FirstName} {personInChargeProfile?.LastName}" : "—")</td>
                         </tr>
                         <tr><td>Kategori</td>         <td>@(category?.Title ?? "—")</td></tr>
                         <tr><td>Çerçeve</td>          <td>@(framework?.Title ?? "—")</td></tr>
@@ -786,9 +786,9 @@ else
                 <div class="pf-left">
                     <span>efavori.com</span>
                     <span>Görev ID: @task.Id</span>
-                    @if (assignedByUser != null)
+                    @if (assignedByProfile != null)
                     {
-                        <span>Atayan: @assignedByUser.FirstName @assignedByUser.LastName</span>
+                        <span>Atayan: @assignedByProfile?.FirstName @assignedByProfile?.LastName</span>
                     }
                 </div>
                 <div class="pf-right">Sayfa 1 / @totalPages</div>
@@ -834,8 +834,8 @@ else
                                 }
                             </div>
                             <div class="tsb-meta">
-                                <strong>@(personInChargeUser != null ? $"{personInChargeUser.FirstName} {personInChargeUser.LastName}" : "Sorumlu: —")</strong>
-                                @(assignedByUser != null ? $"Atayan: {assignedByUser.FirstName} {assignedByUser.LastName}" : "")
+                                <strong>@(personInChargeProfile != null ? $"{personInChargeProfile?.FirstName} {personInChargeProfile?.LastName}" : "Sorumlu: —")</strong>
+                                @(assignedByProfile != null ? $"Atayan: {assignedByProfile?.FirstName} {assignedByProfile?.LastName}" : "")
                             </div>
                         </div>
 
@@ -866,9 +866,9 @@ else
                                             <span>@note.NoteCreatedAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
                                         }
                                         @{
-                                            var noteUser = noteUsers.TryGetValue(note.UserId, out var nu) ? nu : null;
+                                            var noteProfile = noteUserProfiles.TryGetValue(note.UserId, out var np) ? np : null;
                                         }
-                                        <span>@(noteUser != null ? $"{noteUser.FirstName} {noteUser.LastName}" : note.UserId.ToString().Substring(0, 8) + "…")</span>
+                                        <span>@(noteProfile != null ? $"{noteProfile.FirstName} {noteProfile.LastName}" : note.UserId.ToString().Substring(0, 8) + "…")</span>
                                         @if (note.IsTheNoteOk == true)
                                         {
                                             <span class="note-ok-tag">
@@ -909,9 +909,12 @@ else
     private data._Tasks.TaskCategories? category;
     private data._Tasks.TaskFramework? framework;
     private List<data._Tasks.TaskNotes> notes = new();
-    private data._Users.Users? assignedByUser;
-    private data._Users.Users? personInChargeUser;
-    private Dictionary<Guid, Users> noteUsers = new();
+
+    // FirstName/LastName artık Users'ta değil, UserProfiles'da.
+    // Kullanıcı bilgisi gösterimi için profil kaydı ayrı sorgulanır.
+    private data._Users.UserProfiles? assignedByProfile;
+    private data._Users.UserProfiles? personInChargeProfile;
+    private Dictionary<Guid, UserProfiles> noteUserProfiles = new();
 
     private const int NotesPerPage = 12;
     private List<List<TaskNotes>> notesPages = new();
@@ -950,13 +953,16 @@ else
             if (task.PersonInChargeUserId.HasValue) userIds.Add(task.PersonInChargeUserId.Value);
             foreach (var n in notes) userIds.Add(n.UserId);
 
-            var users = await db.Users
-                .Where(u => userIds.Contains(u.Id) && u.IsDeleted.IsDeletedStatu != true)
+            // FirstName/LastName artık UserProfiles tablosunda (Users'ta değil).
+            // Navigation property kullanılmaz; UserId FK ile ayrı sorgu yapılır.
+            var profiles = await db.UserProfiles
+                .Where(p => userIds.Contains(p.UserId)
+                    && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true))
                 .ToListAsync();
 
-            assignedByUser = users.FirstOrDefault(u => u.Id == task.AssignedByUserId);
-            personInChargeUser = users.FirstOrDefault(u => u.Id == task.PersonInChargeUserId);
-            noteUsers = users.ToDictionary(u => u.Id);
+            assignedByProfile = profiles.FirstOrDefault(p => p.UserId == task.AssignedByUserId);
+            personInChargeProfile = profiles.FirstOrDefault(p => p.UserId == task.PersonInChargeUserId);
+            noteUserProfiles = profiles.ToDictionary(p => p.UserId);
 
             // Paginate notes
             for (int i = 0; i < notes.Count; i += NotesPerPage)

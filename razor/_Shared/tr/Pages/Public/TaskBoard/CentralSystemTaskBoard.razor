@@ -2651,7 +2651,7 @@
                         </div>
                     </div>
                     @* ✅ Mobil için dokunmatik durum taşıma (sürükle-bırak dokunmatikte çalışmaz) *@
-                    @if (use?.UsersType == "Customer" || use?.UsersType == "SuperAdmin")
+                    @if (use?.UserType == UserType.Customer || use?.UserType == UserType.SuperAdmin)
                     {
                         <div class="mb-3">
                             <strong class="d-block mb-1"><i class="fa fa-random me-1"></i> Durumu Taşı:</strong>
@@ -2709,7 +2709,7 @@
                     }
                     <div class="mb-3">
                         <label class="form-label"><strong>Yeni Not Ekle:</strong></label>
-                        @if (use?.UsersType == "Customer" || use?.UsersType == "SuperAdmin")
+                        @if (use?.UserType == UserType.Customer || use?.UserType == UserType.SuperAdmin)
                         {
                             <textarea class="form-control" rows="2" @bind="newNote"></textarea>
                         }
@@ -2768,7 +2768,7 @@
                                                                 <i class="fa fa-clone" style="font-size: 0.85rem;"></i>
                                                             </button>
 
-                                                            @if (use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin")
+                                                            @if (use?.UserType == UserType.SuperAdmin || use?.UserType == UserType.SuperAdmin)
                                                             {
                                                                 <button class="btn btn-link btn-sm p-0 text-info opacity-75 shadow-none"
                                                                         title="Düzenle" @onclick="() => EditNoteModalStatu(note)">
@@ -2880,7 +2880,7 @@
                                                 })();
                         </script>
 
-                        @if (use?.UsersType == "Customer" || use?.UsersType == "SuperAdmin")
+                        @if (use?.UserType == UserType.Customer || use?.UserType == UserType.SuperAdmin)
                         {
                             <button type="button" class="btn btn-outline-warning rounded-0" @onclick="() => EditTask(selectedTask)">
                                 <i class="fa fa-edit"></i> Düzenle
@@ -3230,7 +3230,7 @@
     private string newNote = "";
 
     // === Arkadaş Atama Sistemi ===
-    private List<Users> friendList = new();
+    private List<UserProfiles> friendList = new();
     private List<TaskKeeperJoint> taskKeepers = new();
     private string friendSearchText = "";
     private List<Guid> selectedAssigneeIds = new();
@@ -3420,10 +3420,10 @@
         StateHasChanged();
     }
 
-    private List<Users> GetFilteredFriends()
+    private List<UserProfiles> GetFilteredFriends()
     {
         if (string.IsNullOrWhiteSpace(friendSearchText))
-            return new List<Users>();
+            return new List<UserProfiles>();
 
         var searchLower = friendSearchText.ToLower(new CultureInfo("tr-TR"));
 
@@ -3521,10 +3521,10 @@
         StateHasChanged();
     }
 
-    private List<Users> GetEditFilteredFriends()
+    private List<UserProfiles> GetEditFilteredFriends()
     {
         if (string.IsNullOrWhiteSpace(editFriendSearchText))
-            return new List<Users>();
+            return new List<UserProfiles>();
 
         var searchLower = editFriendSearchText.ToLower(new CultureInfo("tr-TR"));
         return friendList
@@ -3601,8 +3601,8 @@
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
             // Kullanıcı tipi kontrolü
-            bool isAdminOrSuperAdmin = use?.UsersType == "Admin" || use?.UsersType == "SuperAdmin";
-            bool isEmployee = use?.UsersType == "Employee";
+            bool isAdminOrSuperAdmin = use?.UserType == UserType.SuperAdmin || use?.UserType == UserType.SuperAdmin;
+            bool isEmployee = use?.UserType == UserType.Customer;
 
             if (use == null || use.Id == Guid.Empty)
                 return;
@@ -3710,24 +3710,25 @@
             }
 
             // === Arkadaş Listesini Yükle ===
-            var friendships = await db.FriendShip
+            // Friendships entity'si: eski FriendShip kaldırıldı.
+            // Yeni alanlar: RequestorUserId, ReceiverUserId, Status (enum FriendshipStatus).
+            var friendships = await db.Friendships
                 .AsNoTracking()
-                .Where(f => (f.RequestorId == use.Id || f.ReceiverId == use.Id)
-                    && f.Status == true
-                    && (f.IsDeleted != null || f.IsDeleted.IsDeletedStatu != true)
-                    && (f.Block == null || f.Block != true))
+                .Where(f => (f.RequestorUserId == use.Id || f.ReceiverUserId == use.Id)
+                    && f.Status == FriendshipStatus.Accepted
+                    && (f.IsDeleted == null || f.IsDeleted.IsDeletedStatu != true))
                 .ToListAsync(_cts.Token);
 
             var friendIds = friendships
-                .Select(f => f.RequestorId == use.Id ? f.ReceiverId : f.RequestorId)
+                .Select(f => f.RequestorUserId == use.Id ? f.ReceiverUserId : f.RequestorUserId)
                 .Distinct()
                 .ToList();
 
-            friendList = await db.Users
+            // friendList → UserProfiles üzerinden yüklenir (FirstName/LastName orada).
+            friendList = await db.UserProfiles
                 .AsNoTracking()
-                .Where(u => friendIds.Contains(u.Id)
-                    && (u.IsDeleted == null || u.IsDeleted.IsDeletedStatu != true)
-                    && u.IsActive == true)
+                .Where(p => friendIds.Contains(p.UserId)
+                    && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true))
                 .ToListAsync(_cts.Token);
 
             // === Bölümleri (TaskFramework) belleğe yükle — markup artık DB'ye gitmez ===
@@ -3748,13 +3749,15 @@
             foreach (var k in taskKeepers) userIds.Add(k.UserId);
             if (use != null) userIds.Add(use.Id);
 
-            _userNames = await db.Users
+            // FirstName/LastName artık UserProfiles tablosunda (Users'ta değil).
+            // Navigation property kullanılmaz; UserId FK ile ayrı sorgu.
+            _userNames = await db.UserProfiles
                 .AsNoTracking()
-                .Where(u => userIds.Contains(u.Id))
-                .Select(u => new { u.Id, u.FirstName, u.LastName })
+                .Where(p => userIds.Contains(p.UserId))
+                .Select(p => new { p.UserId, p.FirstName, p.LastName })
                 .ToDictionaryAsync(
-                    u => u.Id,
-                    u => ($"{u.FirstName} {u.LastName}").Trim(),
+                    p => p.UserId,
+                    p => ($"{p.FirstName} {p.LastName}").Trim(),
                     _cts.Token);
 
             // ✅ LoadData bir OKUMA işlemidir; broadcast etmez (self-notify döngüsü ve çift yükleme yok).
@@ -3906,7 +3909,7 @@
     }
     private async Task HandleDrop(string newStatus)
     {
-        if (use != null && (use.UsersType == "Customer" || use.UsersType == "SuperAdmin"))
+        if (use != null && (use.UserType == UserType.Customer || use.UserType == UserType.SuperAdmin))
         {
             if (draggedTaskId == null) return;
             await ExecuteWithLock(nameof(HandleDrop), async () =>
@@ -3968,7 +3971,7 @@
     }
     private async Task HandleDropCate(Guid NewCate)
     {
-        if (use != null && (use.UsersType == "Employee" || use.UsersType == "Admin" || use.UsersType == "SuperAdmin"))
+        if (use != null && (use.UserType == UserType.Customer || use.UserType == UserType.SuperAdmin || use.UserType == UserType.SuperAdmin))
         {
             if (draggedTaskId == null) return;
             await ExecuteWithLock(nameof(HandleDrop), async () =>
@@ -3998,7 +4001,7 @@
     }
     private async Task HandleDropPri(string NewPri)
     {
-        if (use != null && (use.UsersType == "Employee" || use.UsersType == "Admin" || use.UsersType == "SuperAdmin"))
+        if (use != null && (use.UserType == UserType.Customer || use.UserType == UserType.SuperAdmin || use.UserType == UserType.SuperAdmin))
         {
             if (draggedTaskId == null) return;
             await ExecuteWithLock(nameof(HandleDrop), async () =>

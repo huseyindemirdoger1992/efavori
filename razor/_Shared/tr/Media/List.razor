@@ -16,6 +16,7 @@
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.Extensions.DependencyInjection
 @using System.Threading.Tasks
+@implements IDisposable
 @inject IJSRuntime JSRuntime
 @inject IServiceScopeFactory ScopeFactory
 @rendermode InteractiveServer
@@ -70,7 +71,7 @@
             <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
                 @foreach (var media in mediaItems.Take(displayedItemsCount))
                 {
-                    var isSelected = IsMultiSelect == true && selectedFiles.Contains(media);
+                    var isSelected = IsMultiSelect == true && IsMediaSelected(media);
                     var cardClass = isSelected ? "shadow" : "";
 
                     <div class="col">
@@ -101,7 +102,7 @@
 
                                 @if (isImage)
                                 {
-                                    <img src="@media.FileUrl_Ratio_1_4"
+                                    <img src="@ToAbsolute(media.FileUrl_Ratio_1_4)"
                                          class="card-img-top lazy-load"
                                          style="height: 150px; object-fit: cover;"
                                          alt="@media.FileName"
@@ -111,7 +112,7 @@
                                 {
                                     <div class="position-relative" style="height: 150px; background: #000;">
                                         <video class="w-100 h-100" style="object-fit: cover;">
-                                            <source src="@media.FileUrl" type="@media.ContentType">
+                                            <source src="@ToAbsolute(media.FileUrl)" type="@media.ContentType">
                                         </video>
                                         <div class="position-absolute top-50 start-50 translate-middle">
                                             <i class="fa fa-play-circle fa-3x text-white opacity-75"></i>
@@ -242,7 +243,7 @@
                             @if (isImage)
                             {
                                 <center>
-                                    <img src="@selectedMedia.FileUrl_Ratio_1_4" class="img-fluid rounded" alt="@selectedMedia.FileName" style="max-height:512px;" />
+                                    <img src="@ToAbsolute(selectedMedia.FileUrl_Ratio_1_4)" class="img-fluid rounded" alt="@selectedMedia.FileName" style="max-height:512px;" />
                                 </center>
                             }
                             else
@@ -274,7 +275,7 @@
                                     <tr>
                                         <th class="text-white-50">Bağlantı:</th>
                                         <td class="text-break">
-                                            <small>https://efavori.com@selectedMedia.FileUrl</small>
+                                            <small>@ToAbsolute(selectedMedia.FileUrl)</small>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -390,6 +391,10 @@
 </style>
 
 @code {
+    // ── Parametreler (eski List.razor.cs'ten taşındı) ──────────────────────────
+    [Parameter] public Users? use { get; set; }
+    [Parameter] public bool? IsMultiSelect { get; set; }
+
     private razor._Shared.Notification? notificationRef;
     private List<Media> mediaItems = new();
     private List<Media> selectedFiles = new();
@@ -435,22 +440,24 @@
         await LoadMedia();
     }
 
-    private void HandleSelectionChanged(List<Media> files)
+    private void HandleSelectionChanged(IReadOnlyList<Media> files)
     {
-        selectedFiles = new List<Media>(files);
-        StateHasChanged();
+        selectedFiles = files.ToList();
+        InvokeAsync(StateHasChanged);
     }
 
     private void HandleSingleFileSelected(Media media)
     {
         selectedMedia = media;
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
     }
 
     private void HandleFileUploaded()
     {
-        _ = LoadMedia();
+        _ = InvokeAsync(LoadMedia);
     }
+
+    private bool IsMediaSelected(Media media) => selectedFiles.Any(f => f.Id == media.Id);
 
     private void HandleMediaClick(Media media)
     {
@@ -482,6 +489,20 @@
         }
     }
 
+    /// <summary>
+    /// Kayıt göreli (eski "/_files/...") ise site kökünü ekler; zaten mutlak
+    /// (yeni Azure "https://...") ise olduğu gibi döndürür. Böylece eski ve yeni
+    /// kayıtlar birlikte sorunsuz çalışır.
+    /// </summary>
+    private string ToAbsolute(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return url;
+        return $"https://efavori.com{url}";
+    }
+
     private async Task LoadMedia()
     {
         isLoading = true;
@@ -494,7 +515,7 @@
 
             // IsDeleted owned entity yapısına uygun sorgu
             var query = dbContext.Media
-                .Where(m => m.IsDeleted!.IsDeletedStatu != true && m.UserId == use.Id);
+                .Where(m => m.IsDeleted!.IsDeletedStatu != true && m.UserId == use!.Id);
 
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
@@ -556,7 +577,7 @@
 
     private RenderFragment GetDocumentIcon(string ext) => ext switch
     {
-    ".pdf" => @<i class="fa fa-file-pdf-o fa-4x"></i>,
+        ".pdf" => @<i class="fa fa-file-pdf-o fa-4x"></i>,
         ".doc" or ".docx" => @<i class="fa fa-file-word-o fa-4x"></i>,
         ".xls" or ".xlsx" => @<i class="fa fa-file-excel-o fa-4x"></i>,
         ".ppt" or ".pptx" => @<i class="fa fa-file-powerpoint-o fa-4x"></i>,
@@ -677,7 +698,7 @@
                 // IsDeleted sahipli nesnesini kontrol et ve başlat
                 media.IsDeleted ??= new data.Owned.IsDeleted();
 
-                // IsDeleted içindeki alanları güncelle
+                // IsDeleted içindeki alanları güncelle (soft delete)
                 media.IsDeleted.IsDeletedStatu = true;
                 media.IsDeleted.DeletedAtDate = DateTime.UtcNow;
 
@@ -703,17 +724,19 @@
 
     private async Task OpenInNewTab(string? url)
     {
-        if (!string.IsNullOrWhiteSpace(url))
+        var target = ToAbsolute(url);
+        if (!string.IsNullOrWhiteSpace(target))
         {
-            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+            await JSRuntime.InvokeVoidAsync("open", target, "_blank");
         }
     }
 
     private async Task CopyLink(string? url)
     {
-        if (!string.IsNullOrWhiteSpace(url))
+        var target = ToAbsolute(url);
+        if (!string.IsNullOrWhiteSpace(target))
         {
-            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", $"https://efavori.com{url}");
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", target);
             await ShowNotification("Başarılı", "Bağlantı kopyalandı", "success");
         }
     }

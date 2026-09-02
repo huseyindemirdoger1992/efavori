@@ -47,7 +47,7 @@
         </div>
     </div>
 }
-else if (use != null)
+else if (use != null && _security != null)
 {
     <div class="container-fluid px-3 py-4">
 
@@ -108,8 +108,8 @@ else if (use != null)
                         <div class="form-check form-switch mb-0 ms-3">
                             <input class="form-check-input" type="checkbox" id="chk2FA"
                                    style="width:3em;height:1.5em;"
-                                   checked="@(use.IsPrivateOrPublic!.IsTwoFactorAuthEnabled == true)"
-                                   @onchange="e => use.IsPrivateOrPublic!.IsTwoFactorAuthEnabled = (bool?)e.Value" />
+                                   checked="@(_security?.TwoFactorEnabled == true)"
+                                   @onchange="e => { if (_security != null) _security.TwoFactorEnabled = (bool)(e.Value ?? false); }" />
                             <label class="form-check-label" for="chk2FA"></label>
                         </div>
                     </div>
@@ -137,7 +137,7 @@ else if (use != null)
                         <div class="col-md-12">
                             <label class="form-label small fw-semibold">Oturum Zaman Aşımı Süresi</label>
                             <select class="form-select"
-                                    value="@(use!.LogOutTimer?.ToString() ?? "")"
+                                    value="@(use!.LogOutTimerSeconds?.ToString() ?? "")"
                                     @onchange="OnLogOutTimerChanged">
                                 <option value="">Devre Dışı</option>
                                 <option value="60">1 Dakika</option>
@@ -285,6 +285,10 @@ else if (use != null)
 
     private Users? _use;
 
+    /// <summary>
+    /// Giriş yapmış kullanıcı (Users entity). Kimlik/hesap durumu.
+    /// Güvenlik alanları (parola hash, 2FA, kilitlenme) → UserSecurity (1:1, ayrı entity).
+    /// </summary>
     [Parameter]
     public Users? use
     {
@@ -292,13 +296,15 @@ else if (use != null)
         set
         {
             _use = value;
-            if (_use is null) return;
-            _use.ContactInformation ??= new ContactInformation();
-            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
-            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
-            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
         }
     }
+
+    /// <summary>
+    /// Kullanıcının güvenlik kaydı (UserSecurity entity — 1:1).
+    /// TwoFactorEnabled, TwoFactorMethod, TwoFactorSecret burada.
+    /// Eski IsPrivateOrPublic.IsTwoFactorAuthEnabled kaldırıldı.
+    /// </summary>
+    private UserSecurity? _security;
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -407,6 +413,30 @@ else if (use != null)
         FileService.OnFileSelected += HandleSingleFileSelected;
         StateHub.OnDataChanged += HandleGlobalDataChange;
         await LoadData(null);
+        await LoadSecurity();
+    }
+
+    /// <summary>
+    /// Kullanıcının UserSecurity kaydını yükler (2FA, parola hash, kilitlenme burada).
+    /// Navigation property kullanılmaz; UserId FK ile ayrı sorgu yapılır.
+    /// </summary>
+    private async Task LoadSecurity()
+    {
+        if (use is null) return;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _security = await db.UserSecurity
+                .FirstOrDefaultAsync(s => s.UserId == use.Id
+                    && (s.IsDeleted == null || s.IsDeleted.IsDeletedStatu != true));
+
+            _security ??= new UserSecurity { UserId = use.Id };
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadSecurity",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -459,15 +489,21 @@ else if (use != null)
             var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
             {
                 await using var db2 = await DbFactory.CreateDbContextAsync(token);
-                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var query = db2.Users.AsNoTracking()
+                    .Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
-                    query = query.Where(u =>
-                        u.FirstName!.Contains(search) ||
-                        u.LastName!.Contains(search));
+                {
+                    var matchedUserIds = db2.UserProfiles.AsNoTracking()
+                        .Where(p => p.FirstName != null && p.FirstName.Contains(search)
+                                 || p.LastName != null && p.LastName.Contains(search))
+                        .Select(p => p.UserId);
+
+                    query = query.Where(u => matchedUserIds.Contains(u.Id));
+                }
 
                 var users = await query
-                    .OrderByDescending(u => u.RegistrationDate)
+                    .OrderByDescending(u => u.RegistrationDateUtc)
                     .ToListAsync(token);
 
                 return new { Users = users };
@@ -536,13 +572,13 @@ else if (use != null)
 
     private async Task OnProfileImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.ProfileImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → UserProfiles.AvatarMediaId güncelle (§72)
         await ShowNotification("info", "Bilgi", "Profil fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
     private async Task OnCoverImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.CoverImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → UserProfiles.CoverMediaId güncelle (§72)
         await ShowNotification("info", "Bilgi", "Kapak fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
@@ -631,7 +667,7 @@ else if (use != null)
     private void OnLogOutTimerChanged(ChangeEventArgs e)
     {
         var val = e.Value?.ToString();
-        use!.LogOutTimer = string.IsNullOrEmpty(val) ? null : int.Parse(val);
+        use!.LogOutTimerSeconds = string.IsNullOrEmpty(val) ? null : int.Parse(val);
     }
 
     private async Task SaveLogOutTimer()
@@ -642,7 +678,7 @@ else if (use != null)
         {
             await using var db = await DbFactory.CreateDbContextAsync();
             await db.Users.Where(u => u.Id == use!.Id)
-                .ExecuteUpdateAsync(s => s.SetProperty(u => u.LogOutTimer, use!.LogOutTimer));
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.LogOutTimerSeconds, use!.LogOutTimerSeconds));
             StateHub.ClearCache("ProfileEdit_Main");
             await ShowNotification("success", "Başarılı", "Hareketsizlik süresi güncellendi.", null);
             await Task.Delay(3000); // 3000 milisaniye = 3 saniye bekler
@@ -683,7 +719,8 @@ else if (use != null)
             "Hesabınızı dondurmak istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        use!.IsActive = false;
+        use!.AccountStatus = UserAccountStatus.Deactivated;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 
@@ -693,8 +730,11 @@ else if (use != null)
             "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        // Users.IsDeleted → bool? (Soft Delete flag)
-        use!.IsDeleted.IsDeletedStatu = true;
+        // V2: Hesap silme talebi — PendingDeletion durumuna geçer.
+        // Yasal saklama süresi sonrası anonimleştirme BackgroundService tarafından yapılır.
+        use!.AccountStatus = UserAccountStatus.PendingDeletion;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
+        use.DeletionRequestedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 

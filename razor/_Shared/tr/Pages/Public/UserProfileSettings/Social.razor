@@ -47,7 +47,7 @@
         </div>
     </div>
 }
-else if (use != null)
+else if (use != null && _profile != null)
 {
     <div class="container-fluid px-3 py-4">
 
@@ -73,13 +73,13 @@ else if (use != null)
                                     <i class="fa fa-envelope-o text-light"></i>
                                 </span>
                                 <input type="email" class="form-control "
-                                       @bind="use.ContactInformation!.Email"
+                                       @bind="_profile!.ContactInformation!.Email"
                                        placeholder="ornek@email.com" />
                             </div>
                             <div class="form-check form-switch mt-1">
                                 <input class="form-check-input" type="checkbox" id="chkEmailActive"
-                                       checked="@(use.ContactInformation!.IsActiveEmail == true)"
-                                       @onchange="e => use.ContactInformation!.IsActiveEmail = (bool?)e.Value" />
+                                       checked="@(_profile!.ContactInformation!.IsActiveEmail == true)"
+                                       @onchange="e => _profile!.ContactInformation!.IsActiveEmail = (bool?)e.Value" />
                                 <label class="form-check-label small " for="chkEmailActive">
                                     Herkese Açık
                                 </label>
@@ -91,16 +91,16 @@ else if (use != null)
                             <div class="input-group">
                                 <input type="text" class="form-control "
                                        style="max-width:90px;"
-                                       @bind="use.ContactInformation!.CountryPhoneCode"
+                                       @bind="_profile!.ContactInformation!.CountryPhoneCode"
                                        placeholder="+90" />
                                 <input type="tel" class="form-control "
-                                       @bind="use.ContactInformation!.PhoneNumber"
+                                       @bind="_profile!.ContactInformation!.PhoneNumber"
                                        placeholder="5XX XXX XX XX" />
                             </div>
                             <div class="form-check form-switch mt-1">
                                 <input class="form-check-input" type="checkbox" id="chkPhoneActive"
-                                       checked="@(use.ContactInformation!.IsActivePhoneNumber == true)"
-                                       @onchange="e => use.ContactInformation!.IsActivePhoneNumber = (bool?)e.Value" />
+                                       checked="@(_profile!.ContactInformation!.IsActivePhoneNumber == true)"
+                                       @onchange="e => _profile!.ContactInformation!.IsActivePhoneNumber = (bool?)e.Value" />
                                 <label class="form-check-label small " for="chkPhoneActive">
                                     Herkese Açık
                                 </label>
@@ -114,13 +114,13 @@ else if (use != null)
                                     <i class="fa fa-globe text-light"></i>
                                 </span>
                                 <input type="url" class="form-control "
-                                       @bind="use.ContactInformation!.UserWebSite"
+                                       @bind="_profile!.ContactInformation!.UserWebSite"
                                        placeholder="https://..." />
                             </div>
                             <div class="form-check form-switch mt-1">
                                 <input class="form-check-input" type="checkbox" id="chkWebActive"
-                                       checked="@(use.ContactInformation!.IsActiveUserWebSite == true)"
-                                       @onchange="e => use.ContactInformation!.IsActiveUserWebSite = (bool?)e.Value" />
+                                       checked="@(_profile!.ContactInformation!.IsActiveUserWebSite == true)"
+                                       @onchange="e => _profile!.ContactInformation!.IsActiveUserWebSite = (bool?)e.Value" />
                                 <label class="form-check-label small " for="chkWebActive">
                                     Herkese Açık
                                 </label>
@@ -141,80 +141,80 @@ else if (use != null)
                 <div class="card-body">
                     <div class="row g-3">
                         @RenderSocialField("fa fa-facebook-square", "Facebook",
-                        use.ContactInformation!.Facebook,       v => use.ContactInformation!.Facebook = v,
-                                        use.ContactInformation!.IsActiveFacebook == true, v => use.ContactInformation!.IsActiveFacebook = v, "chkFb")
-                    @RenderSocialField("fa fa-instagram", "Instagram",
-                                        use.ContactInformation!.Instagram,      v => use.ContactInformation!.Instagram = v,
-                                        use.ContactInformation!.IsActiveInstagram == true, v => use.ContactInformation!.IsActiveInstagram = v, "chkIg")
-                    @RenderSocialField("fa fa-twitter", "X (Twitter)",
-                                        use.ContactInformation!.X,              v => use.ContactInformation!.X = v,
-                                        use.ContactInformation!.IsActiveX == true, v => use.ContactInformation!.IsActiveX = v, "chkX")
-                    @RenderSocialField("fa fa-youtube-play", "YouTube",
-                                        use.ContactInformation!.YouTube,        v => use.ContactInformation!.YouTube = v,
-                                        use.ContactInformation!.IsActiveYouTube == true, v => use.ContactInformation!.IsActiveYouTube = v, "chkYt")
-                    @RenderSocialField("fa fa-linkedin-square", "LinkedIn",
-                                        use.ContactInformation!.Linkedin,       v => use.ContactInformation!.Linkedin = v,
-                                        use.ContactInformation!.IsActiveLinkedin == true, v => use.ContactInformation!.IsActiveLinkedin = v, "chkLi")
-                    @RenderSocialField("fa fa-whatsapp", "WhatsApp",
-                                        use.ContactInformation!.WhatsApp,       v => use.ContactInformation!.WhatsApp = v,
-                                        use.ContactInformation!.IsActiveWhatsApp == true, v => use.ContactInformation!.IsActiveWhatsApp = v, "chkWa")
-                    @RenderSocialField("fa fa-paper-plane-o", "Telegram",
-                                        use.ContactInformation!.Telegram,       v => use.ContactInformation!.Telegram = v,
-                                        use.ContactInformation!.IsActiveTelegram == true, v => use.ContactInformation!.IsActiveTelegram = v, "chkTg")
-                    @RenderSocialField("fa fa-music", "TikTok",
-                                        use.ContactInformation!.TikTok,         v => use.ContactInformation!.TikTok = v,
-                                        use.ContactInformation!.IsActiveTikTok == true, v => use.ContactInformation!.IsActiveTikTok = v, "chkTt")
+                        _profile!.ContactInformation!.Facebook, v => _profile!.ContactInformation!.Facebook = v,
+                                        _profile!.ContactInformation!.IsActiveFacebook == true, v => _profile!.ContactInformation!.IsActiveFacebook = v, "chkFb")
+                        @RenderSocialField("fa fa-instagram", "Instagram",
+                                            _profile!.ContactInformation!.Instagram, v => _profile!.ContactInformation!.Instagram = v,
+                                            _profile!.ContactInformation!.IsActiveInstagram == true, v => _profile!.ContactInformation!.IsActiveInstagram = v, "chkIg")
+                        @RenderSocialField("fa fa-twitter", "X (Twitter)",
+                                            _profile!.ContactInformation!.X, v => _profile!.ContactInformation!.X = v,
+                                            _profile!.ContactInformation!.IsActiveX == true, v => _profile!.ContactInformation!.IsActiveX = v, "chkX")
+                        @RenderSocialField("fa fa-youtube-play", "YouTube",
+                                            _profile!.ContactInformation!.YouTube, v => _profile!.ContactInformation!.YouTube = v,
+                                            _profile!.ContactInformation!.IsActiveYouTube == true, v => _profile!.ContactInformation!.IsActiveYouTube = v, "chkYt")
+                        @RenderSocialField("fa fa-linkedin-square", "LinkedIn",
+                                            _profile!.ContactInformation!.Linkedin, v => _profile!.ContactInformation!.Linkedin = v,
+                                            _profile!.ContactInformation!.IsActiveLinkedin == true, v => _profile!.ContactInformation!.IsActiveLinkedin = v, "chkLi")
+                        @RenderSocialField("fa fa-whatsapp", "WhatsApp",
+                                            _profile!.ContactInformation!.WhatsApp, v => _profile!.ContactInformation!.WhatsApp = v,
+                                            _profile!.ContactInformation!.IsActiveWhatsApp == true, v => _profile!.ContactInformation!.IsActiveWhatsApp = v, "chkWa")
+                        @RenderSocialField("fa fa-paper-plane-o", "Telegram",
+                                            _profile!.ContactInformation!.Telegram, v => _profile!.ContactInformation!.Telegram = v,
+                                            _profile!.ContactInformation!.IsActiveTelegram == true, v => _profile!.ContactInformation!.IsActiveTelegram = v, "chkTg")
+                        @RenderSocialField("fa fa-music", "TikTok",
+                                            _profile!.ContactInformation!.TikTok, v => _profile!.ContactInformation!.TikTok = v,
+                                            _profile!.ContactInformation!.IsActiveTikTok == true, v => _profile!.ContactInformation!.IsActiveTikTok = v, "chkTt")
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Bölgesel & Profesyonel -->
-        <div class="card border-0 shadow-sm bg-light mb-3">
-            <div class="card-header bg-light border-bottom">
-                <h6 class="mb-0 fw-semibold">
-                    <i class="fa fa-map me-2 text-light"></i>Bölgesel &amp; Profesyonel Platformlar
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    @RenderSocialField("fa fa-github", "GitHub",
-                                        use.ContactInformation!.GitHub,         v => use.ContactInformation!.GitHub = v,
-                                        use.ContactInformation!.IsActiveGitHub == true, v => use.ContactInformation!.IsActiveGitHub = v, "chkGh")
-                    @RenderSocialField("fa fa-pinterest", "Pinterest",
-                                        use.ContactInformation!.Pinterest,      v => use.ContactInformation!.Pinterest = v,
-                                        use.ContactInformation!.IsActivePinterest == true, v => use.ContactInformation!.IsActivePinterest = v, "chkPin")
-                    @RenderSocialField("fa fa-reddit", "Reddit",
-                                        use.ContactInformation!.Reddit,         v => use.ContactInformation!.Reddit = v,
-                                        use.ContactInformation!.IsActiveReddit == true, v => use.ContactInformation!.IsActiveReddit = v, "chkRed")
-                    @RenderSocialField("fa fa-comment", "Discord",
-                                        use.ContactInformation!.Discord,        v => use.ContactInformation!.Discord = v,
-                                        use.ContactInformation!.IsActiveDiscord == true, v => use.ContactInformation!.IsActiveDiscord = v, "chkDis")
-                    @RenderSocialField("fa fa-paint-brush", "Behance",
-                                        use.ContactInformation!.Behance,        v => use.ContactInformation!.Behance = v,
-                                        use.ContactInformation!.IsActiveBehance == true, v => use.ContactInformation!.IsActiveBehance = v, "chkBeh")
-                    @RenderSocialField("fa fa-weixin", "WeChat",
-                                        use.ContactInformation!.WeChat,         v => use.ContactInformation!.WeChat = v,
-                                        use.ContactInformation!.IsActiveWeChat == true, v => use.ContactInformation!.IsActiveWeChat = v, "chkWc")
-                    @RenderSocialField("fa fa-rss", "Weibo",
-                                        use.ContactInformation!.Weibo,          v => use.ContactInformation!.Weibo = v,
-                                        use.ContactInformation!.IsActiveWeibo == true, v => use.ContactInformation!.IsActiveWeibo = v, "chkWb")
-                    @RenderSocialField("fa fa-vk", "VKontakte",
-                                        use.ContactInformation!.VKontakte,      v => use.ContactInformation!.VKontakte = v,
-                                        use.ContactInformation!.IsActiveVKontakte == true, v => use.ContactInformation!.IsActiveVKontakte = v, "chkVk")
-                    @RenderSocialField("fa fa-line-chart", "Line",
-                                        use.ContactInformation!.Line,           v => use.ContactInformation!.Line = v,
-                                        use.ContactInformation!.IsActiveLine == true, v => use.ContactInformation!.IsActiveLine = v, "chkLine")
-                    @RenderSocialField("fa fa-commenting", "KakaoTalk",
-                                        use.ContactInformation!.KakaoTalk,      v => use.ContactInformation!.KakaoTalk = v,
-                                        use.ContactInformation!.IsActiveKakaoTalk == true, v => use.ContactInformation!.IsActiveKakaoTalk = v, "chkKk")
+            <!-- Bölgesel & Profesyonel -->
+            <div class="card border-0 shadow-sm bg-light mb-3">
+                <div class="card-header bg-light border-bottom">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="fa fa-map me-2 text-light"></i>Bölgesel &amp; Profesyonel Platformlar
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @RenderSocialField("fa fa-github", "GitHub",
+                                            _profile!.ContactInformation!.GitHub, v => _profile!.ContactInformation!.GitHub = v,
+                                            _profile!.ContactInformation!.IsActiveGitHub == true, v => _profile!.ContactInformation!.IsActiveGitHub = v, "chkGh")
+                        @RenderSocialField("fa fa-pinterest", "Pinterest",
+                                            _profile!.ContactInformation!.Pinterest, v => _profile!.ContactInformation!.Pinterest = v,
+                                            _profile!.ContactInformation!.IsActivePinterest == true, v => _profile!.ContactInformation!.IsActivePinterest = v, "chkPin")
+                        @RenderSocialField("fa fa-reddit", "Reddit",
+                                            _profile!.ContactInformation!.Reddit, v => _profile!.ContactInformation!.Reddit = v,
+                                            _profile!.ContactInformation!.IsActiveReddit == true, v => _profile!.ContactInformation!.IsActiveReddit = v, "chkRed")
+                        @RenderSocialField("fa fa-comment", "Discord",
+                                            _profile!.ContactInformation!.Discord, v => _profile!.ContactInformation!.Discord = v,
+                                            _profile!.ContactInformation!.IsActiveDiscord == true, v => _profile!.ContactInformation!.IsActiveDiscord = v, "chkDis")
+                        @RenderSocialField("fa fa-paint-brush", "Behance",
+                                            _profile!.ContactInformation!.Behance, v => _profile!.ContactInformation!.Behance = v,
+                                            _profile!.ContactInformation!.IsActiveBehance == true, v => _profile!.ContactInformation!.IsActiveBehance = v, "chkBeh")
+                        @RenderSocialField("fa fa-weixin", "WeChat",
+                                            _profile!.ContactInformation!.WeChat, v => _profile!.ContactInformation!.WeChat = v,
+                                            _profile!.ContactInformation!.IsActiveWeChat == true, v => _profile!.ContactInformation!.IsActiveWeChat = v, "chkWc")
+                        @RenderSocialField("fa fa-rss", "Weibo",
+                                            _profile!.ContactInformation!.Weibo, v => _profile!.ContactInformation!.Weibo = v,
+                                            _profile!.ContactInformation!.IsActiveWeibo == true, v => _profile!.ContactInformation!.IsActiveWeibo = v, "chkWb")
+                        @RenderSocialField("fa fa-vk", "VKontakte",
+                                            _profile!.ContactInformation!.VKontakte, v => _profile!.ContactInformation!.VKontakte = v,
+                                            _profile!.ContactInformation!.IsActiveVKontakte == true, v => _profile!.ContactInformation!.IsActiveVKontakte = v, "chkVk")
+                        @RenderSocialField("fa fa-line-chart", "Line",
+                                            _profile!.ContactInformation!.Line, v => _profile!.ContactInformation!.Line = v,
+                                            _profile!.ContactInformation!.IsActiveLine == true, v => _profile!.ContactInformation!.IsActiveLine = v, "chkLine")
+                        @RenderSocialField("fa fa-commenting", "KakaoTalk",
+                                            _profile!.ContactInformation!.KakaoTalk, v => _profile!.ContactInformation!.KakaoTalk = v,
+                                            _profile!.ContactInformation!.IsActiveKakaoTalk == true, v => _profile!.ContactInformation!.IsActiveKakaoTalk = v, "chkKk")
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="text-end">
-            <button class="btn btn-dark btn-sm px-4"
-                    @onclick="SaveContactInfo" disabled="@_isProcessing">
-                @if (_isProcessing)
+            <div class="text-end">
+                <button class="btn btn-dark btn-sm px-4"
+                        @onclick="SaveContactInfo" disabled="@_isProcessing">
+                    @if (_isProcessing)
                     {
                         <span class="spinner-border spinner-border-sm me-1"></span>
                     }
@@ -298,6 +298,10 @@ else if (use != null)
 
     private Users? _use;
 
+    /// <summary>
+    /// Giriş yapmış kullanıcı (Users entity). Yalnızca kimlik/hesap durumu için.
+    /// Sosyal profil alanları (ContactInformation, avatar, kapak) → UserProfiles.
+    /// </summary>
     [Parameter]
     public Users? use
     {
@@ -305,13 +309,16 @@ else if (use != null)
         set
         {
             _use = value;
-            if (_use is null) return;
-            _use.ContactInformation ??= new ContactInformation();
-            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
-            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
-            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
         }
     }
+
+    /// <summary>
+    /// Kullanıcının profil kaydı (UserProfiles entity — 1:1).
+    /// ContactInformation owned tipi buradadır (§72 — Users'tan taşındı).
+    /// Profil/kapak görselleri artık AvatarMediaId / CoverMediaId FK'dir
+    /// (eski ProfileCoverGallery kaldırıldı).
+    /// </summary>
+    private UserProfiles? _profile;
 
     private readonly CancellationTokenSource _cts = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
@@ -420,6 +427,32 @@ else if (use != null)
         FileService.OnFileSelected += HandleSingleFileSelected;
         StateHub.OnDataChanged += HandleGlobalDataChange;
         await LoadData(null);
+        await LoadProfile();
+    }
+
+    /// <summary>
+    /// Kullanıcının UserProfiles kaydını yükler (ContactInformation owned type'ı buradadır).
+    /// Navigation property kullanılmaz; UserId FK ile ayrı sorgu yapılır.
+    /// </summary>
+    private async Task LoadProfile()
+    {
+        if (use is null) return;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _profile = await db.UserProfiles
+                .FirstOrDefaultAsync(p => p.UserId == use.Id
+                    && (p.IsDeleted == null || p.IsDeleted.IsDeletedStatu != true));
+
+            _profile ??= new UserProfiles { UserId = use.Id };
+            _profile.ContactInformation ??= new ContactInformation();
+        }
+        catch (Exception ex)
+        {
+            await Logger.TakeIt(use?.Id, PAGE, "LoadProfile",
+                exception: ex.Message, stackTrace: ex.StackTrace);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -472,15 +505,25 @@ else if (use != null)
             var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
             {
                 await using var db2 = await DbFactory.CreateDbContextAsync(token);
-                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+                // Users.AccountStatus (enum) — eski bool? IsActive kaldırıldı.
+                var query = db2.Users.AsNoTracking()
+                    .Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
-                    query = query.Where(u =>
-                        u.FirstName!.Contains(search) ||
-                        u.LastName!.Contains(search));
+                {
+                    // FirstName/LastName artık UserProfiles tablosundadır (Users'ta değil).
+                    // Navigation property kullanılmaz (mimari kuralı); sub-query ile erişilir.
+                    var matchedUserIds = db2.UserProfiles.AsNoTracking()
+                        .Where(p => p.FirstName != null && p.FirstName.Contains(search)
+                                 || p.LastName != null && p.LastName.Contains(search))
+                        .Select(p => p.UserId);
 
+                    query = query.Where(u => matchedUserIds.Contains(u.Id));
+                }
+
+                // RegistrationDate → RegistrationDateUtc (yeni alan adı).
                 var users = await query
-                    .OrderByDescending(u => u.RegistrationDate)
+                    .OrderByDescending(u => u.RegistrationDateUtc)
                     .ToListAsync(token);
 
                 return new { Users = users };
@@ -549,13 +592,15 @@ else if (use != null)
 
     private async Task OnProfileImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.ProfileImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → _profile.AvatarMediaId güncelle
+        // §72: Eski ProfileCoverGallery (fiziksel yol) kaldırıldı; artık merkezî medya FK'si.
         await ShowNotification("info", "Bilgi", "Profil fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
     private async Task OnCoverImageChanged(InputFileChangeEventArgs e)
     {
-        // TODO: Dosyayı sunucuya yükle → use.ProfileCoverGallery!.CoverImagePath güncelle
+        // TODO: Dosyayı sunucuya yükle → _profile.CoverMediaId güncelle
+        // §72: Eski ProfileCoverGallery (fiziksel yol) kaldırıldı; artık merkezî medya FK'si.
         await ShowNotification("info", "Bilgi", "Kapak fotoğrafı yükleme işlemi yapılacak.", null);
     }
 
@@ -596,7 +641,8 @@ else if (use != null)
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            db.Users.Update(use!);
+            // ContactInformation artık UserProfiles üzerindedir (Users'ta değil).
+            db.UserProfiles.Update(_profile!);
             await db.SaveChangesAsync();
             StateHub.ClearCache("ProfileEdit_Main");
             await ShowNotification("success", "Başarılı", "İletişim bilgileri kaydedildi.", null);
@@ -662,7 +708,9 @@ else if (use != null)
             "Hesabınızı dondurmak istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        use!.IsActive = false;
+        // Users.AccountStatus (enum) — eski bool? IsActive kaldırıldı.
+        use!.AccountStatus = UserAccountStatus.Deactivated;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 
@@ -672,8 +720,11 @@ else if (use != null)
             "Bu işlem GERİ ALINAMAZ! Hesabınızı kalıcı olarak silmek istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        // Users.IsDeleted → bool? (Soft Delete flag)
-        use!.IsDeleted.IsDeletedStatu = true;
+        // V2: Hesap silme talebi — kullanıcı PendingDeletion durumuna geçer.
+        // Yasal saklama süresi sonunda anonimleştirme BackgroundService tarafından yapılır.
+        use!.AccountStatus = UserAccountStatus.PendingDeletion;
+        use.AccountStatusChangedAtUtc = DateTime.UtcNow;
+        use.DeletionRequestedAtUtc = DateTime.UtcNow;
         await SaveBasicInfo();
     }
 

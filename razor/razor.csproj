@@ -70,12 +70,6 @@
     <Content Update="_Shared\ThisPageIsBeingPreparedProfileMedia.razor">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
-    <Content Update="_Shared\ThisPageIsBeingPreparedProfile.razor">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-    <Content Update="_Shared\ThisPageIsBeingPrepared.razor">
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

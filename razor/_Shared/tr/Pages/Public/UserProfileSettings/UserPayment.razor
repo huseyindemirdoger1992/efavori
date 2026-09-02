@@ -673,35 +673,35 @@ else
     private Notification? _notificationRef;
 
     // ─── Veriler ──────────────────────────────────────────────────
-    private List<TryTableSingle> _allItems = new();
+    private List<TryTable> _allItems = new();
     private List<Country> _countries = new();
 
     // ─── Sayfalama ────────────────────────────────────────────────
     private int _currentPage = 1;
     private int _totalPages = 1;
-    private List<TryTableSingle> _pagedItems = new();
+    private List<TryTable> _pagedItems = new();
 
     // ─── Ekle modal state ─────────────────────────────────────────
-    private TryTableSingle? _addModel;
+    private TryTable? _addModel;
     private int _addCountryId;
     private int _addStateId;
     private List<States> _addStates = new();
     private List<Cities> _addCities = new();
 
     // ─── Düzenle modal state ──────────────────────────────────────
-    private TryTableSingle? _editModel;
+    private TryTable? _editModel;
     private int _editCountryId;
     private int _editStateId;
     private List<States> _editStates = new();
     private List<Cities> _editCities = new();
 
     // ─── Sil modal state ──────────────────────────────────────────
-    private TryTableSingle? _deleteTarget;
+    private TryTable? _deleteTarget;
 
     // ─── Toplu Sil state ──────────────────────────────────────────
     private readonly HashSet<Guid> _selectedIds = new();
     private bool _allSelected;
-    private List<TryTableSingle> _bulkDeletePreview = new();
+    private List<TryTable> _bulkDeletePreview = new();
 
     // ══════════════════════════════════════════════════════════════
     // YARDIMCI: Şifre çöz (null-safe, hata durumunda orijinal döner)
@@ -790,7 +790,7 @@ else
             var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
-                var q = db.TryTableSingle.AsNoTracking().AsQueryable();
+                var q = db.TryTable.AsNoTracking().AsQueryable();
 
                 // Soft delete: silinmemiş kayıtları getir
                 // (IsDeleted owned entity'si hiç set edilmemiş eski kayıtlar da dahil)
@@ -977,7 +977,7 @@ else
 
     private async Task OpenAddModal()
     {
-        _addModel = new TryTableSingle { Id = Guid.Empty, SelectDateTime = DateTime.UtcNow, GetDateTime = DateTime.UtcNow };
+        _addModel = new TryTable { Id = Guid.Empty, SelectDateTime = DateTime.UtcNow, GetDateTime = DateTime.UtcNow };
         _addCountryId = 0;
         _addStateId = 0;
         _addStates.Clear();
@@ -985,10 +985,10 @@ else
         await ShowModal("AddModal");
     }
 
-    private async Task OpenEditModal(TryTableSingle item)
+    private async Task OpenEditModal(TryTable item)
     {
         // Şifreli alanları çözerek modele yaz
-        _editModel = new TryTableSingle
+        _editModel = new TryTable
         {
             Id = item.Id,
             Country = Decrypt(item.Country),
@@ -1043,7 +1043,7 @@ else
         await ShowModal("EditModal");
     }
 
-    private async Task OpenDeleteModal(TryTableSingle item)
+    private async Task OpenDeleteModal(TryTable item)
     {
         _deleteTarget = item;
         await ShowModal("DeleteModal");
@@ -1089,7 +1089,7 @@ else
             };
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            db.TryTableSingle.Add(_addModel);
+            db.TryTable.Add(_addModel);
             await db.SaveChangesAsync(_cts.Token);
 
             await HideModal("AddModal");
@@ -1128,7 +1128,7 @@ else
             StateHasChanged();
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var existing = await db.TryTableSingle.FindAsync(new object[] { _editModel.Id }, _cts.Token);
+            var existing = await db.TryTable.FindAsync(new object[] { _editModel.Id }, _cts.Token);
 
             if (existing == null)
             {
@@ -1183,7 +1183,7 @@ else
             StateHasChanged();
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var entity = await db.TryTableSingle.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+            var entity = await db.TryTable.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
 
             if (entity != null)
             {
@@ -1238,7 +1238,7 @@ else
 
             // Soft delete: seçili kayıtları kalıcı silmek yerine işaretle
             var now = DateTime.UtcNow;
-            await db.TryTableSingle
+            await db.TryTable
                 .Where(x => ids.Contains(x.Id))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(x => x.IsDeleted!.IsDeletedStatu, true)

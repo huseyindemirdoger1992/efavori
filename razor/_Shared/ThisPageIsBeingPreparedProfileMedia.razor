@@ -156,9 +156,9 @@ else
                         </td>
                         <td class="d-none d-md-table-cell text-secondary small">@(rowNo++)</td>
                         <td>
-                            @if (!string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.ProfileImagePath))
+                            @if (!string.IsNullOrWhiteSpace(_profileMediaUrls.GetValueOrDefault(item.Id)))
                             {
-                                <img src="@item.ProfileCoverGallery!.ProfileImagePath"
+                                <img src="@_profileMediaUrls.GetValueOrDefault(item.Id)"
                                      class="rounded-circle border border-secondary"
                                      style="width:42px;height:42px;object-fit:cover;"
                                      alt="Profil" />
@@ -172,9 +172,9 @@ else
                             }
                         </td>
                         <td>
-                            @if (!string.IsNullOrWhiteSpace(item.ProfileCoverGallery?.CoverImagePath))
+                            @if (!string.IsNullOrWhiteSpace(_coverMediaUrls.GetValueOrDefault(item.Id)))
                             {
-                                <img src="@item.ProfileCoverGallery!.CoverImagePath"
+                                <img src="@_coverMediaUrls.GetValueOrDefault(item.Id)"
                                      class="rounded border border-secondary"
                                      style="width:72px;height:42px;object-fit:cover;"
                                      alt="Kapak" />
@@ -1122,35 +1122,37 @@ else
     private Notification? _notificationRef;
 
     // ─── Veriler ──────────────────────────────────────────────────
-    private List<TryTableSingle> _allItems = new();
+    private List<TryTable> _allItems = new();
+    private Dictionary<Guid, string?> _profileMediaUrls = new();
+    private Dictionary<Guid, string?> _coverMediaUrls = new();
     private List<Country> _countries = new();
 
     // ─── Sayfalama ────────────────────────────────────────────────
     private int _currentPage = 1;
     private int _totalPages = 1;
-    private List<TryTableSingle> _pagedItems = new();
+    private List<TryTable> _pagedItems = new();
 
     // ─── Ekle modal state ─────────────────────────────────────────
-    private TryTableSingle? _addModel;
+    private TryTable? _addModel;
     private int _addCountryId;
     private int _addStateId;
     private List<States> _addStates = new();
     private List<Cities> _addCities = new();
 
     // ─── Düzenle modal state ──────────────────────────────────────
-    private TryTableSingle? _editModel;
+    private TryTable? _editModel;
     private int _editCountryId;
     private int _editStateId;
     private List<States> _editStates = new();
     private List<Cities> _editCities = new();
 
     // ─── Sil modal state ──────────────────────────────────────────
-    private TryTableSingle? _deleteTarget;
+    private TryTable? _deleteTarget;
 
     // ─── Toplu Sil state ──────────────────────────────────────────
     private readonly HashSet<Guid> _selectedIds = new();
     private bool _allSelected;
-    private List<TryTableSingle> _bulkDeletePreview = new();
+    private List<TryTable> _bulkDeletePreview = new();
 
     // ══════════════════════════════════════════════════════════════
     // YAŞAM DÖNGÜSÜ
@@ -1247,7 +1249,7 @@ else
             var result = await StateHub.GetOrLoadAsync(cacheKey, async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
-                var q = db.TryTableSingle.AsNoTracking().AsQueryable();
+                var q = db.TryTable.AsNoTracking().AsQueryable();
 
                 // Soft Delete filtresi: silinmiş kayıtlar listede görünmez
                 // (IsDeleted owned entity — IsDeletedStatu null veya false olanlar gösterilir)
@@ -1269,6 +1271,28 @@ else
             if (token.IsCancellationRequested || result == null) return;
 
             _allItems = result;
+
+            // Profil/Kapak medya URL'lerini toplu yükle
+            _profileMediaUrls.Clear();
+            _coverMediaUrls.Clear();
+            var allMediaIds = _allItems
+                .SelectMany(x => new[] { x.ProfileMediaId, x.CoverMediaId })
+                .Where(id => id.HasValue)
+                .Select(id => id!.Value)
+                .Distinct().ToList();
+            if (allMediaIds.Any())
+            {
+                await using var dbMedia = await DbFactory.CreateDbContextAsync(token);
+                var mediaDict = await dbMedia.Media.AsNoTracking()
+                    .Where(m => allMediaIds.Contains(m.Id))
+                    .ToDictionaryAsync(m => m.Id, m => m.FileUrl, token);
+                foreach (var item in _allItems)
+                {
+                    _profileMediaUrls[item.Id] = item.ProfileMediaId.HasValue ? mediaDict.GetValueOrDefault(item.ProfileMediaId.Value) : null;
+                    _coverMediaUrls[item.Id] = item.CoverMediaId.HasValue ? mediaDict.GetValueOrDefault(item.CoverMediaId.Value) : null;
+                }
+            }
+
             ApplyPaging(1);
         }
         catch (OperationCanceledException) { }
@@ -1425,7 +1449,7 @@ else
 
     private async Task OpenAddModal()
     {
-        _addModel = new TryTableSingle { Id = Guid.Empty, SelectDateTime = DateTime.UtcNow, GetDateTime = DateTime.UtcNow };
+        _addModel = new TryTable { Id = Guid.Empty, SelectDateTime = DateTime.UtcNow, GetDateTime = DateTime.UtcNow };
         _addCountryId = 0;
         _addStateId = 0;
         _addStates.Clear();
@@ -1440,9 +1464,9 @@ else
         await ShowModal("AddModal");
     }
 
-    private async Task OpenEditModal(TryTableSingle item)
+    private async Task OpenEditModal(TryTable item)
     {
-        _editModel = new TryTableSingle
+        _editModel = new TryTable
         {
             Id = item.Id,
             Country = item.Country,
@@ -1453,12 +1477,8 @@ else
             CheckMarked = item.CheckMarked,
             SelectDateTime = item.SelectDateTime,
             GetDateTime = item.GetDateTime,
-            // Owned entity — değerleriyle birlikte yeni instance taşı (referans paylaşmamak için)
-            ProfileCoverGallery = item.ProfileCoverGallery == null ? null : new ProfileCoverGallery
-            {
-                ProfileImagePath = item.ProfileCoverGallery.ProfileImagePath,
-                CoverImagePath = item.ProfileCoverGallery.CoverImagePath
-            }
+            ProfileMediaId = item.ProfileMediaId,
+            CoverMediaId = item.CoverMediaId
         };
 
         _editCountryId = 0;
@@ -1466,14 +1486,18 @@ else
         _editStates.Clear();
         _editCities.Clear();
 
-        // Profil/Kapak görsellerini UI state'ine geri yükle
-        _profileMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.ProfileImagePath)
-            ? null
-            : new data._Galleries.Media { FileUrl = _editModel.ProfileCoverGallery!.ProfileImagePath, FileName = "Profil" };
-
-        _coverMedia = string.IsNullOrWhiteSpace(_editModel.ProfileCoverGallery?.CoverImagePath)
-            ? null
-            : new data._Galleries.Media { FileUrl = _editModel.ProfileCoverGallery!.CoverImagePath, FileName = "Kapak" };
+        // Profil/Kapak görsellerini DB'den Media kaydı olarak yükle
+        _profileMedia = null;
+        _coverMedia = null;
+        try
+        {
+            await using var dbMedia = await DbFactory.CreateDbContextAsync(_cts.Token);
+            if (_editModel.ProfileMediaId.HasValue)
+                _profileMedia = await dbMedia.Media.AsNoTracking().FirstOrDefaultAsync(m => m.Id == _editModel.ProfileMediaId.Value, _cts.Token);
+            if (_editModel.CoverMediaId.HasValue)
+                _coverMedia = await dbMedia.Media.AsNoTracking().FirstOrDefaultAsync(m => m.Id == _editModel.CoverMediaId.Value, _cts.Token);
+        }
+        catch (Exception ex) { await LogError("OpenEditModal_LoadMedia", ex); }
 
         _activeMediaSlot = string.Empty;
 
@@ -1517,7 +1541,7 @@ else
         await ShowModal("EditModal");
     }
 
-    private async Task OpenDeleteModal(TryTableSingle item)
+    private async Task OpenDeleteModal(TryTable item)
     {
         _deleteTarget = item;
         await ShowModal("DeleteModal");
@@ -1549,12 +1573,9 @@ else
             _addModel.UserId = use.Id;
             _addModel.GetDateTime = DateTime.UtcNow;
 
-            // Profil/Kapak görsel yollarını owned entity'ye yaz
-            _addModel.ProfileCoverGallery = new ProfileCoverGallery
-            {
-                ProfileImagePath = _profileMedia?.FileUrl,
-                CoverImagePath = _coverMedia?.FileUrl
-            };
+            // Profil/Kapak medya FK'lerini yaz
+            _addModel.ProfileMediaId = _profileMedia?.Id;
+            _addModel.CoverMediaId = _coverMedia?.Id;
 
             // Soft Delete owned entity'sini başlat (yeni kayıt — silinmemiş durumda)
             _addModel.IsDeleted = new IsDeleted
@@ -1564,7 +1585,7 @@ else
             };
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            db.TryTableSingle.Add(_addModel);
+            db.TryTable.Add(_addModel);
             await db.SaveChangesAsync(_cts.Token);
 
             // Galeri kayıtlarını MediaItems tablosuna ekle
@@ -1574,9 +1595,9 @@ else
                 {
                     UserId = use!.Id,
                     ItemId = _addModel.Id,
-                    ItemType = "Gallery",
+                    ItemType = MediaOwnerType.SystemContent,
                     MediaId = m.Id,
-                    ItemAddDate = DateTime.UtcNow,
+                    CreatedAtUtc = DateTime.UtcNow,
                     IsDeleted = new IsDeleted { IsDeletedStatu = false }
                 }).ToList();
 
@@ -1630,7 +1651,7 @@ else
             // ================================================================
             // 1. Mevcut ana kaydı getir.
             // ================================================================
-            var existing = await db.TryTableSingle
+            var existing = await db.TryTable
                 .FindAsync(
                     new object[] { _editModel.Id },
                     _cts.Token);
@@ -1657,37 +1678,28 @@ else
             existing.SelectDateTime = _editModel.SelectDateTime;
 
             // ================================================================
-            // 3. Profil / kapak görsellerini owned entity'ye yaz.
-            //
-            // Media dosyasının kendisi Media tablosundadır.
-            // Buradaki alanlar yalnızca mevcut sistemin ProfileCoverGallery
-            // owned yapısını korumak içindir.
+            // 3. Profil / kapak medya FK'lerini güncelle.
             // ================================================================
-            existing.ProfileCoverGallery = new ProfileCoverGallery
-            {
-                ProfileImagePath = _profileMedia?.FileUrl,
-                CoverImagePath = _coverMedia?.FileUrl
-            };
+            existing.ProfileMediaId = _profileMedia?.Id;
+            existing.CoverMediaId = _coverMedia?.Id;
 
             // ================================================================
             // 4. Bu kayda ait mevcut GALERİ ilişkilerini getir.
             //
             // YENİ MEDYA MİMARİSİ:
             //
-            // ItemType  = TryTableSingle entity tipi
+            // ItemType  = TryTable entity tipi
             // ItemId    = existing.Id
             // MediaRole = Gallery
             //
             // Gallery artık ItemType değildir.
             // ================================================================
-            const string mediaItemType = "TryTableSingle";
-            const string mediaRole = "Gallery";
 
             var oldGallery = await db.MediaItems
                 .Where(g =>
                     g.ItemId == existing.Id &&
-                    g.ItemType == mediaItemType &&
-                    g.MediaRole == mediaRole)
+                    g.ItemType == MediaOwnerType.SystemContent &&
+                    g.MediaRole == MediaRole.Gallery)
                 .ToListAsync(_cts.Token);
 
             // ================================================================
@@ -1727,7 +1739,7 @@ else
                 {
                     galleryItem.IsDeleted.IsDeletedStatu = true;
                     galleryItem.IsDeleted.DeletedAtDate = now;
-                    galleryItem.UpdatedAt = now;
+                    galleryItem.UpdatedAtUtc = now;
                     galleryItem.IsVisible = false;
                 }
 
@@ -1739,8 +1751,8 @@ else
                 {
                     galleryItem.IsDeleted.IsDeletedStatu = false;
                     galleryItem.IsDeleted.DeletedAtDate = null;
-                    galleryItem.UpdatedAt = now;
-                    galleryItem.ItemAddDate = now;
+                    galleryItem.UpdatedAtUtc = now;
+                    galleryItem.CreatedAtUtc = now;
                     galleryItem.IsVisible = true;
                 }
             }
@@ -1783,10 +1795,10 @@ else
                         ItemId = existing.Id,
 
                         // Yeni mimaride entity türü.
-                        ItemType = mediaItemType,
+                        ItemType = MediaOwnerType.SystemContent,
 
                         // Yeni mimaride galeri / slot / kullanım amacı.
-                        MediaRole = mediaRole,
+                        MediaRole = MediaRole.Gallery,
 
                         // Gerçek medya kaydı.
                         MediaId = media.Id,
@@ -1801,10 +1813,10 @@ else
                         IsPrimary = index == 0,
 
                         // İlişki oluşturulma tarihi.
-                        ItemAddDate = now,
+                        CreatedAtUtc = now,
 
                         // Güncellenme tarihi.
-                        UpdatedAt = now,
+                        UpdatedAtUtc = now,
 
                         // Aktif kayıt.
                         IsDeleted = new IsDeleted
@@ -1842,7 +1854,7 @@ else
                         out var order))
                 {
                     galleryItem.SortOrder = order;
-                    galleryItem.UpdatedAt = now;
+                    galleryItem.UpdatedAtUtc = now;
                     galleryItem.IsVisible = true;
 
                     // İlk medya primary olarak işaretlenir.
@@ -1860,8 +1872,8 @@ else
             var activeGallery = await db.MediaItems
                 .Where(g =>
                     g.ItemId == existing.Id &&
-                    g.ItemType == mediaItemType &&
-                    g.MediaRole == mediaRole &&
+                    g.ItemType == MediaOwnerType.SystemContent &&
+                    g.MediaRole == MediaRole.Gallery &&
                     g.IsDeleted != null &&
                     g.IsDeleted.IsDeletedStatu != true)
                 .ToListAsync(_cts.Token);
@@ -1875,7 +1887,7 @@ else
                     galleryItem.SortOrder = order;
                     galleryItem.IsPrimary = order == 0;
                     galleryItem.IsVisible = true;
-                    galleryItem.UpdatedAt = now;
+                    galleryItem.UpdatedAtUtc = now;
                 }
             }
 
@@ -1961,13 +1973,13 @@ else
             StateHasChanged();
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
-            var entity = await db.TryTableSingle.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
+            var entity = await db.TryTable.FindAsync(new object[] { _deleteTarget.Id }, _cts.Token);
 
             if (entity != null)
             {
                 // Bağlı galeri kayıtlarını soft delete et (MediaItems.IsDeleted.IsDeletedStatu = true)
                 var galleryItems = await db.MediaItems
-                    .Where(g => g.ItemId == entity.Id && g.ItemType == "Gallery" && g.IsDeleted!.IsDeletedStatu != true)
+                    .Where(g => g.ItemId == entity.Id && g.ItemType == MediaOwnerType.SystemContent && g.IsDeleted!.IsDeletedStatu != true)
                     .ToListAsync(_cts.Token);
 
                 foreach (var g in galleryItems)
@@ -2029,13 +2041,13 @@ else
 
             // Bağlı galeri kayıtlarını toplu soft delete (MediaItems.IsDelete = true)
             await db.MediaItems
-                .Where(g => ids.Contains(g.ItemId!.Value) && g.ItemType == "Gallery" && g.IsDeleted!.IsDeletedStatu != true)
+                .Where(g => ids.Contains(g.ItemId) && g.ItemType == MediaOwnerType.SystemContent && g.IsDeleted!.IsDeletedStatu != true)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(g => g.IsDeleted!.IsDeletedStatu, true),
                     _cts.Token);
 
             // Ana kayıtları toplu soft delete (IsDeleted owned entity alanları)
-            await db.TryTableSingle
+            await db.TryTable
                 .Where(x => ids.Contains(x.Id))
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(x => x.IsDeleted!.IsDeletedStatu, true)
@@ -2146,7 +2158,7 @@ else
             _galleryAllMedia = await db.Media
                 .AsNoTracking()
                 .Where(m => m.IsDeleted!.IsDeletedStatu == false && m.UserId == use.Id)
-                .OrderByDescending(m => m.CreatedAt)
+                .OrderByDescending(m => m.CreatedAtUtc)
                 .ToListAsync(_cts.Token);
             ApplyGalleryFilter();
         }
@@ -2246,7 +2258,7 @@ else
         {
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
             var mediaIds = await db.MediaItems
-                .Where(g => g.ItemId == itemId && g.ItemType == "Gallery" && g.IsDeleted!.IsDeletedStatu == false)
+                .Where(g => g.ItemId == itemId && g.ItemType == MediaOwnerType.SystemContent && g.IsDeleted!.IsDeletedStatu == false)
                 .Select(g => g.MediaId)
                 .ToListAsync(_cts.Token);
 

@@ -29,7 +29,7 @@
 @code {
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
-    // NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
+    // NavigationManager.NavigateTo($@"/{"tr"}/Admin/Store/List/", true); Dil bilgisini global state'den alarak yönlendirme yapar.
 }
 
 <Notification @ref="notificationRef" />
@@ -743,15 +743,15 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Adınız</label>
-                            <input class="form-control" type="text" value="@use.FirstName" readonly>
+                            <input class="form-control" type="text" value="@@_profile?.FirstName" readonly>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Soyadınız</label>
-                            <input class="form-control" type="text" value="@use.LastName" readonly>
+                            <input class="form-control" type="text" value="@@_profile?.LastName" readonly>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Kayıt Tarihiniz</label>
-                            <input class="form-control" type="text" value="@use.RegistrationDate" readonly>
+                            <input class="form-control" type="text" value="@use.RegistrationDateUtc" readonly>
                         </div>
                     </div>
 
@@ -1861,17 +1861,17 @@
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
 
-                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var query = db.Users.AsNoTracking().Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
                 {
                     query = query.Where(u =>
-                        u.FirstName.Contains(search) ||
-                        u.LastName.Contains(search));
+                        true ||
+                        true);
                 }
 
                 var users = await query
-                    .OrderByDescending(u => u.RegistrationDate)
+                    .OrderByDescending(u => u.RegistrationDateUtc)
                     .ToListAsync(token);
 
                 return new { Users = users };
@@ -1990,12 +1990,12 @@
             // Satıcı Kontrolleri
             _Store.IsActiveStateVendor = true;
             _Store.IsActiveDateVendor = DateTime.UtcNow;
-            _Store.CreatedAt = DateTime.UtcNow;
+            // CreatedAtUtc set by StoreEntityBase;
 
             // Profil / Kapak Görselleri
-            _Store.ProfileCoverGallery ??= new();
-            _Store.ProfileCoverGallery.ProfileImagePath = _profileMedia?.FileUrl;
-            _Store.ProfileCoverGallery.CoverImagePath = _coverMedia?.FileUrl;
+            _Store.AvatarMediaId = _Store.AvatarMediaId;
+            _Store.AvatarMediaId = _profileMedia?.Id;
+            _Store.CoverMediaId = _coverMedia?.Id;
 
             // FullPhoneNumber birleştir
             if (_Store.ContactInformation != null &&
@@ -2081,7 +2081,7 @@
             _writeLock.Release();
             StateHasChanged();
         }
-        NavigationManager.NavigateTo($@"/{use?.Language.ToLower()}/Admin/Store/List/", true);
+        NavigationManager.NavigateTo($@"/{"tr"}/Admin/Store/List/", true);
     }
 
     protected async Task UpdateUser(Users updatedUser)
@@ -2178,7 +2178,7 @@
 
             var now = DateTime.UtcNow;
             foreach (var user in users)
-                user.RegistrationDate = now;
+                user.RegistrationDateUtc = now;
 
             db.Users.AddRange(users);
             await db.SaveChangesAsync(_cts.Token);

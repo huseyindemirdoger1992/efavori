@@ -44,6 +44,9 @@ namespace data
     /// </summary>
     public class _ApplicationConnectionDb : DbContext
     {
+        public DbSet<TryTable> TryTable { get; set; } = default!;
+
+
         // ═════════════════════════════════════════════════════════════════════
         //  _Galleries — MERKEZÎ MEDYA SİSTEMİ
         //  Platformdaki TEK fiziksel medya deposu (§14, §72).
@@ -211,6 +214,10 @@ namespace data
         public DbSet<ImportJob> ImportJobs { get; set; } = default!;
         public DbSet<ImportRow> ImportRows { get; set; } = default!;
         public DbSet<ImportRowLog> ImportRowLogs { get; set; } = default!;
+
+        // ── Yorum İçe Aktarım (Review Import V1) ────────────────────────────
+        public DbSet<ImportReviewRow> ImportReviewRows { get; set; } = default!;
+        public DbSet<ImportReviewRowLog> ImportReviewRowLogs { get; set; } = default!;
 
         // ═════════════════════════════════════════════════════════════════════
         //  _Inventory — STOK VE ÇOKLU DEPO

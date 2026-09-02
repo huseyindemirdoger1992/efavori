@@ -81,7 +81,7 @@ namespace data._BulkImportProducts
         /// <summary>Sonraki yeniden deneme anı (UTC).</summary>
         public DateTime? NextRetryAtUtc { get; set; }
 
-        // ── İlerleme sayaçları (self-healing; kaynak: ImportRow) ─────────────
+        // ── ÜRÜN ilerleme sayaçları (self-healing; kaynak: ImportRow) ─────────
         /// <summary>Ayrıştırılan toplam satır sayısı.</summary>
         public int TotalRows { get; set; }
 
@@ -108,6 +108,49 @@ namespace data._BulkImportProducts
         /// </summary>
         public int LastProcessedRowIndex { get; set; }
 
+        // ═══════════════════════════════════════════════════════════════════════
+        //  YORUM İLERLEME SAYAÇLARI (Review Import V1)
+        //  Ürün sayaçlarıyla aynı self-healing counter deseni; kaynak ImportReviewRow.
+        //  İlerleme çubuğunda "Ürünler: 95/100 ✓ | Yorumlar: 340/500" gösterimi için.
+        // ═══════════════════════════════════════════════════════════════════════
+
+        /// <summary>Ayrıştırılan toplam yorum satırı sayısı.</summary>
+        public int TotalReviewRows { get; set; }
+
+        /// <summary>İşlenmiş yorum satırı sayısı.</summary>
+        public int ProcessedReviewRows { get; set; }
+
+        /// <summary>Başarıyla oluşturulan yorum sayısı.</summary>
+        public int CreatedReviewCount { get; set; }
+
+        /// <summary>Güncellenen yorum sayısı (ReviewDuplicateStrategy = Update iken).</summary>
+        public int UpdatedReviewCount { get; set; }
+
+        /// <summary>Atlanan yorum sayısı (yineleme / minimum puan altı / tarih filtresi).</summary>
+        public int SkippedReviewCount { get; set; }
+
+        /// <summary>Hatalı yorum sayısı.</summary>
+        public int FailedReviewCount { get; set; }
+
+        /// <summary>İndirilen yorum medya sayısı (fotoğraf/video).</summary>
+        public int DownloadedReviewMediaCount { get; set; }
+
+        /// <summary>Medya indirme hatası sayısı.</summary>
+        public int FailedReviewMediaCount { get; set; }
+
+        // ── Yorum import davranış kopyası (profilden snapshot) ────────────────
+        /// <summary>Yorum içe aktarım davranışı (profilden kopyalanır).</summary>
+        public ImportReviewBehavior ReviewImportBehavior { get; set; } = ImportReviewBehavior.Skip;
+
+        /// <summary>Yorum yineleme stratejisi (profilden kopyalanır).</summary>
+        public ReviewDuplicateStrategy ReviewDuplicateStrategy { get; set; } = ReviewDuplicateStrategy.Skip;
+
+        /// <summary>Puan ölçeği dönüşüm modu (profilden kopyalanır).</summary>
+        public ReviewRatingScaleMode ReviewRatingScaleMode { get; set; } = ReviewRatingScaleMode.AsIs;
+
+        /// <summary>Kaynak puan ölçeği üst sınırı (profilden kopyalanır).</summary>
+        public byte SourceRatingScaleMax { get; set; } = 5;
+
         // ── Zaman damgaları + sonuç ──────────────────────────────────────────
         /// <summary>Kaynak alım/işleme başlangıcı (UTC).</summary>
         public DateTime? StartedAtUtc { get; set; }
@@ -115,7 +158,7 @@ namespace data._BulkImportProducts
         /// <summary>Tamamlanma anı (UTC).</summary>
         public DateTime? CompletedAtUtc { get; set; }
 
-        /// <summary>Sonuç özeti (ör. "1.240 ürün: 1.100 yeni, 90 güncel, 50 atlandı").</summary>
+        /// <summary>Sonuç özeti (ör. "1.240 ürün: 1.100 yeni, 90 güncel, 50 atlandı | 3.200 yorum aktarıldı").</summary>
         public string? ResultSummary { get; set; }
 
         /// <summary>Genel hata mesajı (Status = Failed iken).</summary>

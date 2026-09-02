@@ -30,17 +30,17 @@
 
 <li class="nav-item dropdown dropdown-large">
     <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
-           href="#"
-           role="button"
-           data-bs-toggle="dropdown"
-           data-bs-auto-close="outside">
+       href="#"
+       role="button"
+       data-bs-toggle="dropdown"
+       data-bs-auto-close="outside">
         @if (FriendShipList.Count > 0)
         {
             <span class="alert-count">@FriendShipList.Count</span>
         }
         <i class='fa fa-user-plus'></i>
     </a>
-    
+
     <div class="dropdown-menu dropdown-menu-end shadow border-0">
         <a href="javascript:;">
             <div class="msg-header">
@@ -48,18 +48,23 @@
                 <p class="msg-header-badge">@FriendShipList.Count</p>
             </div>
         </a>
-        
+
         <div class="header-notifications-list">
             @foreach (var item in FriendShipList)
             {
-                var currentUser = Users?.FirstOrDefault(u => u.Id == item.RequestorId);
-                var profileImg = currentUser?.ProfileCoverGallery?.ProfileImagePath ?? "/images/default-avatar.png";
-                var fullName = currentUser != null ? $"{currentUser.FirstName} {currentUser.LastName}" : "Bilinmeyen Kullanıcı";
+                var currentProfile = _userProfiles?.FirstOrDefault(p => p.UserId == item.RequestorUserId);
+                var avatarMediaId = currentProfile?.AvatarMediaId;
+                var profileImg = avatarMediaId.HasValue
+                    ? (_mediaList?.FirstOrDefault(m => m.Id == avatarMediaId.Value)?.FileUrl ?? "/images/default-avatar.png")
+                    : "/images/default-avatar.png";
+                var fullName = currentProfile != null
+                    ? $"{currentProfile.FirstName} {currentProfile.LastName}"
+                    : "Bilinmeyen Kullanıcı";
 
                 <div class="px-3 py-2 border-bottom" style="transition: background 0.2s;">
                     <div class="d-flex align-items-center py-1">
                         <div class="user-online position-relative flex-shrink-0">
-                            @if (!string.IsNullOrEmpty(currentUser?.ProfileCoverGallery?.ProfileImagePath))
+                            @if (avatarMediaId.HasValue && profileImg != "/images/default-avatar.png")
                             {
                                 <img src="@profileImg" class="msg-avatar shadow-sm" alt="@fullName" style="width:42px; height:42px; object-fit: cover; border-radius: 50%;">
                             }
@@ -76,7 +81,7 @@
                                 <span class="fw-bold text-light" style="font-size: 0.85rem;">
                                     @(fullName != null && fullName.Length > 16 ? fullName.Substring(0, 16) + "..." : fullName)
                                 </span>
-                                <small class="text-light" style="font-size: 0.7rem;"> @item.CreatedAt </small>
+                                <small class="text-light" style="font-size: 0.7rem;"> @item.CreatedAtUtc </small>
                             </div>
                             <p class="mb-2 text-light" style="font-size: 0.8rem; margin-top: -2px;">Sana arkadaşlık isteği gönderdi.</p>
                             <div class="d-flex gap-2">
@@ -102,7 +107,7 @@
                 </div>
             }
         </div>
-        
+
         <div class="text-center msg-footer p-2">
             <a class="btn btn-light btn-sm w-100" href="/@culture/Public/FriendShip/Requests/">Tüm Arkadaşlık İstekleri</a>
         </div>
@@ -132,9 +137,9 @@
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private bool _isProcessing;
 
-    private List<Users>? Users { get; set; } = new();
-
-    private List<data._Follows.FriendShip> FriendShipList { get; set; } = new();
+    private List<UserProfiles> _userProfiles = new();
+    private List<data._Galleries.Media> _mediaList = new();
+    private List<Friendships> FriendShipList { get; set; } = new();
 
     private List<Country> _Countries = new();
     private List<States> _States = new();
@@ -193,7 +198,6 @@
         _isInitialized = true;
         StateHub.OnDataChanged += HandleGlobalDataChange;
 
-        // ✅ FİX: Kullanıcı oturum açmamışsa LoadData çağrılmaz
         if (use is not null)
             await LoadData(null);
     }
@@ -213,10 +217,9 @@
 
     private async Task HandleGlobalDataChange(string entityName)
     {
-        // ✅ FİX: use null ise global değişiklik olsa bile LoadData tetiklenmez
         if (_disposed || !_isInitialized || _isProcessing || use is null) return;
 
-        var shouldRefresh = entityName == "Users" || entityName == "FriendShip";
+        var shouldRefresh = entityName == "Users" || entityName == "Friendships";
 
         if (shouldRefresh)
         {
@@ -240,27 +243,28 @@
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            var request = await db.FriendShip
+            var request = await db.Friendships
                 .Include(f => f.IsDeleted)
                 .FirstOrDefaultAsync(f => f.Id == friendShipId, _cts.Token);
 
             if (request == null
-                || request.ReceiverId != use?.Id
+                || request.ReceiverUserId != use?.Id
                 || request.IsDeleted?.IsDeletedStatu == true)
             {
                 await ShowNotification("warning", "Uyarı", "İstek bulunamadı.", null);
                 return;
             }
 
-            request.Status = true;
-            request.ActionDate = DateTime.UtcNow;
+            request.Status = FriendshipStatus.Accepted;
+            request.RespondedAtUtc = DateTime.UtcNow;
+            request.AcceptedAtUtc = DateTime.UtcNow;
 
             await db.SaveChangesAsync(_cts.Token);
 
             FriendShipList.RemoveAll(f => f.Id == friendShipId);
             StateHasChanged();
 
-            await StateHub.NotifyDataChanged("FriendShip");
+            await StateHub.NotifyDataChanged("Friendships");
             await Logger.TakeIt(use?.Id, PAGE, "AcceptFriendShip");
             await ShowNotification("success", "Başarılı", "Arkadaşlık isteği onaylandı.", null);
         }
@@ -292,27 +296,24 @@
 
             await using var db = await DbFactory.CreateDbContextAsync(_cts.Token);
 
-            var request = await db.FriendShip.FindAsync(
-                new object[] { friendShipId }, _cts.Token);
+            var request = await db.Friendships
+                .FirstOrDefaultAsync(f => f.Id == friendShipId, _cts.Token);
 
-            if (request == null || request.ReceiverId != use?.Id)
+            if (request == null || request.ReceiverUserId != use?.Id)
             {
                 await ShowNotification("warning", "Uyarı", "İstek bulunamadı.", null);
             }
             else
             {
-                request.IsDeleted ??= new IsDeleted();
-                request.IsDeleted.IsDeletedStatu = true;
-                request.IsDeleted.DeletedAtDate = DateTime.UtcNow;
-                request.Status = false;
-                request.ActionDate = DateTime.UtcNow;
+                request.Status = FriendshipStatus.Rejected;
+                request.RespondedAtUtc = DateTime.UtcNow;
 
                 await db.SaveChangesAsync(_cts.Token);
 
                 FriendShipList.RemoveAll(f => f.Id == friendShipId);
                 StateHasChanged();
 
-                await StateHub.NotifyDataChanged("FriendShip");
+                await StateHub.NotifyDataChanged("Friendships");
                 await Logger.TakeIt(use?.Id, PAGE, "DeleteFriendShip");
                 await ShowNotification("success", "Başarılı", "Arkadaşlık isteği reddedildi.", null);
             }
@@ -335,7 +336,6 @@
 
     protected virtual async Task LoadData(string? search)
     {
-        // ✅ FİX: Kullanıcı null ise hiçbir şey yükleme, hata da gösterme
         if (use is null) return;
 
         _searchCts?.Cancel();
@@ -350,41 +350,54 @@
             if (_isLoading) return;
             _isLoading = true;
 
-            using var db = await DbFactory.CreateDbContextAsync();
-            _Countries = await db.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
+            using var dbCountry = await DbFactory.CreateDbContextAsync();
+            _Countries = await dbCountry.Country.AsNoTracking().OrderBy(c => c.name).ToListAsync();
             StateHasChanged();
 
             var result = await StateHub.GetOrLoadAsync("DataManager_Main", async () =>
             {
                 await using var db = await DbFactory.CreateDbContextAsync(token);
 
-                var query = db.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var friendships = await db.Friendships.AsNoTracking()
+                    .Where(f => f.ReceiverUserId == use.Id
+                             && f.IsDeleted.IsDeletedStatu != true
+                             && f.Status == FriendshipStatus.Pending)
+                    .ToListAsync(token);
 
-                var query_FriendShip = db.FriendShip.AsNoTracking()
-                    .Where(u => u.ReceiverId == use.Id && u.IsDeleted.IsDeletedStatu != true && u.Status != true);
+                var requestorIds = friendships.Select(f => f.RequestorUserId).Distinct().ToList();
 
-                if (!string.IsNullOrWhiteSpace(search))
+                var profiles = requestorIds.Count > 0
+                    ? await db.UserProfiles.AsNoTracking()
+                        .Where(p => requestorIds.Contains(p.UserId))
+                        .ToListAsync(token)
+                    : new List<UserProfiles>();
+
+                var avatarMediaIds = profiles
+                    .Where(p => p.AvatarMediaId.HasValue)
+                    .Select(p => p.AvatarMediaId!.Value)
+                    .Distinct()
+                    .ToList();
+
+                var mediaList = avatarMediaIds.Count > 0
+                    ? await db.Media.AsNoTracking()
+                        .Where(m => avatarMediaIds.Contains(m.Id))
+                        .ToListAsync(token)
+                    : new List<data._Galleries.Media>();
+
+                return new
                 {
-                    query = query.Where(u =>
-                        u.FirstName.Contains(search) ||
-                        u.LastName.Contains(search));
-                }
-
-                var users = await query
-                    .OrderByDescending(u => u.RegistrationDate)
-                    .ToListAsync(token);
-
-                var friendShip = await query_FriendShip
-                    .ToListAsync(token);
-
-                return new { Users = users, FriendShip = (List<data._Follows.FriendShip>)friendShip };
+                    Friendships = friendships,
+                    Profiles = profiles,
+                    MediaList = mediaList
+                };
 
             }, token);
 
             if (result != null && !token.IsCancellationRequested)
             {
-                Users = result.Users;
-                FriendShipList = result.FriendShip;
+                FriendShipList = result.Friendships;
+                _userProfiles = result.Profiles;
+                _mediaList = result.MediaList;
             }
         }
         catch (OperationCanceledException)

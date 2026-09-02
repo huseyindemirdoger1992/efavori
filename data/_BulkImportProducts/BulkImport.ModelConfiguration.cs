@@ -5,7 +5,7 @@ using data.Owned;        // ortak soft-delete owned tipi (data.Owned.IsDeleted)
 using data._Attribute;   // IntegrationPlatform, AttributeDefinition
 using data._Categories;  // CategoriesProduct
 using data._Galleries;   // Media
-using data._Products;    // Products, ProductVariants, Brands
+using data._Products;    // Products, ProductVariants, ProductReviews, Brands
 using data._Store;       // Store
 using data._Users;       // Users
 
@@ -25,6 +25,8 @@ namespace data._BulkImportProducts
     ///     public DbSet&lt;ImportJob&gt; ImportJobs => Set&lt;ImportJob&gt;();
     ///     public DbSet&lt;ImportRow&gt; ImportRows => Set&lt;ImportRow&gt;();
     ///     public DbSet&lt;ImportRowLog&gt; ImportRowLogs => Set&lt;ImportRowLog&gt;();
+    ///     public DbSet&lt;ImportReviewRow&gt; ImportReviewRows => Set&lt;ImportReviewRow&gt;();
+    ///     public DbSet&lt;ImportReviewRowLog&gt; ImportReviewRowLogs => Set&lt;ImportReviewRowLog&gt;();
     ///
     ///     protected override void OnModelCreating(ModelBuilder modelBuilder)
     ///     {
@@ -50,6 +52,7 @@ namespace data._BulkImportProducts
             ApplyMappings(modelBuilder);
             ApplyJobs(modelBuilder);
             ApplyRows(modelBuilder);
+            ApplyReviewRows(modelBuilder);
 
             ApplyBaseConventions(modelBuilder);
         }
@@ -83,6 +86,14 @@ namespace data._BulkImportProducts
                 b.Property(x => x.Encoding).HasMaxLength(32);
                 b.Property(x => x.RecordsRootPath).HasMaxLength(512);
                 b.Property(x => x.PriceMultiplier).HasPrecision(18, 6);
+
+                // ── Review import alanları ─────────────────────────────────────
+                b.Property(x => x.ReviewRecordsRootPath).HasMaxLength(512);
+
+                // Enum → byte dönüşümleri
+                b.Property(x => x.ReviewImportBehavior).HasConversion<byte>();
+                b.Property(x => x.ReviewDuplicateStrategy).HasConversion<byte>();
+                b.Property(x => x.ReviewRatingScaleMode).HasConversion<byte>();
 
                 // Kullanıcının profillerini hızlı listeleme
                 b.HasIndex(x => new { x.UserId, x.IsActive });
@@ -194,6 +205,11 @@ namespace data._BulkImportProducts
                 b.Property(x => x.ErrorMessage).HasMaxLength(4000);
                 // ErrorDetailsJson → nvarchar(max)
 
+                // ── Review import enum → byte dönüşümleri ─────────────────────
+                b.Property(x => x.ReviewImportBehavior).HasConversion<byte>();
+                b.Property(x => x.ReviewDuplicateStrategy).HasConversion<byte>();
+                b.Property(x => x.ReviewRatingScaleMode).HasConversion<byte>();
+
                 // Kullanıcının işlerini tarihe göre listeleme + kuyruk taraması
                 b.HasIndex(x => new { x.UserId, x.Status });
                 b.HasIndex(x => new { x.Status, x.NextRetryAtUtc });
@@ -231,6 +247,9 @@ namespace data._BulkImportProducts
                 b.Property(x => x.SourceKeyHash).HasMaxLength(128);
                 b.Property(x => x.ErrorMessage).HasMaxLength(4000);
                 // RawRowJson / MappedDataJson / WarningsJson → nvarchar(max)
+
+                // ── Review denormalize alan hassasiyetleri ─────────────────────
+                b.Property(x => x.SourceAverageRating).HasPrecision(3, 2);
 
                 // İş içindeki satırları durum/sıraya göre işleme
                 b.HasIndex(x => new { x.ImportJobId, x.Status });
@@ -271,6 +290,96 @@ namespace data._BulkImportProducts
                 // İş referansı denormalize → çoklu cascade yolunu önlemek için NoAction.
                 b.HasOne(typeof(ImportJob)).WithMany()
                     .HasForeignKey(nameof(ImportRowLog.ImportJobId))
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        //  ImportReviewRow + ImportReviewRowLog (Review Import V1)
+        //
+        //  Ürün yorumlarının staging kayıtları. ImportRow → ImportReviewRow (1:N).
+        //  Başarılı işlemde ProductReviews kaydı oluşturulur.
+        //
+        //  İNDEKS STRATEJİSİ:
+        //   - (ImportJobId, Status) → işin yorum ilerleme sorgusu
+        //   - (ImportRowId, SourceRowIndex) → ürün satırının yorumlarını sıralı listeleme
+        //   - (ImportJobId, SourceKeyHash) UNIQUE → aynı işte aynı yorum tekrar işlenmesin
+        //   - (CreatedReviewId) → oluşturulan yoruma hızlı ters arama
+        //   - (ExternalReviewId) → dış kaynak ile eşleştirme (dedup)
+        //
+        //  FK SİLME DAVRANIŞLARI:
+        //   - ImportJob → Cascade (iş silinince tüm review satırları da gitsin)
+        //   - ImportRow → Cascade (ürün satırı silinince ilişkili review'ler de gitsin)
+        //   - ProductReviews, Products, ProductVariants → NoAction (gerçek veriye dokunma)
+        // ═══════════════════════════════════════════════════════════════════════
+        private static void ApplyReviewRows(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ImportReviewRow>(b =>
+            {
+                // ── Alan uzunlukları / hassasiyetler ───────────────────────────
+                b.Property(x => x.ExternalReviewId).HasMaxLength(256);
+                b.Property(x => x.SourceReviewerName).HasMaxLength(256);
+                b.Property(x => x.SourceTitle).HasMaxLength(512);
+                b.Property(x => x.SourceBodyPreview).HasMaxLength(2048);
+                b.Property(x => x.SourceKeyHash).HasMaxLength(128);
+                b.Property(x => x.SourceReviewerExternalId).HasMaxLength(256);
+                b.Property(x => x.SourceReviewerAvatarUrl).HasMaxLength(2048);
+                b.Property(x => x.SourceVariantLabel).HasMaxLength(256);
+                b.Property(x => x.ErrorMessage).HasMaxLength(4000);
+                // RawReviewJson / MappedReviewJson / SourceMediaUrlsJson / WarningsJson → nvarchar(max)
+
+                // ── İndeksler ──────────────────────────────────────────────────
+                // İşin yorum ilerleme sorgusu (self-healing counter + UI)
+                b.HasIndex(x => new { x.ImportJobId, x.Status });
+                // Ürün satırının yorumlarını sıralı listeleme
+                b.HasIndex(x => new { x.ImportRowId, x.SourceRowIndex });
+                // Aynı işte aynı yorum iki kez işlenmesin
+                b.HasIndex(x => new { x.ImportJobId, x.SourceKeyHash })
+                    .IsUnique()
+                    .HasFilter("[SourceKeyHash] IS NOT NULL AND " + SoftDeleteFilter);
+                // Oluşturulan yoruma hızlı ters arama
+                b.HasIndex(x => x.CreatedReviewId);
+                // Dış kaynak ile eşleştirme (farklı import işlerinde aynı review'in
+                // tekrar geldiğini tespit etmek için — ReviewDuplicateStrategy)
+                b.HasIndex(x => x.ExternalReviewId);
+
+                // ── FK ilişkileri ──────────────────────────────────────────────
+                b.HasOne(typeof(ImportJob)).WithMany()
+                    .HasForeignKey(nameof(ImportReviewRow.ImportJobId))
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.HasOne(typeof(ImportRow)).WithMany()
+                    .HasForeignKey(nameof(ImportReviewRow.ImportRowId))
+                    .OnDelete(DeleteBehavior.NoAction); // Cascade double path; NoAction
+                // Oluşturulan yorum kaydına referans → NoAction.
+                b.HasOne(typeof(ProductReviews)).WithMany()
+                    .HasForeignKey(nameof(ImportReviewRow.CreatedReviewId))
+                    .OnDelete(DeleteBehavior.NoAction);
+                // Hedef ürüne referans → NoAction.
+                b.HasOne(typeof(Products)).WithMany()
+                    .HasForeignKey(nameof(ImportReviewRow.TargetProductId))
+                    .OnDelete(DeleteBehavior.NoAction);
+                // Hedef varyanta referans → NoAction.
+                b.HasOne(typeof(ProductVariants)).WithMany()
+                    .HasForeignKey(nameof(ImportReviewRow.TargetVariantId))
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<ImportReviewRowLog>(b =>
+            {
+                b.Property(x => x.Step).HasMaxLength(128).IsRequired();
+                b.Property(x => x.Level).HasMaxLength(32).IsRequired();
+                b.Property(x => x.Message).HasMaxLength(2048).IsRequired();
+                // DetailJson → nvarchar(max)
+
+                b.HasIndex(x => x.ImportReviewRowId);
+                b.HasIndex(x => x.ImportJobId);
+
+                b.HasOne(typeof(ImportReviewRow)).WithMany()
+                    .HasForeignKey(nameof(ImportReviewRowLog.ImportReviewRowId))
+                    .OnDelete(DeleteBehavior.Cascade);
+                // İş referansı denormalize → çoklu cascade yolunu önlemek için NoAction.
+                b.HasOne(typeof(ImportJob)).WithMany()
+                    .HasForeignKey(nameof(ImportReviewRowLog.ImportJobId))
                     .OnDelete(DeleteBehavior.NoAction);
             });
         }

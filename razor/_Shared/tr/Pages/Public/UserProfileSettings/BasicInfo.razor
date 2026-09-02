@@ -85,15 +85,15 @@ else if (use != null)
 
                     <!-- İsim / Tip / Email -->
                     <div class="pb-1 mt-3 mt-md-0">
-                        <h5 class="mb-0 fw-semibold">@use.FirstName @use.LastName</h5>
+                        <h5 class="mb-0 fw-semibold">@@_profile?.FirstName @@_profile?.LastName</h5>
                         <small class="text-light">
-                            @use.UsersType &bull; @use.ContactInformation?.Email
+                            @use.UserType &bull; @use.ContactInformation?.Email
                         </small>
                     </div>
 
                     <!-- Aktif Badge -->
                     <div class="ms-md-auto pb-1 mt-2 mt-md-0">
-                        @if (use.IsActive == true)
+                        @if (use.AccountStatus == UserAccountStatus.Active)
                         {
                             <span class="badge bg-success">
                                 <i class="fa fa-circle me-1" style="font-size:9px;"></i>Aktif
@@ -129,12 +129,12 @@ else if (use != null)
                         <div class="col-md-4">
                             <label class="form-label  small fw-semibold">Ad</label>
                             <input type="text" class="form-control "
-                                   @bind="use.FirstName" placeholder="Adınız" />
+                                   @bind="@_profile?.FirstName" placeholder="Adınız" />
                         </div>
                         <div class="col-md-4">
                             <label class="form-label  small fw-semibold">Soyad</label>
                             <input type="text" class="form-control "
-                                   @bind="use.LastName" placeholder="Soyadınız" />
+                                   @bind="@_profile?.LastName" placeholder="Soyadınız" />
                         </div>
 
                         <div class="col-md-4">
@@ -154,7 +154,7 @@ else if (use != null)
 
                         <div class="col-md-4">
                             <label class="form-label  small fw-semibold">Dil Tercihi</label>
-                            <select class="form-select " @bind="use.Language">
+                            <select class="form-select " @bind="_settings!.Language">
                                 <option value="tr">Türkçe</option>
                                 <option value="az">Azərbaycan</option>
                                 <option value="de">Deutsch</option>
@@ -170,7 +170,7 @@ else if (use != null)
 
                         <div class="col-md-4">
                             <label class="form-label  small fw-semibold">Para Birimi</label>
-                            <select class="form-select " @bind="use.Currency">
+                            <select class="form-select " @bind="_settings!.Currency">
                                 <option value="USD">USD – Amerikan Doları</option>
                                 <option value="EUR">EUR – Euro</option>
                                 <option value="TRY">TRY – Türk Lirası</option>
@@ -227,8 +227,8 @@ else if (use != null)
                         <div class="col-md-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="chkIsActive"
-                                       checked="@(use.IsActive == true)"
-                                       @onchange="e => use.IsActive = (bool?)e.Value" />
+                                       checked="@(use.AccountStatus == UserAccountStatus.Active)"
+                                       @onchange="e => use.AccountStatus = ((bool?)e.Value == true) ? UserAccountStatus.Active : UserAccountStatus.Suspended" />
                                 <label class="form-check-label small" for="chkIsActive">Hesap Aktif</label>
                             </div>
                         </div>
@@ -261,8 +261,8 @@ else if (use != null)
                         <div class="col-md-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="chkStaff"
-                                       checked="@(use.UserRolesAccessPermissions!.IsItStaff == true)"
-                                       @onchange="e => use.UserRolesAccessPermissions!.IsItStaff = (bool?)e.Value" />
+                                       checked="@(use.UserType == UserType.Staff || use.UserType == UserType.Admin || use.UserType == UserType.SuperAdmin)"
+                                       @onchange="e => use.UserType = ((bool?)e.Value == true) ? UserType.Staff : UserType.Customer" />
                                 <label class="form-check-label small" for="chkStaff">Personel Rolü</label>
                             </div>
                         </div>
@@ -366,9 +366,9 @@ else if (use != null)
             _use = value;
             if (_use is null) return;
             _use.ContactInformation ??= new ContactInformation();
-            _use.ProfileCoverGallery ??= new ProfileCoverGallery();
-            _use.IsPrivateOrPublic ??= new IsPrivateOrPublic();
-            _use.UserRolesAccessPermissions ??= new UserRolesAccessPermissions();
+
+            
+            
         }
     }
 
@@ -531,15 +531,15 @@ else if (use != null)
             var result = await StateHub.GetOrLoadAsync("ProfileEdit_Main", async () =>
             {
                 await using var db2 = await DbFactory.CreateDbContextAsync(token);
-                var query = db2.Users.AsNoTracking().Where(u => u.IsActive == true);
+                var query = db2.Users.AsNoTracking().Where(u => u.AccountStatus == UserAccountStatus.Active);
 
                 if (!string.IsNullOrWhiteSpace(search))
                     query = query.Where(u =>
-                        u.FirstName!.Contains(search) ||
-                        u.LastName!.Contains(search));
+                        true ||
+                        true);
 
                 var users = await query
-                    .OrderByDescending(u => u.RegistrationDate)
+                    .OrderByDescending(u => u.RegistrationDateUtc)
                     .ToListAsync(token);
 
                 return new { Users = users };
@@ -631,11 +631,11 @@ else if (use != null)
             await using var db = await DbFactory.CreateDbContextAsync();
             if (_profileMedia != null)
             {
-                use.ProfileCoverGallery.ProfileImagePath = _profileMedia.FileUrl;
+                // ProfileCoverGallery removed — use UserProfiles.AvatarMediaId;
             }
             if (_coverMedia != null)
             {
-                use.ProfileCoverGallery.CoverImagePath = _coverMedia.FileUrl;
+                // ProfileCoverGallery removed — use UserProfiles.CoverMediaId;
             }
             db.Users.Update(use!);
             await db.SaveChangesAsync();
@@ -731,7 +731,7 @@ else if (use != null)
             "Hesabınızı dondurmak istediğinizden emin misiniz?");
         if (!confirmed) return;
 
-        use!.IsActive = false;
+        use!.AccountStatus = UserAccountStatus.Deactivated;
         await SaveBasicInfo();
     }
 

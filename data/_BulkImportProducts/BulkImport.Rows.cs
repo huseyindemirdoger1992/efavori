@@ -79,6 +79,38 @@ namespace data._BulkImportProducts
 
         /// <summary>İşlenme anı (UTC).</summary>
         public DateTime? ProcessedAtUtc { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        //  YORUM İÇE AKTARIM İZLEME (Review Import V1)
+        //  Ürün satırına bağlı yorumların denormalize sayaçları — ürün detay
+        //  ekranında "bu ürünün kaç yorumu aktarıldı?" hızlı gösterim ve
+        //  iş özeti raporu için.
+        // ═══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Bu ürün satırıyla ilişkili toplam yorum satırı sayısı (denormalize;
+        /// kaynak: ImportReviewRow tablosundaki ImportRowId ile sayım).
+        /// </summary>
+        public int SourceReviewCount { get; set; }
+
+        /// <summary>Bu ürün için başarıyla içe aktarılan yorum sayısı.</summary>
+        public int ImportedReviewCount { get; set; }
+
+        /// <summary>Bu ürün için atlanan yorum sayısı.</summary>
+        public int SkippedReviewCount { get; set; }
+
+        /// <summary>Bu ürün için hata veren yorum sayısı.</summary>
+        public int FailedReviewCount { get; set; }
+
+        /// <summary>
+        /// Kaynaktan gelen ürün genel puan ortalaması (denormalize — önizleme için).
+        /// Amazon/Trendyol ürün verisi içinde ortalama puanı da döner;
+        /// bu doğrudan ProductRatingSummary'ye de yazılabilir.
+        /// </summary>
+        public decimal? SourceAverageRating { get; set; }
+
+        /// <summary>Kaynaktan gelen ürün toplam yorum/puan sayısı (denormalize — önizleme).</summary>
+        public int? SourceTotalRatingCount { get; set; }
     }
 
     /// <summary>

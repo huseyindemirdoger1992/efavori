@@ -123,7 +123,13 @@ namespace data._BulkImportProducts
         /// <summary>Tümüyle başarısız.</summary>
         Failed = 9,
         /// <summary>Kullanıcı tarafından iptal edildi.</summary>
-        Cancelled = 10
+        Cancelled = 10,
+
+        // ── Yorum içe aktarımı için eklenen durumlar ────────────────────────
+        /// <summary>Ürünler tamamlandı, yorumlar içe aktarılıyor.</summary>
+        ImportingReviews = 11,
+        /// <summary>Yorum medyaları (fotoğraf/video) indiriliyor.</summary>
+        DownloadingReviewMedia = 12
     }
 
     /// <summary>Tek bir içe aktarım satırının (staging kaydı) durumu.</summary>
@@ -192,6 +198,47 @@ namespace data._BulkImportProducts
         CountryOfOrigin = 20,
         /// <summary>KDV oranı.</summary>
         VatRate = 21,
+
+        // ── Yorum/Puanlama İçe Aktarım Alanları (Review Import V1) ──────────
+        /// <summary>Yorum kök yolu (JSON/XML'de yorumların bulunduğu dizi yolu).</summary>
+        ReviewRootPath = 22,
+        /// <summary>Yorum dış kimliği (kaynak platformdaki review id).</summary>
+        ReviewExternalId = 23,
+        /// <summary>Yorum yıldız puanı (1..5 veya platformun ölçeğinde).</summary>
+        ReviewRating = 24,
+        /// <summary>Yorum başlığı.</summary>
+        ReviewTitle = 25,
+        /// <summary>Yorum metni (gövde).</summary>
+        ReviewBody = 26,
+        /// <summary>Yorum yazarı adı/takma adı.</summary>
+        ReviewAuthorName = 27,
+        /// <summary>Yorum yazarı dış kimliği (kaynak customer id).</summary>
+        ReviewAuthorExternalId = 28,
+        /// <summary>Yorum tarihi.</summary>
+        ReviewDate = 29,
+        /// <summary>Yorum doğrulanmış satın alma bayrağı.</summary>
+        ReviewIsVerifiedPurchase = 30,
+        /// <summary>Yorum medya URL'si (fotoğraf/video).</summary>
+        ReviewMediaUrl = 31,
+        /// <summary>Yorum faydalı oy sayısı.</summary>
+        ReviewHelpfulVoteCount = 32,
+        /// <summary>Yorum toplam oy sayısı.</summary>
+        ReviewTotalVoteCount = 33,
+        /// <summary>Yorum kalite alt puanı.</summary>
+        ReviewQualityRating = 34,
+        /// <summary>Yorum kargo alt puanı.</summary>
+        ReviewShippingRating = 35,
+        /// <summary>Yorum fiyat/performans alt puanı.</summary>
+        ReviewValueRating = 36,
+        /// <summary>Yorumun hangi varyanta ait olduğu (kaynak varyant etiketi).</summary>
+        ReviewVariantLabel = 37,
+        /// <summary>Yorum yazarı profil resmi URL'si.</summary>
+        ReviewAuthorAvatarUrl = 38,
+        /// <summary>Ürün genel puan ortalaması (özet — ProductRatingSummary için).</summary>
+        ReviewAverageRating = 39,
+        /// <summary>Ürün toplam yorum sayısı (özet — ProductRatingSummary için).</summary>
+        ReviewTotalCount = 40,
+
         /// <summary>Yok say (bu sütun/alan içe alınmaz).</summary>
         Ignore = 100
     }
@@ -221,7 +268,19 @@ namespace data._BulkImportProducts
         /// <summary>Değer eşlemesi uygula (ör. "red" → iç "black" option'ı; JSON sözlük).</summary>
         ValueMap = 9,
         /// <summary>Ayırıcıya göre böl (ör. çoklu görsel/kategori "|" ile ayrılmış).</summary>
-        Split = 10
+        Split = 10,
+
+        // ── Yorum puanı dönüşümleri ─────────────────────────────────────────
+        /// <summary>
+        /// Puan ölçeğini normalize et (ör. 10'luk → 5'lik). Config: {"sourceMax":10,"targetMax":5}.
+        /// Amazon 5'lik, bazı platformlar 10'luk veya 100'lük ölçek kullanır.
+        /// </summary>
+        NormalizeRatingScale = 11,
+        /// <summary>
+        /// Tarih biçimini parse et (kaynak platformun tarih formatı farklı olabilir).
+        /// Config: {"sourceFormat":"dd.MM.yyyy","sourceTimeZone":"Europe/Istanbul"}.
+        /// </summary>
+        ParseDate = 12
     }
 
     /// <summary>Kimlik/kredensiyel kaydının doğrulama durumu.</summary>
@@ -235,5 +294,66 @@ namespace data._BulkImportProducts
         Invalid = 3,
         /// <summary>Token süresi doldu (yenileme gerekli).</summary>
         Expired = 4
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  Yorum İçe Aktarım Davranışları (Review Import V1)
+    // ════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// İçe aktarılan yorumların nasıl işleneceğini belirleyen davranış politikası.
+    /// ImportProfile'da <see cref="ImportProfile.ReviewImportBehavior"/> ile ayarlanır;
+    /// job oluşturulurken profilden kopyalanır.
+    /// </summary>
+    public enum ImportReviewBehavior : byte
+    {
+        /// <summary>Yorum içe aktarımı yapılmasın (yalnızca ürünler).</summary>
+        Skip = 1,
+        /// <summary>Yorumları içe aktar; hepsi doğrudan yayına alınsın (Approved).</summary>
+        ImportAndPublish = 2,
+        /// <summary>Yorumları içe aktar; tümü moderasyon kuyruğuna düşsün (Pending).</summary>
+        ImportAsPending = 3,
+        /// <summary>
+        /// Yorumları içe aktar; yalnızca doğrulanmış satın alma (verified purchase)
+        /// olanlar yayına alınsın, diğerleri Pending. Amazon/Trendyol akışlarında
+        /// güvenilir filtre olarak kullanılır.
+        /// </summary>
+        ImportVerifiedOnly = 4
+    }
+
+    /// <summary>
+    /// İçe aktarılan yorumun yıldız puanının tutarlılığının nasıl sağlanacağı.
+    /// Farklı platformlar farklı ölçekler kullanır (Amazon: 1-5, bazı siteler: 1-10,
+    /// Trustpilot: 1-5 ama ondalıklı). Bu enum, dönüşüm stratejisini belirler.
+    /// </summary>
+    public enum ReviewRatingScaleMode : byte
+    {
+        /// <summary>Dönüşüm yapma — kaynak puan olduğu gibi (efavori 1-5 ölçeğinde kabul et).</summary>
+        AsIs = 1,
+        /// <summary>
+        /// Kaynak ölçekten efavori 1-5 ölçeğine orantılı dönüşüm.
+        /// Profile SourceRatingScaleMax tanımlanır (ör. 10); formül: round(source * 5 / max).
+        /// </summary>
+        Proportional = 2,
+        /// <summary>
+        /// Alan eşleştirmesindeki ValueMap dönüşümü ile birebir eşleme.
+        /// Ör: {"A":"5","B":"4","C":"3","D":"2","E":"1"} (harf bazlı sistemler).
+        /// </summary>
+        ValueMap = 3
+    }
+
+    /// <summary>
+    /// Aynı dış yorum kimliği (ExternalReviewId) tekrar geldiğinde uygulanacak
+    /// strateji. Ürün düzeyindeki DuplicateStrategy'den bağımsızdır çünkü
+    /// yorum tekilleştirmesi farklı kurallar gerektirir.
+    /// </summary>
+    public enum ReviewDuplicateStrategy : byte
+    {
+        /// <summary>Aynı ExternalReviewId varsa atla (mevcut yoruma dokunma).</summary>
+        Skip = 1,
+        /// <summary>Aynı ExternalReviewId varsa mevcut yorumu güncelle (puan/metin değişmiş olabilir).</summary>
+        Update = 2,
+        /// <summary>Tekilleştirme yapma — her zaman yeni yorum oluştur (dikkatli kullanılmalı).</summary>
+        CreateNew = 3
     }
 }

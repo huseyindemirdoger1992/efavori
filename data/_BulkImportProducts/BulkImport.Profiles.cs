@@ -101,6 +101,80 @@ namespace data._BulkImportProducts
 
         /// <summary>En son bu profille içe aktarım yapıldığı an (UTC).</summary>
         public DateTime? LastUsedAtUtc { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        //  YORUM / PUANLAMA İÇE AKTARIM AYARLARI (Review Import V1)
+        //
+        //  Amazon, Trendyol, WooCommerce gibi platformlardan ürünlerle birlikte
+        //  yorumların ve puanlamaların da aktarılabilmesi için gerekli yapılandırma.
+        //  Bu alanlar job oluşturulurken profilden kopyalanır (snapshot deseni).
+        // ═══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Yorum içe aktarım davranışı. Skip = yalnızca ürünler (varsayılan);
+        /// ImportAndPublish / ImportAsPending / ImportVerifiedOnly = yorumlar dahil.
+        /// </summary>
+        public ImportReviewBehavior ReviewImportBehavior { get; set; } = ImportReviewBehavior.Skip;
+
+        /// <summary>
+        /// Aynı dış yorum ikinci kez geldiğinde uygulanacak strateji.
+        /// Ürün düzeyindeki DuplicateStrategy'den BAĞIMSIZDIR.
+        /// </summary>
+        public ReviewDuplicateStrategy ReviewDuplicateStrategy { get; set; } = ReviewDuplicateStrategy.Skip;
+
+        /// <summary>
+        /// Kaynak platformun yıldız puanı ölçek dönüşüm modu.
+        /// Varsayılan: AsIs (kaynak 1-5 ölçeğinde kabul et — Amazon/Trendyol uyumlu).
+        /// </summary>
+        public ReviewRatingScaleMode ReviewRatingScaleMode { get; set; } = ReviewRatingScaleMode.AsIs;
+
+        /// <summary>
+        /// Kaynak platformun maksimum puan değeri (ör. 10, 100). Yalnızca
+        /// ReviewRatingScaleMode = Proportional iken kullanılır. Varsayılan 5.
+        /// </summary>
+        public byte SourceRatingScaleMax { get; set; } = 5;
+
+        /// <summary>
+        /// API/feed/JSON/XML yanıtında yorumların bulunduğu kök yol.
+        /// Ör: Amazon API "reviews.items", WooCommerce JSON "product_reviews",
+        /// Trendyol API "result.productReviews". Null = ürün verisi içinde gömülü.
+        /// </summary>
+        public string? ReviewRecordsRootPath { get; set; }
+
+        /// <summary>
+        /// İçe aktarılan yorum medyalarını (fotoğraf/video) indir ve efavori
+        /// medya sistemine (Media tablosu) kaydet mi? Kapatılırsa yalnızca
+        /// kaynak URL referans olarak tutulur.
+        /// </summary>
+        public bool DownloadReviewMedia { get; set; } = true;
+
+        /// <summary>
+        /// İçe aktarılan yorum/puanlama verileriyle birlikte ProductRatingSummary
+        /// tablosunu otomatik yeniden hesapla mı? True ise import sonrasında
+        /// ürünün ortalama puanı ve yıldız dağılımı güncellenir.
+        /// </summary>
+        public bool RecalculateRatingSummaryAfterImport { get; set; } = true;
+
+        /// <summary>
+        /// Minimum puan eşiği — bu puanın altındaki yorumlar içe aktarılmaz.
+        /// Null = filtre yok. Ör: 3 → yalnızca 3+ yıldız yorumlar alınır
+        /// (negatif yorumları filtreleme senaryosu). Dikkatli kullanılmalıdır.
+        /// </summary>
+        public byte? ReviewMinimumRating { get; set; }
+
+        /// <summary>
+        /// Yorumlar için maksimum içe aktarım sayısı (ürün başına).
+        /// Null = sınırsız. Amazon gibi platformlardan binlerce yorum
+        /// geldiğinde performans ve depolama kontrolü sağlar.
+        /// Ör: 100 → her ürün için en fazla 100 yorum aktarılır.
+        /// </summary>
+        public int? MaxReviewsPerProduct { get; set; }
+
+        /// <summary>
+        /// Belirli bir tarihten sonraki yorumları içe aktar.
+        /// Null = tarih filtresi yok. Ör: son 2 yılın yorumlarını almak için kullanılır.
+        /// </summary>
+        public DateTime? ReviewMinDateUtc { get; set; }
     }
 
     /// <summary>
